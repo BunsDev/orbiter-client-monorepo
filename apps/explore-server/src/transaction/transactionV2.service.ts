@@ -281,12 +281,13 @@ export class TransactionV2Service {
           );
         }
         const transferValue = new BigNumber(responseAmount.tradeAmount);
-        if (transferValue.lt(minPrice)) {
-          return {
-            code: -1,
-            errmsg: `Transfer is less than the min value ${transferValue}/${minPrice}`,
-          };
-        }
+        // TAG: Off minPrice
+        // if (transferValue.lt(minPrice)) {
+        //   return {
+        //     code: -1,
+        //     errmsg: `Transfer is less than the min value ${transferValue}/${minPrice}`,
+        //   };
+        // }
         if (transferValue.gt(maxPrice)) {
           return {
             code: -1,

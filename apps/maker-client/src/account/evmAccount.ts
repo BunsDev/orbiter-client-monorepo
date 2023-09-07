@@ -133,7 +133,6 @@ export default class EVMAccount extends OrbiterAccount {
         transactionRequest.type = 2;
         transactionRequest.maxFeePerGas = maxFeePerGas;
         transactionRequest.maxPriorityFeePerGas = maxPriorityFeePerGas;
-        console.log(transactionRequest.maxPriorityFeePerGas, '==', maxPriorityFeePerGas, '==', chainCustomConfig.MinPriorityFeePerGas)
       }
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
         throw new Error('EIP1559 Fee fail')

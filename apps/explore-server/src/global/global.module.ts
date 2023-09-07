@@ -10,6 +10,7 @@ import { RabbitMqModule } from '../rabbit-mq/rabbit-mq.module';
 import { ENVConfigService, ChainConfigService } from '@orbiter-finance/config';
 import { KnexModule } from 'nest-knexjs';
 import { isEmpty } from '@orbiter-finance/utils';
+import {join} from 'path';
 @Global()
 @Module({
   imports: [
