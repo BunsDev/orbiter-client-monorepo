@@ -27,7 +27,7 @@ import { join } from "path";
             },
         }),
         OrbiterConfigModule.forRoot({
-            chainConfigPath:"explore-data-service/chains.yaml",
+            chainConfigPath:"explore-data-service/chains.json",
             envConfigPath: "explore-data-service/config.yaml",
             cachePath: join(__dirname,'runtime')
         }),

@@ -2,13 +2,13 @@ import { Module, DynamicModule, Provider, Global } from '@nestjs/common';
 import { ConsulService } from './consul.service';
 import { CONSUL_OPTIONS } from './consul.constants';
 import { ConsulOptions, ConsulModuleAsyncOptions } from './consul.interface';
-@Global()
 @Module({})
 export class ConsulModule {
   static registerAsync(options: ConsulModuleAsyncOptions): DynamicModule {
     const provider = this.createAsyncOptionsProvider(options);
     return {
       module: ConsulModule,
+      global:true,
       imports: options.imports,
       providers: [provider],
       exports: [provider],
@@ -17,6 +17,7 @@ export class ConsulModule {
   static register(options: ConsulOptions): DynamicModule {
     return {
       module: ConsulModule,
+      global:true,
       providers: [
         {
           provide: CONSUL_OPTIONS,

@@ -569,7 +569,7 @@ export class TransactionV2Service {
   }
   private getSecurityCode(value: string): string {
     // const code = value.substring(value.length - 4, value.length);
-    const code = new BigNumber(value).mod(10000).toString();
+    const code = new BigNumber(value).mod(1000000).toString();
     return code;
   }
   private parseSecurityCode(value: string): {

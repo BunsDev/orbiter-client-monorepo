@@ -2,7 +2,6 @@
 import { Injectable } from '@nestjs/common';
 import { RabbitmqConnectionManager } from './rabbitmq-connection.manager';
 import { Message } from 'amqplib';
-import { TransactionService } from '../transaction/transaction.service';
 import { createLoggerByName } from '../utils/logger'
 import { AlertService } from '@orbiter-finance/alert';
 @Injectable()
@@ -10,24 +9,29 @@ export class ConsumerService {
   private logger = createLoggerByName(`${ConsumerService.name}`);
   constructor(
     private readonly connectionManager: RabbitmqConnectionManager,
-    private transactionService: TransactionService,
     private alertService: AlertService
   ) {
-    const time = setInterval(() => {
+    // const time = setInterval(() => {
+    //   const channel = this.connectionManager.getChannel();
+    //   if (channel) {
+    //     this.consumeTransferWaitMessages();
+    //     this.consumeTransactionReceiptMessages();
+    //     clearInterval(time);
+    //   }
+    // });
+  }
+  async consumeTransactionReceiptMessages(callback:(data:any) => Promise<any>) {
+    while(true) {
       const channel = this.connectionManager.getChannel();
       if (channel) {
-        this.consumeTransferWaitMessages();
-        this.consumeTransactionReceiptMessages();
-        clearInterval(time);
+        break;
       }
-    });
-  }
-  async consumeTransactionReceiptMessages() {
+    }
     const channel = await this.connectionManager.createChannel();
     channel.on('close', () => {
       this.logger.error('Channel closed');
       this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
-      this.consumeTransferWaitMessages()
+      this.consumeTransferWaitMessages(callback)
     });
 
     channel.on('error', (err) => {
@@ -43,7 +47,8 @@ export class ConsumerService {
         try {
           const messageContent = msg.content.toString();
           const data = JSON.parse(messageContent);
-          await this.transactionService.batchInsertTransactionReceipt(data);
+          await callback(data);
+          // await this.transactionService.batchInsertTransactionReceipt(data);
           channel.ack(msg);
         } catch (error) {
           console.error(
@@ -54,14 +59,20 @@ export class ConsumerService {
       }
     });
   }
-  async consumeTransferWaitMessages() {
+  async consumeTransferWaitMessages(callback:(data:any) => Promise<any>) {
+    while(true) {
+      const channel = this.connectionManager.getChannel();
+      if (channel) {
+        break;
+      }
+    }
     const channel = await this.connectionManager.createChannel();
     const queue = 'TransferWaitMatch';
     await channel.assertQueue(queue);
     channel.on('close', () => {
       this.logger.error('Channel closed');
       this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
-      this.consumeTransferWaitMessages()
+      this.consumeTransferWaitMessages(callback)
     });
 
     channel.on('error', (err) => {
@@ -74,7 +85,8 @@ export class ConsumerService {
         try {
           const messageContent = msg.content.toString();
           const data = JSON.parse(messageContent);
-          await this.transactionService.executeMatch(data);
+          // await this.transactionService.executeMatch(data);
+          await callback(data);
           channel.ack(msg);
         } catch (error) {
           console.error(

@@ -10,10 +10,12 @@ export class RabbitmqConnectionManager
   private connection: Connection;
   private channel: Channel;
   private logger = createLoggerByName(RabbitmqConnectionManager.name);
-  constructor(private readonly envConfigService: ENVConfigService) {}
+  constructor(private readonly envConfigService: ENVConfigService) {
+    this.connectToRabbitMQ();
+  }
 
   async onModuleInit() {
-    await this.connectToRabbitMQ();
+    // await this.connectToRabbitMQ();
   }
 
   async onModuleDestroy() {
@@ -23,7 +25,7 @@ export class RabbitmqConnectionManager
   private async connectToRabbitMQ() {
     try {
       // RABBITMQ_URL
-      const url = this.envConfigService.get<string>('RABBITMQ_URL');
+      const url = await this.envConfigService.getAsync<string>('RABBITMQ_URL');
       this.connection = await connect(url);
       this.connection.on('error', (error) => {
         this.logger.error('RabbitMQ connection error:', error.message);

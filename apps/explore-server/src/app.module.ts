@@ -1,53 +1,105 @@
 import { Module } from '@nestjs/common';
 import { RpcScanningModule } from './rpc-scanning/rpc-scanning.module';
-import { EvmBlockscoutScanningModule } from './evm-blockscout-scanning/evm-blockscout-scanning.module';
-import { EvmEtherscanScanningModule } from './evm-etherscan-scanning/evm-etherscan-scanning.module';
 import { ApiModule } from './api/api.module';
 import { ThegraphModule } from './thegraph/thegraph.module';
 import { TransactionModule } from './transaction/transaction.module';
 
-import { WinstonModule } from 'nest-winston';
+import { WinstonModule, utilities } from 'nest-winston';
 import { ApiScanningModule } from './api-scanning/api-scanning.module';
 import * as winston from 'winston';
-
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { GlobalModule } from './global/global.module';
 import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module';
 import { AlertModule } from '@orbiter-finance/alert';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SequelizeModule } from '@nestjs/sequelize';
+import { OrbiterConfigModule, ENVConfigService,ChainConfigService } from '@orbiter-finance/config';
+import { ConsulModule } from '@orbiter-finance/consul';
+import { join } from 'path';
+import { KnexModule } from 'nest-knexjs';
+import { isEmpty } from '@orbiter-finance/utils';
 
 dayjs.extend(utc);
 
 @Module({
   imports: [
-    GlobalModule,
-    AlertModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    ConsulModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        return {
+          name: 'BlockExploreData',
+          host: config.get('CONSUL_HOST'),
+          port: config.get('CONSUL_PORT'),
+          defaults: {
+            token: config.get('CONSUL_TOKEN'),
+          },
+        };
+      },
+    }),
+    OrbiterConfigModule.forRoot({
+      chainConfigPath:"explore-data-service/chains.json",
+      envConfigPath: "explore-data-service/config.yaml",
+      cachePath: join(__dirname,'runtime')
+    }),
     WinstonModule.forRoot({
-      level: 'info',
-      format: winston.format.combine(
-        winston.format.timestamp({
-          format: 'YYYY-MM-DD HH:mm:ss',
-        }),
-        winston.format.json(),
-      ),
+      exitOnError: false,
+      level: 'debug',
       transports: [
+        // new DailyRotateFile({
+        //   filename: './logs/daily-%DATE%.log',
+        //   datePattern: 'YYYY-MM-DD',
+        //   maxFiles: '14d',
+        // }),
         new winston.transports.Console({
-          level: 'debug',
           format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple(),
+            winston.format.timestamp(),
+            winston.format.ms(),
+            utilities.format.nestLike('BlockExploreData', {
+              colors: true,
+              prettyPrint: true,
+            }),
           ),
+          handleExceptions: true,
         }),
       ],
+      exceptionHandlers: [
+        new winston.transports.File({ filename: './logs/exception.log' }),
+      ],
     }),
+    SequelizeModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async (envConfig: ENVConfigService) => {
+        const config: any = await envConfig.getAsync('DATABASE_URL');
+        if (isEmpty(config)) {
+          console.error('Missing configuration DATABASE_URL');
+          process.exit(1);
+        }
+        return config;
+      },
+    }),
+    KnexModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async (envConfig: ENVConfigService) => {
+        const config: any = await envConfig.getAsync('DATABASE_THEGRAPH');
+        if (isEmpty(config)) {
+          console.error('Missing configuration DATABASE_THEGRAPH');
+          process.exit(1);
+        }
+        return { config };
+      },
+    }),
+    AlertModule,
     ThegraphModule,
-    EvmBlockscoutScanningModule,
-    EvmEtherscanScanningModule,
-    ApiModule,
+    RabbitMqModule,
     TransactionModule,
     RpcScanningModule,
     ApiScanningModule,
-    RabbitMqModule,
+    ApiModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [],
   providers: [],

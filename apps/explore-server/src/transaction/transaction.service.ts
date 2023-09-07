@@ -5,7 +5,7 @@ import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
 import { TransferAmountTransaction } from '../rpc-scanning/rpc-scanning.interface';
 import { Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { MessageService } from '../rabbit-mq/message.service';
+import { MessageService,ConsumerService } from '../rabbit-mq';
 import { TransactionV1Service } from '../transaction/transactionV1.service';
 import { TransactionV2Service } from '../transaction/transactionV2.service';
 import { createLoggerByName } from '../utils/logger';
@@ -18,9 +18,13 @@ export class TransactionService {
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,
     private messageService: MessageService,
+    private consumerService:ConsumerService,
     private transactionV1Service: TransactionV1Service,
     private transactionV2Service: TransactionV2Service
-  ) { }
+  ) { 
+    this.consumerService.consumeTransferWaitMessages(this.executeMatch)
+    this.consumerService.consumeTransactionReceiptMessages(this.batchInsertTransactionReceipt)
+  }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],
   ) {

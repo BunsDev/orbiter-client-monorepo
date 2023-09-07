@@ -1,5 +1,4 @@
 import { Injectable,Inject } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { isEmpty } from 'lodash';
 import { join } from 'path';
 import { outputFile } from 'fs-extra';
