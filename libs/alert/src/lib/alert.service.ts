@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ENVConfigService } from 'libs/config/src/lib/env-config.service'
+import { ENVConfigService } from '@orbiter-finance/config'
 @Injectable()
 export class AlertService {
     constructor(readonly envConfigService: ENVConfigService,) {

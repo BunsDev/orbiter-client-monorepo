@@ -3,10 +3,11 @@ networks:
   app-network:
     driver: bridge
 services:
-  bridge-server:
-    build:
-      dockerfile: apps/explore-server/Dockerfile
-    container_name: OB-BlockExplore
+  maker-client:
+    image: maker-client:latest
+    # build:
+      # dockerfile: apps/explore-server/Dockerfile
+    container_name: OB-MakerClient
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'

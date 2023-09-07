@@ -68,6 +68,12 @@
           "codeCoverage": true
         }
       }
+    },
+    "docker-build": {
+      "dependsOn": [
+        "build"
+      ],
+      "command": "docker build -f apps/maker-client/Dockerfile . -t maker-client"
     }
   },
   "tags": []
