@@ -32,7 +32,7 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
             newTransfers.length
           }`,
         );
-        await this.transactionService.execCreateTransactionReceipt(
+        await this.ctx.transactionService.execCreateTransactionReceipt(
           newTransfers,
         );
       },
@@ -88,7 +88,7 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
     response: any;
     error?: any;
   }> {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    const chainConfig = this.chainConfig;
     const { offset, types } = params;
     const limit = 100;
     const url = `${chainConfig.api.url}/txs?start=${offset}&limit=${limit}&address=${address}&types=${types}`;
@@ -119,7 +119,7 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
             nonce: tx.nonce,
             receipt: tx,
           };
-          const getTokenInfo = this.chainConfigService.getTokenBySymbol(
+          const getTokenInfo = this.ctx.chainConfigService.getTokenBySymbol(
             chainId,
             token.symbol,
           );
@@ -131,7 +131,7 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
               .multipliedBy(getTokenInfo.decimals)
               .toFixed(0);
           }
-          const feeTokenInfo = this.chainConfigService.getTokenByAddress(
+          const feeTokenInfo = this.ctx.chainConfigService.getTokenByAddress(
             chainId,
             tx.fee_token,
           );

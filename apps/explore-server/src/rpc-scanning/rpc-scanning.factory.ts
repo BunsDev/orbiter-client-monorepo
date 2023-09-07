@@ -18,59 +18,52 @@ export class RpcScanningFactory {
     private chainConfigService: ChainConfigService,
     private transactionService: TransactionService,
     protected mdcService: MdcService,
-  ) {}
+  ) { }
 
   createService(chainId: string): RpcScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['rpc'];
+    const ctx = {
+      chainConfigService: this.chainConfigService,
+      transactionService: this.transactionService,
+      mdcService: this.mdcService,
+    }
     switch (key) {
       case 'EVMRpcScanningV5Service':
         return new EVMRpcScanningV5Service(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+          ctx
         );
         break;
       case 'EVMRpcScanningService':
       case 'EVMRpcScanningV6Service':
         return new EVMRpcScanningV6Service(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+          ctx
         );
         break;
       case 'ArbitrumRpcScanningService':
         return new ArbitrumRpcScanningService(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+          ctx
         );
         break;
       case 'OptimisticRpcScanningService':
         return new OptimisticRpcScanningService(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+          ctx
         );
         break;
       case 'BaseRpcScanningService':
         return new BaseRpcScanningService(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+          ctx
         );
         break;
       case 'StarknetRpcScanningService':
         return new StarknetRpcScanningService(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+          ctx
         );
         break;
       default:

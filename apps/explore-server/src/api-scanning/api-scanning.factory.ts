@@ -18,45 +18,37 @@ export class ApiScanningFactory {
   createService(chainId: string): ApiScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['api'];
+    const ctx = {
+      chainConfigService: this.chainConfigService,
+      transactionService: this.transactionService,
+      mdcService: this.mdcService,
+    }
     switch (key) {
       case 'ZKSpaceApiScanningService':
         return new ZKSpaceApiScanningService(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+        ctx
         );
         break;
       case 'LoopringApiScanningService':
         return new LoopringApiScanningService(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
-        );
+       ctx)
         break;
       case 'ZKLiteApiScanningService':
         return new ZKLiteApiScanningService(
           chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+       ctx
         );
         break;
       case 'ImmutableApiScanningService':
         return new ImmutableApiScanningService(
-          chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+          chainId,ctx
         );
         break;
       case 'ApiScanningService':
         return new ApiScanningService(
-          chainId,
-          this.chainConfigService,
-          this.transactionService,
-          this.mdcService,
+          chainId,ctx
         );
         break;
       default:

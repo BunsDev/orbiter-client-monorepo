@@ -19,6 +19,7 @@ import { ConsulModule } from '@orbiter-finance/consul';
 import { join } from 'path';
 import { KnexModule } from 'nest-knexjs';
 import { isEmpty } from '@orbiter-finance/utils';
+import DailyRotateFile from 'winston-daily-rotate-file';
 
 dayjs.extend(utc);
 
@@ -49,11 +50,20 @@ dayjs.extend(utc);
       exitOnError: false,
       level: 'debug',
       transports: [
-        // new DailyRotateFile({
-        //   filename: './logs/daily-%DATE%.log',
-        //   datePattern: 'YYYY-MM-DD',
-        //   maxFiles: '14d',
-        // }),
+        new DailyRotateFile({
+          dirname: `logs`,
+          filename: '%DATE%.log',
+          datePattern: 'YYYY-MM-DD',
+          zippedArchive: true,
+          maxSize: '20m',
+          maxFiles: '14d',
+          format: winston.format.combine(
+            winston.format.timestamp({
+            	format: 'YYYY-MM-DD HH:mm:ss',
+            }),
+            winston.format.json(),
+          ),
+        }),
         new winston.transports.Console({
           format: winston.format.combine(
             winston.format.timestamp(),

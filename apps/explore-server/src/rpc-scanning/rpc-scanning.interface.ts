@@ -1,6 +1,9 @@
 import * as ethers from 'ethers6';
 import { Mutex } from 'async-mutex';
 import { RpcScanningService } from './rpc-scanning.service';
+import { ChainConfigService } from '@orbiter-finance/config';
+import { MdcService } from '../thegraph/mdc/mdc.service';
+import { TransactionService } from '../transaction/transaction.service';
 export type Block = any;
 export type TransactionResponse = ethers.TransactionResponse | any;
 export type TransactionReceipt = ethers.TransactionReceipt | any;
@@ -60,4 +63,10 @@ export interface TransferAmountTransaction {
   version?: string;
   feeToken: string;
   receipt?: any;
+}
+
+export interface Context {
+   chainConfigService: ChainConfigService,
+  transactionService: TransactionService,
+   mdcService: MdcService,
 }

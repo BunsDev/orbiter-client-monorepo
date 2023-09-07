@@ -6,13 +6,12 @@ import {
   Block,
   TransactionReceipt,
   TransactionResponse,
+  Context,
 } from './rpc-scanning.interface';
 import { Level } from 'level';
-import { ChainConfigService } from '@orbiter-finance/config';
+import { IChainConfig } from '@orbiter-finance/config';
 import { isEmpty, sleep,equals} from '@orbiter-finance/utils';
-import { MdcService } from '../thegraph/mdc/mdc.service';
 import { Mutex } from 'async-mutex';
-import { TransactionService } from '../transaction/transaction.service';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
 export class RpcScanningService implements RpcScanningInterface {
@@ -25,10 +24,7 @@ export class RpcScanningService implements RpcScanningInterface {
   private blockInProgress: Set<number> = new Set();
   static levels: { [key: string]: Level } = {};
   constructor(
-    public readonly chainId: string,
-    protected chainConfigService: ChainConfigService,
-    protected transactionService: TransactionService,
-    protected mdcService: MdcService,
+    public readonly chainId: string,public readonly ctx: Context
   ) {
     if (!RpcScanningService.levels[chainId]) {
       const db = new Level(`./runtime/data/${this.chainId}`, {
@@ -36,8 +32,11 @@ export class RpcScanningService implements RpcScanningInterface {
       });
       RpcScanningService.levels[chainId] = db;
     }
-    this.logger = createLoggerByName(`RPC-${this.chainId}`);
+    this.logger = createLoggerByName(`rpcscan-${this.chainId}`);
     this.init();
+  }
+  get chainConfig(): IChainConfig {
+    return this.ctx.chainConfigService.getChainInfo(this.chainId);
   }
   init() { }
   getDB() {
@@ -55,8 +54,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async retryFailedREScanBatch() {
     try {
-      const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
-      this.batchLimit = chainConfig.batchLimit || this.batchLimit;
+      this.batchLimit = this.chainConfig.batchLimit || this.batchLimit;
       const keys = await this.getFaileBlockNumbers(this.batchLimit);
       if (keys.length <= 0) {
         return;
@@ -112,10 +110,9 @@ export class RpcScanningService implements RpcScanningInterface {
       console.log(this.chainId, '*'.repeat(100), 'Start');
       const rpcLastBlockNumber = await this.getLatestBlockNumber();
       this.lastBlockNumber = rpcLastBlockNumber;
-      const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
 
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
-      const targetConfirmation = +chainConfig.targetConfirmation || 1;
+      const targetConfirmation = +this.chainConfig.targetConfirmation || 1;
       const safetyBlockNumber = rpcLastBlockNumber - targetConfirmation;
       this.logger.debug(
         `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
@@ -194,8 +191,7 @@ export class RpcScanningService implements RpcScanningInterface {
     lastScannedBlockNumber: number,
     safetyBlockNumber: number,
   ) {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
-    this.batchLimit = chainConfig.batchLimit || this.batchLimit;
+    this.batchLimit = this.chainConfig.batchLimit || this.batchLimit;
     const startBlockNumber = lastScannedBlockNumber + 1;
     const endBlockNumber = Math.min(
       safetyBlockNumber,
@@ -214,14 +210,14 @@ export class RpcScanningService implements RpcScanningInterface {
     transfers: TransferAmountTransaction[],
   ) {
     if (transfers && isEmpty(error)) {
-      await this.transactionService.execCreateTransactionReceipt(transfers);
+      await this.ctx.transactionService.execCreateTransactionReceipt(transfers);
     }
     return { error, block, transfers };
   }
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
     const newList = [];
     for (const transfer of transfers) {
-      const senderValid = await this.mdcService.validMakerOwnerAddress(
+      const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
         transfer.sender,
       );
       if (senderValid.exist) {
@@ -229,7 +225,7 @@ export class RpcScanningService implements RpcScanningInterface {
         newList.push(transfer);
         continue;
       }
-      const receiverValid = await this.mdcService.validMakerOwnerAddress(
+      const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
         transfer.receiver,
       );
       if (receiverValid.exist) {
@@ -238,14 +234,14 @@ export class RpcScanningService implements RpcScanningInterface {
         continue;
       }
       const senderResponseValid =
-        await this.mdcService.validMakerResponseAddress(transfer.sender);
+        await this.ctx.mdcService.validMakerResponseAddress(transfer.sender);
       if (senderResponseValid.exist) {
         transfer.version = receiverValid.version;
         newList.push(transfer);
         continue;
       }
       const receiverResponseValid =
-        await this.mdcService.validMakerResponseAddress(transfer.receiver);
+        await this.ctx.mdcService.validMakerResponseAddress(transfer.receiver);
       if (receiverResponseValid.exist) {
         transfer.version = receiverValid.version;
         newList.push(transfer);
@@ -503,15 +499,14 @@ export class RpcScanningService implements RpcScanningInterface {
   }
 
   protected getChainConfigToken(address: string) {
-    return this.chainConfigService.getTokenByChain(
+    return this.ctx.chainConfigService.getTokenByChain(
       String(this.chainId),
       address,
     );
   }
   protected getChainConfigContract(toAddress: string) {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
-    if (chainConfig.contract) {
-      for (const [addr, name] of Object.entries(chainConfig.contract)) {
+    if (this.chainConfig.contract) {
+      for (const [addr, name] of Object.entries(this.chainConfig.contract)) {
         if (equals(addr, toAddress)) {
           return { contract: addr, name };
         }

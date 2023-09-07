@@ -52,9 +52,7 @@ import {
       allowNull: true,
       primaryKey: true,
       type: DataType.BIGINT,
-      defaultValue: Sequelize.literal(
-        "nextval('bridge_transaction_id_seq'::regclass)",
-      ),
+  
     })
     @Index({ name: 'bridge_transaction_pkey', using: 'btree', unique: true })
     id?: string;

@@ -40,10 +40,10 @@ export class Transfers
   implements TransfersAttributes
 {
   @Column({
+    autoIncrement: true,
     allowNull: true,
     primaryKey: true,
     type: DataType.BIGINT,
-    defaultValue: Sequelize.literal("nextval('transfers_id_seq'::regclass)"),
   })
   @Index({ name: 'transfers_pkey', using: 'btree', unique: true })
   id?: string;

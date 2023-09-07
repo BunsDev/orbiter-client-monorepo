@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { MdcService } from '../thegraph/mdc/mdc.service';
 import dayjs from 'dayjs';
 import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
@@ -9,11 +9,11 @@ import { MessageService,ConsumerService } from '../rabbit-mq';
 import { TransactionV1Service } from '../transaction/transactionV1.service';
 import { TransactionV2Service } from '../transaction/transactionV2.service';
 import { createLoggerByName } from '../utils/logger';
-import { MemoryMatchingService } from './memory-matching.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 @Injectable()
 export class TransactionService {
-  private logger = createLoggerByName(`${TransactionService.name}`);
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
     private mdcService: MdcService,
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,
@@ -22,8 +22,8 @@ export class TransactionService {
     private transactionV1Service: TransactionV1Service,
     private transactionV2Service: TransactionV2Service
   ) { 
-    this.consumerService.consumeTransferWaitMessages(this.executeMatch)
-    this.consumerService.consumeTransactionReceiptMessages(this.batchInsertTransactionReceipt)
+    this.consumerService.consumeTransferWaitMessages(this.executeMatch.bind(this))
+    this.consumerService.consumeTransactionReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
   }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],
@@ -95,19 +95,6 @@ export class TransactionService {
           )
           .then(([instance, _created]) => {
             transfer['id'] = instance.id;
-            if (!_created) {
-              this.logger.info(
-                `transfer update ${instance.hash} transfer: ${JSONStringify(
-                  transfer,
-                )}`,
-              );
-            } else {
-              this.logger.info(
-                `transfer create ${instance.hash} transfer: ${JSONStringify(
-                  transfer,
-                )}`,
-              );
-            }
             // this.memoryMatchingService.addTransferMatchCache(instance.toJSON())
             // this.eventEmitter.emit(
             //   `transfersCreate.${versionStr}`,

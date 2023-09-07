@@ -12,11 +12,11 @@ import {
   TransferAmountTransactionStatus,
 } from '../rpc-scanning.interface';
 import EVMV6Utils from './lib/v6';
+import { Inject, LoggerService } from '@nestjs/common';
 export class EVMRpcScanningV6Service extends RpcScanningService {
   #provider: provider.Orbiter6Provider;
   getProvider() {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
-    const rpc = chainConfig.rpc[0];
+    const rpc = this.chainConfig.rpc[0];
     if (!this.#provider) {
       this.#provider = new provider.Orbiter6Provider(rpc);
     }
@@ -42,9 +42,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
     let contractList = [];
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
-    if (chainConfig.contract) {
-      contractList = Object.keys(chainConfig.contract).map((addr) =>
+    if (this.chainConfig.contract) {
+      contractList = Object.keys(this.chainConfig.contract).map((addr) =>
         addr.toLocaleLowerCase(),
       );
     }
@@ -54,14 +53,14 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         if (row['to'] == ZeroAddress) {
           continue;
         }
-        const senderValid = await this.mdcService.validMakerOwnerAddress(
+        const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
           row['from'],
         );
         if (senderValid.exist) {
           rows.push(row);
           continue;
         }
-        const receiverValid = await this.mdcService.validMakerOwnerAddress(
+        const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
           row['to'],
         );
         if (receiverValid.exist) {
@@ -69,13 +68,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           continue;
         }
         const senderResponseValid =
-          await this.mdcService.validMakerResponseAddress(row['from']);
+          await this.ctx.mdcService.validMakerResponseAddress(row['from']);
         if (senderResponseValid.exist) {
           rows.push(row);
           continue;
         }
         const receiverResponseValid =
-          await this.mdcService.validMakerResponseAddress(row['to']);
+          await this.ctx.mdcService.validMakerResponseAddress(row['to']);
         if (receiverResponseValid.exist) {
           rows.push(row);
           continue;
@@ -86,7 +85,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           continue;
         }
         if (row['data'] && row['data'] != '0x') {
-          const tokenInfo = this.chainConfigService.getTokenByAddress(
+          const tokenInfo = this.ctx.chainConfigService.getTokenByAddress(
             this.chainId,
             row['to'],
           );
@@ -103,13 +102,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
               }
               const erc20Receiver = result.args[0];
               const senderValid =
-                await this.mdcService.validMakerOwnerAddress(erc20Receiver);
+                await this.ctx.mdcService.validMakerOwnerAddress(erc20Receiver);
               if (senderValid.exist) {
                 rows.push(row);
                 continue;
               }
               const receiverValid =
-                await this.mdcService.validMakerOwnerAddress(erc20Receiver);
+                await this.ctx.mdcService.validMakerOwnerAddress(erc20Receiver);
               if (receiverValid.exist) {
                 rows.push(row);
                 continue;
@@ -196,7 +195,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       if (transaction.hash != receipt.hash) {
         throw new Error(`${transaction.hash} Hash inconsistency`);
       }
-      const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+      const chainConfig = this.chainConfig;
       const { nonce } = transaction;
       const fee = await this.getTransferFee(transaction, receipt);
       const chainId = transaction.chainId || this.chainId;

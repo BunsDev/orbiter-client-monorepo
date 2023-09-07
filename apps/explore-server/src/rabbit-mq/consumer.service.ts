@@ -1,24 +1,16 @@
 // consumer.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable,Inject, Logger,LoggerService } from '@nestjs/common';
 import { RabbitmqConnectionManager } from './rabbitmq-connection.manager';
 import { Message } from 'amqplib';
-import { createLoggerByName } from '../utils/logger'
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlertService } from '@orbiter-finance/alert';
 @Injectable()
 export class ConsumerService {
-  private logger = createLoggerByName(`${ConsumerService.name}`);
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
     private readonly connectionManager: RabbitmqConnectionManager,
     private alertService: AlertService
   ) {
-    // const time = setInterval(() => {
-    //   const channel = this.connectionManager.getChannel();
-    //   if (channel) {
-    //     this.consumeTransferWaitMessages();
-    //     this.consumeTransactionReceiptMessages();
-    //     clearInterval(time);
-    //   }
-    // });
   }
   async consumeTransactionReceiptMessages(callback:(data:any) => Promise<any>) {
     while(true) {
@@ -51,14 +43,12 @@ export class ConsumerService {
           // await this.transactionService.batchInsertTransactionReceipt(data);
           channel.ack(msg);
         } catch (error) {
-          console.error(
-            'consumeTransactionReceiptMessages Error processing message:',
-            error.message,
-          );
+          this.logger.error(`consumeTransactionReceiptMessages Error ${error.message}`, error.stack);
         }
       }
     });
   }
+
   async consumeTransferWaitMessages(callback:(data:any) => Promise<any>) {
     while(true) {
       const channel = this.connectionManager.getChannel();

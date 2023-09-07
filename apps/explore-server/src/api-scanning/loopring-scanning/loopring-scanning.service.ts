@@ -29,7 +29,7 @@ export class LoopringApiScanningService extends ApiScanningService {
     if (this.addressMapAccountId.has(address)) {
       return this.addressMapAccountId.get(address);
     }
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    const chainConfig = this.chainConfig;
     const url = `${chainConfig.api.url}/account?owner=${address}`;
     const result: any = await HTTPGet(url);
     if (result && result.code) {
@@ -54,7 +54,7 @@ export class LoopringApiScanningService extends ApiScanningService {
         this.logger.debug(
           `${this.chainId} timedTetTransactions address ${address},  data total: ${transfers.length} / ${newTransfers.length}`,
         );
-        await this.transactionService.execCreateTransactionReceipt(
+        await this.ctx.transactionService.execCreateTransactionReceipt(
           newTransfers,
         );
       },
@@ -117,7 +117,7 @@ export class LoopringApiScanningService extends ApiScanningService {
     error?: any;
     response: any;
   }> {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    const chainConfig = this.ctx.chainConfigService.getChainInfo(this.chainId);
     let accountId = address;
     if (typeof address === 'string') {
       accountId = await this.getAccountId(address);
@@ -140,7 +140,7 @@ export class LoopringApiScanningService extends ApiScanningService {
           let amount = '0';
           let feeAmount = '0';
           const tokenInfo: any =
-            (await this.chainConfigService.getTokenBySymbol(
+            (await this.ctx.chainConfigService.getTokenBySymbol(
               this.chainId,
               tx.symbol,
             )) || {};
@@ -149,7 +149,7 @@ export class LoopringApiScanningService extends ApiScanningService {
           }
           const fee = new BigNumber(tx.feeAmount);
           const feeToken: any =
-            (await this.chainConfigService.getTokenBySymbol(
+            (await this.ctx.chainConfigService.getTokenBySymbol(
               this.chainId,
               tx.feeTokenSymbol,
             )) || {};

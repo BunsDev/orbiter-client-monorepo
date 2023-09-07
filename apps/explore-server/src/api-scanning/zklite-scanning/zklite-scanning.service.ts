@@ -23,7 +23,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
   async getScanAddressList() {
     const ownerList: string[] = uniq([
       ...this.prevExecute.fail,
-      ...(await this.mdcService.getOwnerList()),
+      ...(await this.ctx.mdcService.getOwnerList()),
     ]);
     return ownerList.filter((addr) => addr && ethers.isAddress(addr));
   }
@@ -77,7 +77,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
       );
       if (newTransfers.length > 0) {
         const result =
-          await this.transactionService.execCreateTransactionReceipt(
+          await this.ctx.transactionService.execCreateTransactionReceipt(
             newTransfers,
           );
         const scanPosition = this.generateLastScannedPositionData(result);
@@ -99,7 +99,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
     response: any;
     error?: any;
   }> {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    const chainConfig =this.chainConfig;
     const transfers: TransferAmountTransaction[] = [];
     // const params = {
     //     from: "latest",

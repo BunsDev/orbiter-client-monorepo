@@ -7,6 +7,8 @@ import { equals,uniq } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
+import {IChainConfig} from '@orbiter-finance/config'
+import {Context} from './api-scanning.interface'
 export class ApiScanningService {
   protected logger: winston.Logger;
   private lock = new Mutex();
@@ -18,12 +20,13 @@ export class ApiScanningService {
   };
   constructor(
     protected readonly chainId: string,
-    protected chainConfigService: ChainConfigService,
-    protected transactionService: TransactionService,
-    protected mdcService: MdcService,
+    protected readonly ctx: Context,
   ) {
     this.logger = createLoggerByName(`API-${this.chainId}`);
     this.init();
+  }
+  get chainConfig(): IChainConfig {
+    return this.ctx.chainConfigService.getChainInfo(this.chainId);
   }
   async init() {
     console.log('init');
@@ -31,7 +34,7 @@ export class ApiScanningService {
   async getScanAddressList() {
     const ownerList = uniq([
       ...this.prevExecute.fail,
-      ...(await this.mdcService.getOwnerList()),
+      ...(await this.ctx.mdcService.getOwnerList()),
     ]);
     return ownerList;
   }
@@ -63,7 +66,7 @@ export class ApiScanningService {
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
     const newList = [];
     for (const transfer of transfers) {
-      const senderValid = await this.mdcService.validMakerOwnerAddress(
+      const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
         transfer.sender,
       );
       if (senderValid.exist) {
@@ -71,7 +74,7 @@ export class ApiScanningService {
         newList.push(transfer);
         continue;
       }
-      const receiverValid = await this.mdcService.validMakerOwnerAddress(
+      const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
         transfer.receiver,
       );
       if (receiverValid.exist) {
@@ -80,14 +83,14 @@ export class ApiScanningService {
         continue;
       }
       const senderResponseValid =
-        await this.mdcService.validMakerResponseAddress(transfer.sender);
+        await this.ctx.mdcService.validMakerResponseAddress(transfer.sender);
       if (senderResponseValid.exist) {
         transfer.version = receiverValid.version;
         newList.push(transfer);
         continue;
       }
       const receiverResponseValid =
-        await this.mdcService.validMakerResponseAddress(transfer.receiver);
+        await this.ctx.mdcService.validMakerResponseAddress(transfer.receiver);
       if (receiverResponseValid.exist) {
         transfer.version = receiverValid.version;
         newList.push(transfer);
@@ -98,7 +101,7 @@ export class ApiScanningService {
   }
 
   getToken(id: number | string) {
-    return this.chainConfigService.getTokenByChain(this.chainId, id);
+    return this.ctx.chainConfigService.getTokenByChain(this.chainId, id);
   }
 
   protected async setLastScannedPosition(

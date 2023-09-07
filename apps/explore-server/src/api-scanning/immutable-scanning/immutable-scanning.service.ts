@@ -10,7 +10,7 @@ import dayjs from 'dayjs';
 export class ImmutableApiScanningService extends ApiScanningService {
   private client: ImmutableX;
   async init() {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    const chainConfig = this.chainConfig;
     if (+chainConfig.networkId == 1) {
       this.client = new ImmutableX(Config.PRODUCTION);
     } else {
@@ -49,7 +49,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       );
       if (senderTransfers.length > 0) {
         const newTransfers = await this.filterTransfers(senderTransfers);
-        await this.transactionService.execCreateTransactionReceipt(
+        await this.ctx.transactionService.execCreateTransactionReceipt(
           newTransfers,
         );
         senderPosition = this.generateLastScannedPositionData(newTransfers);
@@ -68,7 +68,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       );
       if (receiverTransfers.length > 0) {
         const newTransfers = await this.filterTransfers(receiverTransfers);
-        await this.transactionService.execCreateTransactionReceipt(
+        await this.ctx.transactionService.execCreateTransactionReceipt(
           newTransfers,
         );
         transfers.push(...newTransfers);
@@ -172,7 +172,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       for (const item of response.result) {
         const value = new BigNumber(item.token.data.quantity);
         const decimals = item.token.data.decimals;
-        const tokenInfo = await this.chainConfigService.getTokenBySymbol(
+        const tokenInfo = await this.ctx.chainConfigService.getTokenBySymbol(
           this.chainId,
           item.token.type,
         );

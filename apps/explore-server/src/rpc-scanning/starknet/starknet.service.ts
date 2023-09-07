@@ -24,7 +24,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     this.requestTimeout = 1000 * 60 * 2;
   }
   getProvider() {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    const chainConfig = this.chainConfig;
     const chainId = StarknetChainId[this.chainId];
     if (!this.#provider) {
       this.#provider = new RpcProvider({
@@ -153,7 +153,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
         `${transaction.transaction_hash} The block number in the transaction receipt does not exist`,
       );
     }
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    const chainConfig = this.chainConfig;
     const fee = new BigNumber(receipt['actual_fee']);
     for (const row of parseData) {
       try {

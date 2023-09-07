@@ -13,7 +13,7 @@ import EVMV5Utils from './lib/v6';
 export class EVMRpcScanningV5Service extends RpcScanningService {
   #provider: provider.Orbiter5Provider;
   getProvider() {
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
     if (!this.#provider) {
       this.#provider = new provider.Orbiter5Provider(rpc);
@@ -111,7 +111,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           `${transaction.hash}/${receipt.hash} Hash inconsistency`,
         );
       }
-      const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+      const chainConfig = this.chainConfig;
       const { nonce } = transaction;
       const fee = await this.getTransferFee(transaction, receipt);
       const chainId = transaction.chainId || this.chainId;
@@ -206,9 +206,8 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
     let contractList = [];
-    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
-    if (chainConfig.contract) {
-      contractList = Object.keys(chainConfig.contract).map((addr) =>
+    if (this.chainConfig.contract) {
+      contractList = Object.keys(this.chainConfig.contract).map((addr) =>
         addr.toLocaleLowerCase(),
       );
     }
@@ -218,14 +217,14 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         if (row['to'] == ZeroAddress) {
           continue;
         }
-        const senderValid = await this.mdcService.validMakerOwnerAddress(
+        const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
           row['from'],
         );
         if (senderValid.exist) {
           rows.push(row);
           continue;
         }
-        const receiverValid = await this.mdcService.validMakerOwnerAddress(
+        const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
           row['to'],
         );
         if (receiverValid.exist) {
@@ -233,13 +232,13 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           continue;
         }
         const senderResponseValid =
-          await this.mdcService.validMakerResponseAddress(row['from']);
+          await this.ctx.mdcService.validMakerResponseAddress(row['from']);
         if (senderResponseValid.exist) {
           rows.push(row);
           continue;
         }
         const receiverResponseValid =
-          await this.mdcService.validMakerResponseAddress(row['to']);
+          await this.ctx.mdcService.validMakerResponseAddress(row['to']);
         if (receiverResponseValid.exist) {
           rows.push(row);
           continue;
@@ -250,7 +249,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           continue;
         }
         if (row['data'] && row['data'] != '0x') {
-          const tokenInfo = this.chainConfigService.getTokenByAddress(
+          const tokenInfo = this.ctx.chainConfigService.getTokenByAddress(
             this.chainId,
             row['to'],
           );
@@ -268,13 +267,13 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
               }
               const erc20Receiver = result.args[0];
               const senderValid =
-                await this.mdcService.validMakerOwnerAddress(erc20Receiver);
+                await this.ctx.mdcService.validMakerOwnerAddress(erc20Receiver);
               if (senderValid.exist) {
                 rows.push(row);
                 continue;
               }
               const receiverValid =
-                await this.mdcService.validMakerOwnerAddress(erc20Receiver);
+                await this.ctx.mdcService.validMakerOwnerAddress(erc20Receiver);
               if (receiverValid.exist) {
                 rows.push(row);
                 continue;

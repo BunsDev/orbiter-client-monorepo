@@ -1,16 +1,17 @@
 // rabbitmq-connection.manager.ts
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, LoggerService, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { connect, Connection, Channel } from 'amqplib';
-import { createLoggerByName } from '../utils/logger';
 import { ENVConfigService } from '@orbiter-finance/config';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 @Injectable()
 export class RabbitmqConnectionManager
   implements OnModuleInit, OnModuleDestroy
 {
   private connection: Connection;
   private channel: Channel;
-  private logger = createLoggerByName(RabbitmqConnectionManager.name);
-  constructor(private readonly envConfigService: ENVConfigService) {
+  constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
+    private readonly envConfigService: ENVConfigService) {
     this.connectToRabbitMQ();
   }
 
@@ -37,7 +38,7 @@ export class RabbitmqConnectionManager
         setTimeout(() => this.connectToRabbitMQ(), 5000);
       });
       this.channel = await this.connection.createChannel();
-      this.logger.info('Connected to RabbitMQ');
+      this.logger.log('Connected to RabbitMQ');
     } catch (error) {
       this.logger.error(
         `Failed to connect to RabbitMQ:${error.message}`,
@@ -54,7 +55,7 @@ export class RabbitmqConnectionManager
     }
     if (this.connection) {
       await this.connection.close();
-      this.logger.info('Disconnected from RabbitMQ');
+      this.logger.log('Disconnected from RabbitMQ');
     }
   }
   async createChannel(): Channel {
