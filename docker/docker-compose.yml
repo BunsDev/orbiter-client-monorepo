@@ -1,0 +1,21 @@
+version: '3.8'
+networks:
+  app-network:
+    driver: bridge
+services:
+  bridge-server:
+    build:
+      dockerfile: apps/explore-server/Dockerfile
+    container_name: OB-BlockExplore
+    restart: always
+    environment:
+      CONSUL_HOST: '${CONSUL_HOST}'
+      CONSUL_PORT: '${CONSUL_PORT}'
+      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+    ports:
+      - '3002:3002'
+    networks:
+      - app-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'

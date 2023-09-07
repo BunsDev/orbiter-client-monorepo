@@ -1,0 +1,546 @@
+import { readFileSync, outputFile } from 'fs-extra';
+import {
+  RpcScanningInterface,
+  RetryBlockRequestResponse,
+  TransferAmountTransaction,
+  Block,
+  TransactionReceipt,
+  TransactionResponse,
+} from './rpc-scanning.interface';
+import { Level } from 'level';
+import { ChainConfigService } from '@orbiter-finance/config';
+import { isEmpty, sleep,equals} from '@orbiter-finance/utils';
+import { MdcService } from '../thegraph/mdc/mdc.service';
+import { Mutex } from 'async-mutex';
+import { TransactionService } from '../transaction/transaction.service';
+import { createLoggerByName } from '../utils/logger';
+import winston from 'winston';
+export class RpcScanningService implements RpcScanningInterface {
+  // protected db: Level;
+  protected logger: winston.Logger;
+  public lastBlockNumber = 0;
+  protected batchLimit = 50;
+  protected requestTimeout = 1000 * 60;
+  private pendingDBLock = new Mutex();
+  private blockInProgress: Set<number> = new Set();
+  static levels: { [key: string]: Level } = {};
+  constructor(
+    public readonly chainId: string,
+    protected chainConfigService: ChainConfigService,
+    protected transactionService: TransactionService,
+    protected mdcService: MdcService,
+  ) {
+    if (!RpcScanningService.levels[chainId]) {
+      const db = new Level(`./runtime/data/${this.chainId}`, {
+        valueEncoding: 'json',
+      });
+      RpcScanningService.levels[chainId] = db;
+    }
+    this.logger = createLoggerByName(`RPC-${this.chainId}`);
+    this.init();
+  }
+  init() { }
+  getDB() {
+    return RpcScanningService.levels[this.chainId];
+  }
+  async getFaileBlockNumbers(limit = -1) {
+    const db = this.getDB();
+    const subDB = db.sublevel('pending-scan');
+    if (limit > 0) {
+      return await subDB.keys({ limit: limit }).all();
+    } else {
+      return await subDB.keys().all();
+    }
+  }
+
+  async retryFailedREScanBatch() {
+    try {
+      const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+      this.batchLimit = chainConfig.batchLimit || this.batchLimit;
+      const keys = await this.getFaileBlockNumbers(this.batchLimit);
+      if (keys.length <= 0) {
+        return;
+      }
+      this.logger.info(`failedREScan start ${JSON.stringify(keys)}`);
+      const blockNumbers = keys
+        .map((num) => +num)
+        .filter((num) => !this.blockInProgress.has(num));
+      console.log(
+        this.chainId + ' failedREScan',
+        '*'.repeat(100),
+        blockNumbers,
+      );
+      if (blockNumbers.length <= 0) {
+        return;
+      }
+      this.logger.debug(
+        `${this.chainId} failedREScan ${keys.length},blockNumbersLength:${blockNumbers.length}, blockNumbers:${blockNumbers} batchLimit:${this.batchLimit}`,
+      );
+      const result = await this.scanByBlocks(
+        blockNumbers,
+        async (
+          error: Error,
+          block: RetryBlockRequestResponse,
+          transfers: TransferAmountTransaction[],
+        ) => {
+          if (isEmpty(error) && block && transfers) {
+            try {
+              this.logger.debug(
+                `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
+              );
+              await this.handleScanBlockResult(error, block, transfers);
+              await this.delPendingScanBlocks([block.number]);
+            } catch (error) {
+              console.error(error);
+              this.logger.error(
+                `failedREScan handleScanBlockResult ${block.number} error:${error.message}`,
+                error.stack,
+              );
+            }
+          }
+        },
+      );
+      this.logger.info('failedREScan end');
+      return result;
+    } catch (error) {
+      this.logger.error(`failedREScan error ${error.message}`, error.stack);
+    }
+  }
+
+  public async bootstrap(): Promise<any> {
+    try {
+      console.log(this.chainId, '*'.repeat(100), 'Start');
+      const rpcLastBlockNumber = await this.getLatestBlockNumber();
+      this.lastBlockNumber = rpcLastBlockNumber;
+      const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+
+      const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
+      const targetConfirmation = +chainConfig.targetConfirmation || 1;
+      const safetyBlockNumber = rpcLastBlockNumber - targetConfirmation;
+      this.logger.debug(
+        `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
+      );
+      if (safetyBlockNumber > lastScannedBlockNumber) {
+        const blockNumbers = this.getScanBlockNumbers(
+          lastScannedBlockNumber,
+          safetyBlockNumber,
+        );
+        blockNumbers.forEach((num) => {
+          this.blockInProgress.add(num);
+        });
+        const startBlockNumber = blockNumbers[0],
+          endBlockNumber = blockNumbers[blockNumbers.length - 1];
+        await this.setPendingScanBlocks(blockNumbers);
+        await this.setLastScannedBlockNumber(endBlockNumber);
+        this.logger.debug(
+          `bootstrap scan ready ${startBlockNumber}-${endBlockNumber} block count: ${blockNumbers.length
+          }, blockNumbers:${JSON.stringify(blockNumbers)}`,
+        );
+        const result = await this.scanByBlocks(
+          blockNumbers,
+          async (
+            error: Error,
+            block: RetryBlockRequestResponse,
+            transfers: TransferAmountTransaction[],
+          ) => {
+            if (transfers && isEmpty(error)) {
+              try {
+                await this.handleScanBlockResult(error, block, transfers);
+                await this.delPendingScanBlocks([block.number]);
+              } catch (error) {
+                this.logger.error(
+                  `scanByBlocks -> handleScanBlockResult ${block.number} error ${error.message}`,
+                  error.stack,
+                );
+                await this.setPendingScanBlocks([block.number]);
+              }
+            }
+          },
+        );
+        this.logger.debug(
+          `start scan ${startBlockNumber} - ${endBlockNumber} Finish, result:${result.map(
+            (row) => row.block.number,
+          )}`,
+        );
+      }
+      console.log('#'.repeat(100), 'END');
+    } catch (error) {
+      this.logger.error(`bootstrap ${error.message}`, error.stack);
+    }
+  }
+  public async manualScanBlocks(blockNumbers: number[]): Promise<any> {
+    try {
+      let response = [];
+      await this.scanByBlocks(
+        blockNumbers,
+        async (
+          error: Error,
+          block: RetryBlockRequestResponse,
+          transfers: TransferAmountTransaction[],
+        ) => {
+          if (transfers && isEmpty(error)) {
+            response = transfers;
+            await this.handleScanBlockResult(error, block, transfers);
+            await this.delPendingScanBlocks([block.number]);
+          }
+        },
+      );
+      return response;
+    } catch (error) {
+      this.logger.error(`manualScanBlocks ${error.message}`, error.stack);
+    }
+  }
+  public getScanBlockNumbers(
+    lastScannedBlockNumber: number,
+    safetyBlockNumber: number,
+  ) {
+    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    this.batchLimit = chainConfig.batchLimit || this.batchLimit;
+    const startBlockNumber = lastScannedBlockNumber + 1;
+    const endBlockNumber = Math.min(
+      safetyBlockNumber,
+      startBlockNumber + this.batchLimit,
+    );
+    // save pending scan block
+    const blockNumbers = Array.from(
+      { length: endBlockNumber - startBlockNumber + 1 },
+      (_, index) => startBlockNumber + index,
+    );
+    return blockNumbers;
+  }
+  protected async handleScanBlockResult(
+    error: Error,
+    block: RetryBlockRequestResponse,
+    transfers: TransferAmountTransaction[],
+  ) {
+    if (transfers && isEmpty(error)) {
+      await this.transactionService.execCreateTransactionReceipt(transfers);
+    }
+    return { error, block, transfers };
+  }
+  protected async filterTransfers(transfers: TransferAmountTransaction[]) {
+    const newList = [];
+    for (const transfer of transfers) {
+      const senderValid = await this.mdcService.validMakerOwnerAddress(
+        transfer.sender,
+      );
+      if (senderValid.exist) {
+        transfer.version = senderValid.version;
+        newList.push(transfer);
+        continue;
+      }
+      const receiverValid = await this.mdcService.validMakerOwnerAddress(
+        transfer.receiver,
+      );
+      if (receiverValid.exist) {
+        transfer.version = receiverValid.version;
+        newList.push(transfer);
+        continue;
+      }
+      const senderResponseValid =
+        await this.mdcService.validMakerResponseAddress(transfer.sender);
+      if (senderResponseValid.exist) {
+        transfer.version = receiverValid.version;
+        newList.push(transfer);
+        continue;
+      }
+      const receiverResponseValid =
+        await this.mdcService.validMakerResponseAddress(transfer.receiver);
+      if (receiverResponseValid.exist) {
+        transfer.version = receiverValid.version;
+        newList.push(transfer);
+        continue;
+      }
+    }
+    return newList;
+  }
+  public async scanByBlocks(
+    blockNumbers: number[],
+    callbackFun: (
+      error: Error,
+      data: any,
+      transfers: TransferAmountTransaction[],
+    ) => Promise<any>,
+  ): Promise<{ block: any; transfers: any }[]> {
+    if (blockNumbers.length <= 0) {
+      throw new Error('scanByBlocks missing block number');
+    }
+
+    const startTime = Date.now();
+    const blocksResponse = await this.getBlocks(blockNumbers);
+    const endTime = Date.now();
+
+    const processBlock = async (row: RetryBlockRequestResponse) => {
+      try {
+        const result: TransferAmountTransaction[] = await this.handleBlock(
+          row.block,
+        );
+        const transfers = await this.filterTransfers(result);
+        await callbackFun(null, row, transfers);
+        this.logger.debug(
+          `[1/3] RPCScan success block:${row.number}, match:${transfers.length}/${result.length}`,
+        );
+        return { block: row, transfers: transfers };
+      } catch (error) {
+        this.logger.error(
+          `${this.chainId} handleBlock ${row.number} error ${error.message}`,
+          error.stack,
+        );
+        const block = blocksResponse.find((item) => item.number == row.number);
+        if (block) {
+          block.error = new Error(
+            `[2/3] handleBlock ${row.number} error:${error.message}`,
+          );
+        }
+        await callbackFun(error, row, null);
+        this.logger.debug(
+          `[1/3] handleBlock Finish success:${successBlock.map(
+            (row) => row.number,
+          )}, fail:${failBlock.map((row) => row.number)}, time consuming:${(endTime - startTime) / 1000
+          }/s`,
+        );
+        return { block: row, transfers: error };
+      }
+    };
+
+    const successBlock = blocksResponse.filter((row) => isEmpty(row.error));
+    const failBlock = blocksResponse.filter((row) => !isEmpty(row.error));
+    const result = await Promise.all(successBlock.map(processBlock));
+
+    return result;
+  }
+  public getBlocks(
+    blockNumbers: number[],
+  ): Promise<RetryBlockRequestResponse[]> {
+    const blockPromises = blockNumbers.map((blockNumber) =>
+      this.retryBlockRequest(blockNumber),
+    );
+    return Promise.all(blockPromises);
+  }
+
+  protected async retryBlockRequest(
+    blockNumber: number,
+    retryCount = 3,
+    timeoutMs: number = this.requestTimeout,
+  ): Promise<RetryBlockRequestResponse> {
+    let result;
+    for (let retry = 1; retry <= retryCount; retry++) {
+      try {
+        const startTime = Date.now();
+        // this.logger.debug(`start scan ${blockNumber}`, 'retryBlockRequest');
+        const data: Block | null = await Promise.race([
+          this.getBlock(blockNumber),
+          sleep(timeoutMs).then(() => {
+            throw new Error('Block request timed out');
+          }),
+        ]);
+        this.logger.debug(
+          `retryBlockRequest success ${retry}/${retryCount} block:${blockNumber},time consuming:${(Date.now() - startTime) / 1000
+          }/s`,
+        );
+        result = {
+          number: blockNumber,
+          block: data,
+          error: null,
+        };
+        if (!isEmpty(data)) {
+          break;
+        }
+      } catch (error) {
+        if (retry >= retryCount) {
+          this.logger.error(
+            `retryBlockRequest error ${retry}/${retryCount} block:${blockNumber} ${error.message}`,
+            error.stack,
+          );
+          result = {
+            number: blockNumber,
+            block: null,
+            error: error.message,
+          };
+        }
+      }
+    }
+    return result;
+  }
+
+  async requestTransactionReceipt(hash: string, timeoutMs: number) {
+    try {
+      const data = await Promise.race([
+        this.getTransactionReceipt(hash),
+        sleep(timeoutMs).then(() => {
+          throw new Error('Block request timed out');
+        }),
+      ]);
+      return data;
+    } catch (error) {
+      throw new Error(
+        `Failed to request transaction receipt: ${error.message}`,
+      );
+    }
+  }
+
+  async retryRequestGetTransactionReceipt(
+    hash: string,
+    retryCount = 3,
+    timeoutMs = this.requestTimeout,
+  ) {
+    const result = {
+      hash: hash,
+      data: null,
+      error: null,
+    };
+
+    for (let retry = 1; retry <= retryCount; retry++) {
+      try {
+        const startTime = Date.now();
+        const data = await this.requestTransactionReceipt(hash, timeoutMs);
+        if (data) {
+          result.data = data;
+          break;
+        }
+        // if (retry > 1) {
+        //   this.logger.debug(
+        //     `[2-Single] retryRequestGetTransactionReceipt ${retry}/${retryCount} hash:${hash}, time consuming:${
+        //       (Date.now() - startTime) / 1000
+        //     }/s`,
+        //   );
+        // }
+      } catch (error) {
+        if (retry >= retryCount) {
+          this.logger.error(
+            `retryRequestGetTransactionReceipt error ${retry}/${retryCount} hash:${hash} ${error.message}`,
+            error.stack,
+          );
+          result.error = error.message;
+        }
+      }
+    }
+    if (result.error) {
+      throw result.error;
+    }
+    return result;
+  }
+
+  protected async setLastScannedBlockNumber(
+    blockNumber: number,
+  ): Promise<void> {
+    // await this.db.put("LastScannedBlockNumber", blockNumber.toString());
+    await this.pendingDBLock.runExclusive(async () => {
+      return await outputFile(
+        `runtime/scan/${this.chainId}`,
+        blockNumber.toString(),
+      );
+    });
+  }
+
+  public async getLastScannedBlockNumber(): Promise<number> {
+    let lastScannedBlockNumber;
+    try {
+      lastScannedBlockNumber = +readFileSync(`runtime/scan/${this.chainId}`);
+    } catch (error) {
+      this.logger.error(
+        `getLastScannedBlockNumber error ${error.message}`,
+        error.stack,
+      );
+    } finally {
+      if (!lastScannedBlockNumber) {
+        lastScannedBlockNumber = await this.getLatestBlockNumber();
+        this.logger.debug(`networkBlock ${lastScannedBlockNumber}`);
+        await this.setLastScannedBlockNumber(lastScannedBlockNumber);
+      }
+    }
+    return lastScannedBlockNumber;
+    // const lastScannedBlockNumber = await this.db.get('LastScannedBlockNumber').catch(async (reason) => {
+    //     const networkBlock = await this.getLatestBlockNumber();
+    //     this.logger.debug('networkBlock', networkBlock);
+    //     await this.setLastScannedBlockNumber(networkBlock);
+    //     return networkBlock;
+    // });
+    // return +lastScannedBlockNumber;
+  }
+  protected async setPendingScanBlocks(blockNumber: number[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      return this.pendingDBLock.runExclusive(async () => {
+        try {
+          const db = this.getDB();
+          const subDB = db.sublevel('pending-scan');
+          const result = await subDB.batch(
+            blockNumber.map((num) => {
+              return {
+                type: 'put',
+                key: num.toString(),
+                value: '',
+              };
+            }),
+          );
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  }
+  protected async delPendingScanBlocks(blockNumber: number[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.pendingDBLock.runExclusive(async () => {
+        try {
+          const db = this.getDB();
+          const subDB = db.sublevel('pending-scan');
+          const result = await subDB.batch(
+            blockNumber.map((num) => {
+              return {
+                type: 'del',
+                key: num.toString(),
+              };
+            }),
+          );
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  }
+
+  protected getChainConfigToken(address: string) {
+    return this.chainConfigService.getTokenByChain(
+      String(this.chainId),
+      address,
+    );
+  }
+  protected getChainConfigContract(toAddress: string) {
+    const chainConfig = this.chainConfigService.getChainInfo(this.chainId);
+    if (chainConfig.contract) {
+      for (const [addr, name] of Object.entries(chainConfig.contract)) {
+        if (equals(addr, toAddress)) {
+          return { contract: addr, name };
+        }
+      }
+    }
+  }
+
+  async getLatestBlockNumber(): Promise<number> {
+    throw new Error(
+      `${this.chainId} getLatestBlockNumber method not implemented`,
+    );
+  }
+
+  async handleTransaction(
+    _transaction: TransactionResponse,
+    _receipt?: TransactionReceipt,
+  ): Promise<TransferAmountTransaction[] | null> {
+    throw new Error(`${this.chainId} handleTransaction method not implemented`);
+  }
+
+  async getBlock(_blockNumber: number): Promise<any> {
+    throw new Error(`${this.chainId} getBlock method not implemented`);
+  }
+  async getTransactionReceipt(_hash: string): Promise<any> {
+    throw new Error(
+      `${this.chainId} getTransactionReceipt method not implemented`,
+    );
+  }
+  async handleBlock(_block: Block): Promise<TransferAmountTransaction[]> {
+    throw new Error(`${this.chainId} handleBlock method not implemented`);
+  }
+}
