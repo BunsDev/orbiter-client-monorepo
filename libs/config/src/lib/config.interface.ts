@@ -42,4 +42,6 @@ export interface IChainConfig {
 }
 export interface ConfigModuleOptions {
 	envConfigPath: string
+    chainConfigPath:string
+    cachePath:string
 }

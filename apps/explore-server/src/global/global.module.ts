@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ConfigModule as GlobalConfigModule } from '@orbiter-finance/config';
+import { OrbiterConfigModule } from '@orbiter-finance/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WinstonModule, utilities } from 'nest-winston';
 import * as winston from 'winston';
@@ -16,8 +16,10 @@ import { isEmpty } from '@orbiter-finance/utils';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    GlobalConfigModule.forRoot({
-      envConfigPath: "explore-data-service/config.yaml"
+    OrbiterConfigModule.forRoot({
+      chainConfigPath:"explore-data-service/chains.yaml",
+      envConfigPath: "explore-data-service/config.yaml",
+      cachePath: join(__dirname,'runtime')
     }),
     ConsulModule.registerAsync({
       imports: [ConfigModule],

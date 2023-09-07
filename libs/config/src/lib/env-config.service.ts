@@ -1,45 +1,29 @@
 import { get, set, clone, isEmpty, isEqual } from 'lodash';
 import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService, registerAs } from '@nestjs/config';
-import { readFileSync, writeFileSync } from 'fs';
+import { outputFile } from 'fs-extra';
 import * as yaml from 'js-yaml';
 import { join } from 'path';
 import { sleep } from './utils'
 import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
 import { ConsulService } from 'libs/consul/src/lib/consul.service'
 import { Logger } from '@nestjs/common';
-const YAML_CONFIG_FILENAME = 'config.yaml';
-const NAME_SPACE = 'ENV';
-// export function ConfigRegister() {
-//     return registerAs(NAME_SPACE, () => {
-//         try {
-//             return yaml.load(
-//                 readFileSync(join(__dirname, YAML_CONFIG_FILENAME), 'utf8'),
-//             ) as Record<string, any>;
-//         } catch (error: any) {
-//             console.error(`init load ${YAML_CONFIG_FILENAME} fail ${error.message}`);
-//             return {};
-//         }
-//     });
-// }
 export function getConfig(name: string) {
     return get(ENVConfigService.configs, name);
 }
-import {ORBITER_CONFIG_MODULE_OPTS} from './config.constants';
-import {ConfigModuleOptions} from './config.interface';
+import { ORBITER_CONFIG_MODULE_OPTS } from './config.constants';
+import { ConfigModuleOptions } from './config.interface';
 @Injectable()
 export class ENVConfigService {
     public static configs: any;
-    //   private readonly logger = Logger(ENVConfigService.name);
     #init: boolean = false;
     constructor(
-        private readonly configService: ConfigService,
-        private readonly consul: ConsulService
+        private readonly consul: ConsulService,
+        @Inject(ORBITER_CONFIG_MODULE_OPTS) private readonly options: ConfigModuleOptions
     ) {
-        ENVConfigService.configs = this.configService.get(`${NAME_SPACE}`) || {};
+        ENVConfigService.configs = {};
         try {
             this.consul.watchKey(
-                'explore-data-service/config.yaml',
+                this.options.envConfigPath,
                 (config: KeyValueResult) => {
                     const data = config.yamlToJSON();
                     this.#init = true;
@@ -78,14 +62,14 @@ export class ENVConfigService {
     }
     async write() {
         if (isEmpty(ENVConfigService.configs)) {
-            throw new Error('MAKER_CONFIG ISEmpty');
+            throw new Error('no configuration to write');
         }
         if (ENVConfigService.configs) {
             const cloneConfig = clone(ENVConfigService.configs);
             delete cloneConfig['privateKey'];
             const data = yaml.dump(cloneConfig);
-            const filePath = join(__dirname, YAML_CONFIG_FILENAME);
-            await writeFileSync(filePath, data);
+            const filePath = join(this.options.cachePath, this.options.envConfigPath);
+            await outputFile(filePath, data);
         }
     }
 }

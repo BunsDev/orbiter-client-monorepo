@@ -11,10 +11,10 @@ import {ConfigModuleOptions} from './config.interface';
 	providers: [ChainConfigService, ENVConfigService],
 	exports: [ChainConfigService, ENVConfigService],
 })
-export class ConfigModule {
+export class OrbiterConfigModule {
 	static forRoot(options: ConfigModuleOptions): DynamicModule {
 		return {
-			module: ConfigModule,
+			module: OrbiterConfigModule,
 			providers: [
 				ENVConfigService,
 				ChainConfigService,

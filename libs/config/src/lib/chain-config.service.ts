@@ -1,39 +1,27 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService, registerAs } from '@nestjs/config';
+import { Injectable,Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { isEmpty } from 'lodash';
 import { join } from 'path';
-import { writeFileSync, readFileSync } from 'fs';
+import { outputFile } from 'fs-extra';
 import { isEqual } from 'lodash';
 import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
 import { ConsulService } from 'libs/consul/src/lib/consul.service'
 import { Logger } from '@nestjs/common';
 import { IChainConfig, Token } from './config.interface'
 import { equals } from 'libs/utils/src'
-const YAML_CONFIG_FILENAME = join(__dirname, 'chains.json');
-const NAME_SPACE = 'Chains';
-export function ChainConfigRegister() {
-    return registerAs(NAME_SPACE, () => {
-        try {
-            const configContent = readFileSync(YAML_CONFIG_FILENAME, 'utf8');
-            return JSON.parse(configContent);
-        } catch (error) {
-            console.error(`init load ${YAML_CONFIG_FILENAME} fail ${error.message}`);
-            return {};
-        }
-    });
-}
-
+import {ORBITER_CONFIG_MODULE_OPTS} from '../lib/config.constants'
+import {ConfigModuleOptions} from '../lib/config.interface'
 @Injectable()
 export class ChainConfigService {
     private static configs: Array<IChainConfig> = [];
     constructor(
-        private readonly configService: ConfigService,
         private readonly consul: ConsulService,
+        @Inject(ORBITER_CONFIG_MODULE_OPTS) private readonly options: ConfigModuleOptions
     ) {
-        ChainConfigService.configs = (this.configService.get('Chains') || []) as any;
+        ChainConfigService.configs = [];
         try {
             this.consul.watchKey(
-                'explore-data-service/chains.json',
+                this.options.chainConfigPath,
                 (config: KeyValueResult) => {
                     const data = config.toJSON();
                     if (!isEqual(data, ChainConfigService.configs)) {
@@ -190,12 +178,12 @@ export class ChainConfigService {
 
     async write() {
         if (isEmpty(ChainConfigService.configs)) {
-            throw new Error('MAKER_CONFIG ISEmpty');
+            throw new Error('no configuration to write');
         }
         if (ChainConfigService.configs) {
             const data = JSON.stringify(ChainConfigService.configs);
-            const filePath = join(YAML_CONFIG_FILENAME);
-            await writeFileSync(filePath, data);
+            const filePath = join(this.options.cachePath, this.options.envConfigPath);
+            await outputFile(filePath, data);
         }
     }
 }

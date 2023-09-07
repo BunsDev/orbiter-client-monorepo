@@ -2,10 +2,11 @@ import { TransferModule } from "./transfer/transfer.module";
 import { Global, Module } from '@nestjs/common';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ConfigModule as OrbiterConfigModule, ENVConfigService} from '@orbiter-finance/config';
+import { OrbiterConfigModule, ENVConfigService} from '@orbiter-finance/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { isEmpty } from '@orbiter-finance/utils';
+import { join } from "path";
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -26,7 +27,9 @@ import { isEmpty } from '@orbiter-finance/utils';
             },
         }),
         OrbiterConfigModule.forRoot({
-            envConfigPath: "explore-data-service/config.yaml"
+            chainConfigPath:"explore-data-service/chains.yaml",
+            envConfigPath: "explore-data-service/config.yaml",
+            cachePath: join(__dirname,'runtime')
         }),
         SequelizeModule.forRootAsync({
             inject: [ENVConfigService],
