@@ -1,0 +1,28 @@
+{
+  "node_name": "server",
+  "datacenter": "DataCenter",
+  "domain": "consul",
+  "data_dir": "/bitnami/consul",
+  "pid_file": "/opt/bitnami/consul/tmp/consul.pid",
+  "ui": true,
+  "bootstrap_expect": 1,
+  "performance": {
+    "raft_multiplier": 1
+  },
+  "addresses": {
+    "http": "0.0.0.0"
+  },
+  "ports": {
+    "http": 15008
+  },
+  "retry_join": ["127.0.0.1"],
+  "retry_join_wan": ["127.0.0.1"],
+  "acl": {
+    "enabled": true,
+    "default_policy": "deny",
+    "enable_token_persistence":true,
+    "tokens": {
+      "initial_management": "xxxxx"
+    }
+  }
+}

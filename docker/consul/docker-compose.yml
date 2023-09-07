@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+  consul:
+    image: bitnami/consul:latest
+    restart: always
+    ports:
+      - '15008:15008'
+    volumes:
+    - './cunsul/conf:/opt/bitnami/consul/conf'
+    - './consul/data:/bitnami/consul'

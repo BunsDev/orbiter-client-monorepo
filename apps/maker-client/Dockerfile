@@ -28,7 +28,7 @@ ENV PORT=3000
 
 # Create a system user and group for the maker-client application.
 RUN addgroup --system maker-client && \
-    adduser --system -G maker-client explore-server
+    adduser --system -G maker-client maker-client
 
 # Set the working directory in the container.
 WORKDIR /app
@@ -37,7 +37,7 @@ WORKDIR /app
 COPY --from=builder /app .
 
 # Change ownership of the copied files to the maker-client user.
-RUN chown -R explore-server:maker-client .
+RUN chown -R maker-client:maker-client .
 
 # Start the maker-client application.
-CMD [ "node", "explore-server/main.js" ]
+CMD [ "node", "maker-client/main.js" ]
