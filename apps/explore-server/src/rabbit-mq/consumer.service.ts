@@ -16,6 +16,7 @@ export class ConsumerService {
     while(true) {
       const channel = this.connectionManager.getChannel();
       if (channel) {
+        // TAG： Waiting for optimization
         break;
       }
     }
@@ -53,6 +54,7 @@ export class ConsumerService {
     while(true) {
       const channel = this.connectionManager.getChannel();
       if (channel) {
+        // TODO:Waiting for optimization
         break;
       }
     }
