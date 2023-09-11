@@ -42,8 +42,14 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     if (!transactions) {
       throw new Error(`${block.number} transactions empty `);
     }
+    const filterBeforeTransactions =
+    await this.filterBeforeTransactions<TransactionResponse>(transactions);
+    this.logger.info(`filterBeforeTransactions: ${filterBeforeTransactions.map(tx=> tx.hash)}`)
+    if (filterBeforeTransactions.length<=0) {
+      return [];
+    }
     const receipts = await Promise.all(
-      transactions.map((tx) => this.retryRequestGetTransactionReceipt(tx.hash)),
+      filterBeforeTransactions.map((tx) => this.retryRequestGetTransactionReceipt(tx.hash)),
     );
 
     const isErrorTx = receipts.find((row) => !isEmpty(row.error));
@@ -58,10 +64,8 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       throw new Error(`receipt error ${block.number}`);
     }
 
-    const filterBeforeTransactions =
-      await this.filterBeforeTransactions<TransactionResponse>(transactions);
 
-    const txTransfersArray = await Promise.all(
+      const txTransfersArray = await Promise.all(
       filterBeforeTransactions.map(async (transaction) => {
         const receipt = receipts.find((tx) => tx.hash === transaction.hash);
         if (isEmpty(receipt) || isEmpty(receipt.data)) {
@@ -107,6 +111,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       // fix v6/v5 difference
       receipt.hash = receipt.transactionHash;
       if (transaction.hash != receipt.hash) {
+        this.logger.error(`${transaction.hash} Hash inconsistency ${JSONStringify(receipt)}`)
         throw new Error(
           `${transaction.hash}/${receipt.hash} Hash inconsistency`,
         );
@@ -193,7 +198,11 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   }
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
     const provider = this.getProvider();
-    return await provider.getTransactionReceipt(hash);
+    const receipt = await provider.getTransactionReceipt(hash);
+    if (receipt.transactionHash!=hash) {
+      throw new Error(`provider getTransactionReceipt hash inconsistent expect ${hash} get ${receipt.transactionHash}`);
+    }
+    return receipt;
   }
   async getTransferFee(
     transaction: TransactionResponse,
@@ -289,6 +298,6 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         throw error;
       }
     }
-    return transactions;
+    return rows;
   }
 }

@@ -124,7 +124,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         throw error;
       }
     }
-    return transactions;
+    return rows;
   }
 
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
@@ -132,10 +132,16 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     if (!transactions) {
       throw new Error(`${block.number} transactions empty `);
     }
+ 
+    const filterBeforeTransactions =
+      await this.filterBeforeTransactions<TransactionResponse>(transactions);
+    this.logger.info(`filterBeforeTransactions: ${filterBeforeTransactions.map(tx=> tx.hash)}`)
+    if (filterBeforeTransactions.length<=0) {
+      return [];
+    }
     const receipts = await Promise.all(
-      transactions.map((tx) => this.retryRequestGetTransactionReceipt(tx.hash)),
+      filterBeforeTransactions.map((tx) => this.retryRequestGetTransactionReceipt(tx.hash)),
     );
-
     const isErrorTx = receipts.find((row) => !isEmpty(row.error));
     if (isErrorTx) {
       this.logger.error(
@@ -144,16 +150,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       );
       throw new Error(`receipt error ${block.number}`);
     }
-
-    const filterBeforeTransactions =
-      await this.filterBeforeTransactions<TransactionResponse>(transactions);
-
     const txTransfersArray = await Promise.all(
       filterBeforeTransactions.map(async (transaction) => {
         const receipt = receipts.find((tx) => tx.hash === transaction.hash);
         if (isEmpty(receipt) || isEmpty(receipt.data)) {
           throw new Error(`${transaction.hash} receipt not found`);
         }
+        console.log('请求--', transaction.hash)
         return this.handleTransaction(transaction, receipt.data);
       }),
     );
@@ -193,7 +196,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         receipt = await provider.getTransactionReceipt(transaction.hash);
       }
       if (transaction.hash != receipt.hash) {
-        throw new Error(`${transaction.hash} Hash inconsistency`);
+        this.logger.error(`${transaction.hash}/${receipt.hash} Hash inconsistency ${JSONStringify({
+          receipt,
+          transaction
+        })}`)
+        throw new Error(
+          `${transaction.hash}/${receipt.hash} Hash inconsistency`,
+        );
       }
       const chainConfig = this.chainConfig;
       const { nonce } = transaction;
@@ -280,7 +289,11 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   }
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
     const provider = this.getProvider();
-    return await provider.getTransactionReceipt(hash);
+    const receipt = await provider.getTransactionReceipt(hash);
+    if (receipt.hash!=hash) {
+      throw new Error(`provider getTransactionReceipt hash inconsistent expect ${hash} get ${receipt.hash}`);
+    }
+    return receipt;
   }
   async getTransferFee(
     transaction: TransactionResponse,

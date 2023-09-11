@@ -163,6 +163,7 @@ export class SequencerService {
         await transaction.rollback();
       } else {
         sourceTx.status = 97;
+        sourceTx.targetMaker = transferResult.from;
         sourceTx.targetId = transferResult && transferResult.hash;
         await sourceTx.save({
           transaction,
@@ -180,6 +181,7 @@ export class SequencerService {
           await this.bridgeTransactionModel.update(
             {
               status: 99,
+              targetMaker: tx.from,
             },
             {
               where: {
@@ -398,6 +400,7 @@ export class SequencerService {
         await this.bridgeTransactionModel.update(
           {
             status: 97,
+            targetMaker: transferResult.from,
             targetId: transferResult && transferResult.hash
           },
           {
@@ -419,7 +422,7 @@ export class SequencerService {
           await this.bridgeTransactionModel.update(
             {
               status: 99,
-              targetId: tx.hash,
+              targetMaker: tx.from,
             },
             {
               where: {
