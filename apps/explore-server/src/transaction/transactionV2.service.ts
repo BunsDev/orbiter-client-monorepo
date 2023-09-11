@@ -17,6 +17,7 @@ import { Cron } from '@nestjs/schedule';
 import { uniq } from '@orbiter-finance/utils';
 import { createLoggerByName } from '../utils/logger';
 import { Sequelize } from 'sequelize-typescript';
+import { MemoryMatchingService } from './memory-matching.service';
 
 @Injectable()
 export class TransactionV2Service {
@@ -30,6 +31,7 @@ export class TransactionV2Service {
     private bridgeTransactionModel:typeof BridgeTransaction,
     protected chainConfigService: ChainConfigService,
     private sequelize: Sequelize,
+    protected memoryMatchingService: MemoryMatchingService,
   ) {
     const allConfig = [maker1, maker2, maker3, maker4];
     for (const makerConfigs of allConfig) {
@@ -509,31 +511,101 @@ export class TransactionV2Service {
       throw error;
     }
   }
+
   public async handleTransferByDestTx(transfer: Transfers) {
-    const t = await this.sequelize.transaction();
+    if (transfer.version!='2-1') {
+      throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
+    }
+    let t1;
+    try {
+      const memoryBT =
+        await this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
+      if (memoryBT && memoryBT.id) {
+        //
+        t1 = await this.sequelize.transaction();
+        const [rowCount] = await this.bridgeTransactionModel.update(
+          {
+            targetId: transfer.hash,
+            status: 99,
+            targetTime: transfer.timestamp,
+            targetFee: transfer.feeAmount,
+            targetFeeSymbol: transfer.feeToken,
+            targetNonce: transfer.nonce,
+            targetMaker: transfer.sender
+          },
+          {
+            where: {
+              id: memoryBT.id,
+              status: [0, 97, 98],
+            },
+            transaction: t1,
+          },
+        );
+        if (rowCount != 1) {
+          throw new Error(
+            'The number of modified rows in bridgeTransactionModel is incorrect',
+          );
+        }
+        const [updateTransferRows] = await this.transfersModel.update(
+          {
+            opStatus: 99,
+          },
+          {
+            where: {
+              hash: {
+                [Op.in]: [transfer.hash, memoryBT.sourceId],
+              },
+            },
+            transaction: t1,
+          },
+        );
+        if (updateTransferRows != 2) {
+          throw new Error(
+            'Failed to modify the opStatus status of source and target transactions',
+          );
+        }
+        await t1.commit();
+        this.memoryMatchingService.removeTransferMatchCache(memoryBT.sourceId);
+        this.memoryMatchingService.removeTransferMatchCache(transfer.hash);
+        this.logger.info(
+          `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
+        );
+        return memoryBT;
+      }
+    } catch (error) {
+      this.logger.error(
+        `handleTransferByDestTx matchV1GetBridgeTransactions match error ${transfer.hash} ${error.message}`,
+        error.stack,
+      );
+      t1 && (await t1.rollback());
+    }
+
+    // db match
+    const t2 = await this.sequelize.transaction();
     try {
       let btTx = await this.bridgeTransactionModel.findOne({
-        attributes: ['id'],
+        attributes: ['id', 'sourceId'],
         where: {
           targetChain: transfer.chainId,
           targetId: transfer.hash,
         },
-        transaction: t,
+        transaction: t2,
       });
       if (!btTx || !btTx.id) {
-        btTx = await this.bridgeTransactionModel.findOne({
-          attributes: ['id'],
-          where: {
-            status: [0, 97, 98],
-            targetSymbol: transfer.symbol,
-            targetAddress: transfer.receiver,
-            targetChain: transfer.chainId,
-            targetAmount: transfer.amount,
-            responseMaker: {
-              [Op.contains]: [transfer.sender],
-            },
+        const where = {
+          status: [0, 97, 98],
+          targetSymbol: transfer.symbol,
+          targetAddress: transfer.receiver,
+          targetChain: transfer.chainId,
+          targetAmount: transfer.amount,
+          responseMaker: {
+            [Op.contains]: [transfer.sender],
           },
-          transaction: t,
+        };
+        btTx = await this.bridgeTransactionModel.findOne({
+          attributes: ['id', 'sourceId'],
+          where,
+          transaction: t2,
         });
       }
       if (btTx && btTx.id) {
@@ -543,8 +615,9 @@ export class TransactionV2Service {
         btTx.targetFee = transfer.feeAmount;
         btTx.targetFeeSymbol = transfer.feeToken;
         btTx.targetNonce = transfer.nonce;
+        btTx.targetMaker = transfer.sender;
         await btTx.save({
-          transaction: t,
+          transaction: t2,
         });
         await this.transfersModel.update(
           {
@@ -554,19 +627,31 @@ export class TransactionV2Service {
             where: {
               id: transfer.id,
             },
-            transaction: t,
+            transaction: t2,
           },
         );
-        console.log('match success', transfer.hash);
+        this.logger.info(
+          `match success from db ${btTx.sourceId}  /  ${btTx.targetId}`,
+        );
+        this.memoryMatchingService.removeTransferMatchCache(btTx.sourceId);
+        this.memoryMatchingService.removeTransferMatchCache(btTx.targetId);
       } else {
-        console.log('match not found SourceTx', transfer.hash);
+        this.memoryMatchingService
+          .addTransferMatchCache(transfer)
+          .catch((error) => {
+            this.logger.error(
+              `${transfer.hash} addTransferMatchCache error ${error.message}`,
+              error.stack,
+            );
+          });
       }
-      await t.commit();
+      await t2.commit();
     } catch (error) {
-      t && (await t.rollback());
+      t2 && (await t2.rollback());
       throw error;
     }
   }
+
   private getSecurityCode(value: string): string {
     // const code = value.substring(value.length - 4, value.length);
     const code = new BigNumber(value).mod(1000000).toString();

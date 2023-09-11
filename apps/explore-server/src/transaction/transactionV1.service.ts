@@ -503,7 +503,11 @@ export class TransactionV1Service {
       throw error;
     }
   }
+
   public async handleTransferByDestTx(transfer: TransfersModel) {
+    if (transfer.version!='1-1') {
+      throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
+    }
     let t1;
     try {
       const memoryBT =
@@ -519,6 +523,7 @@ export class TransactionV1Service {
             targetFee: transfer.feeAmount,
             targetFeeSymbol: transfer.feeToken,
             targetNonce: transfer.nonce,
+            targetMaker: transfer.sender
           },
           {
             where: {
@@ -602,6 +607,7 @@ export class TransactionV1Service {
         btTx.targetFee = transfer.feeAmount;
         btTx.targetFeeSymbol = transfer.feeToken;
         btTx.targetNonce = transfer.nonce;
+        btTx.targetMaker = transfer.sender;
         await btTx.save({
           transaction: t2,
         });
