@@ -34,8 +34,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     lastScannedBlockNumber: number,
     safetyBlockNumber: number,
   ) {
-    return [13565815];
-    // return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
+    return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
   }
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions; // TAG: v5/v6 difference
