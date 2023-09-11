@@ -81,7 +81,7 @@ export default class EVMVUtils {
       if (event) {
         txData.sender = transaction.from;
         txData.receiver = parsedData.args[0];
-        txData.value = new BigNumber(parsedData.args[1]).toString();
+        txData.value = new BigNumber(parsedData.args[1]).toFixed(0);
         txData.amount = new BigNumber(txData.value)
           .div(Math.pow(10, tokenInfo.decimals))
           .toString();
@@ -159,7 +159,7 @@ export default class EVMVUtils {
     // const chainInfo = ChainUtil.getChainInfoByChainId(chainId);
     if (parsedData.signature == 'transfer(address,bytes)') {
       tokenInfo = chainInfo.nativeCurrency;
-      txData.value = new BigNumber(transaction.value.toString()).toString();
+      txData.value = new BigNumber(transaction.value.toString()).toFixed(0);
       txData.amount = new BigNumber(txData.value)
         .div(Math.pow(10, tokenInfo.decimals))
         .toString();
@@ -186,7 +186,7 @@ export default class EVMVUtils {
         txData.symbol = tokenInfo.symbol;
         txData.sender = event.args[0];
         txData.receiver = event.args[1];
-        txData.value = new BigNumber(event.args[2]).toString();
+        txData.value = new BigNumber(event.args[2]).toFixed(0);
         txData.amount = new BigNumber(txData.value)
           .div(Math.pow(10, tokenInfo.decimals))
           .toString();
@@ -244,7 +244,7 @@ export default class EVMVUtils {
           parsedLogData.topic ===
             '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
         ) {
-          const value = new BigNumber(parsedLogData.args[1]).toString();
+          const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           transfers.push({
             ...txData,
             hash: `${txData.hash}#${transfers.length}`,
@@ -274,7 +274,7 @@ export default class EVMVUtils {
           const tokenInfo = chainInfo.tokens.find((t) =>
             equals(t.address, parsedData.args[0]),
           );
-          const value = new BigNumber(parsedLogData.args[2]).toString();
+          const value = new BigNumber(parsedLogData.args[2]).toFixed(0);
           transfers.push({
             ...txData,
             hash: `${txData.hash}#${transfers.length}`,
