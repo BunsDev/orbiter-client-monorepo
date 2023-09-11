@@ -3,12 +3,14 @@ import { Inject, Injectable, LoggerService, OnModuleDestroy, OnModuleInit } from
 import { connect, Connection, Channel } from 'amqplib';
 import { ENVConfigService } from '@orbiter-finance/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import {AlertService} from '@orbiter-finance/alert'
 @Injectable()
 export class RabbitmqConnectionManager
   implements OnModuleInit, OnModuleDestroy
 {
   private connection: Connection;
   private channel: Channel;
+  private alertService: AlertService
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
     private readonly envConfigService: ENVConfigService) {
@@ -29,17 +31,20 @@ export class RabbitmqConnectionManager
       const url = await this.envConfigService.getAsync<string>('RABBITMQ_URL');
       this.connection = await connect(url);
       this.connection.on('error', (error) => {
+        this.alertService.sendTelegramAlert("ERROR",  `RabbitMQ connection error:${error.message}`);
         this.logger.error('RabbitMQ connection error:', error.message);
       });
       this.connection.on('close', () => {
         this.logger.warn(
           'RabbitMQ connection closed. Attempting to reconnect...',
         );
+        this.alertService.sendTelegramAlert("ERROR", "RabbitMQ connection closed. Attempting to reconnect...");
         setTimeout(() => this.connectToRabbitMQ(), 5000);
       });
       this.channel = await this.connection.createChannel();
       this.logger.log('Connected to RabbitMQ');
     } catch (error) {
+      this.alertService.sendTelegramAlert("ERROR",  `Failed to connect to RabbitMQ:${error.message}`);
       this.logger.error(
         `Failed to connect to RabbitMQ:${error.message}`,
         error.stack,
@@ -55,6 +60,7 @@ export class RabbitmqConnectionManager
     }
     if (this.connection) {
       await this.connection.close();
+      this.alertService.sendTelegramAlert("ERROR",  'Disconnected from RabbitMQ');
       this.logger.log('Disconnected from RabbitMQ');
     }
   }

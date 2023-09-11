@@ -8,3 +8,6 @@ Dockerfile
 .git
 .gitignore
 .npmrc
+**/logs
+**/runtime
+.cache

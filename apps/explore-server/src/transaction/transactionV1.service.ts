@@ -5,7 +5,7 @@ import { TransactionID } from '../utils'
 import { equals, fix0xPadStartAddress } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { ChainConfigService } from '@orbiter-finance/config';
+import { ChainConfigService,ENVConfigService } from '@orbiter-finance/config';
 import * as maker1 from '../config/maker-1.json';
 import * as maker2 from '../config/maker-2.json';
 import * as maker3 from '../config/maker-3.json';
@@ -30,6 +30,7 @@ export class TransactionV1Service {
     protected chainConfigService: ChainConfigService,
     protected memoryMatchingService: MemoryMatchingService,
     private sequelize: Sequelize,
+    protected envConfigService: ENVConfigService,
   ) {
     const allConfig = [maker1, maker2, maker3, maker4];
     for (const makerConfigs of allConfig) {
@@ -386,6 +387,15 @@ export class TransactionV1Service {
     createdData.targetAddress = data.targetAddress.toLowerCase();
     // }
     createdData.responseMaker = [rule.sender.toLocaleLowerCase()];
+    const v1ResponseMaker = this.envConfigService.get("v1ResponseMaker");
+    console.log(v1ResponseMaker, '-=v1ResponseMaker')
+    if (v1ResponseMaker) {
+      for (const fakeMaker in v1ResponseMaker) {
+        if (v1ResponseMaker[fakeMaker].includes(rule.sender.toLocaleLowerCase())) {
+          createdData.responseMaker.push(fakeMaker);
+        }
+      }
+    }
   }
   public async handleTransferBySourceTx(transfer: TransfersModel) {
     if (transfer.status != 2) {
