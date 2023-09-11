@@ -32,8 +32,10 @@ export class RpcScanningService implements RpcScanningInterface {
       });
       RpcScanningService.levels[chainId] = db;
     }
-    this.logger = createLoggerByName(`rpcscan-${this.chainId}`);
-    this.init();
+    if (chainId) {
+      this.logger = createLoggerByName(`rpcscan-${this.chainId}`);
+      this.init();
+    }
   }
   get chainConfig(): IChainConfig {
     return this.ctx.chainConfigService.getChainInfo(this.chainId);
@@ -112,7 +114,7 @@ export class RpcScanningService implements RpcScanningInterface {
       this.lastBlockNumber = rpcLastBlockNumber;
 
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
-      const targetConfirmation = +this.chainConfig.targetConfirmation || 1;
+      const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = rpcLastBlockNumber - targetConfirmation;
       this.logger.debug(
         `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
