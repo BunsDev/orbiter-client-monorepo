@@ -65,7 +65,7 @@ export default class EVMVUtils {
         timestamp: 0,
         status,
         nonce,
-        contract: transaction.to,
+        // contract: transaction.to,
         calldata: parsedData.args.toArray(),
         selector: parsedData.selector,
         signature: parsedData.signature,

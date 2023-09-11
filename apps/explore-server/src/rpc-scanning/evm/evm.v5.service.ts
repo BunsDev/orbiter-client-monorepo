@@ -34,8 +34,8 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     lastScannedBlockNumber: number,
     safetyBlockNumber: number,
   ) {
-    // return [12867233];
-    return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
+    return [13565815];
+    // return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
   }
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions; // TAG: v5/v6 difference
@@ -44,7 +44,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     }
     const filterBeforeTransactions =
     await this.filterBeforeTransactions<TransactionResponse>(transactions);
-    this.logger.info(`filterBeforeTransactions: ${filterBeforeTransactions.map(tx=> tx.hash)}`)
+    this.logger.info(`block ${block.number} filterBeforeTransactions: ${filterBeforeTransactions.map(tx=> tx.hash)}`)
     if (filterBeforeTransactions.length<=0) {
       return [];
     }
@@ -95,9 +95,9 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   ): Promise<TransferAmountTransaction[] | null> {
     try {
       let transfers: TransferAmountTransaction[] = [];
-      // if (transaction.to == ZeroAddress || transaction.from == ZeroAddress) {
-      //     return transfers;
-      // }
+      if (transaction.to == ZeroAddress) {
+          return transfers;
+      }
       const provider = this.getProvider();
       if (!receipt.blockNumber || !receipt.blockHash) {
         throw new Error(
@@ -164,6 +164,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
             timestamp: 0,
             status,
             nonce,
+            receipt
           });
         }
       }
@@ -173,6 +174,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
         tx.token = tx.token && tx.token.toLocaleLowerCase();
         tx.nonce = nonce;
+        tx.receipt = receipt;
         tx.fee = new BigNumber(fee.toString())
           .dividedBy(transfers.length)
           .toString();
@@ -214,62 +216,60 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   }
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
-    let contractList = [];
-    if (this.chainConfig.contract) {
-      contractList = Object.keys(this.chainConfig.contract).map((addr) =>
-        addr.toLocaleLowerCase(),
-      );
-    }
+    const contractList = this.chainConfig.contract  
+    ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())  
+    : [];
 
     for (const row of transactions) {
       try {
         if (row['to'] == ZeroAddress) {
           continue;
         }
+        const toAddrLower = (row['to'] || "").toLocaleLowerCase();
+        const fromAddrLower = (row['from'] || "").toLocaleLowerCase();
         const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
-          row['from'],
+          fromAddrLower,
         );
         if (senderValid.exist) {
           rows.push(row);
           continue;
         }
         const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
-          row['to'],
+          toAddrLower,
         );
         if (receiverValid.exist) {
           rows.push(row);
           continue;
         }
         const senderResponseValid =
-          await this.ctx.mdcService.validMakerResponseAddress(row['from']);
+          await this.ctx.mdcService.validMakerResponseAddress(fromAddrLower);
         if (senderResponseValid.exist) {
           rows.push(row);
           continue;
         }
         const receiverResponseValid =
-          await this.ctx.mdcService.validMakerResponseAddress(row['to']);
+          await this.ctx.mdcService.validMakerResponseAddress(toAddrLower);
         if (receiverResponseValid.exist) {
           rows.push(row);
           continue;
         }
-        // is fllow contract
-        if (contractList.includes(row['to'])) {
+        // is to contract addr
+        if (contractList.includes(toAddrLower)) {
           rows.push(row);
           continue;
         }
         if (row['data'] && row['data'] != '0x') {
           const tokenInfo = this.ctx.chainConfigService.getTokenByAddress(
             this.chainId,
-            row['to'],
+            toAddrLower,
           );
           if (tokenInfo && EVMV5Utils.isERC20Transfer(row['data'])) {
-            // verift from || to
+            // valid from || to
             const result = EVMV5Utils.decodeERC20TransferData(row['data']);
             if (result && result.args) {
               if (!Array.isArray(result.args)) {
                 this.logger.error(
-                  `filterTransactions error break ${
-                    row['hash']
+                  `filterTransactions error break ${row['hash']
                   } ${JSONStringify(result.args)}`,
                 );
                 continue;

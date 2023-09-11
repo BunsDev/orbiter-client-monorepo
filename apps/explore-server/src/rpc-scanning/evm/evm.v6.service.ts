@@ -12,7 +12,7 @@ import {
   TransferAmountTransactionStatus,
 } from '../rpc-scanning.interface';
 import EVMV6Utils from './lib/v6';
-import { Inject, LoggerService } from '@nestjs/common';
+
 export class EVMRpcScanningV6Service extends RpcScanningService {
   #provider: provider.Orbiter6Provider;
   getProvider() {
@@ -41,53 +41,51 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   }
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
-    let contractList = [];
-    if (this.chainConfig.contract) {
-      contractList = Object.keys(this.chainConfig.contract).map((addr) =>
-        addr.toLocaleLowerCase(),
-      );
-    }
-
+    const contractList = this.chainConfig.contract  
+    ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())  
+    : [];
     for (const row of transactions) {
       try {
         if (row['to'] == ZeroAddress) {
           continue;
         }
+        const toAddrLower = (row['to'] || "").toLocaleLowerCase();
+        const fromAddrLower = (row['from'] || "").toLocaleLowerCase();
         const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
-          row['from'],
+          fromAddrLower,
         );
         if (senderValid.exist) {
           rows.push(row);
           continue;
         }
         const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
-          row['to'],
+          toAddrLower,
         );
         if (receiverValid.exist) {
           rows.push(row);
           continue;
         }
         const senderResponseValid =
-          await this.ctx.mdcService.validMakerResponseAddress(row['from']);
+          await this.ctx.mdcService.validMakerResponseAddress(fromAddrLower);
         if (senderResponseValid.exist) {
           rows.push(row);
           continue;
         }
         const receiverResponseValid =
-          await this.ctx.mdcService.validMakerResponseAddress(row['to']);
+          await this.ctx.mdcService.validMakerResponseAddress(toAddrLower);
         if (receiverResponseValid.exist) {
           rows.push(row);
           continue;
         }
-        // is fllow contract
-        if (contractList.includes(row['to'])) {
+        // is to contract addr
+        if (contractList.includes(toAddrLower)) {
           rows.push(row);
           continue;
         }
         if (row['data'] && row['data'] != '0x') {
           const tokenInfo = this.ctx.chainConfigService.getTokenByAddress(
             this.chainId,
-            row['to'],
+            toAddrLower,
           );
           if (tokenInfo && EVMV6Utils.isERC20Transfer(row['data'])) {
             // valid from || to
@@ -135,7 +133,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
  
     const filterBeforeTransactions =
       await this.filterBeforeTransactions<TransactionResponse>(transactions);
-    this.logger.info(`filterBeforeTransactions: ${filterBeforeTransactions.map(tx=> tx.hash)}`)
+    this.logger.info(`block ${block.number} filterBeforeTransactions: ${filterBeforeTransactions.map(tx=> tx.hash)}`)
     if (filterBeforeTransactions.length<=0) {
       return [];
     }
@@ -156,7 +154,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         if (isEmpty(receipt) || isEmpty(receipt.data)) {
           throw new Error(`${transaction.hash} receipt not found`);
         }
-        console.log('请求--', transaction.hash)
         return this.handleTransaction(transaction, receipt.data);
       }),
     );
@@ -182,9 +179,9 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   ): Promise<TransferAmountTransaction[] | null> {
     try {
       let transfers: TransferAmountTransaction[] = [];
-      // if (transaction.to == ZeroAddress || transaction.from == ZeroAddress) {
-      //     return transfers;
-      // }
+      if (transaction.to == ZeroAddress) {
+          return transfers;
+      }
       const provider = this.getProvider();
       if (!receipt.blockNumber || !receipt.blockHash) {
         throw new Error(
@@ -254,6 +251,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
             timestamp: 0,
             status,
             nonce,
+            receipt
           });
         }
       }
@@ -263,6 +261,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
         tx.token = tx.token && tx.token.toLocaleLowerCase();
         tx.nonce = nonce;
+        tx.receipt = receipt;
         tx.fee = new BigNumber(fee.toString())
           .dividedBy(transfers.length)
           .toString();

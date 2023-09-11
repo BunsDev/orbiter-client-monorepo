@@ -12,6 +12,7 @@ import { StarknetRpcScanningService } from './starknet/starknet.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { EVMRpcScanningV5Service } from './evm/evm.v5.service';
 import { MdcService } from '../thegraph/mdc/mdc.service';
+import {ZKSyncEraRpcScanningService} from './zksyncEra/zksyncEra.service'
 @Injectable()
 export class RpcScanningFactory {
   constructor(
@@ -29,12 +30,18 @@ export class RpcScanningFactory {
       mdcService: this.mdcService,
     }
     switch (key) {
-      case 'EVMRpcScanningV5Service':
-        return new EVMRpcScanningV5Service(
+      case 'ZKSyncEraRpcScanningService':
+        return new ZKSyncEraRpcScanningService(
           chainId,
           ctx
         );
         break;
+        case 'EVMRpcScanningV5Service':
+          return new EVMRpcScanningV5Service(
+            chainId,
+            ctx
+          );
+          break;
       case 'EVMRpcScanningService':
       case 'EVMRpcScanningV6Service':
         return new EVMRpcScanningV6Service(

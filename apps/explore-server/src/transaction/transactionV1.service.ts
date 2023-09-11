@@ -388,7 +388,6 @@ export class TransactionV1Service {
     // }
     createdData.responseMaker = [rule.sender.toLocaleLowerCase()];
     const v1ResponseMaker = this.envConfigService.get("v1ResponseMaker");
-    console.log(v1ResponseMaker, '-=v1ResponseMaker')
     if (v1ResponseMaker) {
       for (const fakeMaker in v1ResponseMaker) {
         if (v1ResponseMaker[fakeMaker].includes(rule.sender.toLocaleLowerCase())) {
