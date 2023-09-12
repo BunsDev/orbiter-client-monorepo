@@ -1,7 +1,7 @@
 {
-  "name": "explore-openapi",
+  "name": "explore-open-api",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "apps/explore-openapi/src",
+  "sourceRoot": "apps/explore-open-api/src",
   "projectType": "application",
   "targets": {
     "build": {
@@ -13,14 +13,11 @@
       "options": {
         "target": "node",
         "compiler": "tsc",
-        "outputPath": "dist/apps/explore-openapi",
-        "main": "apps/explore-openapi/src/main.ts",
-        "tsConfig": "apps/explore-openapi/tsconfig.app.json",
-        "assets": [
-          "apps/explore-openapi/src/assets"
-        ],
+        "outputPath": "dist/apps/explore-open-api",
+        "main": "apps/explore-open-api/src/main.ts",
+        "tsConfig": "apps/explore-open-api/tsconfig.app.json",
         "isolatedConfig": true,
-        "webpackConfig": "apps/explore-openapi/webpack.config.js"
+        "webpackConfig": "apps/explore-open-api/webpack.config.js"
       },
       "configurations": {
         "development": {},
@@ -31,14 +28,14 @@
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
       "options": {
-        "buildTarget": "explore-openapi:build"
+        "buildTarget": "explore-open-api:build"
       },
       "configurations": {
         "development": {
-          "buildTarget": "explore-openapi:build:development"
+          "buildTarget": "explore-open-api:build:development"
         },
         "production": {
-          "buildTarget": "explore-openapi:build:production"
+          "buildTarget": "explore-open-api:build:production"
         }
       }
     },
@@ -49,7 +46,7 @@
       ],
       "options": {
         "lintFilePatterns": [
-          "apps/explore-openapi/**/*.ts"
+          "apps/explore-open-api/**/*.ts"
         ]
       }
     },
@@ -59,7 +56,7 @@
         "{workspaceRoot}/coverage/{projectRoot}"
       ],
       "options": {
-        "jestConfig": "apps/explore-openapi/jest.config.ts",
+        "jestConfig": "apps/explore-open-api/jest.config.ts",
         "passWithNoTests": true
       },
       "configurations": {

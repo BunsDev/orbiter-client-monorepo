@@ -41,7 +41,26 @@ export interface IChainConfig {
     service: { [key: string]: string };
 }
 export interface ConfigModuleOptions {
-	envConfigPath: string
-    chainConfigPath:string
-    cachePath:string
+  envConfigPath: string
+  chainConfigPath: string
+  cachePath?: string
+  tradingPairsPath?: string
+}
+export interface IMakerConfig {
+  [makerAddress: string]: {
+    [chainIdPair: string]: {
+      [symbolPair: string]: IMakerDataConfig;
+    };
+  }
+}
+export interface IMakerDataConfig {
+  makerAddress: string;
+  sender: string;
+  gasFee: number;
+  tradingFee: number;
+  maxPrice: number;
+  minPrice: number;
+  slippage: number;
+  startTime: number;
+  endTime: number;
 }

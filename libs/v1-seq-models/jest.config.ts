@@ -1,11 +1,11 @@
 /* eslint-disable */
 export default {
-  displayName: 'explore-openapi',
+  displayName: 'v1-seq-models',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }]
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../coverage/apps/explore-openapi'
+  coverageDirectory: '../../coverage/libs/v1-seq-models'
 };

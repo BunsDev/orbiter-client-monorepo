@@ -1,0 +1,14 @@
+version: '3.8'
+networks:
+  app-network:
+    driver: bridge
+services:
+  ssl-proxy:
+    image: nginx:stable-alpine
+    ports:
+      - 443:443
+    volumes:
+      - './ssl/:/etc/nginx/conf.d/ssl/'
+      - './default.conf:/etc/nginx/conf.d/default.conf'
+    networks:
+      - app-network
