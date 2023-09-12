@@ -33,7 +33,7 @@ export class ConsulService implements OnModuleInit {
     await this.consulClient.kv.set(key, value);
   }
 
-  watchKey(key: string, callback: (newValue: KeyValueResult) => void): void {
+  watchKey(key: string, callback: (newValue: KeyValueResult) => void) {
     const opts = {
       key,
     };
@@ -52,5 +52,63 @@ export class ConsulService implements OnModuleInit {
     watch.on('error', (err) => {
       console.error(`watchConfig error ${key}`, err);
     });
+    return watch;
+  }
+
+  async watchFolder(folderKey: string, callback: (newValue: { [key: string]: KeyValueResult }) => void): Promise<void> {
+    const keys: string[] = await this.consulClient.kv.keys(folderKey);
+    const keyMap = {};
+    const promises = [];
+    const resMap: { [key: string]: KeyValueResult } = {};
+    for (const key of keys) {
+      promises.push(new Promise((resolve) => {
+        try {
+          keyMap[key] = this.watchKey(key, function (newValue: KeyValueResult) {
+            const makerAddress = key.split(folderKey + '/')[1];
+            if (!makerAddress) {
+              resolve(null);
+            }
+            resMap[makerAddress.toLowerCase()] = newValue;
+            resolve(newValue);
+          });
+        } catch (err) {
+          console.error(`watchFolder key error ${key}`, err);
+          resolve(null);
+        }
+      }));
+    }
+    await Promise.all(promises);
+    callback(resMap);
+
+    const _this = this;
+    setInterval(async () => {
+      try {
+        // await checkConsul();
+        const currentKeys = await _this.consulClient.kv.keys(folderKey);
+        for (const key of currentKeys) {
+          if (!keyMap[key]) {
+            console.log(`add consul config ${key}`);
+            keyMap[key] = _this.watchKey(key, function (newValue: KeyValueResult) {
+              const makerAddress = key.split(folderKey + '/')[1];
+              if (!makerAddress) {
+                return;
+              }
+              const obj = {};
+              obj[makerAddress.toLowerCase()] = newValue;
+              callback(obj);
+            });
+          }
+        }
+        for (const key in keyMap) {
+          if (!currentKeys.find(item => item === key)) {
+            console.log(`delete consul config ${key}`);
+            keyMap[key].end();
+            delete keyMap[key];
+          }
+        }
+      } catch (e) {
+        console.error('watch new config error', e);
+      }
+    }, 30000);
   }
 }

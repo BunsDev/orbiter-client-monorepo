@@ -34,6 +34,9 @@
       "@orbiter-finance/subgraph-sdk": [
         "libs/subgraph-sdk/src/index.ts"
       ],
+      "@orbiter-finance/v1-seq-models": [
+        "libs/v1-seq-models/src/index.ts"
+      ],
       "@orbiter-finance/utils": [
         "libs/utils/src/index.ts"
       ]
