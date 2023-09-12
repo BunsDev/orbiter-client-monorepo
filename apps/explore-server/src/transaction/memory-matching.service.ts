@@ -25,16 +25,16 @@ export class MemoryMatchingService {
           this.transfersID[transfer.version].delete(transfer.hash);
         }
       } else {
-        if (transfer.version === '1-1') {
-          const matchTx = this.matchV1GetBridgeTransactions(transfer);
-          if (matchTx) {
-            this.logger.info(
-              `for match tx: source hash:${matchTx.sourceId}，dest hash:${
-                transfer.hash
-              }, ${JSON.stringify(matchTx)}`,
-            );
-          }
-        }
+      //   if (transfer.version === '1-1') {
+      //     const matchTx = this.matchV1GetBridgeTransactions(transfer);
+      //     if (matchTx) {
+      //       this.logger.info(
+      //         `for match tx: source hash:${matchTx.sourceId}，dest hash:${
+      //           transfer.hash
+      //         }, ${JSON.stringify(matchTx)}`,
+      //       );
+      //     }
+      //   }
       }
     }
     for (let i = this.bridgeTransactions.length - 1; i >= 0; i--) {
