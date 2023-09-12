@@ -12,22 +12,27 @@ import { StarknetRpcScanningService } from './starknet/starknet.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { EVMRpcScanningV5Service } from './evm/evm.v5.service';
 import { MdcService } from '../thegraph/mdc/mdc.service';
-import {ZKSyncEraRpcScanningService} from './zksyncEra/zksyncEra.service'
+import { ZKSyncEraRpcScanningService } from './zksyncEra/zksyncEra.service'
+import { Context } from './rpc-scanning.interface'
+import { MakerService } from '../maker/maker.service'
 @Injectable()
 export class RpcScanningFactory {
   constructor(
     private chainConfigService: ChainConfigService,
     private transactionService: TransactionService,
     protected mdcService: MdcService,
+    protected makerService: MakerService,
+
   ) { }
 
   createService(chainId: string): RpcScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['rpc'];
-    const ctx = {
+    const ctx: Context = {
       chainConfigService: this.chainConfigService,
       transactionService: this.transactionService,
       mdcService: this.mdcService,
+      makerService: this.makerService
     }
     switch (key) {
       case 'ZKSyncEraRpcScanningService':
@@ -36,12 +41,12 @@ export class RpcScanningFactory {
           ctx
         );
         break;
-        case 'EVMRpcScanningV5Service':
-          return new EVMRpcScanningV5Service(
-            chainId,
-            ctx
-          );
-          break;
+      case 'EVMRpcScanningV5Service':
+        return new EVMRpcScanningV5Service(
+          chainId,
+          ctx
+        );
+        break;
       case 'EVMRpcScanningService':
       case 'EVMRpcScanningV6Service':
         return new EVMRpcScanningV6Service(

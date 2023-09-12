@@ -7,8 +7,9 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
 import { TransactionV2Service } from './transactionV2.service';
 import { MemoryMatchingService } from './memory-matching.service';
+import {MakerModule} from '../maker/maker.module'
 @Module({
-  imports: [SequelizeModule.forFeature([Transfers, BridgeTransaction])],
+  imports: [SequelizeModule.forFeature([Transfers, BridgeTransaction]), MakerModule],
   providers: [
     ThegraphManagerService,
     TransactionV2Service,

@@ -5,23 +5,23 @@ import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
 import { TransferAmountTransaction } from '../rpc-scanning/rpc-scanning.interface';
 import { Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { MessageService,ConsumerService } from '../rabbit-mq';
+import { MessageService, ConsumerService } from '../rabbit-mq';
 import { TransactionV1Service } from '../transaction/transactionV1.service';
 import { TransactionV2Service } from '../transaction/transactionV2.service';
-import { createLoggerByName } from '../utils/logger';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { MakerService } from '../maker/maker.service'
 @Injectable()
 export class TransactionService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
-    private mdcService: MdcService,
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,
     private messageService: MessageService,
-    private consumerService:ConsumerService,
+    private consumerService: ConsumerService,
     private transactionV1Service: TransactionV1Service,
-    private transactionV2Service: TransactionV2Service
-  ) { 
+    private transactionV2Service: TransactionV2Service,
+    private makerService: MakerService
+  ) {
     this.consumerService.consumeTransferWaitMessages(this.executeMatch.bind(this))
     this.consumerService.consumeTransactionReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
   }
@@ -50,21 +50,20 @@ export class TransactionService {
         const calldata = BigIntToString(transfer.calldata);
         const txTime = dayjs(transfer.timestamp).utc().toDate();
 
-        let versionStr = `${transfer.version || ''}-0`;
-        const { exist } = await this.mdcService.validMakerOwnerAddress(
-          transfer.receiver,
-        );
-        if (exist) {
-          versionStr = `${transfer.version || ''}-0`;
-        } else {
-          // valid from is response addres
-          const { exist: existSender } =
-            await this.mdcService.validMakerOwnerAddress(transfer.sender);
-          if (existSender) {
-            versionStr = `${transfer.version || ''}-1`;
-          }
+        // valid v1 or v2
+        let versionStr = null;
+        if (await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
+          versionStr = '1-1';
+        } else if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver)) {
+          versionStr = '1-0';
+        } else if (await this.makerService.isV2WhiteWalletAddress(transfer.receiver)) {
+          versionStr = '2-0';
+        } else if (await this.makerService.isV2WhiteWalletAddress(transfer.sender)) {
+          versionStr = '2-1';
         }
-
+        if (versionStr) {
+          transfer.version = versionStr;
+        }
         await this.transfersModel
           .upsert(
             {
@@ -86,7 +85,7 @@ export class TransactionService {
               contract: contractAddr || null,
               selector: transfer.selector,
               signature: transfer.signature,
-              version: versionStr,
+              version: transfer.version,
               feeToken: transfer.feeToken,
             },
             {

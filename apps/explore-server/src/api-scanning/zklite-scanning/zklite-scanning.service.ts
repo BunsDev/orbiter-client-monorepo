@@ -4,7 +4,7 @@ import {
   TransferAmountTransaction,
   TransferAmountTransactionStatus,
 } from '../../rpc-scanning/rpc-scanning.interface';
-import { objectToQueryString, HTTPGet,isEmpty,uniq } from '@orbiter-finance/utils';
+import { objectToQueryString, HTTPGet, isEmpty, uniq } from '@orbiter-finance/utils';
 import * as ethers from 'ethers6';
 import dayjs from 'dayjs';
 export class ZKLiteApiScanningService extends ApiScanningService {
@@ -23,7 +23,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
   async getScanAddressList() {
     const ownerList: string[] = uniq([
       ...this.prevExecute.fail,
-      ...(await this.ctx.mdcService.getOwnerList()),
+      ...(await this.ctx.makerService.getWhiteWalletAddress()),
     ]);
     return ownerList.filter((addr) => addr && ethers.isAddress(addr));
   }
@@ -99,7 +99,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
     response: any;
     error?: any;
   }> {
-    const chainConfig =this.chainConfig;
+    const chainConfig = this.chainConfig;
     const transfers: TransferAmountTransaction[] = [];
     // const params = {
     //     from: "latest",
@@ -108,9 +108,8 @@ export class ZKLiteApiScanningService extends ApiScanningService {
     // }
     let response;
     try {
-      const url = `${
-        chainConfig.api.url
-      }/accounts/${address}/transactions?${objectToQueryString(params)}`;
+      const url = `${chainConfig.api.url
+        }/accounts/${address}/transactions?${objectToQueryString(params)}`;
       response = await HTTPGet(url);
       if (response && response['status'] === 'success') {
         const { list } = response['result'];

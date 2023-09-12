@@ -219,33 +219,15 @@ export class RpcScanningService implements RpcScanningInterface {
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
     const newList = [];
     for (const transfer of transfers) {
-      const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
-        transfer.sender,
-      );
+      const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender);
       if (senderValid.exist) {
-        transfer.version = senderValid.version;
+        // transfer.version = senderValid.version;
         newList.push(transfer);
         continue;
       }
-      const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
-        transfer.receiver,
-      );
+      const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.receiver);
       if (receiverValid.exist) {
-        transfer.version = receiverValid.version;
-        newList.push(transfer);
-        continue;
-      }
-      const senderResponseValid =
-        await this.ctx.mdcService.validMakerResponseAddress(transfer.sender);
-      if (senderResponseValid.exist) {
-        transfer.version = receiverValid.version;
-        newList.push(transfer);
-        continue;
-      }
-      const receiverResponseValid =
-        await this.ctx.mdcService.validMakerResponseAddress(transfer.receiver);
-      if (receiverResponseValid.exist) {
-        transfer.version = receiverValid.version;
+        // transfer.version = receiverValid.version;
         newList.push(transfer);
         continue;
       }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ENVConfigService } from '@orbiter-finance/config'
+import {HTTPPost} from '@orbiter-finance/utils'
 @Injectable()
 export class AlertService {
     constructor(readonly envConfigService: ENVConfigService,) {
@@ -41,15 +42,8 @@ export class AlertService {
         };
 
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            });
-
-            if (response.ok) {
+            const response = await HTTPPost(url, data);
+            if (response) {
                 console.log('Alert sent successfully');
             } else {
                 console.error('Failed to send alert');

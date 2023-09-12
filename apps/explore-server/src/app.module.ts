@@ -19,6 +19,7 @@ import { ConsulModule } from '@orbiter-finance/consul';
 import { join } from 'path';
 import { KnexModule } from 'nest-knexjs';
 import { isEmpty } from '@orbiter-finance/utils';
+import { MakerService } from './maker/maker.service';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
 dayjs.extend(utc);
@@ -112,6 +113,6 @@ dayjs.extend(utc);
     ScheduleModule.forRoot(),
   ],
   controllers: [],
-  providers: [],
+  providers: [MakerService],
 })
 export class AppModule {}

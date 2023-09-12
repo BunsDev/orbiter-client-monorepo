@@ -4,6 +4,8 @@ import { RpcScanningService } from './rpc-scanning.service';
 import { ChainConfigService } from '@orbiter-finance/config';
 import { MdcService } from '../thegraph/mdc/mdc.service';
 import { TransactionService } from '../transaction/transaction.service';
+import { MakerService } from '../maker/maker.service'
+
 export type Block = any;
 export type TransactionResponse = ethers.TransactionResponse | any;
 export type TransactionReceipt = ethers.TransactionReceipt | any;
@@ -67,6 +69,7 @@ export interface TransferAmountTransaction {
 
 export interface Context {
    chainConfigService: ChainConfigService,
-  transactionService: TransactionService,
+   transactionService: TransactionService,
    mdcService: MdcService,
+   makerService: MakerService
 }

@@ -51,34 +51,20 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         }
         const toAddrLower = (row['to'] || "").toLocaleLowerCase();
         const fromAddrLower = (row['from'] || "").toLocaleLowerCase();
-        const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
-          fromAddrLower,
-        );
-        if (senderValid.exist) {
-          rows.push(row);
-          continue;
-        }
-        const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
-          toAddrLower,
-        );
-        if (receiverValid.exist) {
-          rows.push(row);
-          continue;
-        }
-        const senderResponseValid =
-          await this.ctx.mdcService.validMakerResponseAddress(fromAddrLower);
-        if (senderResponseValid.exist) {
-          rows.push(row);
-          continue;
-        }
-        const receiverResponseValid =
-          await this.ctx.mdcService.validMakerResponseAddress(toAddrLower);
-        if (receiverResponseValid.exist) {
-          rows.push(row);
-          continue;
-        }
         // is to contract addr
         if (contractList.includes(toAddrLower)) {
+          rows.push(row);
+          continue;
+        }
+        const senderValid = await this.ctx.makerService.isWhiteWalletAddress(fromAddrLower);
+        if (senderValid.exist) {
+          // transfer.version = senderValid.version;
+          rows.push(row);
+          continue;
+        }
+        const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(toAddrLower);
+        if (receiverValid.exist) {
+          // transfer.version = receiverValid.version;
           rows.push(row);
           continue;
         }
@@ -100,14 +86,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
               }
               const erc20Receiver = result.args[0];
               const senderValid =
-                await this.ctx.mdcService.validMakerOwnerAddress(erc20Receiver);
+                await this.ctx.makerService.isWhiteWalletAddress(erc20Receiver);
               if (senderValid.exist) {
-                rows.push(row);
-                continue;
-              }
-              const receiverValid =
-                await this.ctx.mdcService.validMakerOwnerAddress(erc20Receiver);
-              if (receiverValid.exist) {
                 rows.push(row);
                 continue;
               }

@@ -3,12 +3,12 @@ import { TransferAmountTransaction } from '../rpc-scanning/rpc-scanning.interfac
 import { readFileSync, outputFile } from 'fs-extra';
 import { TransactionService } from '../transaction/transaction.service';
 import { MdcService } from '../thegraph/mdc/mdc.service';
-import { equals,uniq } from '@orbiter-finance/utils';
+import { equals, uniq } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
-import {IChainConfig} from '@orbiter-finance/config'
-import {Context} from './api-scanning.interface'
+import { IChainConfig } from '@orbiter-finance/config'
+import { Context } from './api-scanning.interface'
 export class ApiScanningService {
   protected logger: winston.Logger;
   private lock = new Mutex();
@@ -34,7 +34,7 @@ export class ApiScanningService {
   async getScanAddressList() {
     const ownerList = uniq([
       ...this.prevExecute.fail,
-      ...(await this.ctx.mdcService.getOwnerList()),
+      ...(await this.ctx.makerService.getWhiteWalletAddress()),
     ]);
     return ownerList;
   }
@@ -66,33 +66,16 @@ export class ApiScanningService {
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
     const newList = [];
     for (const transfer of transfers) {
-      const senderValid = await this.ctx.mdcService.validMakerOwnerAddress(
-        transfer.sender,
-      );
+      const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender)
       if (senderValid.exist) {
-        transfer.version = senderValid.version;
+        // transfer.version = senderValid.version;
         newList.push(transfer);
         continue;
       }
-      const receiverValid = await this.ctx.mdcService.validMakerOwnerAddress(
-        transfer.receiver,
-      );
+      const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.receiver)
+
       if (receiverValid.exist) {
-        transfer.version = receiverValid.version;
-        newList.push(transfer);
-        continue;
-      }
-      const senderResponseValid =
-        await this.ctx.mdcService.validMakerResponseAddress(transfer.sender);
-      if (senderResponseValid.exist) {
-        transfer.version = receiverValid.version;
-        newList.push(transfer);
-        continue;
-      }
-      const receiverResponseValid =
-        await this.ctx.mdcService.validMakerResponseAddress(transfer.receiver);
-      if (receiverResponseValid.exist) {
-        transfer.version = receiverValid.version;
+        // transfer.version = receiverValid.version;
         newList.push(transfer);
         continue;
       }

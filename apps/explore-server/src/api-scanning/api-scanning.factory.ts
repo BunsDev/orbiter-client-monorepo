@@ -7,21 +7,25 @@ import { ImmutableApiScanningService } from './immutable-scanning/immutable-scan
 import { LoopringApiScanningService } from './loopring-scanning/loopring-scanning.service';
 import { ZKSpaceApiScanningService } from './zkspace-scanning/zkspace-scanning.service';
 import { MdcService } from '../thegraph/mdc/mdc.service';
+import {MakerService} from '../maker/maker.service'
+import {Context} from './api-scanning.interface'
 @Injectable()
 export class ApiScanningFactory {
   constructor(
     private chainConfigService: ChainConfigService,
     protected transactionService: TransactionService,
     protected mdcService: MdcService,
+    protected makerService: MakerService,
   ) {}
 
   createService(chainId: string): ApiScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['api'];
-    const ctx = {
+    const ctx:Context = {
       chainConfigService: this.chainConfigService,
       transactionService: this.transactionService,
       mdcService: this.mdcService,
+      makerService: this.makerService,
     }
     switch (key) {
       case 'ZKSpaceApiScanningService':

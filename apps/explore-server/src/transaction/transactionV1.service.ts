@@ -6,10 +6,6 @@ import { equals, fix0xPadStartAddress } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService,ENVConfigService } from '@orbiter-finance/config';
-import * as maker1 from '../config/maker-1.json';
-import * as maker2 from '../config/maker-2.json';
-import * as maker3 from '../config/maker-3.json';
-import * as maker4 from '../config/maker-4.json';
 import { getAmountToSend } from '../utils/oldUtils';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
@@ -17,11 +13,10 @@ import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
 import { createLoggerByName } from '../utils/logger';
 import { Sequelize } from 'sequelize-typescript';
-
+import makerRules from '../config/v1MakerConfig'
 @Injectable()
 export class TransactionV1Service {
   private logger = createLoggerByName(`${TransactionV1Service.name}`);
-  private makerRules: any[] = [];
   constructor(
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,
@@ -32,23 +27,6 @@ export class TransactionV1Service {
     private sequelize: Sequelize,
     protected envConfigService: ENVConfigService,
   ) {
-    const allConfig = [maker1, maker2, maker3, maker4];
-    for (const makerConfigs of allConfig) {
-      for (const chainId in makerConfigs) {
-        const chains = chainId.split('-');
-        for (const symbolId in makerConfigs[chainId]) {
-          const ruleConfig = makerConfigs[chainId][symbolId];
-          const symbols = symbolId.split('-');
-          this.makerRules.push({
-            ...ruleConfig,
-            sourceChainId: chains[0],
-            targetChainId: chains[1],
-            sourceSymbol: symbols[0],
-            targetSymbol: symbols[1],
-          });
-        }
-      }
-    }
     this.matchScheduleTask()
       .then((res) => {
         this.matchSenderScheduleTask();
@@ -233,7 +211,7 @@ export class TransactionV1Service {
     result.targetToken = targetToken;
     let rule;
     if (targetToken) {
-      rule = this.makerRules.find((rule) => {
+      rule = makerRules.find((rule) => {
         const {
           sourceChainId,
           targetChainId,

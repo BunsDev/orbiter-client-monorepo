@@ -45,7 +45,6 @@ export class ZKSyncEraRpcScanningService extends EVMRpcScanningV5Service {
 
             }
         }
-        console.log('zksync era', transfers);
         return transfers;
     }
 
