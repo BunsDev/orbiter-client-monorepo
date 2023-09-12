@@ -654,7 +654,7 @@ export class TransactionV2Service {
 
   private getSecurityCode(value: string): string {
     // const code = value.substring(value.length - 4, value.length);
-    const code = new BigNumber(value).mod(1000000).toString();
+    const code = new BigNumber(value).mod(10000).toString();
     return code;
   }
   private parseSecurityCode(value: string): {
@@ -679,7 +679,7 @@ export class TransactionV2Service {
     const tradeAmount =
       BigInt(amount) - BigInt(securityCode) - BigInt(withholdingFee);
     //  tradeAmount valid max and min
-    const tradingFee = (tradeAmount * BigInt(tradeFee)) / 10000n;
+    const tradingFee = (tradeAmount * BigInt(tradeFee)) / 1000000n;
     const responseAmount = ((tradeAmount - tradingFee) / 10000n) * 10000n;
     const responseAmountStr = responseAmount.toString();
     const result = {

@@ -73,7 +73,7 @@ export class RpcScanningService implements RpcScanningInterface {
       if (blockNumbers.length <= 0) {
         return;
       }
-      this.logger.debug(
+      this.chainConfig.debug && this.logger.debug(
         `${this.chainId} failedREScan ${keys.length},blockNumbersLength:${blockNumbers.length}, blockNumbers:${blockNumbers} batchLimit:${this.batchLimit}`,
       );
       const result = await this.scanByBlocks(
@@ -116,7 +116,7 @@ export class RpcScanningService implements RpcScanningInterface {
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = rpcLastBlockNumber - targetConfirmation;
-      this.logger.debug(
+      this.chainConfig.debug  &&  this.logger.debug(
         `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
       );
       if (safetyBlockNumber > lastScannedBlockNumber) {
@@ -314,7 +314,7 @@ export class RpcScanningService implements RpcScanningInterface {
             throw new Error('Block request timed out');
           }),
         ]);
-        this.logger.debug(
+        this.chainConfig.debug && this.logger.debug(
           `retryBlockRequest success ${retry}/${retryCount} block:${blockNumber},time consuming:${(Date.now() - startTime) / 1000
           }/s`,
         );
@@ -425,7 +425,6 @@ export class RpcScanningService implements RpcScanningInterface {
     } finally {
       if (!lastScannedBlockNumber) {
         lastScannedBlockNumber = await this.getLatestBlockNumber();
-        this.logger.debug(`networkBlock ${lastScannedBlockNumber}`);
         await this.setLastScannedBlockNumber(lastScannedBlockNumber);
       }
     }
