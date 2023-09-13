@@ -194,11 +194,12 @@ export class V3Service {
     for (const item of params) {
       const responseResult = await this.BridgeTransactionModel.findAll({
         attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceMaker', 'targetMaker', 'sourceAddress',
-          'targetAddress', 'sourceSymbol', 'targetSymbol', 'sourceTime', 'targetTime', 'sourceToken', 'targetToken', 'dealerAddress', 'profit'],
+          'targetAddress', 'sourceSymbol', 'targetSymbol', 'sourceTime', 'targetTime', 'sourceToken', 'targetToken', 'dealerAddress', 'tradeFee', 'withholdingFee'],
         raw: true,
         where: {
           status: 99,
           targetChain: String(item.id),
+          version: "2-0",
           targetTime: {
             [Op.gte]: dayjs(item.timestamp[0]).toISOString(),
             [Op.lte]: dayjs(item.timestamp[1]).toISOString(),
@@ -208,9 +209,19 @@ export class V3Service {
       const rows = [];
       for (const row of responseResult) {
         const newData = BigIntToString(row);
+        // newData.profit = row.tradeFee;
+        // delete newData.tradeFee;
+        const chainInfo = utils.getChainInfoByNetworkId(String(row.sourceChain));
         newData.sourceTime = dayjs(row.sourceTime).valueOf();
         newData.targetTime = dayjs(row.targetTime).valueOf();
-        rows.push(newData);
+        const token =utils.getChainTokenList(chainInfo).find(t=> t.symbol === row.sourceSymbol);
+        if (token) {
+          newData.tradeFee = new BigNumber(row.tradeFee).times(10**token.decimals).toFixed(0);
+          newData.withholdingFee = new BigNumber(row.withholdingFee).times(10**token.decimals).toFixed(0);
+          newData.withholdingFeeDecimals = token.decimals;
+          newData.tradeFeeDecimals = token.decimals;
+          rows.push(newData);
+        }
       }
       response[item.id] = rows;
     }

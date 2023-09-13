@@ -55,11 +55,13 @@ export class StarknetRpcScanningService extends RpcScanningService {
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     return transactions.filter((tx) => {
       if (tx['type'] === 'INVOKE') {
-        const executeCalldata = this.decodeExecuteCalldata(tx['calldata']);
-        if (executeCalldata) {
-          const parseData = this.parseContractCallData(executeCalldata);
-          return parseData && parseData.length > 0;
-        }
+        // TODO: 
+        // const executeCalldata = this.decodeExecuteCalldata(tx['calldata']);
+        // if (executeCalldata) {
+        //   const parseData = this.parseContractCallData(executeCalldata);
+        //   return parseData && parseData.length > 0;
+        // }
+        return true;
       }
       return false;
     });
@@ -136,11 +138,19 @@ export class StarknetRpcScanningService extends RpcScanningService {
     transaction: any,
     receipt?: RPC.TransactionReceipt,
   ): Promise<TransferAmountTransaction[]> {
+    // const hash = fix0xPadStartAddress(receipt.transaction_hash, 66);
     const executeCalldata = this.decodeExecuteCalldata(transaction.calldata);
+    let parseData = this.parseContractCallData(executeCalldata);
+    if (!parseData || parseData.length <= 0) {
+      parseData = this.decodeExecuteCalldata2(transaction.calldata) as any;
+    }
+    if (!parseData) {
+      return [];
+    }
+
     if (!executeCalldata || executeCalldata.callArray.length <= 0) {
       return [];
     }
-    const parseData = this.parseContractCallData(executeCalldata);
     const transfers: TransferAmountTransaction[] = [];
     if (transaction.type != 'INVOKE') {
       return [];
@@ -182,6 +192,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
           signature: row.signature,
           receipt: receipt,
         };
+
         if (row.name) {
           let isMatch = false;
           if (row.name === 'transfer') {
@@ -231,6 +242,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
             }
             isMatch = true;
           }
+
           if (isMatch) {
             // 0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9 = transfer event topic
             const events = receipt['events'].filter(
@@ -305,11 +317,83 @@ export class StarknetRpcScanningService extends RpcScanningService {
       }
     } catch (error) {
       this.logger.error(
-        `decodeExecuteCalldata error ${JSON.stringify(inputs)} ${error.message
+        `decodeExecuteCalldata V1 error ${JSON.stringify(inputs)} ${error.message
         }`,
         error.stack,
       );
       throw error;
+    }
+  }
+  decodeExecuteCalldata2(inputs: string[]): CalldataArg {
+    if (!inputs) {
+      return undefined;
+    }
+    try {
+      const result: object[] = [];
+      let currentIndex = 1;
+
+      while (currentIndex < inputs.length) {
+        const length = +inputs[0];
+        for (let i = 0; i < length; i++) {
+          const calldataValueLength = +inputs[currentIndex + 2];
+          const calldataValue = inputs.slice(currentIndex + 3, currentIndex + 2 + calldataValueLength + 1)
+          const selector = inputs[currentIndex + 1];
+          const to = inputs[currentIndex];
+          const calldataObject = {
+            name: '',
+            signature: '',
+            to,
+            selector,
+            index: result.length,
+            args: calldataValue,
+          };
+          const selectorItem = this.getSelectorName(to, selector);
+          if (selectorItem) {
+            calldataObject.name = selectorItem.name;
+            calldataObject.signature = selectorItem.signature;
+            result.push(calldataObject);
+          }
+          currentIndex += calldataValueLength + 3;
+        }
+
+      }
+      return result as any;
+    } catch (error) {
+      this.logger.error(
+        `decodeExecuteCalldata V2 error ${JSON.stringify(inputs)} ${error.message
+        }`,
+        error.stack,
+      );
+      return null
+    }
+  }
+  getSelectorName(to: string, selector: string) {
+    if (
+      selector ===
+      '0x1a256b309f5305c9cebef13e453384c78753c556a1b339faddc674a1950d228'
+    ) {
+      return {
+        name: 'sign_pending_multisig_transaction',
+        signature: 'sign_pending_multisig_transaction(felt,felt*,felt,felt,felt)'
+      }
+    } else if (
+      selector ===
+      '0x83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e'
+    ) {
+      return {
+        name: 'transfer',
+        signature: 'transfer(felt,Uint256)'
+      }
+    } else if (
+      selector ===
+      '0x68bcbdba7cc8cac2832d23e2c32e9eec39a9f1d03521eff5dff800a62725fa' &&
+      to ===
+      '0x173f81c529191726c6e7287e24626fe24760ac44dae2a1f7e02080230f8458b'
+    ) {
+      return {
+        name: 'transferERC20',
+        signature: 'transferERC20(felt,felt,Uint256,felt)'
+      }
     }
   }
   parseContractCallData(data: ExecuteCalldata): CalldataArg[] {
@@ -329,51 +413,34 @@ export class StarknetRpcScanningService extends RpcScanningService {
           args: data.calldata.slice(argStart, index),
           index: opIndex,
         };
-        if (
-          result.selector ===
-          '0x1a256b309f5305c9cebef13e453384c78753c556a1b339faddc674a1950d228'
-        ) {
-          // sign_pending_multisig_transaction
-          result.name = 'sign_pending_multisig_transaction';
-          result.signature =
-            'sign_pending_multisig_transaction(felt,felt*,felt,felt,felt)';
-          result.args = this.parseSignPendingMultisigCalldata(result.args);
-          calldata.push(result);
-        } else if (
-          result.selector ===
-          '0x83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e'
-        ) {
-          // transfer token
-          result.name = 'transfer';
-          result.signature = 'transfer(felt,Uint256)';
-          calldata.push(result);
-        } else if (
-          result.selector ===
-          '0x68bcbdba7cc8cac2832d23e2c32e9eec39a9f1d03521eff5dff800a62725fa' &&
-          result.to ===
-          '0x173f81c529191726c6e7287e24626fe24760ac44dae2a1f7e02080230f8458b'
-        ) {
-          // orbiter contract
-          result.name = 'transferERC20';
-          result.signature = 'transferERC20(felt,felt,Uint256,felt)';
-          calldata.push(result);
+        const selectorItem = this.getSelectorName(result.to, result.selector);
+        if (selectorItem) {
+          result.name = selectorItem.name;
+          result.signature = selectorItem.signature;
+          if (selectorItem.name === 'transfer' && result.args.length == 3) {
+            calldata.push(result);
+          } else if (selectorItem.name === 'transferERC20' && result.args.length == 5) {
+            calldata.push(result);
+          } else if (selectorItem.name === 'sign_pending_multisig_transaction') {
+            try {
+              result.args = this.parseSignPendingMultisigCalldata(result.args);
+              calldata.push(result);
+            } catch (error) {
+              this.logger.error(
+                `parseContractCallData parseSignPendingMultisigCalldata error ${JSON.stringify(result.args)} ${error.message}`,
+                error.stack)
+            }
+          }
         }
-        // else if (
-        //   result.selector ===
-        //   '0x219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c'
-        // ) {
-        //   result.name = 'approve';
-        //   result.signature = 'approve(felt,Uint256)';
-        //   calldata.push(result);
-        // }
       }
       return calldata;
     } catch (error) {
+      console.log(error);
       this.logger.error(
         `parseContractCallData error ${JSON.stringify(data)} ${error.message}`,
         error.stack,
       );
-      throw error;
+      return null;
     }
   }
   parseSignPendingMultisigCalldata(inputs: string[]): any[] {
