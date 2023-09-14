@@ -5,7 +5,7 @@ import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
 import { TransferAmountTransaction } from '../rpc-scanning/rpc-scanning.interface';
 import { Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { MessageService, ConsumerService } from '../rabbit-mq';
+import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { TransactionV1Service } from '../transaction/transactionV1.service';
 import { TransactionV2Service } from '../transaction/transactionV2.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';

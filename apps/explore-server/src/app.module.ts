@@ -9,7 +9,7 @@ import { ApiScanningModule } from './api-scanning/api-scanning.module';
 import * as winston from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { RabbitMqModule } from './rabbit-mq/rabbit-mq.module';
+import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { AlertModule } from '@orbiter-finance/alert';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';

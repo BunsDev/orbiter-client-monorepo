@@ -43,7 +43,7 @@ export class ConsumerService {
           await callback(data);
           // await this.transactionService.batchInsertTransactionReceipt(data);
           channel.ack(msg);
-        } catch (error) {
+        } catch (error: any) {
           this.logger.error(`consumeTransactionReceiptMessages Error ${error.message}`, error.stack);
         }
       }
@@ -80,7 +80,7 @@ export class ConsumerService {
           // await this.transactionService.executeMatch(data);
           await callback(data);
           channel.ack(msg);
-        } catch (error) {
+        } catch (error: any) {
           console.error(
             'consumeTransferWaitMessages Error processing message:',
             error.message,

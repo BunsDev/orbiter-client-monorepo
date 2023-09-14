@@ -14,7 +14,7 @@ export class MessageService {
       await channel.assertQueue(queue);
       return await channel.sendToQueue(queue, Buffer.from(JSONStringify(data)));
     } catch (error) {
-      console.error('Failed to send message:', error.message);
+      console.error('Failed to send message:', (error as any).message);
       throw error;
     }
   }
@@ -27,9 +27,17 @@ export class MessageService {
         queue,
         Buffer.from(JSONStringify(data)),
       );
+      if (data.version === '1-0' || data.version === '2-0') {
+        const makerTransferWaitMatchQueue = 'makerTransferWaitMatch'
+        await channel.assertQueue(makerTransferWaitMatchQueue);
+        await channel.sendToQueue(
+          makerTransferWaitMatchQueue,
+          Buffer.from(JSONStringify(data)),
+        );
+      }
       return result;
     } catch (error) {
-      console.error('Failed to send message:', error.message);
+      console.error('Failed to send message:', (error as any).message);
       throw error;
     }
   }
@@ -39,7 +47,7 @@ export class MessageService {
       await channel.assertQueue(queue);
       await channel.sendToQueue(queue, Buffer.from(message));
     } catch (error) {
-      console.error('Failed to send message:', error.message);
+      console.error('Failed to send message:', (error as any).message);
     }
   }
 }

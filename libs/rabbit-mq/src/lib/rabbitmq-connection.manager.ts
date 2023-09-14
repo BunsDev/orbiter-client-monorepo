@@ -42,7 +42,7 @@ export class RabbitmqConnectionManager
         setTimeout(() => this.connectToRabbitMQ(), 5000);
       });
       this.channel = await this.connection.createChannel();
-      this.logger.log('Connected to RabbitMQ');
+      this.logger.log('Connected to RabbitMQ 12312312');
     } catch (error) {
       this.alertService.sendTelegramAlert("ERROR",  `Failed to connect to RabbitMQ:${error.message}`);
       this.logger.error(
@@ -64,7 +64,7 @@ export class RabbitmqConnectionManager
       this.logger.log('Disconnected from RabbitMQ');
     }
   }
-  async createChannel(): Channel {
+  async createChannel(): Promise<Channel> {
     return await this.connection.createChannel();
   }
   getChannel(): Channel {
