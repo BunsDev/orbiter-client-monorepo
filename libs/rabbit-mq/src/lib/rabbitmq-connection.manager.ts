@@ -42,7 +42,7 @@ export class RabbitmqConnectionManager
         setTimeout(() => this.connectToRabbitMQ(), 5000);
       });
       this.channel = await this.connection.createChannel();
-      this.logger.log('Connected to RabbitMQ 12312312');
+      this.logger.log('Connected to RabbitMQ');
     } catch (error) {
       this.alertService.sendTelegramAlert("ERROR",  `Failed to connect to RabbitMQ:${error.message}`);
       this.logger.error(

@@ -128,6 +128,11 @@ export class TransactionService {
     } else {
       throw new Error(` incorrect version ${payload.version}`);
     }
+
+    // send to maker client when side is 0
+    if (['1-0', '2-0'].includes(payload.version) && result && result.id && result.sourceId) {
+      this.messageService.sendTransferToMakerClient(result)
+    }
     return result;
   }
 }

@@ -29,6 +29,10 @@ export class ValidatorService {
     return true;
   }
 
+  public optimisticCheckTxStatus(hash: string, chainId: string) {
+    return true
+  }
+
   public async transactionGetPrivateKey(transfer: TransferAmountTransaction) {
     const addressList: string[] = uniq(
       transfer.responseMaker || [transfer.sourceMaker]

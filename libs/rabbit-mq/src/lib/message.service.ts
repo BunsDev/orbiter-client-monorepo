@@ -2,7 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { RabbitmqConnectionManager } from './rabbitmq-connection.manager';
 import { JSONStringify } from '@orbiter-finance/utils';
-
+import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 @Injectable()
 export class MessageService {
   constructor(private readonly connectionManager: RabbitmqConnectionManager) {}
@@ -27,20 +27,29 @@ export class MessageService {
         queue,
         Buffer.from(JSONStringify(data)),
       );
-      if (data.version === '1-0' || data.version === '2-0') {
-        const makerTransferWaitMatchQueue = 'makerTransferWaitMatch'
-        await channel.assertQueue(makerTransferWaitMatchQueue);
-        await channel.sendToQueue(
-          makerTransferWaitMatchQueue,
-          Buffer.from(JSONStringify(data)),
-        );
-      }
       return result;
     } catch (error) {
       console.error('Failed to send message:', (error as any).message);
       throw error;
     }
   }
+
+  async sendTransferToMakerClient(data: BridgeTransactionAttributes) {
+    const queue = 'makerTransferWaitMatch'
+    const channel = this.connectionManager.getChannel();
+    try {
+      await channel.assertQueue(queue);
+      const result = await channel.sendToQueue(
+        queue,
+        Buffer.from(JSONStringify(data)),
+      );
+      return result;
+    } catch (error) {
+      console.error('Failed to send message:', (error as any).message);
+      throw error;
+    }
+  }
+
   async sendMessage(queue: string, message: string) {
     const channel = this.connectionManager.getChannel();
     try {

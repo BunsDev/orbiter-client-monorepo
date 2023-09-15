@@ -15,6 +15,8 @@ import { StoreService } from "../store/store.service";
 import { Op } from "sequelize";
 import { AccountFactoryService } from "../../account/factory";
 import dayjs from "dayjs";
+import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
+import { ConsumerService } from '@orbiter-finance/rabbit-mq';
 @Injectable()
 export class SequencerScheduleService {
   private readonly logger = new Logger(SequencerService.name);
@@ -29,9 +31,12 @@ export class SequencerScheduleService {
     @InjectModel(BridgeTransactionModel)
     private readonly bridgeTransactionModel: typeof BridgeTransactionModel,
     private readonly sequencerService: SequencerService,
-    private readonly envConfig: ENVConfigService
+    private readonly envConfig: ENVConfigService,
+    private readonly consumerService: ConsumerService
   ) {
     this.checkDBTransactionRecords();
+    this.logger.log('start consumeBridgeTransactionMessages')
+    this.consumerService.consumeBridgeTransactionMessages(this.consumeMQTransactionRecords.bind(this))
     // this.validatorService.validatingValueMatches("ETH", "1", "ETH", "2")
   }
 
@@ -69,7 +74,6 @@ export class SequencerScheduleService {
         status: 0,
         targetChain: store.chainId,
         sourceMaker: owner,
-        version: "2-0",
         id: {
           [Op.gt]: store.lastId,
         },
@@ -103,6 +107,11 @@ export class SequencerScheduleService {
     });
     if (records.length > 0) {
       for (const tx of records) {
+        const checkResult = await this.validatorService.optimisticCheckTxStatus(tx.sourceId, tx.sourceChain)
+        if (!checkResult) {
+          this.logger.warn(`${tx.sourceId} optimisticCheckTxStatus failed`)
+          continue
+        }
         const result = await store.addTransactions(tx as any);
         this.logger.debug(
           `${tx.sourceId} store addTransactions ${JSON.stringify(result)}`
@@ -112,6 +121,32 @@ export class SequencerScheduleService {
         }
       }
     }
+  }
+
+  private async consumeMQTransactionRecords(bridgeTransaction: BridgeTransactionAttributes) {
+    this.logger.log('consumeMQTransactionRecords', JSON.stringify(bridgeTransaction))
+    const owners = this.envConfig.get("MAKERS") || [];
+    const chains = this.chainConfigService.getAllChains()
+    const targetChainInfo = chains.find(chain => String(chain.chainId) === bridgeTransaction.targetChain)
+    if (!owners.includes(bridgeTransaction.sourceMaker) || !targetChainInfo) {
+      this.logger.warn(`sourceId:${bridgeTransaction.sourceId}, bridgeTransaction does not match the maker or chain, sourceMaker:${bridgeTransaction.sourceMaker}, chainId:${bridgeTransaction.targetChain}`)
+    }
+    const key = `${bridgeTransaction.targetChain}-${bridgeTransaction.sourceMaker}`.toLocaleLowerCase();
+    if (!this.stores.has(key)) {
+      this.stores.set(key, new StoreService(bridgeTransaction.targetChain));
+    }
+    if (!this.storesState[key]) {
+      this.storesState[key] = {
+        lock: new Mutex(),
+        lastSubmit: Date.now(),
+      };
+    }
+    const store = this.stores.get(key)
+    const result = await store.addTransactions(bridgeTransaction as any);
+    this.logger.debug(
+      `${bridgeTransaction.sourceId} store addTransactions ${JSON.stringify(result)}`
+    );
+    // throw new Error()
   }
 
   @Cron("*/5 * * * * *")
