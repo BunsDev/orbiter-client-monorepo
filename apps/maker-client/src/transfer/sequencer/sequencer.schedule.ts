@@ -141,6 +141,11 @@ export class SequencerScheduleService {
         lastSubmit: Date.now(),
       };
     }
+    const checkResult = await this.validatorService.optimisticCheckTxStatus(bridgeTransaction.sourceId, bridgeTransaction.sourceChain)
+    if (!checkResult) {
+      this.logger.warn(`${bridgeTransaction.sourceId} optimisticCheckTxStatus failed`)
+      return
+    }
     const store = this.stores.get(key)
     const result = await store.addTransactions(bridgeTransaction as any);
     this.logger.debug(
