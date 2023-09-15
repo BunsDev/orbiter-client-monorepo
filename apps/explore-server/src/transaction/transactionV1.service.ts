@@ -5,7 +5,7 @@ import { TransactionID } from '../utils'
 import { equals, fix0xPadStartAddress } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { ChainConfigService,ENVConfigService } from '@orbiter-finance/config';
+import { ChainConfigService,ENVConfigService,MakerV1RuleService } from '@orbiter-finance/config';
 import { getAmountToSend } from '../utils/oldUtils';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
@@ -13,7 +13,6 @@ import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
 import { createLoggerByName } from '../utils/logger';
 import { Sequelize } from 'sequelize-typescript';
-import makerRules from '../config/v1MakerConfig'
 @Injectable()
 export class TransactionV1Service {
   private logger = createLoggerByName(`${TransactionV1Service.name}`);
@@ -26,6 +25,7 @@ export class TransactionV1Service {
     protected memoryMatchingService: MemoryMatchingService,
     private sequelize: Sequelize,
     protected envConfigService: ENVConfigService,
+    protected makerV1RuleService: MakerV1RuleService,
   ) {
     this.matchScheduleTask()
       .then((res) => {
@@ -60,7 +60,7 @@ export class TransactionV1Service {
       await this.handleTransferBySourceTx(transfer).catch((error) => {
         this.logger.error(
           `matchScheduleTask handleTransferBySourceTx ${transfer.hash} error ${error.message}`,
-          error.stack,
+          error,
         );
       });
     }
@@ -211,7 +211,7 @@ export class TransactionV1Service {
     result.targetToken = targetToken;
     let rule;
     if (targetToken) {
-      rule = makerRules.find((rule) => {
+      rule = this.makerV1RuleService.getAll().find((rule) => {
         const {
           sourceChainId,
           targetChainId,
@@ -377,6 +377,7 @@ export class TransactionV1Service {
   public async handleTransferBySourceTx(transfer: TransfersModel) {
     if (transfer.status != 2) {
       this.logger.error(
+<<<<<<< HEAD
         `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`,
       );
       return
@@ -387,6 +388,22 @@ export class TransactionV1Service {
         `validSourceTxInfo fail ${transfer.hash} ${errmsg}`,
       );
       return
+=======
+        `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`
+      );
+      return {
+        errmsg:  `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`
+      }
+    }
+    const { code, errmsg, data } = await this.validSourceTxInfo(transfer);
+    if (code !== 0) {
+       this.logger.error(
+        `validSourceTxInfo fail ${transfer.hash} ${errmsg}`,
+      );
+      return {
+        errmsg:  `validSourceTxInfo fail ${transfer.hash} ${errmsg}`
+      }
+>>>>>>> develop
     }
     const sourceBT = await this.bridgeTransactionModel.findOne({
       attributes: ['id', 'status', 'targetChain'],
@@ -396,10 +413,19 @@ export class TransactionV1Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
+<<<<<<< HEAD
       this.logger.error(
         `${transfer.hash} Status is in operation Operation not permitted`,
       );
       return
+=======
+       this.logger.error(
+        `${transfer.hash} Status is in operation Operation not permitted`,
+      );
+      return {
+        errmsg:  `${transfer.hash} Status is in operation Operation not permitted`
+      }
+>>>>>>> develop
     }
 
     const t = await this.sequelize.transaction();

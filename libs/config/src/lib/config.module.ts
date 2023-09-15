@@ -4,8 +4,7 @@ import { ENVConfigService } from './env-config.service';
 
 import {ORBITER_CONFIG_MODULE_OPTS} from './config.constants';
 import {ConfigModuleOptions} from './config.interface';
-import { V1MakerConfigService } from "./v1-maker-config.service";
-
+import {MakerV1RuleService} from './maker-v1-rule.service'
 @Module({})
 export class OrbiterConfigModule {
 	static forRoot(options: ConfigModuleOptions): DynamicModule {
@@ -15,13 +14,13 @@ export class OrbiterConfigModule {
 			providers: [
 				ChainConfigService,
 				ENVConfigService,
-        V1MakerConfigService,
+				MakerV1RuleService,
 				{
 					provide: ORBITER_CONFIG_MODULE_OPTS,
 					useValue: options,
 				},
 			],
-			exports: [ChainConfigService, ENVConfigService, V1MakerConfigService],
+			exports: [ChainConfigService, ENVConfigService, MakerV1RuleService],
 		};
 	}
 }

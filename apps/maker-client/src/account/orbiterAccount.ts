@@ -21,7 +21,7 @@ export default class OrbiterAccount extends IAccount {
   get chainConfig(): IChainConfig {
     return this.ctx.chainConfigService.getChainInfo(this.chainId);
   }
-  async connect(_privateKey: string) {
+  async connect(_privateKey: string, _address?:string) {
     return this;
   }
 

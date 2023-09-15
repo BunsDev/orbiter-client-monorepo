@@ -1,12 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import OBUT from "orbiter-util";
 import BigNumber from 'bignumber.js';
 import {
-  CHAIN_ID,
   ChainConfigService,
   IChainConfig,
-  IMakerConfig, IMakerDataConfig,
-  V1MakerConfigService
+  MakerV1RuleService
 } from "@orbiter-finance/config";
 import { ECode, ITradingPair } from "../api.interface";
 import Keyv from 'keyv';
@@ -22,7 +19,6 @@ import {
 } from "@orbiter-finance/v1-seq-models";
 
 const keyv = new Keyv();
-const obut = new OBUT();
 
 const defaultCacheTime = 1000 * 60 * 60;
 
@@ -31,15 +27,16 @@ export class V2Service {
   static tradingPairs:ITradingPair[] = [];
   static idMap = {};
 
-  constructor(private chainConfigService: ChainConfigService, private v1MakerConfigService: V1MakerConfigService) {
+  constructor(private chainConfigService: ChainConfigService, private makerV1RuleService: MakerV1RuleService) {
     const _this = this;
-    v1MakerConfigService.init(async function (makerConfig) {
-      const chainList = chainConfigService.getAllChains();
-      chainList.forEach(item => {
-        V2Service.idMap[+item.internalId] = item.chainId;
-      });
-      V2Service.tradingPairs = _this.convertMakerConfig(chainList, makerConfig);
-    });
+    // TODO: reomve
+    // v1MakerConfigService.init(async function (makerConfig) {
+    //   const chainList = chainConfigService.getAllChains();
+    //   chainList.forEach(item => {
+    //     V2Service.idMap[+item.internalId] = item.chainId;
+    //   });
+    //   V2Service.tradingPairs = _this.convertMakerConfig(chainList, makerConfig);
+    // });
   }
 
   @InjectModel(Transaction) private TransactionModel: typeof Transaction;
@@ -57,30 +54,6 @@ export class V2Service {
       );
     }
     return V2Service.tradingPairs;
-  }
-
-  async tradingPrice(params: string[]) {
-    if (!params || !(params instanceof Array) || params.length < 2) {
-      throw new Error("Invalid params");
-    }
-    const id = params[0];
-    const amount = params[1];
-    const tradingPair: ITradingPair = V2Service.tradingPairs.find(item => item.id === id);
-    if (!tradingPair) {
-      throw new Error("Invalid tradingPair");
-    }
-    return await obut.util.calculateAmount(tradingPair, amount);
-  }
-
-  async request(params: string[]) {
-    if (!params || !(params instanceof Array) || params.length < 2) {
-      throw new Error("Invalid params");
-    }
-    const id = params[0];
-    const amount = params[1];
-    const targetAddress = params.length >= 3 ? params[2] : undefined;
-    const tradingPair: ITradingPair = V2Service.tradingPairs.find(item => item.id === id);
-    return await obut.util.getTransactionRequest(tradingPair, amount, targetAddress);
   }
 
   async getTransactionByHash(params: string[]) {
@@ -178,9 +151,10 @@ export class V2Service {
     if (!chainInfo?.internalId) {
       return { code: ECode.Fail, msg: 'from chain error' };
     }
-    if (fromChain === CHAIN_ID.starknet || fromChain === CHAIN_ID.starknet_test) {
+    const internalId = +chainInfo.internalId;
+    if (internalId === 4 || internalId === 44) {
       // starknet
-    } else if (fromChain === CHAIN_ID.imx || fromChain === CHAIN_ID.imx_test) {
+    } else if (internalId === 8 || internalId === 88) {
       if (!Number(fromHash)) {
         return { code: ECode.Fail, msg: 'hash format error' };
       }

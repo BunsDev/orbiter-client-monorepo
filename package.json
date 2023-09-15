@@ -10,7 +10,8 @@
     "build:explore-server": "npx nx run explore-server:build",
     "build:*": "npm run build:maker-client && npm run build:explore-server",
     "build-docker:explore-server": "nx run explore-server:docker-build",
-    "build-docker:maker-client": "nx run maker-client:docker-build"
+    "build-docker:maker-client": "nx run maker-client:docker-build",
+    "build-docker:explore-open-api": "npx nx run explore-open-api:docker-build"
   },
   "private": true,
   "dependencies": {
@@ -22,6 +23,7 @@
     "@nestjs/schedule": "^3.0.3",
     "@nestjs/sequelize": "^10.0.0",
     "@types/amqplib": "^0.10.1",
+    "@types/consul": "^0.40.1",
     "@types/js-yaml": "^4.0.5",
     "@types/json-bigint": "^1.0.1",
     "@types/lodash": "^4.14.197",
@@ -46,13 +48,12 @@
     "mysql2": "^3.6.1",
     "nest-knexjs": "^0.0.17",
     "nest-winston": "^1.9.4",
-    "orbiter-util": "^1.0.10",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "sequelize": "^6.32.1",
     "sequelize-typescript": "^2.1.5",
-    "starknet": "^5.14.1",
+    "starknet": "5.19.5",
     "tslib": "^2.6.2",
     "winston": "^3.10.0",
     "winston-daily-rotate-file": "^4.7.1",

@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { ENVConfigService } from '@orbiter-finance/config'
+import { ENVConfigService,MakerV1RuleService } from '@orbiter-finance/config'
 import { InjectConnection } from 'nest-knexjs';
 import { Knex } from 'knex';
 import { uniq, maxBy } from '@orbiter-finance/utils'
-import v1MakerRules from '../config/v1MakerConfig';
+// import v1MakerRules from '../config/v1MakerConfig';
 import winston from 'winston';
 import { createLoggerByName } from '../utils/logger';
 @Injectable()
@@ -12,16 +12,21 @@ export class MakerService {
     #v2OwnerResponseMakers: string[] = [];
     #v2OwnerResponseMakersVid: number = 0;
     private logger: winston.Logger = createLoggerByName(MakerService.name);
-    constructor(protected envConfigService: ENVConfigService, @InjectConnection() private readonly knex: Knex) {
+    constructor(protected envConfigService: ENVConfigService, 
+        @InjectConnection() private readonly knex: Knex,
+        protected makerV1RuleService: MakerV1RuleService,
+        ) {
         this.getV2MakerOwnersFromCache()
         this.getV2MakerOwnerResponseFromCache()
     }
 
     async getV1MakerOwners() {
+        const v1MakerRules = this.makerV1RuleService.getAll();
         return uniq(v1MakerRules.filter(r => r.makerAddress).map(r => r.makerAddress.toLocaleLowerCase()));
     }
 
     async getV1MakerOwnerResponse() {
+        const v1MakerRules = this.makerV1RuleService.getAll();
         const list = v1MakerRules.filter(r => r.sender).map(r => r.sender.toLocaleLowerCase());
         // add fake maker
         const resutl = await this.envConfigService.getAsync("v1ResponseMaker");

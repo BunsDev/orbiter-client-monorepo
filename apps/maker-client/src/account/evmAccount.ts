@@ -18,7 +18,7 @@ import {
   TransactionFailedError,
   TransactionSendBeforeError,
 } from "./IAccount.interface";
-import { provider, JSONStringify, timeoutPromise } from "@orbiter-finance/utils";
+import { provider, JSONStringify, timeoutPromise,equals } from "@orbiter-finance/utils";
 export default class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
@@ -41,9 +41,12 @@ export default class EVMAccount extends OrbiterAccount {
     }
     return this.#provider;
   }
-  async connect(privateKey: string) {
+  async connect(privateKey: string, _address:string) {
     const provider = this.getProvider();
     this.wallet = new ethers.Wallet(privateKey).connect(provider);
+    if (_address && ! equals(_address,this.wallet.address )) {
+      throw new Error('The connected wallet address is inconsistent with the private key address')
+    }
     this.address = this.wallet.address;
     if (!this.nonceManager) {
       this.nonceManager = new NonceManager(this.wallet.address, async () => {
@@ -380,4 +383,5 @@ export default class EVMAccount extends OrbiterAccount {
     const erc20 = new ethers.Contract(token, abis.ERC20Abi, provider);
     return await erc20.balanceOf(address || this.wallet.address);
   }
+
 }

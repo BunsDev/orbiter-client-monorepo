@@ -50,13 +50,6 @@ export class SequencerScheduleService {
         if (!this.stores.has(key)) {
           this.stores.set(key, new StoreService(chain.chainId));
         }
-        if (!this.storesState[key]) {
-          this.storesState[key] = {
-            lock: new Mutex(),
-            lastSubmit: Date.now(),
-          };
-        }
-
         const store = this.stores.get(key);
         // read db history
         this.readDBTransactionRecords(store, owner).catch((error) => {
@@ -135,12 +128,6 @@ export class SequencerScheduleService {
     if (!this.stores.has(key)) {
       this.stores.set(key, new StoreService(bridgeTransaction.targetChain));
     }
-    if (!this.storesState[key]) {
-      this.storesState[key] = {
-        lock: new Mutex(),
-        lastSubmit: Date.now(),
-      };
-    }
     const checkResult = await this.validatorService.optimisticCheckTxStatus(bridgeTransaction.sourceId, bridgeTransaction.sourceChain)
     if (!checkResult) {
       this.logger.warn(`${bridgeTransaction.sourceId} optimisticCheckTxStatus failed`)
@@ -159,6 +146,12 @@ export class SequencerScheduleService {
     const storeKeys = this.stores.keys();
     for (const k of storeKeys) {
       const store = this.stores.get(k);
+      if (!this.storesState[k]) {
+        this.storesState[k] = {
+          lock: new Mutex(),
+          lastSubmit: Date.now(),
+        };
+      }
       const wthData = store.getSymbolsWithData();
       if (wthData.length > 0) {
         this.checkStoreReadySend(k, store);
