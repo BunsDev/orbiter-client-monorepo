@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import OBUT from "orbiter-util";
 import BigNumber from 'bignumber.js';
 import {
-  CHAIN_ID,
   ChainConfigService,
   IChainConfig,
   IMakerConfig, IMakerDataConfig,
@@ -178,9 +177,10 @@ export class V2Service {
     if (!chainInfo?.internalId) {
       return { code: ECode.Fail, msg: 'from chain error' };
     }
-    if (fromChain === CHAIN_ID.starknet || fromChain === CHAIN_ID.starknet_test) {
+    const internalId = +chainInfo.internalId;
+    if (internalId === 4 || internalId === 44) {
       // starknet
-    } else if (fromChain === CHAIN_ID.imx || fromChain === CHAIN_ID.imx_test) {
+    } else if (internalId === 8 || internalId === 88) {
       if (!Number(fromHash)) {
         return { code: ECode.Fail, msg: 'hash format error' };
       }
