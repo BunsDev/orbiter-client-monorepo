@@ -403,17 +403,6 @@ export class TransactionV2Service {
   }
   public async handleTransferBySourceTx(transfer: Transfers) {
     if (transfer.status != 2) {
-<<<<<<< HEAD
-      this.logger.error(
-        `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`,
-      );
-      return
-    }
-    const { code, errmsg, data } = await this.validSourceTxInfo(transfer);
-    if (code !== 0) {
-      this.logger.error(`${transfer.hash} ${errmsg}`);
-      return
-=======
       return this.errorBreakResult(`validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`)
     }
     let data;
@@ -428,7 +417,6 @@ export class TransactionV2Service {
     }
     if (!data) {
       return this.errorBreakResult(`validSourceTxInfo catch ${transfer.hash} ValidData not found`)
->>>>>>> develop
     }
     const sourceBT = await this.bridgeTransactionModel.findOne({
       where: {
@@ -437,26 +425,12 @@ export class TransactionV2Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-<<<<<<< HEAD
-      this.logger.error(
-        `${transfer.hash} Status is in operation Operation not permitted`,
-      );
-      return
-=======
       return this.errorBreakResult(`${transfer.hash} Status is in operation Operation not permitted`)
->>>>>>> develop
     }
     const t = await this.sequelize.transaction();
     try {
       const createdData: BridgeTransactionAttributes = {
-        sourceId: transfer.hash,
-        sourceAddress: transfer.sender,
-        sourceMaker: transfer.receiver,
-        sourceAmount: transfer.amount.toString(),
-        sourceChain: transfer.chainId,
-        sourceNonce: transfer.nonce,
         sourceSymbol: transfer.symbol,
-        sourceToken: transfer.token,
         targetToken: null,
         sourceTime: transfer.timestamp,
         dealerAddress: null,

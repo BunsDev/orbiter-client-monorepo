@@ -22,7 +22,7 @@ import { AlertModule } from '@orbiter-finance/alert'
             inject: [ConfigService],
             useFactory: (config: ConfigService) => {
                 return {
-                    name: 'BlockExploreData',
+                    name: 'MakerClient',
                     host: config.get('CONSUL_HOST'),
                     port: config.get('CONSUL_PORT'),
                     defaults: {

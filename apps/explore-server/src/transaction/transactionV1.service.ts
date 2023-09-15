@@ -377,18 +377,6 @@ export class TransactionV1Service {
   public async handleTransferBySourceTx(transfer: TransfersModel) {
     if (transfer.status != 2) {
       this.logger.error(
-<<<<<<< HEAD
-        `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`,
-      );
-      return
-    }
-    const { code, errmsg, data } = await this.validSourceTxInfo(transfer);
-    if (code !== 0) {
-      this.logger.error(
-        `validSourceTxInfo fail ${transfer.hash} ${errmsg}`,
-      );
-      return
-=======
         `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`
       );
       return {
@@ -403,7 +391,6 @@ export class TransactionV1Service {
       return {
         errmsg:  `validSourceTxInfo fail ${transfer.hash} ${errmsg}`
       }
->>>>>>> develop
     }
     const sourceBT = await this.bridgeTransactionModel.findOne({
       attributes: ['id', 'status', 'targetChain'],
@@ -413,19 +400,12 @@ export class TransactionV1Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-<<<<<<< HEAD
-      this.logger.error(
-        `${transfer.hash} Status is in operation Operation not permitted`,
-      );
-      return
-=======
        this.logger.error(
         `${transfer.hash} Status is in operation Operation not permitted`,
       );
       return {
         errmsg:  `${transfer.hash} Status is in operation Operation not permitted`
       }
->>>>>>> develop
     }
 
     const t = await this.sequelize.transaction();
