@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { InjectModel } from "@nestjs/sequelize";
 import { Mutex } from "async-mutex";
-import { ChainConfigService,ENVConfigService } from "@orbiter-finance/config";
+import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import { Transfers as TransfersModel, BridgeTransaction as BridgeTransactionModel } from "@orbiter-finance/seq-models";
 import { SequencerService } from "./sequencer.service";
 import { ValidatorService } from "../validator/validator.service";
@@ -40,7 +40,7 @@ export class SequencerScheduleService {
     // this.validatorService.validatingValueMatches("ETH", "1", "ETH", "2")
   }
 
-  @Cron("*/5 * * * * *")
+  @Cron("* */5 * * * *")
   private checkDBTransactionRecords() {
     const owners = this.envConfig.get("MAKERS") || [];
     for (const chain of this.chainConfigService.getAllChains()) {
@@ -64,15 +64,15 @@ export class SequencerScheduleService {
 
   private async readDBTransactionRecords(store: StoreService, owner: string) {
     const where = {
-        status: 0,
-        targetChain: store.chainId,
-        sourceMaker: owner,
-        id: {
-          [Op.gt]: store.lastId,
-        },
-        sourceTime: {
-          [Op.gte]: dayjs().subtract(24, "hour").toISOString(),
-        },
+      status: 0,
+      targetChain: store.chainId,
+      sourceMaker: owner,
+      id: {
+        [Op.gt]: store.lastId,
+      },
+      sourceTime: {
+        [Op.gte]: dayjs().subtract(24, "hour").toISOString(),
+      },
     }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
@@ -141,7 +141,7 @@ export class SequencerScheduleService {
     // throw new Error()
   }
 
-  @Cron("*/5 * * * * *")
+  @Cron("*/1 * * * * *")
   private checkStoreWaitSend() {
     const storeKeys = this.stores.keys();
     for (const k of storeKeys) {
@@ -152,20 +152,29 @@ export class SequencerScheduleService {
           lastSubmit: Date.now(),
         };
       }
-      const wthData = store.getSymbolsWithData();
-      if (wthData.length > 0) {
-        this.checkStoreReadySend(k, store);
+      const storesState = this.storesState[k];
+      if (storesState.lock.isLocked()) {
+        return;
+      }
+      const TransferInterval =
+        this.envConfig.get(`${store.chainId}.TransferInterval`) || 1000 * 10;
+      if (Date.now() - storesState.lastSubmit >= TransferInterval) {
+        const wthData = store.getSymbolsWithData();
+        if (wthData.length > 0) {
+          this.checkStoreReadySend(k, store);
+        }
       }
     }
   }
 
   private async checkStoreReadySend(key: string, store: StoreService) {
-    const batchTransferCount =
-      this.envConfig.get(`${store.chainId}.BatchTransferCount`) || 1;
-    const lock: Mutex = this.storesState[key].lock;
+    const lock:Mutex = this.storesState[key].lock;
     if (lock.isLocked()) {
       return;
     }
+    const batchTransferCount =
+      this.envConfig.get(`${store.chainId}.BatchTransferCount`) || 1;
+
     lock.runExclusive(async () => {
       this.logger.debug(`checkStoreReadySend ${key}`);
       const wthData = store.getSymbolsWithData();
