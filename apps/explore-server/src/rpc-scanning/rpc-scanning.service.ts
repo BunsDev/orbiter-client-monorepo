@@ -16,7 +16,7 @@ import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
 export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
-  protected logger: winston.Logger;
+  public logger: winston.Logger;
   public lastBlockNumber = 0;
   protected batchLimit = 50;
   protected requestTimeout = 1000 * 60;
@@ -65,13 +65,13 @@ export class RpcScanningService implements RpcScanningInterface {
       const blockNumbers = keys
         .map((num) => +num)
         .filter((num) => !this.blockInProgress.has(num));
-      console.log(
+        this.logger.info(
         this.chainId + ' failedREScan',
         '*'.repeat(100),
         blockNumbers,
       );
       if (blockNumbers.length <= 0) {
-        this.logger.info('failedREScan end');
+        this.logger.info('failedREScan end not blockNumbers');
         return;
       }
       this.chainConfig.debug && this.logger.debug(
@@ -100,7 +100,7 @@ export class RpcScanningService implements RpcScanningInterface {
           }
         },
       );
-      this.logger.info('failedREScan end');
+      this.logger.info('failedREScan scan end');
       return result;
     } catch (error) {
       this.logger.error(`failedREScan error`, error);
@@ -153,6 +153,8 @@ export class RpcScanningService implements RpcScanningInterface {
                 );
                 await this.setPendingScanBlocks([block.number]);
               }
+            }else {
+              console.log(error, '====error');
             }
           },
         );

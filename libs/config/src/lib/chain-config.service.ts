@@ -32,7 +32,7 @@ export class ChainConfigService {
                 );
             } catch (error: any) {
                 Logger.error(
-                    `watch config change error`,
+                    `watch config change error ${this.options.chainConfigPath}`,
                     error,
                 );
             }

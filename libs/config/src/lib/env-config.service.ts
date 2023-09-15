@@ -36,7 +36,7 @@ export class ENVConfigService {
                 );
             } catch (error) {
                 Logger.error(
-                    `watch config change error`,
+                    `watch config change error ${this.options.envConfigPath}`,
                     error,
                 );
             }

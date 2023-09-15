@@ -26,13 +26,22 @@ export class MakerV1RuleService {
             try {
                 const keys: string[] = await this.consul.consulClient.kv.keys(this.configPath)
                 for (let i = 1; i < keys.length; i++) {
-                    this.consul.watchConsulConfig(keys[i], (data: any) => {
-                        MakerV1RuleService.configs[data.Key] = JSON.parse(data.Value);
-                    })
+                    try {
+                        this.consul.watchConsulConfig(keys[i], (data: any) => {
+                            MakerV1RuleService.configs[data.Key] = JSON.parse(data.Value);
+                        })
+                    } catch (error) {
+                        Logger.error(
+                            `watch config change error ${error.message} ${keys[i]}`,
+                            error,
+                        );
+                    }
+                  
                 }
             } catch (error) {
+                console.error(error);
                 Logger.error(
-                    `watch config change error`,
+                    `watch config change error ${error.message} ${this.configPath}`,
                     error,
                 );
             }

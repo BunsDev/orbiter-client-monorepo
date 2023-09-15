@@ -94,13 +94,16 @@ export class RpcScanningSchedule {
       try {
         if (!scanner.mutex.isLocked()) {
           scanner.mutex.runExclusive(async () => {
+            scanner.service.logger.info(`scanSchedule start`)
             return await scanner.service.bootstrap().catch((error) => {
               this.logger.error(
                 `scan bootstrap error`,
                 error,
               );
-            });
-          });
+            }).then(()=> {
+              scanner.service.logger.info(`scanSchedule end`)
+            })
+          })
         }
       } catch (error) {
         this.logger.error(
