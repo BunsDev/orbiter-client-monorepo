@@ -37,12 +37,6 @@ export class V2Controller {
         case 'orbiter_collectUserTransaction': {
           return { id, jsonrpc, result: await v2Service.collectUserTransaction(params) };
         }
-        case 'orbiter_getTradingPrice': {
-          return { id, jsonrpc, result: await v2Service.tradingPrice(params) };
-        }
-        case 'orbiter_request': {
-          return { id, jsonrpc, result: await v2Service.request(params) };
-        }
         case 'orbiter_getTransactionByHash': {
           return { id, jsonrpc, result: await v2Service.getTransactionByHash(params) };
         }
