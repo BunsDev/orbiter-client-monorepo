@@ -10,7 +10,8 @@
     "build:explore-server": "npx nx run explore-server:build",
     "build:*": "npm run build:maker-client && npm run build:explore-server",
     "build-docker:explore-server": "nx run explore-server:docker-build",
-    "build-docker:maker-client": "nx run maker-client:docker-build"
+    "build-docker:maker-client": "nx run maker-client:docker-build",
+    "build-docker:explore-open-api": "npx nx run explore-open-api:docker-build"
   },
   "private": true,
   "dependencies": {
@@ -45,7 +46,6 @@
     "mysql2": "^3.6.1",
     "nest-knexjs": "^0.0.17",
     "nest-winston": "^1.9.4",
-    "orbiter-util": "^1.0.10",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",

@@ -5,24 +5,15 @@ networks:
 services:
   open-api-server:
     build:
-      dockerfile: apps/explore-open-api/Dockerfile
+      dockerfile: ../../apps/explore-open-api/Dockerfile
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'
       CONSUL_PORT: '${CONSUL_PORT}'
       CONSUL_TOKEN: '${CONSUL_TOKEN}'
     ports:
-      - '9095:9095'
+      - '9003:3000'
     networks:
       - app-network
     volumes:
       - './runtime:/app/runtime'
-  proxy:
-    image: nginx:stable-alpine
-    ports:
-      - 443:443
-    volumes:
-      - './ssl/:/etc/nginx/conf.d/ssl/'
-      - './default.conf:/etc/nginx/conf.d/default.conf'
-    networks:
-      - app-network
