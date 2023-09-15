@@ -18,7 +18,7 @@ import {
   TransactionFailedError,
   TransactionSendBeforeError,
 } from "./IAccount.interface";
-import { provider, JSONStringify, timeoutPromise } from "@orbiter-finance/utils";
+import { provider, JSONStringify, timeoutPromise,equals } from "@orbiter-finance/utils";
 export default class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
