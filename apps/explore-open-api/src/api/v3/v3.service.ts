@@ -6,13 +6,16 @@ import { BridgeTransaction, BridgeTransactionAttributes } from "@orbiter-finance
 import { V2Service } from "../v2/v2.service";
 import Keyv from "keyv";
 import { BigIntToString } from "@orbiter-finance/utils";
-
+import {BigNumber} from "bignumber.js"
+import {
+  ChainConfigService,
+} from "@orbiter-finance/config";
 const keyv = new Keyv();
 const defaultCacheTime = 1000 * 60 * 60;
 
 @Injectable()
 export class V3Service {
-  constructor(private readonly v2Service: V2Service) {
+  constructor(private readonly v2Service: V2Service,private chainConfigService: ChainConfigService) {
   }
 
   @InjectModel(BridgeTransaction) private BridgeTransactionModel: typeof BridgeTransaction;
@@ -211,15 +214,12 @@ export class V3Service {
         const newData = BigIntToString(row);
         // newData.profit = row.tradeFee;
         // delete newData.tradeFee;
-        const chainInfo = utils.getChainInfoByNetworkId(String(row.sourceChain));
-        newData.sourceTime = dayjs(row.sourceTime).valueOf();
-        newData.targetTime = dayjs(row.targetTime).valueOf();
-        const token =utils.getChainTokenList(chainInfo).find(t=> t.symbol === row.sourceSymbol);
+        const token = this.chainConfigService.getTokenBySymbol(String(row.sourceChain),row.sourceSymbol)
         if (token) {
           newData.tradeFee = new BigNumber(row.tradeFee).times(10**token.decimals).toFixed(0);
+          newData.tradeFeeDecimals = token.decimals;
           newData.withholdingFee = new BigNumber(row.withholdingFee).times(10**token.decimals).toFixed(0);
           newData.withholdingFeeDecimals = token.decimals;
-          newData.tradeFeeDecimals = token.decimals;
           rows.push(newData);
         }
       }
