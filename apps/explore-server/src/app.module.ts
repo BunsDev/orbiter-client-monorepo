@@ -45,6 +45,7 @@ dayjs.extend(utc);
     OrbiterConfigModule.forRoot({
       chainConfigPath:"explore-data-service/chains.json",
       envConfigPath: "explore-data-service/config.yaml",
+      makerV1RulePath: "explore-data-service/rules/",
       cachePath: join(__dirname,'runtime')
     }),
     WinstonModule.forRoot({

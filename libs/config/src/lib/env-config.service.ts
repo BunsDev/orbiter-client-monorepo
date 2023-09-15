@@ -7,7 +7,7 @@ import { sleep } from './utils'
 import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
 import { ConsulService } from 'libs/consul/src/lib/consul.service'
 import { Logger } from '@nestjs/common';
-export function getConfig(name: string) {
+function getConfig(name: string) {
     return get(ENVConfigService.configs, name);
 }
 import { ORBITER_CONFIG_MODULE_OPTS } from './config.constants';
@@ -21,24 +21,27 @@ export class ENVConfigService {
         @Inject(ORBITER_CONFIG_MODULE_OPTS) private readonly options: ConfigModuleOptions
     ) {
         ENVConfigService.configs = {};
-        try {
-            this.consul.watchKey(
-                this.options.envConfigPath,
-                (config: KeyValueResult) => {
-                    const data = config.yamlToJSON();
-                    this.#init = true;
-                    if (!isEqual(data, ENVConfigService.configs)) {
-                        ENVConfigService.configs = data;
-                        this.write();
-                    }
-                },
-            );
-        } catch (error) {
-            Logger.error(
-                `watch config change error ${error.message}`,
-                error.stack,
-            );
+        if (this.options.envConfigPath) {
+            try {
+                this.consul.watchKey(
+                    this.options.envConfigPath,
+                    (config: KeyValueResult) => {
+                        const data = config.yamlToJSON();
+                        this.#init = true;
+                        if (!isEqual(data, ENVConfigService.configs)) {
+                            ENVConfigService.configs = data;
+                            this.write();
+                        }
+                    },
+                );
+            } catch (error) {
+                Logger.error(
+                    `watch config change error ${error.message}`,
+                    error.stack,
+                );
+            }
         }
+
     }
     get<T = any>(name: string): T {
         return getConfig(name);
@@ -64,11 +67,18 @@ export class ENVConfigService {
         if (isEmpty(ENVConfigService.configs)) {
             throw new Error('no configuration to write');
         }
+        const envConfigPath = this.options.envConfigPath;
+        if (!envConfigPath) {
+            throw new Error('Missing configuration path');
+        }
+        if(!this.options.cachePath) {
+            return console.warn('Missing cache path');
+        }
         if (ENVConfigService.configs) {
             const cloneConfig = clone(ENVConfigService.configs);
             delete cloneConfig['privateKey'];
             const data = yaml.dump(cloneConfig);
-            const filePath = join(this.options.cachePath, this.options.envConfigPath);
+            const filePath = join(this.options.cachePath, envConfigPath);
             await outputFile(filePath, data);
         }
     }

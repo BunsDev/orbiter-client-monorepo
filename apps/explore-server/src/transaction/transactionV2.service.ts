@@ -2,15 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { MdcService } from '../thegraph/mdc/mdc.service';
 import dayjs from 'dayjs';
 import { ThegraphManagerService } from '../thegraph/manager/manager.service';
-import {TransactionID} from '../utils';
+import { TransactionID } from '../utils';
 import { equals, addressPadStart64, padStart } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction, Transfers } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService } from '@orbiter-finance/config';
-import * as maker1 from '../config/maker-1.json';
-import * as maker2 from '../config/maker-2.json';
-import * as maker3 from '../config/maker-3.json';
-import * as maker4 from '../config/maker-4.json';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
@@ -22,34 +18,16 @@ import { MemoryMatchingService } from './memory-matching.service';
 @Injectable()
 export class TransactionV2Service {
   private logger = createLoggerByName(`${TransactionV2Service.name}`);
-  private makerRules: any[] = [];
   constructor(
     private mdcService: MdcService,
     private thegraphManagerService: ThegraphManagerService,
-    @InjectModel(Transfers) private transfersModel:typeof Transfers,
+    @InjectModel(Transfers) private transfersModel: typeof Transfers,
     @InjectModel(BridgeTransaction)
-    private bridgeTransactionModel:typeof BridgeTransaction,
+    private bridgeTransactionModel: typeof BridgeTransaction,
     protected chainConfigService: ChainConfigService,
     private sequelize: Sequelize,
     protected memoryMatchingService: MemoryMatchingService,
   ) {
-    const allConfig = [maker1, maker2, maker3, maker4];
-    for (const makerConfigs of allConfig) {
-      for (const chainId in makerConfigs) {
-        const chains = chainId.split('-');
-        for (const symbolId in makerConfigs[chainId]) {
-          const ruleConfig = makerConfigs[chainId][symbolId];
-          const symbols = symbolId.split('-');
-          this.makerRules.push({
-            ...ruleConfig,
-            sourceChainId: chains[0],
-            targetChainId: chains[1],
-            sourceSymbol: symbols[0],
-            targetSymbol: symbols[1],
-          });
-        }
-      }
-    }
     this.matchScheduleUserSendTask()
       .then((res) => {
         this.matchScheduleMakerSendTask();
@@ -77,12 +55,13 @@ export class TransactionV2Service {
       },
     });
     for (const transfer of transfers) {
-      await this.handleTransferBySourceTx(transfer).catch((error) => {
+      const result = await this.handleTransferBySourceTx(transfer).catch((error) => {
         this.logger.error(
           `matchScheduleTask handleTransferBySourceTx ${transfer.hash} error ${error.message}`,
           error.stack,
         );
       });
+      this.logger.info(`handleTransferBySourceTx result:${JSON.stringify(result)}`)
     }
   }
   @Cron('0 */6 * * * *')
@@ -101,12 +80,13 @@ export class TransactionV2Service {
       },
     });
     for (const transfer of transfers) {
-      await this.handleTransferByDestTx(transfer).catch((error) => {
+      const result = await this.handleTransferByDestTx(transfer).catch((error) => {
         this.logger.error(
           `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error ${error.message}`,
           error.stack,
         );
       });
+      this.logger.info(`handleTransferByDestTx result:${JSON.stringify(result)}`)
     }
   }
 
@@ -218,8 +198,7 @@ export class TransactionV2Service {
             result.targetToken = tokenInfo;
           } else {
             this.logger.warn(
-              `${
-                transfer.hash
+              `${transfer.hash
               } targetChainInfo Token not found,targetChainIdIndex=${targetChainIdIndex},targetChainId=${targetChainId},sourceTokenMainnetToken=${sourceTokenMainnetToken}, targetTokenList${JSON.stringify(
                 targetChainInfo.tokenList,
               )}`,
@@ -408,7 +387,7 @@ export class TransactionV2Service {
     }
     createdData.transactionId = TransactionID(
       transfer.sender,
-      '',
+      `-${transfer.chainId}`,
       transfer.nonce,
       transfer.symbol,
       dayjs(transfer.timestamp).valueOf(),
@@ -416,15 +395,28 @@ export class TransactionV2Service {
     createdData.targetAddress = data.targetAddress;
     return createdData;
   }
+  errorBreakResult(errmsg: string) {
+    this.logger.error(errmsg);
+    return {
+      errmsg: errmsg
+    }
+  }
   public async handleTransferBySourceTx(transfer: Transfers) {
     if (transfer.status != 2) {
-      return this.logger.error(
-        `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`,
-      );
+      return this.errorBreakResult(`validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`)
     }
-    const { code, errmsg, data } = await this.validSourceTxInfo(transfer);
-    if (code !== 0) {
-      return this.logger.error(`${transfer.hash} ${errmsg}`);
+    let data;
+    try {
+      const { code, errmsg, data:validData } = await this.validSourceTxInfo(transfer);
+      data = validData;
+      if (code !== 0) {
+        return this.errorBreakResult(`validSourceTxInfo fail ${transfer.hash} ${errmsg}`)
+      }
+    } catch (error) {
+      return this.errorBreakResult(`validSourceTxInfo catch ${transfer.hash} ${error.message}`)
+    }
+    if (!data) {
+      return this.errorBreakResult(`validSourceTxInfo catch ${transfer.hash} ValidData not found`)
     }
     const sourceBT = await this.bridgeTransactionModel.findOne({
       where: {
@@ -433,9 +425,7 @@ export class TransactionV2Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-      return this.logger.error(
-        `${transfer.hash} Status is in operation Operation not permitted`,
-      );
+      return this.errorBreakResult(`${transfer.hash} Status is in operation Operation not permitted`)
     }
     const t = await this.sequelize.transaction();
     try {
@@ -503,6 +493,7 @@ export class TransactionV2Service {
       }
       await t.commit();
     } catch (error) {
+      console.error(error);
       this.logger.error(
         `handleTransferBySourceTx ${transfer.hash} error ${error.message}`,
         error.stack,
@@ -513,7 +504,7 @@ export class TransactionV2Service {
   }
 
   public async handleTransferByDestTx(transfer: Transfers) {
-    if (transfer.version!='2-1') {
+    if (transfer.version != '2-1') {
       throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
     }
     let t1;

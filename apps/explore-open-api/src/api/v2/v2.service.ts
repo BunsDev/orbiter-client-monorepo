@@ -4,8 +4,7 @@ import BigNumber from 'bignumber.js';
 import {
   ChainConfigService,
   IChainConfig,
-  IMakerConfig, IMakerDataConfig,
-  V1MakerConfigService
+  MakerV1RuleService
 } from "@orbiter-finance/config";
 import { ECode, ITradingPair } from "../api.interface";
 import Keyv from 'keyv';
@@ -30,15 +29,16 @@ export class V2Service {
   static tradingPairs:ITradingPair[] = [];
   static idMap = {};
 
-  constructor(private chainConfigService: ChainConfigService, private v1MakerConfigService: V1MakerConfigService) {
+  constructor(private chainConfigService: ChainConfigService, private makerV1RuleService: MakerV1RuleService) {
     const _this = this;
-    v1MakerConfigService.init(async function (makerConfig) {
-      const chainList = chainConfigService.getAllChains();
-      chainList.forEach(item => {
-        V2Service.idMap[+item.internalId] = item.chainId;
-      });
-      V2Service.tradingPairs = _this.convertMakerConfig(chainList, makerConfig);
-    });
+    // TODO: reomve
+    // v1MakerConfigService.init(async function (makerConfig) {
+    //   const chainList = chainConfigService.getAllChains();
+    //   chainList.forEach(item => {
+    //     V2Service.idMap[+item.internalId] = item.chainId;
+    //   });
+    //   V2Service.tradingPairs = _this.convertMakerConfig(chainList, makerConfig);
+    // });
   }
 
   @InjectModel(Transaction) private TransactionModel: typeof Transaction;

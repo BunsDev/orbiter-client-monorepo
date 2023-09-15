@@ -5,12 +5,12 @@ import Consul from 'consul';
 import { KeyValueResult } from './keyValueResult';
 @Injectable()
 export class ConsulService implements OnModuleInit {
-  private consulClient!: Consul.Consul;
+  public readonly consulClient!: Consul.Consul;
 
   constructor(@Inject(CONSUL_OPTIONS) private readonly options: ConsulOptions) {
     this.consulClient = new Consul({
       host: this.options.host,
-      port: this.options.port,
+      port: String(this.options.port),
       defaults: this.options.defaults,
       promisify: true,
     });
@@ -18,13 +18,15 @@ export class ConsulService implements OnModuleInit {
 
   onModuleInit() {
     // this.consulClient.agent.service.register({
-    //     name: this.options.name,
+    //     name: String(this.options.name),
     //     status: "passing"
-    // });
+    // }).catch(error=> {
+    //   console.error('onModuleInit fail', error);
+    // })
   }
 
-  async get(key: string): Promise<KeyValueResult> {
-    const result = await this.consulClient.kv.get(key);
+  async get(key: string): Promise<KeyValueResult | void> {
+    const result:any = await this.consulClient.kv.get(key);
     if (result) {
       return new KeyValueResult(result.Value);
     }
@@ -32,9 +34,31 @@ export class ConsulService implements OnModuleInit {
   async set(key: string, value: string): Promise<void> {
     await this.consulClient.kv.set(key, value);
   }
-
+  watchConsulConfig(keyPrefix:string, callback:any) {
+    const client = this.consulClient;
+    const watcher = client.watch({
+      method: client.kv.get,
+      options: {
+        key: keyPrefix,
+      },
+    });
+  
+    watcher.on('change', (data, res) => {
+      if (data) {
+        callback(data);
+      }
+    });
+  
+    watcher.on('error', (err) => {
+      console.error('Consul Watcher Error:', err);
+    });
+  
+    return function stopWatching() {
+      watcher.end(); // 停止监视
+    };
+  }
   watchKey(key: string, callback: (newValue: KeyValueResult) => void) {
-    const opts = {
+    const opts:any = {
       key,
     };
     if (this.options.defaults && this.options.defaults.token) {
@@ -57,7 +81,7 @@ export class ConsulService implements OnModuleInit {
 
   async watchFolder(folderKey: string, callback: (newValue: { [key: string]: KeyValueResult }) => void): Promise<void> {
     const keys: string[] = await this.consulClient.kv.keys(folderKey);
-    const keyMap = {};
+    const keyMap:any = {};
     const promises = [];
     const resMap: { [key: string]: KeyValueResult } = {};
     for (const key of keys) {
@@ -84,7 +108,7 @@ export class ConsulService implements OnModuleInit {
     setInterval(async () => {
       try {
         // await checkConsul();
-        const currentKeys = await _this.consulClient.kv.keys(folderKey);
+        const currentKeys:any = await _this.consulClient.kv.keys(folderKey);
         for (const key of currentKeys) {
           if (!keyMap[key]) {
             console.log(`add consul config ${key}`);

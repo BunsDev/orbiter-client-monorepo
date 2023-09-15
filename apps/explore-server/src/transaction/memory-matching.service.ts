@@ -53,9 +53,6 @@ export class MemoryMatchingService {
   }
 
   matchV1GetBridgeTransactions(transfer: TransfersAttributes) {
-    if (transfer.version != '1-1') {
-      throw new Error('Target Tx Incorrect version');
-    }
     const matchTx = this.bridgeTransactions.find((bt) => {
       const responseMaker: string[] = bt.responseMaker || [];
       return (
@@ -64,7 +61,7 @@ export class MemoryMatchingService {
         equals(bt.targetChain, transfer.chainId) &&
         equals(bt.targetAmount, transfer.amount) &&
         responseMaker.includes(transfer.sender) &&
-        bt.version === '1-0'
+        bt.version === `${transfer.version.split('-')[0]}-0`
       );
     });
     if (!matchTx) {

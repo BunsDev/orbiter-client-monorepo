@@ -21,6 +21,7 @@
     "@nestjs/platform-express": "^10.2.4",
     "@nestjs/schedule": "^3.0.3",
     "@nestjs/sequelize": "^10.0.0",
+    "@types/consul": "^0.40.1",
     "@types/js-yaml": "^4.0.5",
     "@types/json-bigint": "^1.0.1",
     "@types/lodash": "^4.14.197",

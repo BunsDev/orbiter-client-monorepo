@@ -64,30 +64,34 @@ export class TransactionService {
         if (versionStr) {
           transfer.version = versionStr;
         }
+        const upsertData:any = {
+          hash: transfer.hash,
+          chainId: transfer.chainId,
+          blockNumber: transfer.blockNumber.toString(),
+          sender,
+          receiver,
+          amount: transfer.amount,
+          value: transfer.value,
+          token: tokenAddr,
+          symbol: transfer.symbol,
+          fee: transfer.fee,
+          feeAmount: transfer.feeAmount,
+          nonce: String(transfer.nonce),
+          calldata: calldata,
+          status: transfer.status,
+          timestamp: txTime,
+          contract: contractAddr || null,
+          selector: transfer.selector,
+          signature: transfer.signature,
+          version: transfer.version,
+          feeToken: transfer.feeToken,
+        }
+        if (transfer.sender === transfer.receiver) {
+          upsertData.opStatus = 3;
+        }
         await this.transfersModel
           .upsert(
-            {
-              hash: transfer.hash,
-              chainId: transfer.chainId,
-              blockNumber: transfer.blockNumber.toString(),
-              sender,
-              receiver,
-              amount: transfer.amount,
-              value: transfer.value,
-              token: tokenAddr,
-              symbol: transfer.symbol,
-              fee: transfer.fee,
-              feeAmount: transfer.feeAmount,
-              nonce: String(transfer.nonce),
-              calldata: calldata,
-              status: transfer.status,
-              timestamp: txTime,
-              contract: contractAddr || null,
-              selector: transfer.selector,
-              signature: transfer.signature,
-              version: transfer.version,
-              feeToken: transfer.feeToken,
-            },
+            upsertData,
             {
               conflictFields: ['chainId', 'hash'],
             },

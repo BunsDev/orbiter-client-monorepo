@@ -3,7 +3,7 @@ import { ModuleMetadata } from '@nestjs/common/interfaces';
 export interface ConsulOptions {
   name?: string;
   host: string;
-  port: number;
+  port: string;
   defaults?: any;
 }
 
