@@ -96,8 +96,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         }
       } catch (error) {
         this.logger.error(
-          `filterTransactions error ${row['hash']} ${error.message}`,
-          error.stack,
+          `filterTransactions error ${row['hash']} `, error,
         );
         throw error;
       }
@@ -259,8 +258,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     } catch (error) {
       console.error(error);
       this.logger.error(
-        `handleTransaction error ${transaction.hash} ${error.message}`,
-        error.stack,
+        `handleTransaction error ${transaction.hash}`,
+        error,
       );
       throw error;
     }

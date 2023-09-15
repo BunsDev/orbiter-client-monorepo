@@ -82,9 +82,8 @@ export class RpcScanningSchedule {
           return await scanner.service.retryFailedREScanBatch();
         } catch (error) {
           this.logger.error(
-            `failedREScanSchedule failedREScan error ${error.message}`,
-            error.stack,
-            scanner.id,
+            `failedREScanSchedule failedREScan error `,
+            error,
           );
         }
       });
@@ -97,17 +96,16 @@ export class RpcScanningSchedule {
           scanner.mutex.runExclusive(async () => {
             return await scanner.service.bootstrap().catch((error) => {
               this.logger.error(
-                `scan bootstrap error ${error.message}`,
-                error.stack,
-                scanner.id,
+                `scan bootstrap error`,
+                error,
               );
             });
           });
         }
       } catch (error) {
         this.logger.error(
-          `scanSchedule bootstrap error ${error.message}`,
-          error.stack,
+          `scanSchedule bootstrap error`,
+          error,
         );
       }
     }

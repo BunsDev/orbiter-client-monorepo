@@ -107,7 +107,7 @@ export default class StarknetAccount extends OrbiterAccount  {
         transactionRequest: TransactionRequest = {}
     ): Promise<TransferResponse | undefined> {
         const provider = this.getProviderV4();
-        let maxFee = cairo.uint256(0.009 * 10 ** 18);
+        const maxFee = cairo.uint256(0.009 * 10 ** 18);
         const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
         const invocation = {
             contractAddress: token,

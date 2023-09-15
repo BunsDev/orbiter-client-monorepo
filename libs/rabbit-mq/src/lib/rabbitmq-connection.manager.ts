@@ -46,8 +46,8 @@ export class RabbitmqConnectionManager
     } catch (error) {
       this.alertService.sendTelegramAlert("ERROR",  `Failed to connect to RabbitMQ:${error.message}`);
       this.logger.error(
-        `Failed to connect to RabbitMQ:${error.message}`,
-        error.stack,
+        `Failed to connect to RabbitMQ`,
+        error,
       );
       process.exit(1);
       // setTimeout(() => this.connectToRabbitMQ(), 5000);

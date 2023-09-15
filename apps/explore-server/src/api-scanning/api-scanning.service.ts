@@ -59,7 +59,7 @@ export class ApiScanningService {
         }
       } catch (error) {
         this.prevExecute.fail.push(addr);
-        this.logger.error(`${addr} scan error ${error.message}`, error.stack);
+        this.logger.error(`${addr} scan error`, error);
       }
     }
   }
@@ -106,7 +106,7 @@ export class ApiScanningService {
       );
       return position && position.toString();
     } catch (error) {
-      this.logger.error('getLastScannedPosition error', error.stack);
+      this.logger.error('getLastScannedPosition error', error);
       this.setLastScannedPosition(prefix, '');
     }
     return '';

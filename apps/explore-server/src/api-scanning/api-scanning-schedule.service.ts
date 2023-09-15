@@ -76,9 +76,7 @@ export class ApiScanningSchedule {
         await scanner.mutex.runExclusive(async () => {
           return await scanner.service.bootstrap().catch((error) => {
             this.logger.error(
-              `scan bootstrap error ${error.message}`,
-              error.stack,
-              scanner.id,
+              `scan bootstrap error ${error.message}`,error
             );
           });
         });

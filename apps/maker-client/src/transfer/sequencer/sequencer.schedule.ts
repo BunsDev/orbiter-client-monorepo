@@ -188,7 +188,7 @@ export class SequencerScheduleService {
           await this.batchSendTransaction(row.id, store).catch((error) => {
             this.logger.error(
               "checkStoreReadySend -> batchSendTransaction error",
-              error.stack
+              error
             );
           });
         } else {
@@ -198,7 +198,7 @@ export class SequencerScheduleService {
           await this.singleSendTransaction(row.id, store).catch((error) => {
             this.logger.error(
               "checkStoreReadySend -> singleSendTransaction error",
-              error.stack
+              error
             );
           });
         }

@@ -27,8 +27,8 @@ export class ImmutableApiScanningService extends ApiScanningService {
       }
     } catch (error) {
       this.logger.error(
-        `${address} getAccount error ${error.message}`,
-        error.stack,
+        `${address} getAccount error `,
+        error,
       );
       return [];
     }
@@ -58,7 +58,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
     } catch (error) {
       this.logger.error(
         `${address} getTransactionsBySender error`,
-        error.stack,
+        error,
       );
     }
     try {
@@ -77,7 +77,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
     } catch (error) {
       this.logger.error(
         `${address} getTransactionsByReceiver error`,
-        error.stack,
+        error,
       );
     }
     await this.setLastScannedPosition(

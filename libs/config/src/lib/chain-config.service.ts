@@ -32,8 +32,8 @@ export class ChainConfigService {
                 );
             } catch (error: any) {
                 Logger.error(
-                    `watch config change error ${error.message}`,
-                    error.stack,
+                    `watch config change error`,
+                    error,
                 );
             }
         }

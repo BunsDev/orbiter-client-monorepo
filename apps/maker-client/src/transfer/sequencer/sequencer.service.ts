@@ -231,7 +231,7 @@ export class SequencerService {
             async () => {
               this.logger.debug(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
               await this.execSingleTransfer(transfer, wallet.account, store).catch(error=> {
-                this.logger.error(`execSingleTransfer error ${error.message}`, error.stack)
+                this.logger.error(`execSingleTransfer error`, error)
                 if (error instanceof TransactionSendBeforeError) {
                   rollback();
                 }
@@ -244,15 +244,15 @@ export class SequencerService {
             await rollback();
           }
           this.logger.error(
-            `sequencer.schedule singleSendTransaction ${hash} error ${error.message}`,
-            error.stack
+            `sequencer.schedule singleSendTransaction ${hash} error`,
+            error
           );
         }
       }
     } catch (error) {
       this.logger.error(
-        `singleSendTransactionByTransfer ${hash} error ${error.message}`,
-        error.stack
+        `singleSendTransactionByTransfer ${hash} error`,
+        error
       );
     }
   }
@@ -309,7 +309,7 @@ export class SequencerService {
         }
         this.logger.error(
           "sequencer.schedule batchSendTransactionByTransfer error",
-          error.stack
+          error
         );
       }
     });

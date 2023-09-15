@@ -107,10 +107,9 @@ export class TransactionService {
           })
           .catch((error) => {
             this.logger.error(
-              `insert data error ${transfer.hash} ${error.message}`,
-              error.stack,
+              `insert data error ${transfer.hash}`,
+              error,
             );
-            this.logger.error(JSONStringify(transfer));
             throw error;
           });
       }

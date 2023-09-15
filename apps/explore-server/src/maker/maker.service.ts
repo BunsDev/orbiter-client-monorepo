@@ -10,7 +10,7 @@ import { createLoggerByName } from '../utils/logger';
 export class MakerService {
     #v2Owners: string[] = [];
     #v2OwnerResponseMakers: string[] = [];
-    #v2OwnerResponseMakersVid: number = 0;
+    #v2OwnerResponseMakersVid = 0;
     private logger: winston.Logger = createLoggerByName(MakerService.name);
     constructor(protected envConfigService: ENVConfigService, 
         @InjectConnection() private readonly knex: Knex,
@@ -29,7 +29,7 @@ export class MakerService {
         const v1MakerRules = this.makerV1RuleService.getAll();
         const list = v1MakerRules.filter(r => r.sender).map(r => r.sender.toLocaleLowerCase());
         // add fake maker
-        const resutl = await this.envConfigService.getAsync("v1ResponseMaker");
+        const resutl = await this.envConfigService.getAsync("v1ResponseMaker") || [];
         const responseAddrs = [...Object.values(resutl).flat(), ...Object.keys(resutl)];
         list.push(...responseAddrs);
         return uniq(list).map(a => a.toLocaleLowerCase());
@@ -51,18 +51,16 @@ export class MakerService {
                 this.#v2Owners = result.map(addr => addr.toLocaleLowerCase());
             }
         }).catch(error => {
-            this.logger.error(`asyncV2MakerOwnersFromCache error: ${error.message}`, error.stack);
+            this.logger.error(`asyncV2MakerOwnersFromCache error: ${error}`, error);
         })
     }
     async getV2MakerOwnersFromCache() {
         if (this.#v2Owners.length <= 0) {
             this.#v2Owners = await this.getV2MakerOwners();
-        } else {
-
         }
         return this.#v2Owners;
     }
-    private async getV2MakerOwnerResponse(vid: number = 0) {
+    private async getV2MakerOwnerResponse(vid = 0) {
         const rows = await this.knex('response_maker')
             .distinct('id')
             .column(['vid'])
@@ -86,14 +84,12 @@ export class MakerService {
                 }
             }
         }).catch(error => {
-            this.logger.error(`asyncV2MakerOwnerResponseToCache error: ${error.message}`, error.stack);
+            this.logger.error(`asyncV2MakerOwnerResponseToCache error: ${error}`, error);
         })
     }
     async getV2MakerOwnerResponseFromCache() {
         if (this.#v2OwnerResponseMakers.length <= 0) {
             this.#v2OwnerResponseMakers = await this.getV2MakerOwnerResponse();
-        } else {
-
         }
         return this.#v2OwnerResponseMakers;
     }

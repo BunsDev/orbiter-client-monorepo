@@ -33,8 +33,8 @@ export class TransactionV1Service {
       })
       .catch((error) => {
         this.logger.error(
-          `constructor matchScheduleTask error ${error.message}`,
-          error.stack,
+          `constructor matchScheduleTask error `,
+          error,
         );
       });
   }
@@ -59,7 +59,7 @@ export class TransactionV1Service {
     for (const transfer of transfers) {
       await this.handleTransferBySourceTx(transfer).catch((error) => {
         this.logger.error(
-          `matchScheduleTask handleTransferBySourceTx ${transfer.hash} error ${error.message}`,
+          `matchScheduleTask handleTransferBySourceTx ${transfer.hash} error`,
           error,
         );
       });
@@ -84,8 +84,8 @@ export class TransactionV1Service {
     for (const transfer of transfers) {
       await this.handleTransferByDestTx(transfer).catch((error) => {
         this.logger.error(
-          `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error ${error.message}`,
-          error.stack,
+          `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error`,
+          error,
         );
       });
     }
@@ -462,8 +462,8 @@ export class TransactionV1Service {
           .addBridgeTransaction(createRow.toJSON())
           .catch((error) => {
             this.logger.error(
-              `${sourceBT.sourceId} addBridgeTransaction error ${error.message}`,
-              error.stack,
+              `${sourceBT.sourceId} addBridgeTransaction error`,
+              error,
             );
           });
       }
@@ -485,8 +485,8 @@ export class TransactionV1Service {
       return createdData
     } catch (error) {
       this.logger.error(
-        `handleTransferBySourceTx ${transfer.hash} error ${error.message}`,
-        error.stack,
+        `handleTransferBySourceTx ${transfer.hash} error`,
+        error,
       );
       t && (await t.rollback());
       throw error;
@@ -555,8 +555,8 @@ export class TransactionV1Service {
       }
     } catch (error) {
       this.logger.error(
-        `handleTransferByDestTx matchV1GetBridgeTransactions match error ${transfer.hash} ${error.message}`,
-        error.stack,
+        `handleTransferByDestTx matchV1GetBridgeTransactions match error ${transfer.hash} `,
+        error,
       );
       t1 && (await t1.rollback());
     }
@@ -621,8 +621,8 @@ export class TransactionV1Service {
           .addTransferMatchCache(transfer)
           .catch((error) => {
             this.logger.error(
-              `${transfer.hash} addTransferMatchCache error ${error.message}`,
-              error.stack,
+              `${transfer.hash} addTransferMatchCache error `,
+              error,
             );
           });
       }

@@ -21,7 +21,7 @@ import { KnexModule } from 'nest-knexjs';
 import { isEmpty } from '@orbiter-finance/utils';
 import { MakerService } from './maker/maker.service';
 import DailyRotateFile from 'winston-daily-rotate-file';
-
+import {loggerFormat} from './utils/logger'
 dayjs.extend(utc);
 
 @Module({
@@ -59,22 +59,10 @@ dayjs.extend(utc);
           zippedArchive: true,
           maxSize: '20m',
           maxFiles: '14d',
-          format: winston.format.combine(
-            winston.format.timestamp({
-            	format: 'YYYY-MM-DD HH:mm:ss',
-            }),
-            winston.format.json(),
-          ),
+          format: loggerFormat(),
         }),
         new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.ms(),
-            utilities.format.nestLike('BlockExploreData', {
-              colors: true,
-              prettyPrint: true,
-            }),
-          ),
+          format:loggerFormat(),
           handleExceptions: true,
         }),
       ],

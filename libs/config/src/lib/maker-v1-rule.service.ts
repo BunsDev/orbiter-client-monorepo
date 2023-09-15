@@ -32,8 +32,8 @@ export class MakerV1RuleService {
                 }
             } catch (error) {
                 Logger.error(
-                    `watch config change error ${error.message}`,
-                    error.stack,
+                    `watch config change error`,
+                    error,
                 );
             }
         }

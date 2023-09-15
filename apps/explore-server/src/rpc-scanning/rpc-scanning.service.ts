@@ -92,10 +92,9 @@ export class RpcScanningService implements RpcScanningInterface {
               await this.handleScanBlockResult(error, block, transfers);
               await this.delPendingScanBlocks([block.number]);
             } catch (error) {
-              console.error(error);
               this.logger.error(
-                `failedREScan handleScanBlockResult ${block.number} error:${error.message}`,
-                error.stack,
+                `failedREScan handleScanBlockResult ${block.number} error`,
+                error,
               );
             }
           }
@@ -104,7 +103,7 @@ export class RpcScanningService implements RpcScanningInterface {
       this.logger.info('failedREScan end');
       return result;
     } catch (error) {
-      this.logger.error(`failedREScan error ${error.message}`, error.stack);
+      this.logger.error(`failedREScan error`, error);
     }
   }
 
@@ -149,8 +148,8 @@ export class RpcScanningService implements RpcScanningInterface {
                 await this.delPendingScanBlocks([block.number]);
               } catch (error) {
                 this.logger.error(
-                  `scanByBlocks -> handleScanBlockResult ${block.number} error ${error.message}`,
-                  error.stack,
+                  `scanByBlocks -> handleScanBlockResult ${block.number} error `,
+                  error,
                 );
                 await this.setPendingScanBlocks([block.number]);
               }
@@ -165,7 +164,7 @@ export class RpcScanningService implements RpcScanningInterface {
       }
       console.log('#'.repeat(100), 'END');
     } catch (error) {
-      this.logger.error(`bootstrap ${error.message}`, error.stack);
+      this.logger.error(`bootstrap `, error);
     }
   }
   public async manualScanBlocks(blockNumbers: number[]): Promise<any> {
@@ -187,7 +186,7 @@ export class RpcScanningService implements RpcScanningInterface {
       );
       return response;
     } catch (error) {
-      this.logger.error(`manualScanBlocks ${error.message}`, error.stack);
+      this.logger.error(`manualScanBlocks error`, error);
     }
   }
   public getScanBlockNumbers(
@@ -264,8 +263,8 @@ export class RpcScanningService implements RpcScanningInterface {
         return { block: row, transfers: transfers };
       } catch (error) {
         this.logger.error(
-          `${this.chainId} handleBlock ${row.number} error ${error.message}`,
-          error.stack,
+          `${this.chainId} handleBlock ${row.number} error `,
+          error,
         );
         const block = blocksResponse.find((item) => item.number == row.number);
         if (block) {
@@ -330,8 +329,8 @@ export class RpcScanningService implements RpcScanningInterface {
       } catch (error) {
         if (retry >= retryCount) {
           this.logger.error(
-            `retryBlockRequest error ${retry}/${retryCount} block:${blockNumber} ${error.message}`,
-            error.stack,
+            `retryBlockRequest error ${retry}/${retryCount} block:${blockNumber} `,
+            error,
           );
           result = {
             number: blockNumber,
@@ -389,8 +388,8 @@ export class RpcScanningService implements RpcScanningInterface {
       } catch (error) {
         if (retry >= retryCount) {
           this.logger.error(
-            `retryRequestGetTransactionReceipt error ${retry}/${retryCount} hash:${hash} ${error.message}`,
-            error.stack,
+            `retryRequestGetTransactionReceipt error ${retry}/${retryCount} hash:${hash} `,
+            error,
           );
           result.error = error.message;
         }
@@ -420,8 +419,8 @@ export class RpcScanningService implements RpcScanningInterface {
       lastScannedBlockNumber = +readFileSync(`runtime/scan/${this.chainId}`);
     } catch (error) {
       this.logger.error(
-        `getLastScannedBlockNumber error ${error.message}`,
-        error.stack,
+        `getLastScannedBlockNumber error`,
+        error,
       );
     } finally {
       if (!lastScannedBlockNumber) {

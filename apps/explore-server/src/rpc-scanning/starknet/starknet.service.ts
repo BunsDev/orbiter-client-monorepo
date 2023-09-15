@@ -278,8 +278,8 @@ export class StarknetRpcScanningService extends RpcScanningService {
         }
       } catch (error) {
         this.logger.error(
-          `handleTransaction for calldata ${row.name} error ${error.message}`,
-          error.stack,
+          `handleTransaction for calldata ${row.name} error`,
+          error,
         );
         throw error;
       }
@@ -317,9 +317,8 @@ export class StarknetRpcScanningService extends RpcScanningService {
       }
     } catch (error) {
       this.logger.error(
-        `decodeExecuteCalldata V1 error ${JSON.stringify(inputs)} ${error.message
-        }`,
-        error.stack,
+        `decodeExecuteCalldata V1 error ${JSON.stringify(inputs)}`,
+        error,
       );
       throw error;
     }
@@ -360,9 +359,8 @@ export class StarknetRpcScanningService extends RpcScanningService {
       return result as any;
     } catch (error) {
       this.logger.error(
-        `decodeExecuteCalldata V2 error ${JSON.stringify(inputs)} ${error.message
-        }`,
-        error.stack,
+        `decodeExecuteCalldata V2 error ${JSON.stringify(inputs)}`,
+        error,
       );
       return null
     }
@@ -427,8 +425,8 @@ export class StarknetRpcScanningService extends RpcScanningService {
               calldata.push(result);
             } catch (error) {
               this.logger.error(
-                `parseContractCallData parseSignPendingMultisigCalldata error ${JSON.stringify(result.args)} ${error.message}`,
-                error.stack)
+                `parseContractCallData parseSignPendingMultisigCalldata error ${JSON.stringify(result.args)}`,
+                error)
             }
           }
         }
@@ -437,8 +435,8 @@ export class StarknetRpcScanningService extends RpcScanningService {
     } catch (error) {
       console.log(error);
       this.logger.error(
-        `parseContractCallData error ${JSON.stringify(data)} ${error.message}`,
-        error.stack,
+        `parseContractCallData error ${JSON.stringify(data)}`,
+        error,
       );
       return null;
     }
