@@ -130,7 +130,7 @@ export class ConsumerService {
         } catch (error: any) {
           console.error(
             'consumeTransferWaitMessages Error processing message:',
-            error.message,
+            error,
           );
         }
       }

@@ -37,8 +37,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     lastScannedBlockNumber: number,
     safetyBlockNumber: number,
   ) {
-    return [47541561];
-    // return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
+    return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
   }
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
@@ -107,6 +106,9 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   }
 
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
+    if (!block) {
+      throw new Error(`Get Block Empty`);
+    }
     const transactions = block.prefetchedTransactions;
     if (!transactions) {
       throw new Error(`${block.number} transactions empty `);
