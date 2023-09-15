@@ -180,6 +180,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         tx.feeAmount = new BigNumber(tx.fee)
           .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
           .toString();
+        tx.status = status === TransferAmountTransactionStatus.failed ?TransferAmountTransactionStatus.failed:tx.status;
         return tx;
       });
       return transfers;

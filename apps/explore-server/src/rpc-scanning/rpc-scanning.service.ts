@@ -71,6 +71,7 @@ export class RpcScanningService implements RpcScanningInterface {
         blockNumbers,
       );
       if (blockNumbers.length <= 0) {
+        this.logger.info('failedREScan end');
         return;
       }
       this.chainConfig.debug && this.logger.debug(
