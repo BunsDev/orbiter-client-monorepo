@@ -199,3 +199,18 @@ export function timeoutPromise<T>(
         });
     });
   }
+
+  export function MaxBigInt(bigIntValues: bigint[]): bigint {
+    if (bigIntValues.length === 0) {
+        throw new Error('missing data');
+      }
+    
+      let maxBigInt: bigint = bigIntValues[0];
+      for (let i = 1; i < bigIntValues.length; i++) {
+        if (bigIntValues[i] > maxBigInt) {
+          maxBigInt = bigIntValues[i];
+        }
+      }
+    
+      return maxBigInt;
+}

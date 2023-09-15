@@ -24,7 +24,7 @@ export class ConsumerService {
     channel.on('close', () => {
       this.logger.error('Channel closed');
       this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
-      this.consumeTransferWaitMessages(callback)
+      this.consumeTransactionReceiptMessages(callback)
     });
 
     channel.on('error', (err) => {

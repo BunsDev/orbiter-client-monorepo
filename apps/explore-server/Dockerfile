@@ -40,5 +40,6 @@ COPY --from=builder /app .
 # Change ownership of the copied files to the explore-server user.
 RUN chown -R explore-server:explore-server .
 
+EXPOSE 3000
 # Start the explore-server application.
 CMD [ "node", "explore-server/main.js" ]

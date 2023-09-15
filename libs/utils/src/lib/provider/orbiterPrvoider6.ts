@@ -8,7 +8,7 @@ import {
   TransactionReceiptParams,
 } from 'ethers6';
 export default class OrbiterProvider extends JsonRpcProvider {
-  #url: string;
+  #url!: string;
   constructor(
     url?: string | FetchRequest,
     network?: Networkish,
@@ -22,13 +22,13 @@ export default class OrbiterProvider extends JsonRpcProvider {
   public getUrl() {
     return this.#url;
   }
-  _wrapTransactionReceipt(
+  override _wrapTransactionReceipt(
     value: TransactionReceiptParams,
     network: Network,
   ): TransactionReceipt {
     const result = super._wrapTransactionReceipt(value, network);
     const keys = Object.keys(result);
-    const extra = {};
+    const extra:any = {};
     for (const k in value) {
       if (!keys.includes(k) && k != 'logs') {
         extra[k] = value[k];

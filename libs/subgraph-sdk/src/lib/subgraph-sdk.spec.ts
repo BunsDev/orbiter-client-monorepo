@@ -1,7 +1,16 @@
-import { subgraphSdk } from './subgraph-sdk';
+import SubgraphClient from './subgraph-sdk';
 
 describe('subgraphSdk', () => {
-    it('should work', () => {
-        expect(subgraphSdk()).toEqual('subgraph-sdk');
+    const client = new SubgraphClient()
+    it('create client', () => {
+        expect(client).toBeDefined;
+    })
+    it('query getOwners', async () => {
+        const result = await client.factory.getOwners();
+        console.log(result, '=result')
+    })
+    it('query getOwners', async () => {
+        const result = await client.factory.GetChainIdMapping();
+        console.log(result, '=result')
     })
 })

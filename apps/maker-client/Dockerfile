@@ -39,5 +39,6 @@ COPY --from=builder /app .
 # Change ownership of the copied files to the maker-client user.
 RUN chown -R maker-client:maker-client .
 
+EXPOSE 3000
 # Start the maker-client application.
 CMD [ "node", "maker-client/main.js" ]

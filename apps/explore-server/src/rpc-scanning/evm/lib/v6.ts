@@ -4,7 +4,7 @@ import {
   TransferAmountTransactionStatus,
 } from '../../rpc-scanning.interface';
 import { IChainConfig } from '@orbiter-finance/config';
-import {abis,equals} from '@orbiter-finance/utils';
+import { abis, equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
 
 export default class EVMVUtils {
@@ -44,17 +44,14 @@ export default class EVMVUtils {
     if (!tokenInfo) {
       return transfers;
     }
-    const status = receipt.status
-      ? TransferAmountTransactionStatus.confirmed
-      : TransferAmountTransactionStatus.failed;
     if (parsedData && parsedData.signature === 'transfer(address,uint256)') {
       // find log
       const txData: TransferAmountTransaction = {
         chainId: chainInfo.chainId,
         hash: transaction.hash,
         blockNumber: transaction.blockNumber,
-        sender: '',
-        receiver: '',
+        sender:  transaction.from,
+        receiver: parsedData.args[0],
         amount: null,
         value: null,
         token: transaction.to,
@@ -63,7 +60,9 @@ export default class EVMVUtils {
         feeAmount: null,
         feeToken: chainInfo.nativeCurrency.symbol,
         timestamp: 0,
-        status,
+        status: +receipt.status
+          ? TransferAmountTransactionStatus.none
+          : TransferAmountTransactionStatus.failed,
         nonce,
         // contract: transaction.to,
         calldata: parsedData.args.toArray(),
@@ -78,15 +77,16 @@ export default class EVMVUtils {
         parsedData.args[0],
         parsedData.args[1],
       );
+      txData.value = new BigNumber(parsedData.args[1]).toFixed(0);
+      txData.amount = new BigNumber(txData.value)
+        .div(Math.pow(10, tokenInfo.decimals))
+        .toString();
       if (event) {
-        txData.sender = transaction.from;
-        txData.receiver = parsedData.args[0];
-        txData.value = new BigNumber(parsedData.args[1]).toFixed(0);
-        txData.amount = new BigNumber(txData.value)
-          .div(Math.pow(10, tokenInfo.decimals))
-          .toString();
-        transfers.push(txData);
+        // txData.receiver = parsedData.args[0];
+        txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
       }
+
+      transfers.push(txData);
     }
 
     return transfers;
@@ -122,9 +122,6 @@ export default class EVMVUtils {
     receipt: any,
   ): TransferAmountTransaction[] {
     const transfers: TransferAmountTransaction[] = [];
-    const status = receipt.status
-      ? TransferAmountTransactionStatus.confirmed
-      : TransferAmountTransactionStatus.failed;
     const { nonce } = transaction;
     const contractInterface = new Interface(abis['OBSource']);
     const parsedData = contractInterface.parseTransaction({
@@ -147,7 +144,9 @@ export default class EVMVUtils {
       feeAmount: null,
       feeToken: chainInfo.nativeCurrency.symbol,
       timestamp: 0,
-      status,
+      status: +receipt.status
+        ? TransferAmountTransactionStatus.none
+        : TransferAmountTransactionStatus.failed,
       nonce,
       calldata: parsedData.args.toArray(),
       contract: transaction.to,
@@ -165,6 +164,7 @@ export default class EVMVUtils {
         .toString();
       txData.symbol = tokenInfo.symbol;
       txData.token = tokenInfo.address;
+      txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
       transfers.push(txData);
     } else if (
       parsedData.signature == 'transferERC20(address,address,uint256,bytes)'
@@ -190,8 +190,9 @@ export default class EVMVUtils {
         txData.amount = new BigNumber(txData.value)
           .div(Math.pow(10, tokenInfo.decimals))
           .toString();
-        transfers.push(txData);
+        txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
       }
+      transfers.push(txData);
     }
     return transfers;
   }
@@ -201,9 +202,6 @@ export default class EVMVUtils {
     receipt: any,
   ): TransferAmountTransaction[] {
     const transfers: TransferAmountTransaction[] = [];
-    const status = receipt.status
-      ? TransferAmountTransactionStatus.confirmed
-      : TransferAmountTransactionStatus.failed;
     const { nonce } = transaction;
     const contractInterface = new Interface(abis['OrbiterRouterV3']);
     const parsedData = contractInterface.parseTransaction({
@@ -226,7 +224,9 @@ export default class EVMVUtils {
       feeAmount: null,
       feeToken: chainInfo.nativeCurrency.symbol,
       timestamp: 0,
-      status,
+      status: +receipt.status
+      ? TransferAmountTransactionStatus.none
+      : TransferAmountTransactionStatus.failed,
       nonce,
       calldata: parsedData.args.toArray(),
       contract: transaction.to,
@@ -242,7 +242,7 @@ export default class EVMVUtils {
           parsedLogData &&
           parsedLogData.signature === 'Transfer(address,uint256)' &&
           parsedLogData.topic ===
-            '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
+          '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
         ) {
           const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           transfers.push({
@@ -256,6 +256,7 @@ export default class EVMVUtils {
               .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
               .toString(),
           });
+          txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
         }
       }
     } else if (
@@ -268,7 +269,7 @@ export default class EVMVUtils {
           parsedLogData &&
           parsedLogData.signature === 'Transfer(address,uint256)' &&
           parsedLogData.topic ===
-            '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+          '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
         ) {
           // }
           const tokenInfo = chainInfo.tokens.find((t) =>
@@ -287,6 +288,7 @@ export default class EVMVUtils {
               .div(Math.pow(10, tokenInfo.decimals))
               .toString(),
           });
+          txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
         }
       }
     } else if (
@@ -314,7 +316,7 @@ export default class EVMVUtils {
           parsedLogData &&
           parsedLogData.signature === 'Transfer(address,address,uint256)' &&
           parsedLogData.topic ===
-            '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+          '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
         ) {
           if (
             equals(from, parsedLogData.args[0]) &&

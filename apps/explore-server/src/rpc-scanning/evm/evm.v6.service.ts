@@ -37,7 +37,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     lastScannedBlockNumber: number,
     safetyBlockNumber: number,
   ) {
-    return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
+    return [47541561];
+    // return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
   }
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
@@ -185,7 +186,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       const { nonce } = transaction;
       const fee = await this.getTransferFee(transaction, receipt);
       const chainId = transaction.chainId || this.chainId;
-      const status = receipt.status
+      const status = +receipt.status
         ? TransferAmountTransactionStatus.confirmed
         : TransferAmountTransactionStatus.failed;
       // console.log(`block:${transaction.blockNumber}, hash:${transaction.hash},index:${receipt.index}, status:${receipt.status}`);
@@ -248,6 +249,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         tx.feeAmount = new BigNumber(tx.fee)
           .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
           .toString();
+          
+        tx.status = status === TransferAmountTransactionStatus.failed ?TransferAmountTransactionStatus.failed:tx.status;
         return tx;
       });
       return transfers;
