@@ -73,7 +73,6 @@ export class RpcScanningService implements RpcScanningInterface {
       this.logger.debug(
         `${this.chainId} failedREScan ${keys.length},blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
       );
-      const result = {}
       const result = await this.scanByBlocks(
         blockNumbers,
         async (
