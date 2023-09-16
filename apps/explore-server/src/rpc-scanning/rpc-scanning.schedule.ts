@@ -7,7 +7,7 @@ import { RpcScanningScheduleService } from './rpc-scanning.interface';
 import { RpcScanningFactory } from './rpc-scanning.factory';
 import { isEmpty } from '@orbiter-finance/utils';
 import { createLoggerByName } from '../utils/logger';
-import {AlertService} from '@orbiter-finance/alert'
+import { AlertService } from '@orbiter-finance/alert'
 @Injectable()
 export class RpcScanningSchedule {
   private readonly logger = createLoggerByName(RpcScanningSchedule.name);
@@ -16,7 +16,7 @@ export class RpcScanningSchedule {
     private chainConfigService: ChainConfigService,
     private envConfigService: ENVConfigService,
     private rpcScanningFactory: RpcScanningFactory,
-    private alertService:AlertService
+    private alertService: AlertService
   ) {
     this.initializeTransactionScanners();
   }
@@ -74,9 +74,9 @@ export class RpcScanningSchedule {
   @Cron('*/5 * * * * *')
   failedREScanSchedule() {
     for (const scanner of this.scanService.values()) {
-      // if (scanner.reScanMutex.isLocked()) {
-      //   continue;
-      // }
+      if (scanner.reScanMutex.isLocked()) {
+        continue;
+      }
       scanner.reScanMutex.runExclusive(async () => {
         try {
           return await scanner.service.retryFailedREScanBatch();
@@ -92,19 +92,20 @@ export class RpcScanningSchedule {
   private async scanSchedule() {
     for (const scanner of this.scanService.values()) {
       try {
-        // if (!scanner.mutex.isLocked()) {
-          scanner.mutex.runExclusive(async () => {
-            scanner.service.logger.info(`rpc scan scanSchedule start`)
-            return await scanner.service.bootstrap().catch((error) => {
-              this.logger.error(
-                `rpc scan bootstrap error`,
-                error,
-              );
-            }).then(()=> {
-              scanner.service.logger.info(`rpc scan scanSchedule end`)
-            })
+        if (scanner.mutex.isLocked()) {
+          continue;
+        }
+        scanner.mutex.runExclusive(async () => {
+          scanner.service.logger.info(`rpc scan scanSchedule start`)
+          return await scanner.service.bootstrap().catch((error) => {
+            this.logger.error(
+              `rpc scan bootstrap error`,
+              error,
+            );
+          }).then(() => {
+            scanner.service.logger.info(`rpc scan scanSchedule end`)
           })
-        // }
+        })
       } catch (error) {
         this.logger.error(
           `scanSchedule bootstrap error`,

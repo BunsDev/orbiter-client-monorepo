@@ -18,7 +18,7 @@ export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
   public logger: winston.Logger;
   public lastBlockNumber = 0;
-  protected batchLimit = 10;
+  protected batchLimit = 100;
   protected requestTimeout = 1000 * 60;
   private pendingDBLock = new Mutex();
   private blockInProgress: Set<number> = new Set();
@@ -58,10 +58,10 @@ export class RpcScanningService implements RpcScanningInterface {
     try {
       this.batchLimit = this.chainConfig.batchLimit || this.batchLimit;
       const keys = await this.getFaileBlockNumbers(this.batchLimit);
+      this.logger.info(`failedREScan start ${JSON.stringify(keys)}`);
       if (keys.length <= 0) {
         return;
       }
-      this.logger.info(`failedREScan start ${JSON.stringify(keys)}`);
       const blockNumbers = keys
         .map((num) => +num)
         .filter((num) => !this.blockInProgress.has(num));
@@ -70,33 +70,33 @@ export class RpcScanningService implements RpcScanningInterface {
         this.logger.info('failedREScan end not blockNumbers');
         return;
       }
-      this.chainConfig.debug && this.logger.debug(
-        `${this.chainId} failedREScan ${keys.length},blockNumbersLength:${blockNumbers.length}, blockNumbers:${blockNumbers} batchLimit:${this.batchLimit}`,
+      this.logger.debug(
+        `${this.chainId} failedREScan ${keys.length},blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
       );
       const result = {}
-      // const result = await this.scanByBlocks(
-      //   blockNumbers,
-      //   async (
-      //     error: Error,
-      //     block: RetryBlockRequestResponse,
-      //     transfers: TransferAmountTransaction[],
-      //   ) => {
-      //     if (isEmpty(error) && block && transfers) {
-      //       try {
-      //         this.logger.debug(
-      //           `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
-      //         );
-      //         await this.handleScanBlockResult(error, block, transfers);
-      //         await this.delPendingScanBlocks([block.number]);
-      //       } catch (error) {
-      //         this.logger.error(
-      //           `failedREScan handleScanBlockResult ${block.number} error`,
-      //           error,
-      //         );
-      //       }
-      //     }
-      //   },
-      // );
+      const result = await this.scanByBlocks(
+        blockNumbers,
+        async (
+          error: Error,
+          block: RetryBlockRequestResponse,
+          transfers: TransferAmountTransaction[],
+        ) => {
+          if (isEmpty(error) && block && transfers) {
+            try {
+              this.logger.debug(
+                `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
+              );
+              await this.handleScanBlockResult(error, block, transfers);
+              await this.delPendingScanBlocks([block.number]);
+            } catch (error) {
+              this.logger.error(
+                `failedREScan handleScanBlockResult ${block.number} error`,
+                error,
+              );
+            }
+          }
+        },
+      );
       this.logger.info('failedREScan scan end');
       return result;
     } catch (error) {
@@ -315,11 +315,8 @@ export class RpcScanningService implements RpcScanningInterface {
           }),
         ]);
         if (!isEmpty(data)) {
-          result = {
-            number: blockNumber,
-            block: data,
-            error: null,
-          };
+          result.error = null;
+          result.block = data;
           break;
         }
       } catch (error) {
@@ -328,11 +325,8 @@ export class RpcScanningService implements RpcScanningInterface {
             `retryBlockRequest error ${retry}/${retryCount} block:${blockNumber} `,
             error,
           );
-          result = {
-            number: blockNumber,
-            block: null,
-            error: error.message,
-          };
+          result.error = error;
+          result.block = null;
         }
       }
     }
@@ -375,6 +369,7 @@ export class RpcScanningService implements RpcScanningInterface {
         const data = await this.requestTransactionReceipt(hash, timeoutMs);
         if (data) {
           result.data = data;
+          result.error = null;
           break;
         }
         // if (retry > 1) {
@@ -394,9 +389,7 @@ export class RpcScanningService implements RpcScanningInterface {
         }
       }
     }
-    if (result.error) {
-      throw result.error;
-    }
+
     return result;
   }
 

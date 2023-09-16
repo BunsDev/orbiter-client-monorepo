@@ -115,7 +115,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
  
     const filterBeforeTransactions =
       await this.filterBeforeTransactions<TransactionResponse>(transactions);
-    // this.logger.info(`block ${block.number} filterBeforeTransactions: ${filterBeforeTransactions.map(tx=> tx.hash)}`)
+    this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
     if (filterBeforeTransactions.length<=0) {
       return [];
     }
@@ -190,7 +190,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       const status = +receipt.status
         ? TransferAmountTransactionStatus.confirmed
         : TransferAmountTransactionStatus.failed;
-      // console.log(`block:${transaction.blockNumber}, hash:${transaction.hash},index:${receipt.index}, status:${receipt.status}`);
       // toAddr is token contract
       const tokenInfo = this.getChainConfigToken(transaction.to);
       const contractInfo = this.getChainConfigContract(transaction.to);
