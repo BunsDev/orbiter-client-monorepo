@@ -18,7 +18,7 @@ export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
   public logger: winston.Logger;
   public lastBlockNumber = 0;
-  protected batchLimit = 50;
+  protected batchLimit = 10;
   protected requestTimeout = 1000 * 60;
   private pendingDBLock = new Mutex();
   private blockInProgress: Set<number> = new Set();
@@ -65,11 +65,7 @@ export class RpcScanningService implements RpcScanningInterface {
       const blockNumbers = keys
         .map((num) => +num)
         .filter((num) => !this.blockInProgress.has(num));
-      this.logger.info(
-        this.chainId + ' failedREScan',
-        '*'.repeat(100),
-        blockNumbers,
-      );
+      this.logger.info(`${this.chainConfig.name} ${'*'.repeat(100)}, blocks:${JSON.stringify(blockNumbers)}`)
       if (blockNumbers.length <= 0) {
         this.logger.info('failedREScan end not blockNumbers');
         return;
@@ -77,29 +73,30 @@ export class RpcScanningService implements RpcScanningInterface {
       this.chainConfig.debug && this.logger.debug(
         `${this.chainId} failedREScan ${keys.length},blockNumbersLength:${blockNumbers.length}, blockNumbers:${blockNumbers} batchLimit:${this.batchLimit}`,
       );
-      const result = await this.scanByBlocks(
-        blockNumbers,
-        async (
-          error: Error,
-          block: RetryBlockRequestResponse,
-          transfers: TransferAmountTransaction[],
-        ) => {
-          if (isEmpty(error) && block && transfers) {
-            try {
-              this.logger.debug(
-                `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
-              );
-              await this.handleScanBlockResult(error, block, transfers);
-              await this.delPendingScanBlocks([block.number]);
-            } catch (error) {
-              this.logger.error(
-                `failedREScan handleScanBlockResult ${block.number} error`,
-                error,
-              );
-            }
-          }
-        },
-      );
+      const result = {}
+      // const result = await this.scanByBlocks(
+      //   blockNumbers,
+      //   async (
+      //     error: Error,
+      //     block: RetryBlockRequestResponse,
+      //     transfers: TransferAmountTransaction[],
+      //   ) => {
+      //     if (isEmpty(error) && block && transfers) {
+      //       try {
+      //         this.logger.debug(
+      //           `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
+      //         );
+      //         await this.handleScanBlockResult(error, block, transfers);
+      //         await this.delPendingScanBlocks([block.number]);
+      //       } catch (error) {
+      //         this.logger.error(
+      //           `failedREScan handleScanBlockResult ${block.number} error`,
+      //           error,
+      //         );
+      //       }
+      //     }
+      //   },
+      // );
       this.logger.info('failedREScan scan end');
       return result;
     } catch (error) {
@@ -145,7 +142,7 @@ export class RpcScanningService implements RpcScanningInterface {
             transfers: TransferAmountTransaction[],
           ) => {
             this.blockInProgress.delete(block.number);
-            this.logger.info(`delete blockInProgress: ${block.number}`)
+            this.logger.info(`delete blockInProgress: ${block.number}, status: ${!(transfers && isEmpty(error))}`)
             if (transfers && isEmpty(error)) {
               try {
                 await this.handleScanBlockResult(error, block, transfers);
@@ -160,7 +157,7 @@ export class RpcScanningService implements RpcScanningInterface {
             } else {
               this.logger.error(
                 `scanByBlocks  error ${block.number}`,
-                {stack: error},
+                { stack: error },
               );
             }
           },
@@ -261,7 +258,6 @@ export class RpcScanningService implements RpcScanningInterface {
     const processBlock = async (row: RetryBlockRequestResponse) => {
       try {
         if (isEmpty(row) || row.error) {
-          console.log('错误---', row);
           return callbackFun(row.error, row, []);
         }
         const result: TransferAmountTransaction[] = await this.handleBlock(
@@ -303,10 +299,14 @@ export class RpcScanningService implements RpcScanningInterface {
     retryCount = 3,
     timeoutMs: number = this.requestTimeout,
   ): Promise<RetryBlockRequestResponse> {
-    let result;
+    let result = {
+      number: blockNumber,
+      block: null,
+      error: null,
+    };
     for (let retry = 1; retry <= retryCount; retry++) {
       try {
-        const startTime = Date.now();
+        // const startTime = Date.now();
         // this.logger.debug(`start scan ${blockNumber}`, 'retryBlockRequest');
         const data: Block | null = await Promise.race([
           this.getBlock(blockNumber),
@@ -314,16 +314,12 @@ export class RpcScanningService implements RpcScanningInterface {
             throw new Error('Block request timed out');
           }),
         ]);
-        this.chainConfig.debug && this.logger.debug(
-          `retryBlockRequest success ${retry}/${retryCount} block:${blockNumber},time consuming:${(Date.now() - startTime) / 1000
-          }/s`,
-        );
-        result = {
-          number: blockNumber,
-          block: data,
-          error: null,
-        };
         if (!isEmpty(data)) {
+          result = {
+            number: blockNumber,
+            block: data,
+            error: null,
+          };
           break;
         }
       } catch (error) {
@@ -364,6 +360,9 @@ export class RpcScanningService implements RpcScanningInterface {
     retryCount = 3,
     timeoutMs = this.requestTimeout,
   ) {
+    if (isEmpty(hash)) {
+      throw new Error('Missing hash parameter')
+    }
     const result = {
       hash: hash,
       data: null,
@@ -372,7 +371,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
     for (let retry = 1; retry <= retryCount; retry++) {
       try {
-        const startTime = Date.now();
+        // const startTime = Date.now();
         const data = await this.requestTransactionReceipt(hash, timeoutMs);
         if (data) {
           result.data = data;

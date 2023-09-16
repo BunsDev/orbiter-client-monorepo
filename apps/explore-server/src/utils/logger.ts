@@ -1,23 +1,23 @@
 import * as winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
-// function loggerFormat () {
-//   return winston.format.combine(
-//     winston.format.colorize(),
-//     winston.format.timestamp(),
-//     winston.format.printf(({ timestamp, level, message, stack }) => {
-//       return `${timestamp} ${name} [${level}]: ${message}\n${stack || ''}`;
-//     })
-//   );
-// }
 export function loggerFormat () {
   return winston.format.combine(
-    winston.format.timestamp({
-      format: 'YYYY-MM-DD HH:mm:ss',
-    }),
-    winston.format.json(),
-  )
+    winston.format.colorize(),
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message, stack,service }) => {
+      return `${timestamp} ${service} [${level}]: ${message}\n${stack || ''}`;
+    })
+  );
 }
+// export function loggerFormat () {
+//   return winston.format.combine(
+//     winston.format.timestamp({
+//       format: 'YYYY-MM-DD HH:mm:ss',
+//     }),
+//     winston.format.json(),
+//   )
+// }
 
 
 export function createLoggerByName(name: string) {
@@ -30,6 +30,9 @@ export function createLoggerByName(name: string) {
   const logger = winston.createLogger({
     level: 'debug',
     format: loggerFormat(),
+    defaultMeta: {
+      service:name
+    },
     transports,
   });
   return logger;

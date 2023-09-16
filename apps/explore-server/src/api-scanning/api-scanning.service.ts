@@ -59,7 +59,7 @@ export class ApiScanningService {
         }
       } catch (error) {
         this.prevExecute.fail.push(addr);
-        this.logger.error(`${addr} scan error`, error);
+        this.logger.error(`${addr} api scan error`, error);
       }
     }
   }

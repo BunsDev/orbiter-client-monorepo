@@ -74,9 +74,9 @@ export class RpcScanningSchedule {
   @Cron('*/5 * * * * *')
   failedREScanSchedule() {
     for (const scanner of this.scanService.values()) {
-      if (scanner.reScanMutex.isLocked()) {
-        continue;
-      }
+      // if (scanner.reScanMutex.isLocked()) {
+      //   continue;
+      // }
       scanner.reScanMutex.runExclusive(async () => {
         try {
           return await scanner.service.retryFailedREScanBatch();
@@ -92,19 +92,19 @@ export class RpcScanningSchedule {
   private async scanSchedule() {
     for (const scanner of this.scanService.values()) {
       try {
-        if (!scanner.mutex.isLocked()) {
+        // if (!scanner.mutex.isLocked()) {
           scanner.mutex.runExclusive(async () => {
-            scanner.service.logger.info(`scanSchedule start`)
+            scanner.service.logger.info(`rpc scan scanSchedule start`)
             return await scanner.service.bootstrap().catch((error) => {
               this.logger.error(
-                `scan bootstrap error`,
+                `rpc scan bootstrap error`,
                 error,
               );
             }).then(()=> {
-              scanner.service.logger.info(`scanSchedule end`)
+              scanner.service.logger.info(`rpc scan scanSchedule end`)
             })
           })
-        }
+        // }
       } catch (error) {
         this.logger.error(
           `scanSchedule bootstrap error`,
