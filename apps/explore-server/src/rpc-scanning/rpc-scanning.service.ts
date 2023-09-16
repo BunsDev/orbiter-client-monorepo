@@ -10,7 +10,7 @@ import {
 } from './rpc-scanning.interface';
 import { Level } from 'level';
 import { IChainConfig } from '@orbiter-finance/config';
-import { isEmpty, sleep,equals} from '@orbiter-finance/utils';
+import { isEmpty, sleep, equals } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
@@ -24,7 +24,7 @@ export class RpcScanningService implements RpcScanningInterface {
   private blockInProgress: Set<number> = new Set();
   static levels: { [key: string]: Level } = {};
   constructor(
-    public readonly chainId: string,public readonly ctx: Context
+    public readonly chainId: string, public readonly ctx: Context
   ) {
     if (!RpcScanningService.levels[chainId]) {
       const db = new Level(`./runtime/data/${this.chainId}`, {
@@ -65,7 +65,7 @@ export class RpcScanningService implements RpcScanningInterface {
       const blockNumbers = keys
         .map((num) => +num)
         .filter((num) => !this.blockInProgress.has(num));
-        this.logger.info(
+      this.logger.info(
         this.chainId + ' failedREScan',
         '*'.repeat(100),
         blockNumbers,
@@ -116,19 +116,21 @@ export class RpcScanningService implements RpcScanningInterface {
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = rpcLastBlockNumber - targetConfirmation;
-      this.chainConfig.debug  &&  this.logger.debug(
+      this.chainConfig.debug && this.logger.debug(
         `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
       );
+      this.logger.info(`blockInProgress: ${JSON.stringify(this.blockInProgress)}`)
       if (safetyBlockNumber > lastScannedBlockNumber) {
         const blockNumbers = this.getScanBlockNumbers(
           lastScannedBlockNumber,
           safetyBlockNumber,
         );
-        blockNumbers.forEach((num) => {
-          this.blockInProgress.add(num);
-        });
         const startBlockNumber = blockNumbers[0],
           endBlockNumber = blockNumbers[blockNumbers.length - 1];
+        blockNumbers.forEach((num) => {
+          this.logger.info(`add blockInProgress: ${num}`)
+          this.blockInProgress.add(num);
+        });
         await this.setPendingScanBlocks(blockNumbers);
         await this.setLastScannedBlockNumber(endBlockNumber);
         this.logger.debug(
@@ -142,6 +144,8 @@ export class RpcScanningService implements RpcScanningInterface {
             block: RetryBlockRequestResponse,
             transfers: TransferAmountTransaction[],
           ) => {
+            this.blockInProgress.delete(block.number);
+            this.logger.info(`delete blockInProgress: ${block.number}`)
             if (transfers && isEmpty(error)) {
               try {
                 await this.handleScanBlockResult(error, block, transfers);
@@ -153,8 +157,11 @@ export class RpcScanningService implements RpcScanningInterface {
                 );
                 await this.setPendingScanBlocks([block.number]);
               }
-            }else {
-              console.log(error, '====error');
+            } else {
+              this.logger.error(
+                `scanByBlocks  error ${block.number}`,
+                {stack: error},
+              );
             }
           },
         );
@@ -247,47 +254,38 @@ export class RpcScanningService implements RpcScanningInterface {
     if (blockNumbers.length <= 0) {
       throw new Error('scanByBlocks missing block number');
     }
-
-    const startTime = Date.now();
+    // const startTime = Date.now();
     const blocksResponse = await this.getBlocks(blockNumbers);
-    const endTime = Date.now();
+    // const endTime = Date.now();
 
     const processBlock = async (row: RetryBlockRequestResponse) => {
       try {
+        if (isEmpty(row) || row.error) {
+          console.log('错误---', row);
+          return callbackFun(row.error, row, []);
+        }
         const result: TransferAmountTransaction[] = await this.handleBlock(
           row.block,
         );
         const transfers = await this.filterTransfers(result);
         await callbackFun(null, row, transfers);
         this.logger.debug(
-          `[1/3] RPCScan success block:${row.number}, match:${transfers.length}/${result.length}`,
+          `RPCScan handle block success block:${row.number}, match:${transfers.length}/${result.length}`,
         );
         return { block: row, transfers: transfers };
       } catch (error) {
-        this.logger.error(
-          `${this.chainId} handleBlock ${row.number} error `,
-          error,
-        );
-        const block = blocksResponse.find((item) => item.number == row.number);
-        if (block) {
-          block.error = new Error(
-            `[2/3] handleBlock ${row.number} error:${error.message}`,
-          );
-        }
         await callbackFun(error, row, null);
-        this.logger.debug(
-          `[1/3] handleBlock Finish success:${successBlock.map(
-            (row) => row.number,
-          )}, fail:${failBlock.map((row) => row.number)}, time consuming:${(endTime - startTime) / 1000
-          }/s`,
+        this.logger.error(
+          `${this.chainId} handleBlock  error ${row.number} `,
+          error,
         );
         return { block: row, transfers: error };
       }
     };
 
-    const successBlock = blocksResponse.filter((row) => isEmpty(row.error));
-    const failBlock = blocksResponse.filter((row) => !isEmpty(row.error));
-    const result = await Promise.all(successBlock.map(processBlock));
+    // const successBlock = blocksResponse.filter((row) => isEmpty(row.error));
+    // const failBlock = blocksResponse.filter((row) => !isEmpty(row.error));
+    const result = await Promise.all(blocksResponse.map(processBlock));
 
     return result;
   }
