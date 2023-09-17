@@ -35,6 +35,7 @@ export class ScanningController {
               latestBlockNumber,
               backward: latestBlockNumber - lastScannedBlockNumber,
               failBlocks: await factory.getFaileBlockNumbers(),
+              
             };
           }
         } catch (error) {

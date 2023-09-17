@@ -71,41 +71,41 @@ export class RpcScanningSchedule {
     }
     this.scanSchedule();
   }
-  @Cron('*/5 * * * * *')
+  @Cron('*/10 * * * * *')
   failedREScanSchedule() {
     for (const scanner of this.scanService.values()) {
-      if (scanner.reScanMutex.isLocked()) {
-        continue;
-      }
-      scanner.reScanMutex.runExclusive(async () => {
+      // if (scanner.reScanMutex.isLocked()) {
+      //   continue;
+      // }
+      // scanner.reScanMutex.runExclusive(async () => {
         try {
-          return await scanner.service.retryFailedREScanBatch();
+          scanner.service.logger.info(`rpc scan failedREScanSchedule start`)
+            scanner.service.retryFailedREScanBatch().then(()=> {
+            scanner.service.logger.info(`rpc scan failedREScanSchedule end`)
+          })
         } catch (error) {
           this.logger.error(
             `failedREScanSchedule failedREScan error `,
             error,
           );
         }
-      });
+      // });
     }
   }
   private async scanSchedule() {
     for (const scanner of this.scanService.values()) {
       try {
-        if (scanner.mutex.isLocked()) {
-          continue;
-        }
-        scanner.mutex.runExclusive(async () => {
-          scanner.service.logger.info(`rpc scan scanSchedule start`)
+        // if (scanner.mutex.isLocked()) {
+        //   continue;
+        // }
+        // scanner.mutex.runExclusive(async () => {
           return await scanner.service.bootstrap().catch((error) => {
             this.logger.error(
               `rpc scan bootstrap error`,
               error,
             );
-          }).then(() => {
-            scanner.service.logger.info(`rpc scan scanSchedule end`)
           })
-        })
+        // })
       } catch (error) {
         this.logger.error(
           `scanSchedule bootstrap error`,

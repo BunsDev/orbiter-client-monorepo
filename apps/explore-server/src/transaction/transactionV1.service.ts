@@ -606,7 +606,9 @@ export class TransactionV1Service {
           },
           {
             where: {
-              id: transfer.id,
+              hash: {
+                [Op.in]: [btTx.sourceId, btTx.targetId],
+              },
             },
             transaction: t2,
           },

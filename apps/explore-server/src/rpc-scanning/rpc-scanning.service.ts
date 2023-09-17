@@ -18,7 +18,7 @@ export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
   public logger: winston.Logger;
   public lastBlockNumber = 0;
-  protected batchLimit = 100;
+  protected batchLimit = 50;
   protected requestTimeout = 1000 * 60;
   private pendingDBLock = new Mutex();
   private blockInProgress: Set<number> = new Set();
@@ -54,24 +54,37 @@ export class RpcScanningService implements RpcScanningInterface {
     }
   }
 
+  async getWaitScanBlockNumbers(limit = -1, gt: string = "") {
+    const db = this.getDB();
+    const subDB = db.sublevel('pending-scan');
+    const keys = await subDB.keys({ limit: limit, gt }).all();
+    if (keys.length <= 0) {
+      return [];
+    }
+    const blockNumbers = keys
+      .map((num) => +num)
+      .filter((num) => !this.blockInProgress.has(num));
+    if (blockNumbers.length <= 0) {
+      gt = keys[keys.length - 1];
+      return this.getWaitScanBlockNumbers(limit, gt)
+    }
+    return blockNumbers;
+  }
+
+
   async retryFailedREScanBatch() {
     try {
-      this.batchLimit = this.chainConfig.batchLimit || this.batchLimit;
-      const keys = await this.getFaileBlockNumbers(this.batchLimit);
-      this.logger.info(`failedREScan start ${JSON.stringify(keys)}`);
-      if (keys.length <= 0) {
-        return;
+      const blockNumbers = await this.getWaitScanBlockNumbers(this.batchLimit);
+      for (const blockNum of blockNumbers) {
+        this.blockInProgress.add(blockNum);
       }
-      const blockNumbers = keys
-        .map((num) => +num)
-        .filter((num) => !this.blockInProgress.has(num));
-      this.logger.info(`${this.chainConfig.name} ${'*'.repeat(100)}, blocks:${JSON.stringify(blockNumbers)}`)
+
       if (blockNumbers.length <= 0) {
         this.logger.info('failedREScan end not blockNumbers');
         return;
       }
       this.logger.debug(
-        `${this.chainId} failedREScan ${keys.length},blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
+        `${this.chainId} failedREScan ,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
       );
       const result = await this.scanByBlocks(
         blockNumbers,
@@ -80,6 +93,7 @@ export class RpcScanningService implements RpcScanningInterface {
           block: RetryBlockRequestResponse,
           transfers: TransferAmountTransaction[],
         ) => {
+          this.blockInProgress.delete(block.number);
           if (isEmpty(error) && block && transfers) {
             try {
               this.logger.debug(
@@ -105,17 +119,17 @@ export class RpcScanningService implements RpcScanningInterface {
 
   public async bootstrap(): Promise<any> {
     try {
-      console.log(this.chainId, '*'.repeat(100), 'Start');
+      // console.log(this.chainId, '*'.repeat(100), 'Start');
       const rpcLastBlockNumber = await this.getLatestBlockNumber();
       this.lastBlockNumber = rpcLastBlockNumber;
 
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
-      const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
+      const targetConfirmation = +this.chainConfig.targetConfirmation || 1;
       const safetyBlockNumber = rpcLastBlockNumber - targetConfirmation;
-      this.chainConfig.debug && this.logger.debug(
-        `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
-      );
-      this.logger.info(`blockInProgress: ${JSON.stringify(this.blockInProgress)}`)
+      // this.chainConfig.debug && this.logger.debug(
+      //   `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
+      // );
+      // this.logger.info(`blockInProgress: ${JSON.stringify(this.blockInProgress)}`)
       if (safetyBlockNumber > lastScannedBlockNumber) {
         const blockNumbers = this.getScanBlockNumbers(
           lastScannedBlockNumber,
@@ -123,51 +137,51 @@ export class RpcScanningService implements RpcScanningInterface {
         );
         const startBlockNumber = blockNumbers[0],
           endBlockNumber = blockNumbers[blockNumbers.length - 1];
-        blockNumbers.forEach((num) => {
-          this.logger.info(`add blockInProgress: ${num}`)
-          this.blockInProgress.add(num);
-        });
+        //   blockNumbers.forEach((num) => {
+        //     this.logger.info(`add blockInProgress: ${num}`)
+        //     this.blockInProgress.add(num);
+        //   });
         await this.setPendingScanBlocks(blockNumbers);
         await this.setLastScannedBlockNumber(endBlockNumber);
-        this.logger.debug(
-          `bootstrap scan ready ${startBlockNumber}-${endBlockNumber} block count: ${blockNumbers.length
-          }, blockNumbers:${JSON.stringify(blockNumbers)}`,
-        );
-        const result = await this.scanByBlocks(
-          blockNumbers,
-          async (
-            error: Error,
-            block: RetryBlockRequestResponse,
-            transfers: TransferAmountTransaction[],
-          ) => {
-            this.blockInProgress.delete(block.number);
-            this.logger.info(`delete blockInProgress: ${block.number}, status: ${!(transfers && isEmpty(error))}`)
-            if (transfers && isEmpty(error)) {
-              try {
-                await this.handleScanBlockResult(error, block, transfers);
-                await this.delPendingScanBlocks([block.number]);
-              } catch (error) {
-                this.logger.error(
-                  `scanByBlocks -> handleScanBlockResult ${block.number} error `,
-                  error,
-                );
-                await this.setPendingScanBlocks([block.number]);
-              }
-            } else {
-              this.logger.error(
-                `scanByBlocks  error ${block.number}`,
-                { stack: error },
-              );
-            }
-          },
-        );
-        this.logger.debug(
-          `start scan ${startBlockNumber} - ${endBlockNumber} Finish, result:${result.map(
-            (row) => row.block.number,
-          )}`,
-        );
+        //   this.logger.debug(
+        //     `bootstrap scan ready ${startBlockNumber}-${endBlockNumber} block count: ${blockNumbers.length
+        //     }, blockNumbers:${JSON.stringify(blockNumbers)}`,
+        //   );
+        //   const result = await this.scanByBlocks(
+        //     blockNumbers,
+        //     async (
+        //       error: Error,
+        //       block: RetryBlockRequestResponse,
+        //       transfers: TransferAmountTransaction[],
+        //     ) => {
+        //       this.blockInProgress.delete(block.number);
+        //       this.logger.info(`delete blockInProgress: ${block.number}, status: ${!(transfers && isEmpty(error))}`)
+        //       if (transfers && isEmpty(error)) {
+        //         try {
+        //           await this.handleScanBlockResult(error, block, transfers);
+        //           await this.delPendingScanBlocks([block.number]);
+        //         } catch (error) {
+        //           this.logger.error(
+        //             `scanByBlocks -> handleScanBlockResult ${block.number} error `,
+        //             error,
+        //           );
+        //           await this.setPendingScanBlocks([block.number]);
+        //         }
+        //       } else {
+        //         this.logger.error(
+        //           `scanByBlocks  error ${block.number}`,
+        //           { stack: error },
+        //         );
+        //       }
+        //     },
+        //   );
+        //   this.logger.debug(
+        //     `start scan ${startBlockNumber} - ${endBlockNumber} Finish, result:${result.map(
+        //       (row) => row.block.number,
+        //     )}`,
+        //   );
       }
-      console.log('#'.repeat(100), 'END');
+      // console.log('#'.repeat(100), 'END');
     } catch (error) {
       this.logger.error(`bootstrap `, error);
     }
