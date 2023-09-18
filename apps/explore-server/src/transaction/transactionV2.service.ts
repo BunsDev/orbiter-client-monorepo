@@ -430,6 +430,7 @@ export class TransactionV2Service {
     const t = await this.sequelize.transaction();
     try {
       const createdData: BridgeTransactionAttributes = {
+        sourceId: transfer.hash,
         sourceSymbol: transfer.symbol,
         targetToken: null,
         sourceTime: transfer.timestamp,
@@ -438,6 +439,7 @@ export class TransactionV2Service {
         targetChain: null,
         ruleId: null,
         targetAmount: null,
+        sourceMaker: transfer.receiver,
         targetAddress: null,
         targetSymbol: null,
         createdAt: new Date(),
