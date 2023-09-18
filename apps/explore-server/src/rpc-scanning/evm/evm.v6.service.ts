@@ -33,12 +33,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     const provider = this.getProvider();
     return await provider.getBlockNumber();
   }
-  public getScanBlockNumbers(
-    lastScannedBlockNumber: number,
-    safetyBlockNumber: number,
-  ) {
-    return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
-  }
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
     const contractList = this.chainConfig.contract  

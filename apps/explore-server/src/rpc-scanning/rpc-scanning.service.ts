@@ -10,7 +10,7 @@ import {
 } from './rpc-scanning.interface';
 import { Level } from 'level';
 import { IChainConfig } from '@orbiter-finance/config';
-import { isEmpty, sleep, equals,take } from '@orbiter-finance/utils';
+import { isEmpty, sleep, equals,take, generateSequenceNumbers } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
@@ -113,9 +113,9 @@ export class RpcScanningService implements RpcScanningInterface {
           // this.logger.info(`delete blockInProgress: ${block.number}, status: ${(transfers && isEmpty(error))}`)
           if (isEmpty(error) && transfers) {
             try {
-              this.logger.debug(
-                `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
-              );
+              // this.logger.debug(
+              //   `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
+              // );
               await this.handleScanBlockResult(error, block, transfers);
               await this.delPendingScanBlocks([block.number]);
             } catch (error) {
@@ -144,12 +144,12 @@ export class RpcScanningService implements RpcScanningInterface {
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
       const targetConfirmation = +this.chainConfig.targetConfirmation || 1;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
-      // this.chainConfig.debug && this.logger.debug(
-      //   `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
-      // );
+      this.chainConfig.debug && this.logger.debug(
+        `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${this.rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
+      );
       // this.logger.info(`blockInProgress: ${JSON.stringify(this.blockInProgress)}`)
       if (safetyBlockNumber > lastScannedBlockNumber) {
-        const blockNumbers = this.getScanBlockNumbers(
+        const blockNumbers = generateSequenceNumbers(
           lastScannedBlockNumber,
           safetyBlockNumber,
         );
@@ -227,23 +227,7 @@ export class RpcScanningService implements RpcScanningInterface {
       this.logger.error(`manualScanBlocks error`, error);
     }
   }
-  public getScanBlockNumbers(
-    lastScannedBlockNumber: number,
-    safetyBlockNumber: number,
-  ) {
-    this.batchLimit = this.chainConfig.batchLimit || this.batchLimit;
-    const startBlockNumber = lastScannedBlockNumber + 1;
-    const endBlockNumber = Math.min(
-      safetyBlockNumber,
-      startBlockNumber + this.batchLimit,
-    );
-    // save pending scan block
-    const blockNumbers = Array.from(
-      { length: endBlockNumber - startBlockNumber + 1 },
-      (_, index) => startBlockNumber + index,
-    );
-    return blockNumbers;
-  }
+
   protected async handleScanBlockResult(
     error: Error,
     block: RetryBlockRequestResponse,
