@@ -20,7 +20,7 @@ export class RpcScanningSchedule {
   ) {
     this.initializeTransactionScanners();
   }
-  @Cron('*/2 * * * * *')
+  @Cron('*/5 * * * * *')
   private async initializeTransactionScanners() {
     const SCAN_CHAINS = (
       this.envConfigService.get<string>('SCAN_CHAINS') || ''
@@ -78,34 +78,35 @@ export class RpcScanningSchedule {
       //   continue;
       // }
       // scanner.reScanMutex.runExclusive(async () => {
-        try {
-          scanner.service.logger.info(`rpc scan failedREScanSchedule start`)
-            scanner.service.retryFailedREScanBatch().then(()=> {
-            scanner.service.logger.info(`rpc scan failedREScanSchedule end`)
-          })
-        } catch (error) {
-          this.logger.error(
-            `failedREScanSchedule failedREScan error `,
-            error,
-          );
-        }
+      scanner.service.logger.info(`rpc scan failedREScanSchedule start`)
+      scanner.service.retryFailedREScanBatch().then(() => {
+        scanner.service.logger.info(`rpc scan failedREScanSchedule end`)
+      }).catch(error => {
+        this.logger.error(
+          `failedREScanSchedule failedREScan error `,
+          error,
+        );
+      })
       // });
     }
   }
   private async scanSchedule() {
     for (const scanner of this.scanService.values()) {
       try {
-        // if (scanner.mutex.isLocked()) {
-        //   continue;
-        // }
-        // scanner.mutex.runExclusive(async () => {
-          return await scanner.service.bootstrap().catch((error) => {
+        if (scanner.mutex.isLocked()) {
+          continue;
+        }
+        scanner.mutex.runExclusive(async () => {
+          scanner.service.logger.info(`rpc scan scanSchedule start`)
+          const result = await scanner.service.bootstrap().catch((error) => {
             this.logger.error(
               `rpc scan bootstrap error`,
               error,
             );
           })
-        // })
+          scanner.service.logger.info(`rpc scan scanSchedule ennd ${JSON.stringify(result)}`)
+          return result;
+        })
       } catch (error) {
         this.logger.error(
           `scanSchedule bootstrap error`,

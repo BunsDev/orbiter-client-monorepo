@@ -7,7 +7,7 @@ export class MakerScheduuleService {
     constructor(private makerService: MakerService) {
 
     }
-    @Cron('*/5 * * * * *')
+    @Cron('* */1 * * * *')
     syncV2Owners() {
         this.makerService.syncV2MakerOwnersToCache();
         this.makerService.syncV2MakerOwnerResponseToCache();

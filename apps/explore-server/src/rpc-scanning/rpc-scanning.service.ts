@@ -18,7 +18,7 @@ export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
   public logger: winston.Logger;
   public lastBlockNumber = 0;
-  protected batchLimit = 50;
+  protected batchLimit = 10;
   protected requestTimeout = 1000 * 60;
   private pendingDBLock = new Mutex();
   private blockInProgress: Set<number> = new Set();
@@ -84,7 +84,7 @@ export class RpcScanningService implements RpcScanningInterface {
         return;
       }
       this.logger.debug(
-        `${this.chainId} failedREScan ,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
+        `failedREScan process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
       );
       const result = await this.scanByBlocks(
         blockNumbers,
@@ -94,7 +94,8 @@ export class RpcScanningService implements RpcScanningInterface {
           transfers: TransferAmountTransaction[],
         ) => {
           this.blockInProgress.delete(block.number);
-          if (isEmpty(error) && block && transfers) {
+          this.logger.info(`delete blockInProgress: ${block.number}, status: ${(transfers && isEmpty(error))}`)
+          if (isEmpty(error) && transfers) {
             try {
               this.logger.debug(
                 `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
@@ -107,6 +108,8 @@ export class RpcScanningService implements RpcScanningInterface {
                 error,
               );
             }
+          } else {
+            this.logger.info(`scanByBlocks block error blockInProgress: ${block.number}, error: ${error.message}`)
           }
         },
       );
@@ -143,6 +146,7 @@ export class RpcScanningService implements RpcScanningInterface {
         //   });
         await this.setPendingScanBlocks(blockNumbers);
         await this.setLastScannedBlockNumber(endBlockNumber);
+        return blockNumbers;
         //   this.logger.debug(
         //     `bootstrap scan ready ${startBlockNumber}-${endBlockNumber} block count: ${blockNumbers.length
         //     }, blockNumbers:${JSON.stringify(blockNumbers)}`,

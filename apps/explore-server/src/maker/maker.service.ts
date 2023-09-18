@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ENVConfigService,MakerV1RuleService } from '@orbiter-finance/config'
+import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config'
 import { InjectConnection } from 'nest-knexjs';
 import { Knex } from 'knex';
 import { uniq, maxBy } from '@orbiter-finance/utils'
@@ -12,10 +12,10 @@ export class MakerService {
     #v2OwnerResponseMakers: string[] = [];
     #v2OwnerResponseMakersVid = 0;
     private logger: winston.Logger = createLoggerByName(MakerService.name);
-    constructor(protected envConfigService: ENVConfigService, 
+    constructor(protected envConfigService: ENVConfigService,
         @InjectConnection() private readonly knex: Knex,
         protected makerV1RuleService: MakerV1RuleService,
-        ) {
+    ) {
         this.getV2MakerOwnersFromCache()
         this.getV2MakerOwnerResponseFromCache()
     }
@@ -55,9 +55,9 @@ export class MakerService {
         })
     }
     async getV2MakerOwnersFromCache() {
-        if (this.#v2Owners.length <= 0) {
-            this.#v2Owners = await this.getV2MakerOwners();
-        }
+        // if (this.#v2Owners.length <= 0) {
+        //     this.#v2Owners = await this.getV2MakerOwners();
+        // }
         return this.#v2Owners;
     }
     private async getV2MakerOwnerResponse(vid = 0) {
@@ -88,9 +88,9 @@ export class MakerService {
         })
     }
     async getV2MakerOwnerResponseFromCache() {
-        if (this.#v2OwnerResponseMakers.length <= 0) {
-            this.#v2OwnerResponseMakers = await this.getV2MakerOwnerResponse();
-        }
+        // if (this.#v2OwnerResponseMakers.length <= 0) {
+        //     this.#v2OwnerResponseMakers = await this.getV2MakerOwnerResponse();
+        // }
         return this.#v2OwnerResponseMakers;
     }
     async getWhiteWalletAddress() {
@@ -108,34 +108,44 @@ export class MakerService {
             };
         }
         address = address.toLocaleLowerCase();
-        const v1Owners = await this.getV1MakerOwners();
-        if (v1Owners.includes(address)) {
-            return {
-                version: '1',
-                exist: true,
-            };
+
+        try {
+            const v1Owners = await this.getV1MakerOwners();
+            if (v1Owners.includes(address)) {
+                return {
+                    version: '1',
+                    exist: true,
+                };
+            }
+            const v1Responses = await this.getV1MakerOwnerResponse();
+            if (v1Responses.includes(address)) {
+                return {
+                    version: '1',
+                    exist: true,
+                };
+            }
+        } catch (error) {
+            throw new Error(`isWhiteWalletAddress v1 error ${error.message}`);
         }
-        const v1Responses = await this.getV1MakerOwnerResponse();
-        if (v1Responses.includes(address)) {
-            return {
-                version: '1',
-                exist: true,
-            };
+        try {
+            const v2Owners = await this.getV2MakerOwnersFromCache();
+            if (v2Owners.includes(address)) {
+                return {
+                    version: '2',
+                    exist: true,
+                };
+            }
+            const v2Responses = await this.getV2MakerOwnerResponseFromCache();
+            if (v2Responses.includes(address)) {
+                return {
+                    version: '2',
+                    exist: true,
+                };
+            }
+        } catch (error) {
+            throw new Error(`isWhiteWalletAddress v2 error ${error.message}`);
         }
-        const v2Owners = await this.getV2MakerOwnersFromCache();
-        if (v2Owners.includes(address)) {
-            return {
-                version: '2',
-                exist: true,
-            };
-        }
-        const v2Responses = await this.getV2MakerOwnerResponseFromCache();
-        if (v2Responses.includes(address)) {
-            return {
-                version: '2',
-                exist: true,
-            };
-        }
+
         return {
             version: '0',
             exist: false,

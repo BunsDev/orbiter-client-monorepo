@@ -47,7 +47,7 @@ export class ConsumerService {
           // await this.transactionService.batchInsertTransactionReceipt(data);
           channel.ack(msg);
         } catch (error: any) {
-          this.logger.error(`consumeTransactionReceiptMessages Error`, error);
+          this.logger.error(`consumeTransactionReceiptMessages Error ${error.message}`, error);
         }
       }
     });

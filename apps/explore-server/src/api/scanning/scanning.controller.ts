@@ -26,15 +26,18 @@ export class ScanningController {
             const factory = this.rpcScanningFactory.createService(
               chain.chainId,
             );
+
             const latestBlockNumber = await factory.getLatestBlockNumber();
             const lastScannedBlockNumber =
               await factory.getLastScannedBlockNumber();
+              const blocks =  await factory.getFaileBlockNumbers();
             result[chain.chainId] = {
               chainId: factory.chainId,
               lastScannedBlockNumber,
               latestBlockNumber,
               backward: latestBlockNumber - lastScannedBlockNumber,
-              failBlocks: await factory.getFaileBlockNumbers(),
+              failBlocks:blocks,
+              waitBlockCount: blocks.length
               
             };
           }
@@ -60,6 +63,7 @@ export class ScanningController {
       const factory = this.rpcScanningFactory.createService(chainId);
       const latestBlockNumber = await factory.getLatestBlockNumber();
       const lastScannedBlockNumber = await factory.getLastScannedBlockNumber();
+      const blocks =  await factory.getFaileBlockNumbers();
       return {
         errno: 0,
         data: {
@@ -67,7 +71,8 @@ export class ScanningController {
           latestBlockNumber,
           lastScannedBlockNumber,
           backward: latestBlockNumber - lastScannedBlockNumber,
-          failBlocks: await factory.getFaileBlockNumbers(),
+          failBlocks:blocks,
+          waitBlockCount: blocks.length
         },
       };
     } catch (error) {
