@@ -4,6 +4,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { RpcScanningFactory } from '../../rpc-scanning/rpc-scanning.factory';
 import { BigIntToString } from '@orbiter-finance/utils';
 import { TransactionService } from '../../transaction/transaction.service';
+import { MakerService } from '../../maker/maker.service';
 @Controller('scanning')
 export class ScanningController {
   constructor(
@@ -11,6 +12,7 @@ export class ScanningController {
     private apiScanningFactory: ApiScanningFactory,
     protected transactionService: TransactionService,
     protected chainConfigService: ChainConfigService,
+    protected makerService: MakerService,
   ) {}
   @Get('/rpc-scan/status')
   async rpcStatus() {
@@ -56,6 +58,18 @@ export class ScanningController {
       };
     }
   }
+  @Get('/owners')
+  async owners() {
+    let startTime = Date.now();
+    return {
+      errno: 0,
+      data: {
+        owners: await this.makerService.getV1MakerOwners(),
+        responses: await this.makerService.getV1MakerOwnerResponse()
+      },
+      response: (Date.now() - startTime) / 1000
+    }
+  }
   @Get('/rpc-scan/status/:chainId/')
   async status(@Param() params) {
     const { chainId } = params;
@@ -73,10 +87,10 @@ export class ScanningController {
           latestBlockNumber,
           lastScannedBlockNumber,
           backward: latestBlockNumber - lastScannedBlockNumber,
-          failBlocks:blocks,
+          // failBlocks:blocks,
           waitBlockCount: blocks.length,
-          time: (Date.now() - startTime )/ 1000
         },
+        response: (Date.now() - startTime )/ 1000
       };
     } catch (error) {
       return {

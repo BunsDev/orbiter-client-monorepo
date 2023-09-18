@@ -8,6 +8,7 @@ import { RpcScanningFactory } from './rpc-scanning.factory';
 import { isEmpty } from '@orbiter-finance/utils';
 import { createLoggerByName } from '../utils/logger';
 import { AlertService } from '@orbiter-finance/alert'
+import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class RpcScanningSchedule {
   private readonly logger = createLoggerByName(RpcScanningSchedule.name);
@@ -16,14 +17,15 @@ export class RpcScanningSchedule {
     private chainConfigService: ChainConfigService,
     private envConfigService: ENVConfigService,
     private rpcScanningFactory: RpcScanningFactory,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private configSercie: ConfigService
   ) {
     this.initializeTransactionScanners();
   }
   @Cron('*/5 * * * * *')
   private async initializeTransactionScanners() {
     const SCAN_CHAINS = (
-      this.envConfigService.get<string>('SCAN_CHAINS') || ''
+      this.configSercie.get('SCAN_CHAINS') || this.envConfigService.get<string>('SCAN_CHAINS')
     ).split(',');
     const chains = this.chainConfigService.getAllChains();
     if (isEmpty(chains)) {
@@ -66,7 +68,7 @@ export class RpcScanningSchedule {
           reScanMutex: new Mutex(),
           service: scanner,
         });
-        this.alertService.sendTelegramAlert("INFO", `CREATE RPC SCAN SERVICE ${chain.name}`)
+        // this.alertService.sendTelegramAlert("INFO", `CREATE RPC SCAN SERVICE ${chain.name}`)
       }
     }
     this.scanSchedule();

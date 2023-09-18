@@ -11,6 +11,7 @@ export class MakerService {
     #v2Owners: string[] = [];
     #v2OwnerResponseMakers: string[] = [];
     #v2OwnerResponseMakersVid = 0;
+    
     private logger: winston.Logger = createLoggerByName(MakerService.name);
     constructor(protected envConfigService: ENVConfigService,
         @InjectConnection() private readonly knex: Knex,
