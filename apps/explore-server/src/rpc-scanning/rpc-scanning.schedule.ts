@@ -90,8 +90,10 @@ export class RpcScanningSchedule {
         })
         if (result) {
           for (const row of result) {
-            if (row.block) {
+            if (row && row.block) {
               scanner.service.logger.info(`failedREScanSchedule scan scanSchedule end ${row.block['number']} / transfers: ${row['transfers'].length}`)
+            } else {
+              scanner.service.logger.error(`failedREScanSchedule error ${JSONStringify(row || {})}`)
             }
           }
         }
