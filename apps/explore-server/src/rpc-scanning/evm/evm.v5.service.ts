@@ -54,7 +54,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           isErrorTx,
         )} `,
       );
-      throw new Error(`receipt error ${block.number}`);
+      throw new Error(`handleBlock get receipt error ${block.number}`);
     }
 
 

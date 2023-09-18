@@ -40,12 +40,6 @@ export class StarknetRpcScanningService extends RpcScanningService {
     }
     return this.#provider;
   }
-  // public getScanBlockNumbers(
-  //   lastScannedBlockNumber: number,
-  //   safetyBlockNumber: number,
-  // ) {
-  //   return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
-  // }
 
   async getLatestBlockNumber(): Promise<number> {
     const provider = this.getProvider();
@@ -87,7 +81,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
           isErrorTx,
         )}`,
       );
-      throw new Error(`receipt error ${blockNumber}`);
+      throw new Error(`handleBlock receipt error ${blockNumber}`);
     }
 
     const filterBeforeTransactions =

@@ -122,7 +122,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         `handleBlock ${block.number
         } retryRequestGetTransactionReceipt error:${JSON.stringify(isErrorTx)}`,
       );
-      throw new Error(`receipt error ${block.number}`);
+      throw new Error(`handleBlock get receipt error ${block.number}`);
     }
     const txTransfersArray = await Promise.all(
       filterBeforeTransactions.map(async (transaction) => {

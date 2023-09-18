@@ -1,0 +1,35 @@
+version: '3.8'
+networks:
+  app-network:
+    driver: bridge
+services:
+  ethereum:
+    image: explore-server:latest
+    restart: always
+    environment:
+      CONSUL_HOST: '${CONSUL_HOST}'
+      CONSUL_PORT: '${CONSUL_PORT}'
+      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+      SCAN_CHAINS: "1"
+    ports:
+      - '3001:3000'
+    networks:
+      - app-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'
+  arbitrum:
+    image: explore-server:latest
+    restart: always
+    environment:
+      CONSUL_HOST: '${CONSUL_HOST}'
+      CONSUL_PORT: '${CONSUL_PORT}'
+      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+      SCAN_CHAINS: "42161"
+    ports:
+      - '3001:3000'
+    networks:
+      - app-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'

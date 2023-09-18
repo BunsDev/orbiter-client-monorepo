@@ -125,7 +125,7 @@ export class RpcScanningService implements RpcScanningInterface {
               );
             }
           } else {
-            this.logger.info(`scanByBlocks block error blockInProgress: ${block.number}, error: ${error.message}`)
+            this.logger.error(`scanByBlocks block error Block: ${block.number} `, error)
           }
         },
       );
@@ -312,7 +312,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
   protected async retryBlockRequest(
     blockNumber: number,
-    retryCount = 3,
+    retryCount = 2,
     timeoutMs: number = this.requestTimeout,
   ): Promise<RetryBlockRequestResponse> {
     let result = {
@@ -336,11 +336,12 @@ export class RpcScanningService implements RpcScanningInterface {
           break;
         }
       } catch (error) {
+        this.logger.error(
+          `retryBlockRequest error ${retry}/${retryCount} block:${blockNumber} `,
+          error,
+        );
         if (retry >= retryCount) {
-          this.logger.error(
-            `retryBlockRequest error ${retry}/${retryCount} block:${blockNumber} `,
-            error,
-          );
+      
           result.error = error;
           result.block = null;
         }
@@ -354,7 +355,7 @@ export class RpcScanningService implements RpcScanningInterface {
       const data = await Promise.race([
         this.getTransactionReceipt(hash),
         sleep(timeoutMs).then(() => {
-          throw new Error('Block request timed out');
+          throw new Error('RequestTransactionReceipt request timed out');
         }),
       ]);
       return data;
@@ -367,7 +368,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async retryRequestGetTransactionReceipt(
     hash: string,
-    retryCount = 3,
+    retryCount = 2,
     timeoutMs = this.requestTimeout,
   ) {
     if (isEmpty(hash)) {
@@ -396,11 +397,12 @@ export class RpcScanningService implements RpcScanningInterface {
         //   );
         // }
       } catch (error) {
+        this.logger.error(
+          `retryRequestGetTransactionReceipt error ${retry}/${retryCount} hash:${hash} `,
+          error,
+        );
         if (retry >= retryCount) {
-          this.logger.error(
-            `retryRequestGetTransactionReceipt error ${retry}/${retryCount} hash:${hash} `,
-            error,
-          );
+   
           result.error = error.message;
         }
       }
