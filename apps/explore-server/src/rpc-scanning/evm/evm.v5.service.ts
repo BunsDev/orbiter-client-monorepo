@@ -43,7 +43,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     }
     const filterBeforeTransactions =
     await this.filterBeforeTransactions<TransactionResponse>(transactions);
-    this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
+    // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
     if (filterBeforeTransactions.length<=0) {
       return [];
     }

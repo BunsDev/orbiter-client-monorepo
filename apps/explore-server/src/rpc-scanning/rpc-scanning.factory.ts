@@ -17,6 +17,7 @@ import { Context } from './rpc-scanning.interface'
 import { MakerService } from '../maker/maker.service'
 @Injectable()
 export class RpcScanningFactory {
+  private services:{[key:string]:RpcScanningService }= {}
   constructor(
     private chainConfigService: ChainConfigService,
     private transactionService: TransactionService,
@@ -28,34 +29,38 @@ export class RpcScanningFactory {
   createService(chainId: string): RpcScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['rpc'];
+    if  (this.services[key] ) {
+      return this.services[key] ;
+    }
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
       transactionService: this.transactionService,
       mdcService: this.mdcService,
       makerService: this.makerService
     }
+    let service;
     switch (key) {
       case 'ZKSyncEraRpcScanningService':
-        return new ZKSyncEraRpcScanningService(
+        service= new ZKSyncEraRpcScanningService(
           chainId,
           ctx
         );
         break;
       case 'EVMRpcScanningV5Service':
-        return new EVMRpcScanningV5Service(
+        service= new EVMRpcScanningV5Service(
           chainId,
           ctx
         );
         break;
       case 'EVMRpcScanningService':
       case 'EVMRpcScanningV6Service':
-        return new EVMRpcScanningV6Service(
+        service= new EVMRpcScanningV6Service(
           chainId,
           ctx
         );
         break;
       case 'ArbitrumRpcScanningService':
-        return new ArbitrumRpcScanningService(
+        service= new ArbitrumRpcScanningService(
           chainId,
           ctx
         );
@@ -67,13 +72,13 @@ export class RpcScanningFactory {
         );
         break;
       case 'BaseRpcScanningService':
-        return new BaseRpcScanningService(
+        service= new BaseRpcScanningService(
           chainId,
           ctx
         );
         break;
       case 'StarknetRpcScanningService':
-        return new StarknetRpcScanningService(
+        service= new StarknetRpcScanningService(
           chainId,
           ctx
         );
@@ -81,5 +86,7 @@ export class RpcScanningFactory {
       default:
         throw new Error(`${chainId} Not Config RPC Service Class`);
     }
+    this.services[key] = service;
+    return this.services[key];
   }
 }

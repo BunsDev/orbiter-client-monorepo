@@ -19,7 +19,7 @@ import BigNumber from 'bignumber.js';
 import { RpcProvider, RPC } from 'starknet';
 export class StarknetRpcScanningService extends RpcScanningService {
   #provider: RpcProvider;
-  init() {
+  async init() {
     this.batchLimit = 5;
     this.requestTimeout = 1000 * 60 * 2;
   }

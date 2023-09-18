@@ -16,8 +16,6 @@ export class MakerService {
         @InjectConnection() private readonly knex: Knex,
         protected makerV1RuleService: MakerV1RuleService,
     ) {
-        this.getV2MakerOwnersFromCache()
-        this.getV2MakerOwnerResponseFromCache()
     }
 
     async getV1MakerOwners() {

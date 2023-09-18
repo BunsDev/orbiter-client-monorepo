@@ -30,7 +30,7 @@ export class ScanningController {
             const latestBlockNumber = await factory.getLatestBlockNumber();
             const lastScannedBlockNumber =
               await factory.getLastScannedBlockNumber();
-              const blocks =  await factory.getFaileBlockNumbers();
+              const blocks =  await factory.getMemoryWaitScanBlockNumbers();
             result[chain.chainId] = {
               chainId: factory.chainId,
               lastScannedBlockNumber,
@@ -60,10 +60,12 @@ export class ScanningController {
   async status(@Param() params) {
     const { chainId } = params;
     try {
+      let startTime = Date.now();
       const factory = this.rpcScanningFactory.createService(chainId);
-      const latestBlockNumber = await factory.getLatestBlockNumber();
-      const lastScannedBlockNumber = await factory.getLastScannedBlockNumber();
-      const blocks =  await factory.getFaileBlockNumbers();
+      const result = await Promise.all([factory.getLatestBlockNumber(), factory.getLastScannedBlockNumber(), factory.getMemoryWaitScanBlockNumbers()]);
+      const latestBlockNumber = +result[0]
+      const lastScannedBlockNumber = +result[1];
+      const blocks = result[2];
       return {
         errno: 0,
         data: {
@@ -72,7 +74,8 @@ export class ScanningController {
           lastScannedBlockNumber,
           backward: latestBlockNumber - lastScannedBlockNumber,
           failBlocks:blocks,
-          waitBlockCount: blocks.length
+          waitBlockCount: blocks.length,
+          time: (Date.now() - startTime )/ 1000
         },
       };
     } catch (error) {

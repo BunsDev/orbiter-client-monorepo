@@ -14,4 +14,6 @@ export {
   uniq,
   clone,
   cloneDeep,
+  take,
+  takeRight
 } from 'lodash';

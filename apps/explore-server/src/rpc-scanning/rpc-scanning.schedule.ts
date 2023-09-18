@@ -71,23 +71,23 @@ export class RpcScanningSchedule {
     }
     this.scanSchedule();
   }
-  @Cron('*/10 * * * * *')
+  @Cron('*/1 * * * * *')
   failedREScanSchedule() {
     for (const scanner of this.scanService.values()) {
-      // if (scanner.reScanMutex.isLocked()) {
-      //   continue;
-      // }
-      // scanner.reScanMutex.runExclusive(async () => {
-      scanner.service.logger.info(`rpc scan failedREScanSchedule start`)
-      scanner.service.retryFailedREScanBatch().then(() => {
-        scanner.service.logger.info(`rpc scan failedREScanSchedule end`)
-      }).catch(error => {
-        this.logger.error(
-          `failedREScanSchedule failedREScan error `,
-          error,
-        );
-      })
-      // });
+      if (scanner.reScanMutex.isLocked()) {
+        continue;
+      }
+      scanner.reScanMutex.runExclusive(async () => {
+        scanner.service.logger.info(`rpc scan failedREScanSchedule start`)
+        scanner.service.retryFailedREScanBatch().then(() => {
+          scanner.service.logger.info(`rpc scan failedREScanSchedule end`)
+        }).catch(error => {
+          this.logger.error(
+            `failedREScanSchedule failedREScan error `,
+            error,
+          );
+        })
+      });
     }
   }
   private async scanSchedule() {
@@ -104,7 +104,7 @@ export class RpcScanningSchedule {
               error,
             );
           })
-          scanner.service.logger.info(`rpc scan scanSchedule ennd ${JSON.stringify(result)}`)
+          scanner.service.logger.info(`rpc scan scanSchedule end ${JSON.stringify(result)}`)
           return result;
         })
       } catch (error) {
