@@ -18,7 +18,7 @@ export class RpcScanningSchedule {
     private envConfigService: ENVConfigService,
     private rpcScanningFactory: RpcScanningFactory,
     private alertService: AlertService,
-    private configSercie: ConfigService
+    private configSercie: ConfigService,
   ) {
     this.initializeTransactionScanners();
   }
@@ -31,6 +31,7 @@ export class RpcScanningSchedule {
     if (isEmpty(chains)) {
       return;
     }
+    
     for (const chain of chains) {
       if (SCAN_CHAINS[0] != '*') {
         if (!SCAN_CHAINS.includes(chain.chainId)) {
@@ -81,7 +82,7 @@ export class RpcScanningSchedule {
       }
       scanner.reScanMutex.runExclusive(async () => {
         scanner.service.logger.info(`rpc scan failedREScanSchedule start`)
-        scanner.service.retryFailedREScanBatch().then(() => {
+        await scanner.service.retryFailedREScanBatch().then(() => {
           scanner.service.logger.info(`rpc scan failedREScanSchedule end`)
         }).catch(error => {
           this.logger.error(
