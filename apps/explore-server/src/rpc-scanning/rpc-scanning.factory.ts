@@ -15,6 +15,8 @@ import { MdcService } from '../thegraph/mdc/mdc.service';
 import { ZKSyncEraRpcScanningService } from './zksyncEra/zksyncEra.service'
 import { Context } from './rpc-scanning.interface'
 import { MakerService } from '../maker/maker.service'
+import {WorkerService} from './worker.service';
+
 @Injectable()
 export class RpcScanningFactory {
   private services:{[key:string]:RpcScanningService }= {}
@@ -23,6 +25,7 @@ export class RpcScanningFactory {
     private transactionService: TransactionService,
     protected mdcService: MdcService,
     protected makerService: MakerService,
+    protected workerService: WorkerService,
 
   ) { }
 
@@ -30,13 +33,15 @@ export class RpcScanningFactory {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['rpc'];
     if  (this.services[chainId] ) {
+      console.log('内存获取---', chainId)
       return this.services[chainId] ;
     }
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
       transactionService: this.transactionService,
       mdcService: this.mdcService,
-      makerService: this.makerService
+      makerService: this.makerService,
+      workerService: this.workerService
     }
     let service;
     switch (key) {
@@ -87,6 +92,6 @@ export class RpcScanningFactory {
         throw new Error(`${chainId} Not Config RPC Service Class`);
     }
     this.services[chainId] = service;
-    return this.services[chainId];
+    return service;
   }
 }

@@ -5,7 +5,7 @@ import { ChainConfigService } from '@orbiter-finance/config';
 import { ENVConfigService } from '@orbiter-finance/config';
 import { RpcScanningScheduleService } from './rpc-scanning.interface';
 import { RpcScanningFactory } from './rpc-scanning.factory';
-import { isEmpty } from '@orbiter-finance/utils';
+import { JSONStringify, isEmpty } from '@orbiter-finance/utils';
 import { createLoggerByName } from '../utils/logger';
 import { AlertService } from '@orbiter-finance/alert'
 import { ConfigService } from '@nestjs/config';
@@ -31,7 +31,7 @@ export class RpcScanningSchedule {
     if (isEmpty(chains)) {
       return;
     }
-    
+
     for (const chain of chains) {
       if (SCAN_CHAINS[0] != '*') {
         if (!SCAN_CHAINS.includes(chain.chainId)) {
@@ -82,14 +82,20 @@ export class RpcScanningSchedule {
       }
       scanner.reScanMutex.runExclusive(async () => {
         scanner.service.logger.info(`rpc scan failedREScanSchedule start`)
-        await scanner.service.retryFailedREScanBatch().then(() => {
-          scanner.service.logger.info(`rpc scan failedREScanSchedule end`)
-        }).catch(error => {
+        const result: any = await scanner.service.retryFailedREScanBatch().catch(error => {
           this.logger.error(
             `failedREScanSchedule failedREScan error `,
             error,
           );
         })
+        if (result) {
+          for (const row of result) {
+            if (row.block) {
+              scanner.service.logger.info(`failedREScanSchedule scan scanSchedule end ${row.block['number']} / transfers: ${row['transfers'].length}`)
+            }
+          }
+        }
+
       });
     }
   }
@@ -100,14 +106,14 @@ export class RpcScanningSchedule {
           continue;
         }
         scanner.mutex.runExclusive(async () => {
-          scanner.service.logger.info(`rpc scan scanSchedule start`)
+          // scanner.service.logger.info(`rpc scan scanSchedule start`)
           const result = await scanner.service.bootstrap().catch((error) => {
             this.logger.error(
               `rpc scan bootstrap error`,
               error,
             );
           })
-          scanner.service.logger.info(`rpc scan scanSchedule end ${JSON.stringify(result)}`)
+          // scanner.service.logger.info(`rpc scan scanSchedule end ${JSONStringify(result)}`)
           return result;
         })
       } catch (error) {

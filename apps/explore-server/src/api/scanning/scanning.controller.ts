@@ -70,12 +70,17 @@ export class ScanningController {
       response: (Date.now() - startTime) / 1000
     }
   }
-  @Get('/rpc-scan/status/:chainId/')
+  @Get('/status/:chainId/')
   async status(@Param() params) {
     const { chainId } = params;
     try {
+      console.log("请求-------", chainId);
       let startTime = Date.now();
       const factory = this.rpcScanningFactory.createService(chainId);
+      if (!factory) {
+        throw new Error('factory not found')
+      }
+      console.log(factory.rpcLastBlockNumber,'===factory')
       const result = await Promise.all([factory.rpcLastBlockNumber, factory.getLastScannedBlockNumber(), factory.getMemoryWaitScanBlockNumbers()]);
       const latestBlockNumber = +result[0]
       const lastScannedBlockNumber = +result[1];

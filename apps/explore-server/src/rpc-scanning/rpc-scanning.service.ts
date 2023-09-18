@@ -17,9 +17,9 @@ import winston from 'winston';
 export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
   public logger: winston.Logger;
-  public rpcLastBlockNumber = 0;
+  public rpcLastBlockNumber:number;
   protected batchLimit = 100;
-  protected requestTimeout = 1000 * 60;
+  protected requestTimeout = 1000 * 60 * 5;
   private pendingDBLock = new Mutex();
   private pendingScanBlocks:Set<number> = new Set();
   private blockInProgress: Set<number> = new Set();
@@ -70,24 +70,6 @@ export class RpcScanningService implements RpcScanningInterface {
     }
   }
 
-  // async getWaitScanBlockNumbers(limit = -1, gt: string = "") {
-  //   const db = this.getDB();
-  //   const subDB = db.sublevel('pending-scan');
-  //   const keys = await subDB.keys({ limit: limit, gt }).all();
-  //   if (keys.length <= 0) {
-  //     return [];
-  //   }
-  //   const blockNumbers = keys
-  //     .map((num) => +num)
-  //     .filter((num) => !this.blockInProgress.has(num));
-  //   if (blockNumbers.length <= 0) {
-  //     gt = keys[keys.length - 1];
-  //     return this.getWaitScanBlockNumbers(limit, gt)
-  //   }
-  //   return blockNumbers;
-  // }
-
-
   async retryFailedREScanBatch() {
     try {
       const blockNumbers = await this.getMemoryWaitScanBlockNumbers(this.batchLimit);
@@ -99,9 +81,9 @@ export class RpcScanningService implements RpcScanningInterface {
         this.logger.info('failedREScan end not blockNumbers');
         return;
       }
-      // this.logger.debug(
-      //   `failedREScan process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
-      // );
+      this.logger.debug(
+        `failedREScan process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
+      );
       const result = await this.scanByBlocks(
         blockNumbers,
         async (
@@ -142,7 +124,7 @@ export class RpcScanningService implements RpcScanningInterface {
       this.rpcLastBlockNumber = await this.getLatestBlockNumber();
 
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
-      const targetConfirmation = +this.chainConfig.targetConfirmation || 1;
+      const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
       this.chainConfig.debug && this.logger.debug(
         `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${this.rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,

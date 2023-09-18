@@ -5,6 +5,7 @@ import { ChainConfigService } from '@orbiter-finance/config';
 import { MdcService } from '../thegraph/mdc/mdc.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { MakerService } from '../maker/maker.service'
+import { WorkerService } from './worker.service';
 
 export type Block = any;
 export type TransactionResponse = ethers.TransactionResponse | any;
@@ -71,5 +72,6 @@ export interface Context {
    chainConfigService: ChainConfigService,
    transactionService: TransactionService,
    mdcService: MdcService,
-   makerService: MakerService
+   makerService: MakerService,
+   workerService: WorkerService
 }

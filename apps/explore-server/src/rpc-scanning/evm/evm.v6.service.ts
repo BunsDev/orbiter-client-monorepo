@@ -8,6 +8,7 @@ import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 import {
+  RetryBlockRequestResponse,
   TransferAmountTransaction,
   TransferAmountTransactionStatus,
 } from '../rpc-scanning.interface';
@@ -104,12 +105,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     }
     const transactions = block.prefetchedTransactions;
     if (!transactions) {
+      this.logger.info(`transactions empty: ${JSONStringify(block)}`);
       throw new Error(`${block.number} transactions empty `);
     }
  
     const filterBeforeTransactions =
       await this.filterBeforeTransactions<TransactionResponse>(transactions);
-    // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
+    this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
     if (filterBeforeTransactions.length<=0) {
       return [];
     }
@@ -147,6 +149,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     }
 
     return transfers;
+  }
+
+  public async getBlocks(
+    blockNumbers: number[],
+  ): Promise<RetryBlockRequestResponse[]> {
+    const blocks = await this.ctx.workerService.runTask(this.chainConfig, blockNumbers);
+    return blocks;
   }
 
   async handleTransaction(

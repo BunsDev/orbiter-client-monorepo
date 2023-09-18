@@ -5,8 +5,8 @@ import { MakerService } from './maker.service'
 export class MakerScheduuleService {
 
     constructor(private makerService: MakerService) {
-        this.makerService.syncV2MakerOwnersToCache();
-        this.makerService.syncV2MakerOwnerResponseToCache();
+        // this.makerService.syncV2MakerOwnersToCache();
+        // this.makerService.syncV2MakerOwnerResponseToCache();
     }
     @Cron('* */1 * * * *')
     syncV2Owners() {
