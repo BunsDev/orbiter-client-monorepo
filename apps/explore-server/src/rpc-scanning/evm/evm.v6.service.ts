@@ -17,16 +17,18 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   #provider: provider.Orbiter6Provider;
   getProvider() {
     const rpc = this.chainConfig.rpc[0];
-    if (!this.#provider) {
-      this.#provider = new provider.Orbiter6Provider(rpc);
-    }
-    if (this.#provider && this.#provider.getUrl() != rpc) {
-      this.logger.info(
-        `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
-      );
-      this.#provider = new provider.Orbiter6Provider(rpc);
-    }
-    return this.#provider;
+    this.#provider = new provider.Orbiter6Provider(rpc);
+    return this.#provider ;
+    // if (!this.#provider) {
+    //   this.#provider = new provider.Orbiter6Provider(rpc);
+    // }
+    // if (this.#provider && this.#provider.getUrl() != rpc) {
+    //   this.logger.info(
+    //     `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
+    //   );
+    //   this.#provider = new provider.Orbiter6Provider(rpc);
+    // }
+    // return this.#provider;
   }
 
   async getLatestBlockNumber(): Promise<number> {

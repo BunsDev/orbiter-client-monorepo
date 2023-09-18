@@ -29,8 +29,8 @@ export class RpcScanningFactory {
   createService(chainId: string): RpcScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['rpc'];
-    if  (this.services[key] ) {
-      return this.services[key] ;
+    if  (this.services[chainId] ) {
+      return this.services[chainId] ;
     }
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
@@ -86,7 +86,7 @@ export class RpcScanningFactory {
       default:
         throw new Error(`${chainId} Not Config RPC Service Class`);
     }
-    this.services[key] = service;
-    return this.services[key];
+    this.services[chainId] = service;
+    return this.services[chainId];
   }
 }

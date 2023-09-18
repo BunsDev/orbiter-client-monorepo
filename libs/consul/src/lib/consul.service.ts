@@ -50,7 +50,7 @@ export class ConsulService implements OnModuleInit {
     });
   
     watcher.on('error', (err) => {
-      console.error('Consul Watcher Error:', err);
+      console.error(`Consul Watcher Error: ${keyPrefix}`, err);
     });
   
     return function stopWatching() {

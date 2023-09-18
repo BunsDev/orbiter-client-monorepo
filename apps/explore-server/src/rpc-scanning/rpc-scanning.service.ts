@@ -17,7 +17,7 @@ import winston from 'winston';
 export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
   public logger: winston.Logger;
-  public lastBlockNumber = 0;
+  public rpcLastBlockNumber = 0;
   protected batchLimit = 100;
   protected requestTimeout = 1000 * 60;
   private pendingDBLock = new Mutex();
@@ -139,12 +139,11 @@ export class RpcScanningService implements RpcScanningInterface {
   public async bootstrap(): Promise<any> {
     try {
       // console.log(this.chainId, '*'.repeat(100), 'Start');
-      const rpcLastBlockNumber = await this.getLatestBlockNumber();
-      this.lastBlockNumber = rpcLastBlockNumber;
+      this.rpcLastBlockNumber = await this.getLatestBlockNumber();
 
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
       const targetConfirmation = +this.chainConfig.targetConfirmation || 1;
-      const safetyBlockNumber = rpcLastBlockNumber - targetConfirmation;
+      const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
       // this.chainConfig.debug && this.logger.debug(
       //   `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
       // );

@@ -76,7 +76,7 @@ export class ScanningController {
     try {
       let startTime = Date.now();
       const factory = this.rpcScanningFactory.createService(chainId);
-      const result = await Promise.all([factory.getLatestBlockNumber(), factory.getLastScannedBlockNumber(), factory.getMemoryWaitScanBlockNumbers()]);
+      const result = await Promise.all([factory.rpcLastBlockNumber, factory.getLastScannedBlockNumber(), factory.getMemoryWaitScanBlockNumbers()]);
       const latestBlockNumber = +result[0]
       const lastScannedBlockNumber = +result[1];
       const blocks = result[2];
