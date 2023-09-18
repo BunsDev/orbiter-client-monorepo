@@ -440,6 +440,7 @@ export class TransactionV2Service {
         ruleId: null,
         targetAmount: null,
         sourceMaker: transfer.receiver,
+        sourceAddress: transfer.sender,
         targetAddress: null,
         targetSymbol: null,
         createdAt: new Date(),
