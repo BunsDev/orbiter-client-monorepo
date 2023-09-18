@@ -29,16 +29,23 @@ async function getBlock(provider: OrbiterProvider, blockNumber: number) {
         // const block = await provider.getBlock(blockNumber, true);
         if (block) {
             const prefetchedTransactions = await block.prefetchedTransactions;
-            const blockInfo = {
-                ...block,
-                prefetchedTransactions,
+            if (prefetchedTransactions) {
+                const blockInfo = {
+                    ...block,
+                    prefetchedTransactions,
 
+                }
+                return {
+                    error: null,
+                    number: blockNumber,
+                    block: blockInfo,
+                }
             }
-            return {
-                error: null,
-                number: blockNumber,
-                block: blockInfo,
-            }
+        }
+        return {
+            error: new Error(`${blockNumber} Block isEmpty`),
+            number: blockNumber,
+            block: null,
         }
     } catch (error) {
         return {

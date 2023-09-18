@@ -14,50 +14,50 @@ export class ScanningController {
     protected chainConfigService: ChainConfigService,
     protected makerService: MakerService,
   ) {}
-  @Get('/rpc-scan/status')
-  async rpcStatus() {
-    try {
-      const result = {};
-      for (const chain of this.chainConfigService.getAllChains()) {
-        if (!chain.service) {
-          continue;
-        }
-        const serviceKeys = Object.keys(chain.service);
-        try {
-          if (serviceKeys.includes('rpc')) {
-            const factory = this.rpcScanningFactory.createService(
-              chain.chainId,
-            );
+  // @Get('/rpc-scan/status')
+  // async rpcStatus() {
+  //   try {
+  //     const result = {};
+  //     for (const chain of this.chainConfigService.getAllChains()) {
+  //       if (!chain.service) {
+  //         continue;
+  //       }
+  //       const serviceKeys = Object.keys(chain.service);
+  //       try {
+  //         if (serviceKeys.includes('rpc')) {
+  //           const factory = this.rpcScanningFactory.createService(
+  //             chain.chainId,
+  //           );
 
-            const latestBlockNumber = await factory.getLatestBlockNumber();
-            const lastScannedBlockNumber =
-              await factory.getLastScannedBlockNumber();
-              const blocks =  await factory.getMemoryWaitScanBlockNumbers();
-            result[chain.chainId] = {
-              chainId: factory.chainId,
-              lastScannedBlockNumber,
-              latestBlockNumber,
-              backward: latestBlockNumber - lastScannedBlockNumber,
-              failBlocks:blocks,
-              waitBlockCount: blocks.length
+  //           const latestBlockNumber = await factory.getLatestBlockNumber();
+  //           const lastScannedBlockNumber =
+  //             await factory.getLastScannedBlockNumber();
+  //             const blocks =  await factory.getMemoryWaitScanBlockNumbers();
+  //           result[chain.chainId] = {
+  //             chainId: factory.chainId,
+  //             lastScannedBlockNumber,
+  //             latestBlockNumber,
+  //             backward: latestBlockNumber - lastScannedBlockNumber,
+  //             failBlocks:blocks,
+  //             waitBlockCount: blocks.length
               
-            };
-          }
-        } catch (error) {
-          console.log(error);
-        }
-      }
-      return {
-        errno: 0,
-        data: result,
-      };
-    } catch (error) {
-      return {
-        errno: 1000,
-        errmsg: error.message,
-      };
-    }
-  }
+  //           };
+  //         }
+  //       } catch (error) {
+  //         console.log(error);
+  //       }
+  //     }
+  //     return {
+  //       errno: 0,
+  //       data: result,
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       errno: 1000,
+  //       errmsg: error.message,
+  //     };
+  //   }
+  // }
   @Get('/owners')
   async owners() {
     let startTime = Date.now();
@@ -74,17 +74,16 @@ export class ScanningController {
   async status(@Param() params) {
     const { chainId } = params;
     try {
-      console.log("请求-------", chainId);
       let startTime = Date.now();
       const factory = this.rpcScanningFactory.createService(chainId);
       if (!factory) {
         throw new Error('factory not found')
       }
       console.log(factory.rpcLastBlockNumber,'===factory')
-      const result = await Promise.all([factory.rpcLastBlockNumber, factory.getLastScannedBlockNumber(), factory.getMemoryWaitScanBlockNumbers()]);
+      const result = await Promise.all([factory.rpcLastBlockNumber, factory.getLastScannedBlockNumber()]);
       const latestBlockNumber = +result[0]
       const lastScannedBlockNumber = +result[1];
-      const blocks = result[2];
+      const blocks = [];
       return {
         errno: 0,
         data: {

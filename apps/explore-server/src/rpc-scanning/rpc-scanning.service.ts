@@ -10,27 +10,25 @@ import {
 } from './rpc-scanning.interface';
 import { Level } from 'level';
 import { IChainConfig } from '@orbiter-finance/config';
-import { isEmpty, sleep, equals,take, generateSequenceNumbers } from '@orbiter-finance/utils';
+import { isEmpty, sleep, equals, take, generateSequenceNumbers } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
 export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
   public logger: winston.Logger;
-  public rpcLastBlockNumber:number;
+  public rpcLastBlockNumber: number;
   protected batchLimit = 100;
   protected requestTimeout = 1000 * 60 * 5;
   private pendingDBLock = new Mutex();
-  private pendingScanBlocks:Set<number> = new Set();
+  private pendingScanBlocks: Set<number> = new Set();
   private blockInProgress: Set<number> = new Set();
   static levels: { [key: string]: Level } = {};
   constructor(
     public readonly chainId: string, public readonly ctx: Context
   ) {
     if (!RpcScanningService.levels[chainId]) {
-      const db = new Level(`./runtime/data/${this.chainId}`, {
-        valueEncoding: 'json',
-      });
+      const db = new Level(`./runtime/data/${this.chainId}`);
       RpcScanningService.levels[chainId] = db;
     }
     if (chainId) {
@@ -55,9 +53,9 @@ export class RpcScanningService implements RpcScanningInterface {
   }
   async getMemoryWaitScanBlockNumbers(limit = -1) {
     if (limit > 0) {
-      return take(Array.from(this.pendingScanBlocks), limit).map(n=>+n);
+      return take(Array.from(this.pendingScanBlocks), limit).map(n => +n);
     } else {
-      return Array.from(this.pendingScanBlocks).map(n=>+n);
+      return Array.from(this.pendingScanBlocks).map(n => +n);
     }
   }
   async getStoreWaitScanBlocks(limit = -1) {
@@ -79,7 +77,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
       if (blockNumbers.length <= 0) {
         this.logger.info('failedREScan end not blockNumbers');
-        return;
+        return [];
       }
       this.logger.debug(
         `failedREScan process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
@@ -256,7 +254,8 @@ export class RpcScanningService implements RpcScanningInterface {
     const processBlock = async (row: RetryBlockRequestResponse) => {
       try {
         if (isEmpty(row) || row.error) {
-          return callbackFun(row.error, row, []);
+          callbackFun(row.error, row, []);
+          return { block: row, transfers: [], error: row.error };
         }
         const result: TransferAmountTransaction[] = await this.handleBlock(
           row.block,
@@ -273,7 +272,7 @@ export class RpcScanningService implements RpcScanningInterface {
           `${this.chainId} handleBlock  error ${row.number} `,
           error,
         );
-        return { block: row, transfers: error };
+        return { block: row, transfers: [], error };
       }
     };
 
@@ -323,7 +322,7 @@ export class RpcScanningService implements RpcScanningInterface {
           error,
         );
         if (retry >= retryCount) {
-      
+
           result.error = error;
           result.block = null;
         }
@@ -384,7 +383,7 @@ export class RpcScanningService implements RpcScanningInterface {
           error,
         );
         if (retry >= retryCount) {
-   
+
           result.error = error.message;
         }
       }

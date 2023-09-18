@@ -46,13 +46,20 @@ function getBlock(provider, blockNumber) {
             // const block = await provider.getBlock(blockNumber, true);
             if (block) {
                 const prefetchedTransactions = yield block.prefetchedTransactions;
-                const blockInfo = Object.assign(Object.assign({}, block), { prefetchedTransactions });
-                return {
-                    error: null,
-                    number: blockNumber,
-                    block: blockInfo,
-                };
+                if (prefetchedTransactions) {
+                    const blockInfo = Object.assign(Object.assign({}, block), { prefetchedTransactions });
+                    return {
+                        error: null,
+                        number: blockNumber,
+                        block: blockInfo,
+                    };
+                }
             }
+            return {
+                error: new Error(`${blockNumber} Block isEmpty`),
+                number: blockNumber,
+                block: null,
+            };
         }
         catch (error) {
             return {

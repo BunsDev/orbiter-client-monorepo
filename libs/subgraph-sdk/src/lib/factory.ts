@@ -23,7 +23,6 @@ export class Factory {
             timestamp:Date.now(),
             chainIndex: 0
         });
-        console.log(result, '===result')
         return result;
     }
     async getOwners() {
