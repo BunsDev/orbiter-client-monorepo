@@ -328,6 +328,11 @@ export class TransactionV2Service {
           .toLocaleLowerCase();
         createdData.targetToken = `0x${byte20Address}`;
         createdData.targetSymbol = targetToken.symbol;
+        const tragetTokenInfo = this.chainConfigService.getTokenByAddress(targetChain.id, createdData.targetToken);
+        if (tragetTokenInfo) {
+           // TAG: tag info
+          createdData.targetSymbol = tragetTokenInfo.symbol;
+        }
       }
     }
     if (rule) {
