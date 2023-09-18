@@ -11,13 +11,12 @@ export class MakerService {
     #v2Owners: string[] = [];
     #v2OwnerResponseMakers: string[] = [];
     #v2OwnerResponseMakersVid = 0;
+    
     private logger: winston.Logger = createLoggerByName(MakerService.name);
     constructor(protected envConfigService: ENVConfigService,
         @InjectConnection() private readonly knex: Knex,
         protected makerV1RuleService: MakerV1RuleService,
     ) {
-        this.getV2MakerOwnersFromCache()
-        this.getV2MakerOwnerResponseFromCache()
     }
 
     async getV1MakerOwners() {

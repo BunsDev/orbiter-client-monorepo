@@ -200,6 +200,18 @@ export function timeoutPromise<T>(
     });
   }
 
+  export function  generateSequenceNumbers(
+    min: number,
+    max: number,
+  ) {
+    // save pending scan block
+    const blockNumbers = Array.from(
+      { length: max - min + 1 },
+      (_, index) => min + index,
+    );
+    return blockNumbers;
+  }
+
   export function MaxBigInt(bigIntValues: bigint[]): bigint {
     if (bigIntValues.length === 0) {
         throw new Error('missing data');

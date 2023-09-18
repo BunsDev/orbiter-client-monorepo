@@ -49,7 +49,7 @@ export class AlertService {
                 console.error('Failed to send alert');
             }
         } catch (error) {
-            console.error('Error sending alert:', error);
+            console.error(`Error sending alert ${message}:`, error);
         }
     }
 }

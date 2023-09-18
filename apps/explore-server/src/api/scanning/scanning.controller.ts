@@ -4,6 +4,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { RpcScanningFactory } from '../../rpc-scanning/rpc-scanning.factory';
 import { BigIntToString } from '@orbiter-finance/utils';
 import { TransactionService } from '../../transaction/transaction.service';
+import { MakerService } from '../../maker/maker.service';
 @Controller('scanning')
 export class ScanningController {
   constructor(
@@ -11,6 +12,7 @@ export class ScanningController {
     private apiScanningFactory: ApiScanningFactory,
     protected transactionService: TransactionService,
     protected chainConfigService: ChainConfigService,
+    protected makerService: MakerService,
   ) {}
   @Get('/rpc-scan/status')
   async rpcStatus() {
@@ -30,7 +32,7 @@ export class ScanningController {
             const latestBlockNumber = await factory.getLatestBlockNumber();
             const lastScannedBlockNumber =
               await factory.getLastScannedBlockNumber();
-              const blocks =  await factory.getFaileBlockNumbers();
+              const blocks =  await factory.getMemoryWaitScanBlockNumbers();
             result[chain.chainId] = {
               chainId: factory.chainId,
               lastScannedBlockNumber,
@@ -56,14 +58,28 @@ export class ScanningController {
       };
     }
   }
+  @Get('/owners')
+  async owners() {
+    let startTime = Date.now();
+    return {
+      errno: 0,
+      data: {
+        owners: await this.makerService.getV1MakerOwners(),
+        responses: await this.makerService.getV1MakerOwnerResponse()
+      },
+      response: (Date.now() - startTime) / 1000
+    }
+  }
   @Get('/rpc-scan/status/:chainId/')
   async status(@Param() params) {
     const { chainId } = params;
     try {
+      let startTime = Date.now();
       const factory = this.rpcScanningFactory.createService(chainId);
-      const latestBlockNumber = await factory.getLatestBlockNumber();
-      const lastScannedBlockNumber = await factory.getLastScannedBlockNumber();
-      const blocks =  await factory.getFaileBlockNumbers();
+      const result = await Promise.all([factory.rpcLastBlockNumber, factory.getLastScannedBlockNumber(), factory.getMemoryWaitScanBlockNumbers()]);
+      const latestBlockNumber = +result[0]
+      const lastScannedBlockNumber = +result[1];
+      const blocks = result[2];
       return {
         errno: 0,
         data: {
@@ -71,9 +87,10 @@ export class ScanningController {
           latestBlockNumber,
           lastScannedBlockNumber,
           backward: latestBlockNumber - lastScannedBlockNumber,
-          failBlocks:blocks,
-          waitBlockCount: blocks.length
+          // failBlocks:blocks,
+          waitBlockCount: blocks.length,
         },
+        response: (Date.now() - startTime )/ 1000
       };
     } catch (error) {
       return {

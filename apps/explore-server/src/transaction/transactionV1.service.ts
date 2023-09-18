@@ -5,7 +5,7 @@ import { TransactionID } from '../utils'
 import { equals, fix0xPadStartAddress } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { ChainConfigService,ENVConfigService,MakerV1RuleService } from '@orbiter-finance/config';
+import { ChainConfigService, ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
 import { getAmountToSend } from '../utils/oldUtils';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
@@ -380,16 +380,17 @@ export class TransactionV1Service {
         `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`
       );
       return {
-        errmsg:  `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`
+        errmsg: `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`
       }
     }
+
     const { code, errmsg, data } = await this.validSourceTxInfo(transfer);
     if (code !== 0) {
-       this.logger.error(
+      this.logger.error(
         `validSourceTxInfo fail ${transfer.hash} ${errmsg}`,
       );
       return {
-        errmsg:  `validSourceTxInfo fail ${transfer.hash} ${errmsg}`
+        errmsg: `validSourceTxInfo fail ${transfer.hash} ${errmsg}`
       }
     }
     const sourceBT = await this.bridgeTransactionModel.findOne({
@@ -400,11 +401,11 @@ export class TransactionV1Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-       this.logger.error(
+      this.logger.error(
         `${transfer.hash} Status is in operation Operation not permitted`,
       );
       return {
-        errmsg:  `${transfer.hash} Status is in operation Operation not permitted`
+        errmsg: `${transfer.hash} Status is in operation Operation not permitted`
       }
     }
 
@@ -432,6 +433,11 @@ export class TransactionV1Service {
         version: transfer.version,
       };
       this.buildSourceTxData(transfer, createdData, data);
+      if (createdData.targetAddress.length >= 100) {
+        return {
+          errmsg: `${transfer.hash} There is an issue with the transaction format`
+        }
+      }
       if (sourceBT && sourceBT.id) {
         if (sourceBT.status < 90) {
           sourceBT.targetChain = createdData.targetChain;
@@ -484,6 +490,7 @@ export class TransactionV1Service {
       await t.commit();
       return createdData
     } catch (error) {
+      console.error(error);
       this.logger.error(
         `handleTransferBySourceTx ${transfer.hash} error`,
         error,
@@ -494,7 +501,7 @@ export class TransactionV1Service {
   }
 
   public async handleTransferByDestTx(transfer: TransfersModel) {
-    if (transfer.version!='1-1') {
+    if (transfer.version != '1-1') {
       throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
     }
     let t1;

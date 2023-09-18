@@ -18,9 +18,7 @@ export function loggerFormat () {
 //     winston.format.json(),
 //   )
 // }
-
-
-export function createLoggerByName(name: string) {
+export function createLoggerByName(name: string, opts:any = {}) {
   const transports = [ new winston.transports.Console(),new DailyRotateFile({
     filename: `logs/${name}/app-%DATE%.log`,
     datePattern: 'YYYY-MM-DD', //
@@ -31,7 +29,7 @@ export function createLoggerByName(name: string) {
     level: 'debug',
     format: loggerFormat(),
     defaultMeta: {
-      service:name
+      service:opts.label || ""
     },
     transports,
   });

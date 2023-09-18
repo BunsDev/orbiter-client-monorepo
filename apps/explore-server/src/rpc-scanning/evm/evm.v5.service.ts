@@ -30,12 +30,6 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     const provider = this.getProvider();
     return await provider.getBlockNumber();
   }
-  public getScanBlockNumbers(
-    lastScannedBlockNumber: number,
-    safetyBlockNumber: number,
-  ) {
-    return super.getScanBlockNumbers(lastScannedBlockNumber, safetyBlockNumber);
-  }
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions; // TAG: v5/v6 difference
     if (!transactions) {
@@ -43,7 +37,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     }
     const filterBeforeTransactions =
     await this.filterBeforeTransactions<TransactionResponse>(transactions);
-    this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
+    // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
     if (filterBeforeTransactions.length<=0) {
       return [];
     }

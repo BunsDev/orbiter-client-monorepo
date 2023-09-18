@@ -40,9 +40,9 @@ export class TransactionService {
     if (transfers) {
       for (const transfer of transfers) {
         // this.logger.debug(`handleScanBlockResult ${transfer.blockNumber}-${transfer.hash}, receipt:${JSON.stringify(transfer.receipt)}`)
-        this.logger.debug(
-          `handleScanBlockResult ${transfer.blockNumber}-${transfer.hash}`,
-        );
+        // this.logger.debug(
+        //   `handleScanBlockResult ${transfer.blockNumber}-${transfer.hash}`,
+        // );
         const sender = (transfer.sender || '').toLocaleLowerCase();
         const receiver = (transfer.receiver || '').toLocaleLowerCase();
         const tokenAddr = (transfer.token || '').toLocaleLowerCase();
