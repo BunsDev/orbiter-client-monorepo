@@ -103,10 +103,10 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   async filterTransfers(transfers: TransferAmountTransaction[]) {
     transfers =  await super.filterTransfers(transfers)
     return transfers.filter(row=> {
-      if((isAddress(row.sender) && isAddress(row.receiver))) {
-        this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
+      if(isAddress(row.sender) && isAddress(row.receiver)) {
         return true;
       }
+      this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
       return false;
     })
   }
