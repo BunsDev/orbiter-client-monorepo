@@ -10,7 +10,7 @@ import {
 } from './rpc-scanning.interface';
 import { Level } from 'level';
 import { IChainConfig } from '@orbiter-finance/config';
-import { isEmpty, sleep, equals, take, generateSequenceNumbers, promiseWithTimeout } from '@orbiter-finance/utils';
+import { isEmpty, sleep, equals, take, generateSequenceNumbers, promiseWithTimeout, JSONStringify } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
@@ -106,7 +106,7 @@ export class RpcScanningService implements RpcScanningInterface {
               );
             }
           } else {
-            this.logger.error(`scanByBlocks block error Block: ${block.number} `, error)
+            this.logger.error(`scanByBlocks block error Block: ${block.number} ${JSONStringify(error)}`)
           }
         },
       );
