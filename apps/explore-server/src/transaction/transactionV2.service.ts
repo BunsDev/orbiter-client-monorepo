@@ -438,6 +438,7 @@ export class TransactionV2Service {
         sourceId: transfer.hash,
         sourceSymbol: transfer.symbol,
         sourceAmount: transfer.amount,
+        sourceNonce: transfer.nonce,
         targetToken: null,
         sourceTime: transfer.timestamp,
         dealerAddress: null,
