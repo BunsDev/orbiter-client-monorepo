@@ -4,6 +4,7 @@ import {
   ZeroAddress,
   Block,
   ethers,
+  isAddress
 } from 'ethers6';
 import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningService } from '../rpc-scanning.service';
@@ -98,6 +99,16 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       }
     }
     return rows;
+  }
+  async filterTransfers(transfers: TransferAmountTransaction[]) {
+    transfers =  await super.filterTransfers(transfers)
+    return transfers.filter(row=> {
+      if((isAddress(row.sender) && isAddress(row.receiver))) {
+        this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
+        return true;
+      }
+      return false;
+    })
   }
 
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {

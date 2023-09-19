@@ -98,11 +98,6 @@ export class TransactionService {
           )
           .then(([instance, _created]) => {
             transfer['id'] = instance.id;
-            // this.memoryMatchingService.addTransferMatchCache(instance.toJSON())
-            // this.eventEmitter.emit(
-            //   `transfersCreate.${versionStr}`,
-            //   instance.toJSON(),
-            // );
             this.messageService.sendTransferMatchMessage(instance.toJSON());
           })
           .catch((error) => {

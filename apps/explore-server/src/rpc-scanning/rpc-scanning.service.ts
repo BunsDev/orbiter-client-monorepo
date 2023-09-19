@@ -180,10 +180,6 @@ export class RpcScanningService implements RpcScanningInterface {
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
     const newList = [];
     for (const transfer of transfers) {
-      if(!(ethers.isAddress(transfer.sender) && ethers.isAddress(transfer.receiver))) {
-        this.logger.warn(`${transfer.hash} Address format verification failed ${JSON.stringify(transfer)}`)
-        continue;
-      }
       const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender);
       if (senderValid.exist) {
         // transfer.version = senderValid.version;

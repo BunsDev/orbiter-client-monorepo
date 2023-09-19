@@ -1,7 +1,7 @@
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
-import { ZeroAddress } from 'ethers6';
+import { ZeroAddress,isAddress } from 'ethers6';
 import {
   Block,
   TransactionReceipt,
@@ -29,6 +29,16 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   async getLatestBlockNumber(): Promise<number> {
     const provider = this.getProvider();
     return await provider.getBlockNumber();
+  }
+  async filterTransfers(transfers: TransferAmountTransaction[]) {
+    transfers =  await super.filterTransfers(transfers)
+    return transfers.filter(row=> {
+      if((isAddress(row.sender) && isAddress(row.receiver))) {
+        this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
+        return true;
+      }
+      return false;
+    })
   }
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions; // TAG: v5/v6 difference
