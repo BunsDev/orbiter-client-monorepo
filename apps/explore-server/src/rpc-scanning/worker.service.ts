@@ -50,7 +50,7 @@ export class WorkerService {
       if (now - request.startTime > request.expires) {
         return
       }
-      console.log(`WorkerService.getWorker msgId: ${message.id}, type:${message.type}`)
+      console.log(`WorkerService.handleWorkerMessage msgId: ${message.id}, type:${message.type}`)
       if (message.type === 'error') {
         request.callback(new Error(message.data))
       } else {
