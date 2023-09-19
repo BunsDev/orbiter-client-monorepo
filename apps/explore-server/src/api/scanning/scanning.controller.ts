@@ -70,7 +70,7 @@ export class ScanningController {
       response: (Date.now() - startTime) / 1000
     }
   }
-  @Get('/status/:chainId/')
+  @Get('/status/:chainId')
   async status(@Param() params) {
     const { chainId } = params;
     try {

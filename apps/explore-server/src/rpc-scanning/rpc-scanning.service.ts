@@ -106,7 +106,7 @@ export class RpcScanningService implements RpcScanningInterface {
               );
             }
           } else {
-            this.logger.error(`scanByBlocks block error Block: ${block.number} ${JSONStringify(error)}`)
+            this.logger.error(`scanByBlocks block error Block: ${block.number} ${error.message}`)
           }
         },
       );
