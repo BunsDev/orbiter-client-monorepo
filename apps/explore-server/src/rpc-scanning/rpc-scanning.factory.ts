@@ -33,7 +33,6 @@ export class RpcScanningFactory {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['rpc'];
     if  (this.services[chainId] ) {
-      console.log('内存获取---', chainId)
       return this.services[chainId] ;
     }
     const ctx: Context = {

@@ -3,6 +3,7 @@ import {
   TransactionReceipt,
   ZeroAddress,
   Block,
+  ethers,
 } from 'ethers6';
 import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningService } from '../rpc-scanning.service';
@@ -111,7 +112,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
  
     const filterBeforeTransactions =
       await this.filterBeforeTransactions<TransactionResponse>(transactions);
-    this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
+    // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
     if (filterBeforeTransactions.length<=0) {
       return [];
     }

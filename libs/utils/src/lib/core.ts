@@ -226,3 +226,24 @@ export function timeoutPromise<T>(
     
       return maxBigInt;
 }
+export function promiseWithTimeout<T>(
+    promise: Promise<T>,
+    timeoutMilliseconds: number
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        clearTimeout(timeoutId);
+        reject(new Error(`Promise timed out`));
+      }, timeoutMilliseconds);
+      promise
+        .then((result) => {
+          clearTimeout(timeoutId);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        });
+    });
+  }
+  

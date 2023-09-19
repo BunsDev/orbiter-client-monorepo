@@ -21,11 +21,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
     return `${transfer.blockNumber}-${blockIndex}-${transfer.timestamp}-${transfer.hash}`;
   }
   async getScanAddressList() {
-    const ownerList: string[] = uniq([
-      ...this.prevExecute.fail,
-      ...(await this.ctx.makerService.getWhiteWalletAddress()),
-    ]);
-    return ownerList.filter((addr) => addr && ethers.isAddress(addr));
+    return await super.getScanEVMAddressList();
   }
 
   async timedTetTransactions(

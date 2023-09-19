@@ -17,6 +17,9 @@ export class ImmutableApiScanningService extends ApiScanningService {
       this.client = new ImmutableX(Config.SANDBOX);
     }
   }
+  async getScanAddressList() {
+    return await super.getScanEVMAddressList();
+  }
   async timedTetTransactions(
     address: string,
   ): Promise<TransferAmountTransaction[]> {

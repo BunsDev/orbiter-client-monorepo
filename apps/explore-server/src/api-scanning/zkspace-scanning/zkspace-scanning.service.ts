@@ -15,6 +15,9 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
   // ) {
   //   super(chainId, chainConfigService, transactionService);
   // }
+  async getScanAddressList() {
+    return await super.getScanEVMAddressList();
+  }
   async timedTetTransactions(address: string) {
     const prevTime = await this.getLastScannedPosition(address).then((data) => {
       return data ? +data : dayjs().subtract(60, 'minute').valueOf();

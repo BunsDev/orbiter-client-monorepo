@@ -72,28 +72,28 @@ export class RpcScanningSchedule {
         // this.alertService.sendTelegramAlert("INFO", `CREATE RPC SCAN SERVICE ${chain.name}`)
       }
     }
-    this.scanSchedule();
+    this.checkLatestHeight();
   }
   @Cron('*/1 * * * * *')
-  failedREScanSchedule() {
+  executeCrawlBlock() {
     for (const scanner of this.scanService.values()) {
       if (scanner.reScanMutex.isLocked()) {
         continue;
       }
       scanner.reScanMutex.runExclusive(async () => {
-        scanner.service.logger.info(`rpc scan failedREScanSchedule start`)
-        const result: any = await scanner.service.retryFailedREScanBatch().catch(error => {
+        scanner.service.logger.info(`rpc scan executeCrawlBlock start`)
+        const result: any = await scanner.service.executeCrawlBlock().catch(error => {
           this.logger.error(
-            `failedREScanSchedule failedREScan error `,
+            `executeCrawlBlock error `,
             error,
           );
         })
         if (result) {
           for (const row of result) {
             if (row && row.block) {
-              scanner.service.logger.info(`failedREScanSchedule scan scanSchedule end ${row.block['number']} / transfers: ${row['transfers'].length}`)
+              scanner.service.logger.info(`executeCrawlBlock end ${row.block['number']} / transfers: ${row['transfers'].length}`)
             } else {
-              scanner.service.logger.error(`failedREScanSchedule error ${JSONStringify(row || {})}`)
+              scanner.service.logger.error(`executeCrawlBlock error ${JSONStringify(row || {})}`)
             }
           }
         }
@@ -101,7 +101,7 @@ export class RpcScanningSchedule {
       });
     }
   }
-  private async scanSchedule() {
+  private async checkLatestHeight() {
     for (const scanner of this.scanService.values()) {
       try {
         if (scanner.mutex.isLocked()) {
@@ -109,7 +109,7 @@ export class RpcScanningSchedule {
         }
         scanner.mutex.runExclusive(async () => {
           // scanner.service.logger.info(`rpc scan scanSchedule start`)
-          const result = await scanner.service.bootstrap().catch((error) => {
+          const result = await scanner.service.checkLatestHeight().catch((error) => {
             this.logger.error(
               `rpc scan bootstrap error`,
               error,
@@ -120,7 +120,7 @@ export class RpcScanningSchedule {
         })
       } catch (error) {
         this.logger.error(
-          `scanSchedule bootstrap error`,
+          `scanSchedule checkLatestHeight error`,
           error,
         );
       }

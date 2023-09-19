@@ -9,6 +9,7 @@ import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
 import { IChainConfig } from '@orbiter-finance/config'
 import { Context } from './api-scanning.interface'
+import { ethers } from 'ethers6';
 export class ApiScanningService {
   protected logger: winston.Logger;
   private lock = new Mutex();
@@ -38,6 +39,14 @@ export class ApiScanningService {
     ]);
     return ownerList;
   }
+  async getScanEVMAddressList() {
+    const ownerList = uniq([
+      ...this.prevExecute.fail,
+      ...(await this.ctx.makerService.getWhiteWalletAddress()),
+    ]);
+    return ownerList.filter(ethers.isAddress);
+  }
+
   async bootstrap() {
     const ownerList = await this.getScanAddressList();
     const interval = Date.now() - this.prevExecute.time;

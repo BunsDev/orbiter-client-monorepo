@@ -10,10 +10,11 @@ import {
 } from './rpc-scanning.interface';
 import { Level } from 'level';
 import { IChainConfig } from '@orbiter-finance/config';
-import { isEmpty, sleep, equals, take, generateSequenceNumbers } from '@orbiter-finance/utils';
+import { isEmpty, sleep, equals, take, generateSequenceNumbers, promiseWithTimeout } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
+import { ethers } from 'ethers6';
 export class RpcScanningService implements RpcScanningInterface {
   // protected db: Level;
   public logger: winston.Logger;
@@ -22,7 +23,7 @@ export class RpcScanningService implements RpcScanningInterface {
   protected requestTimeout = 1000 * 60 * 5;
   private pendingDBLock = new Mutex();
   private pendingScanBlocks: Set<number> = new Set();
-  private blockInProgress: Set<number> = new Set();
+  // private blockInProgress: Set<number> = new Set();
   static levels: { [key: string]: Level } = {};
   constructor(
     public readonly chainId: string, public readonly ctx: Context
@@ -68,19 +69,19 @@ export class RpcScanningService implements RpcScanningInterface {
     }
   }
 
-  async retryFailedREScanBatch() {
+  async executeCrawlBlock() {
     try {
-      const blockNumbers = await this.getMemoryWaitScanBlockNumbers(this.batchLimit);
-      for (const blockNum of blockNumbers) {
-        this.blockInProgress.add(blockNum);
-      }
 
+      const blockNumbers = await this.getMemoryWaitScanBlockNumbers(this.batchLimit);
+      // for (const blockNum of blockNumbers) {
+      //   this.blockInProgress.add(blockNum);
+      // }
       if (blockNumbers.length <= 0) {
-        this.logger.info('failedREScan end not blockNumbers');
+        this.logger.info('executeCrawlBlock not blockNumbers');
         return [];
       }
       this.logger.debug(
-        `failedREScan process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
+        `executeCrawlBlock process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
       );
       const result = await this.scanByBlocks(
         blockNumbers,
@@ -89,7 +90,7 @@ export class RpcScanningService implements RpcScanningInterface {
           block: RetryBlockRequestResponse,
           transfers: TransferAmountTransaction[],
         ) => {
-          this.blockInProgress.delete(block.number);
+          // this.blockInProgress.delete(block.number);
           // this.logger.info(`delete blockInProgress: ${block.number}, status: ${(transfers && isEmpty(error))}`)
           if (isEmpty(error) && transfers) {
             try {
@@ -100,7 +101,7 @@ export class RpcScanningService implements RpcScanningInterface {
               await this.delPendingScanBlocks([block.number]);
             } catch (error) {
               this.logger.error(
-                `failedREScan handleScanBlockResult ${block.number} error`,
+                `executeCrawlBlock handleScanBlockResult ${block.number} error`,
                 error,
               );
             }
@@ -109,80 +110,38 @@ export class RpcScanningService implements RpcScanningInterface {
           }
         },
       );
-      this.logger.info('failedREScan scan end');
+      this.logger.info('executeCrawlBlock end');
       return result;
     } catch (error) {
-      this.logger.error(`failedREScan error`, error);
+      this.logger.error(`executeCrawlBlock error`, error);
     }
   }
 
-  public async bootstrap(): Promise<any> {
+  async checkLatestHeight(): Promise<any> {
     try {
-      // console.log(this.chainId, '*'.repeat(100), 'Start');
-      this.rpcLastBlockNumber = await this.getLatestBlockNumber();
-
+      const blockHeight = await promiseWithTimeout(this.getLatestBlockNumber(), 1000 * 20);
+      if (isEmpty(blockHeight)) {
+        throw new Error('checkLatestHeight getLatestBlockNumber empty');
+      }
+      this.rpcLastBlockNumber = this.rpcLastBlockNumber === 0 && blockHeight > this.batchLimit ? blockHeight - this.batchLimit : blockHeight;
       const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
       this.chainConfig.debug && this.logger.debug(
-        `bootstrap scan ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${this.rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
+        `checkLatestHeight check ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${this.rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
       );
-      // this.logger.info(`blockInProgress: ${JSON.stringify(this.blockInProgress)}`)
       if (safetyBlockNumber > lastScannedBlockNumber) {
         const blockNumbers = generateSequenceNumbers(
           lastScannedBlockNumber,
           safetyBlockNumber,
         );
-        const startBlockNumber = blockNumbers[0],
-          endBlockNumber = blockNumbers[blockNumbers.length - 1];
-        //   blockNumbers.forEach((num) => {
-        //     this.logger.info(`add blockInProgress: ${num}`)
-        //     this.blockInProgress.add(num);
-        //   });
+        const endBlockNumber = blockNumbers[blockNumbers.length - 1];
         await this.setPendingScanBlocks(blockNumbers);
         await this.setLastScannedBlockNumber(endBlockNumber);
         return blockNumbers;
-        //   this.logger.debug(
-        //     `bootstrap scan ready ${startBlockNumber}-${endBlockNumber} block count: ${blockNumbers.length
-        //     }, blockNumbers:${JSON.stringify(blockNumbers)}`,
-        //   );
-        //   const result = await this.scanByBlocks(
-        //     blockNumbers,
-        //     async (
-        //       error: Error,
-        //       block: RetryBlockRequestResponse,
-        //       transfers: TransferAmountTransaction[],
-        //     ) => {
-        //       this.blockInProgress.delete(block.number);
-        //       this.logger.info(`delete blockInProgress: ${block.number}, status: ${!(transfers && isEmpty(error))}`)
-        //       if (transfers && isEmpty(error)) {
-        //         try {
-        //           await this.handleScanBlockResult(error, block, transfers);
-        //           await this.delPendingScanBlocks([block.number]);
-        //         } catch (error) {
-        //           this.logger.error(
-        //             `scanByBlocks -> handleScanBlockResult ${block.number} error `,
-        //             error,
-        //           );
-        //           await this.setPendingScanBlocks([block.number]);
-        //         }
-        //       } else {
-        //         this.logger.error(
-        //           `scanByBlocks  error ${block.number}`,
-        //           { stack: error },
-        //         );
-        //       }
-        //     },
-        //   );
-        //   this.logger.debug(
-        //     `start scan ${startBlockNumber} - ${endBlockNumber} Finish, result:${result.map(
-        //       (row) => row.block.number,
-        //     )}`,
-        //   );
       }
-      // console.log('#'.repeat(100), 'END');
     } catch (error) {
-      this.logger.error(`bootstrap `, error);
+      this.logger.error(`checkLatestHeight error `, error);
     }
   }
   public async manualScanBlocks(blockNumbers: number[]): Promise<any> {
@@ -221,6 +180,10 @@ export class RpcScanningService implements RpcScanningInterface {
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
     const newList = [];
     for (const transfer of transfers) {
+      if(!(ethers.isAddress(transfer.sender) && ethers.isAddress(transfer.receiver))) {
+        this.logger.warn(`${transfer.hash} Address format verification failed ${JSON.stringify(transfer)}`)
+        continue;
+      }
       const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender);
       if (senderValid.exist) {
         // transfer.version = senderValid.version;
@@ -261,10 +224,11 @@ export class RpcScanningService implements RpcScanningInterface {
           row.block,
         );
         const transfers = await this.filterTransfers(result);
+        this.logger.debug(
+          `RPCScan handle block success block:${row.number}, match:${transfers.length}/${result.length}`,
+        );
         await callbackFun(null, row, transfers);
-        // this.logger.debug(
-        //   `RPCScan handle block success block:${row.number}, match:${transfers.length}/${result.length}`,
-        // );
+
         return { block: row, transfers: transfers };
       } catch (error) {
         await callbackFun(error, row, null);
