@@ -98,7 +98,7 @@ export class SequencerService {
         );
       }
 
-      if (!equals(sourceTx.targetAmount, transfer.targetAmount)) {
+      if (!new BigNumber(sourceTx.targetAmount).eq(transfer.targetAmount)) {
         throw new TransactionSendBeforeError(
           `${sourceChainId} - ${sourceHash} Inconsistent targetAmount (${sourceTx.targetAmount}/${transfer.targetAmount})`
         );
