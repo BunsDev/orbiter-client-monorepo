@@ -14,6 +14,7 @@ import { InjectModel } from "@nestjs/sequelize";
 import { BridgeTransaction } from "@orbiter-finance/seq-models";
 import BigNumber from "bignumber.js";
 import { type StoreService } from "../store/store.service";
+import { AlertService } from "@orbiter-finance/alert";
 @Injectable()
 export class SequencerService {
   private readonly logger = new Logger(SequencerService.name);
@@ -21,6 +22,7 @@ export class SequencerService {
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
+    private alertService: AlertService,
     @InjectModel(BridgeTransaction)
     private readonly bridgeTransactionModel: typeof BridgeTransaction
   ) { }
@@ -311,6 +313,12 @@ export class SequencerService {
           "sequencer.schedule batchSendTransactionByTransfer error",
           error
         );
+        this.alertService.sendTelegramAlert('ERROR', `sequencer.schedule batchSendTransactionByTransfer error: ${error.message}`).catch((e) => {
+          this.logger.error(
+            "sequencer.schedule sendTelegramAlert error",
+            error
+          );
+        });
       }
     });
   }
