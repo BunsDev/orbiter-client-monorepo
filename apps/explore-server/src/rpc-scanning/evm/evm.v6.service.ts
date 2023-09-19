@@ -38,8 +38,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   }
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
-    const contractList = this.chainConfig.contract  
-    ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())  
+    const contractList = this.chainConfig.contract
+    ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())
     : [];
     for (const row of transactions) {
       try {
@@ -120,7 +120,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       this.logger.info(`transactions empty: ${JSONStringify(block)}`);
       throw new Error(`${block.number} transactions empty `);
     }
- 
+
     const filterBeforeTransactions =
       await this.filterBeforeTransactions<TransactionResponse>(transactions);
     // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
@@ -166,7 +166,12 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   public async getBlocks(
     blockNumbers: number[],
   ): Promise<RetryBlockRequestResponse[]> {
-    const blocks = await this.ctx.workerService.runTask(this.chainConfig, blockNumbers);
+    const action = 'getBlocks'
+    const params = {
+      chainInfo: this.chainConfig,
+      blockNumbers,
+    }
+    const blocks = await this.ctx.workerService.runTask(action, params);
     return blocks;
   }
 
@@ -264,7 +269,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         tx.feeAmount = new BigNumber(tx.fee)
           .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
           .toString();
-          
+
         tx.status = status === TransferAmountTransactionStatus.failed ?TransferAmountTransactionStatus.failed:tx.status;
         return tx;
       });
