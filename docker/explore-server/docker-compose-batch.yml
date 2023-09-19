@@ -27,9 +27,279 @@ services:
       CONSUL_TOKEN: '${CONSUL_TOKEN}'
       SCAN_CHAINS: "42161"
     ports:
-      - '3001:3000'
+      - '3002:3000'
     networks:
       - app-network
     volumes:
       - './runtime:/app/runtime'
       - './logs:/app/logs'
+  zksynclite:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "zksync"
+      ports:
+        - '3004:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  starknet:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "SN_MAIN"
+      ports:
+        - '3005:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  polygon:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "137"
+      ports:
+        - '3006:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  optimism:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "10"
+      ports:
+        - '3007:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  immutablex:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "immutableX"
+      ports:
+        - '3008:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  loopring:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "loopring"
+      ports:
+        - '3009:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  metis:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "1088"
+      ports:
+        - '3010:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  zkspace:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "ZKSpace"
+      ports:
+        - '3011:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  boba:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "288"
+      ports:
+        - '3012:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  zksyncera:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "324"
+      ports:
+        - '3013:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  bnbchain:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "56"
+      ports:
+        - '3014:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  arbitrumnova:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "42170"
+      ports:
+        - '3015:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  polygonzkevm:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "1101"
+      ports:
+        - '3016:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  linea:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "59144"
+      ports:
+        - '3017:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  mantle:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "5000"
+      ports:
+        - '3018:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  base:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "8453"
+      ports:
+        - '3019:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  zora:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "7777777"
+      ports:
+        - '3020:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
+  opbnb:
+      image: explore-server:latest
+      restart: always
+      environment:
+        CONSUL_HOST: '${CONSUL_HOST}'
+        CONSUL_PORT: '${CONSUL_PORT}'
+        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        SCAN_CHAINS: "204"
+      ports:
+        - '3021:3000'
+      networks:
+        - app-network
+      volumes:
+        - './runtime:/app/runtime'
+        - './logs:/app/logs'
