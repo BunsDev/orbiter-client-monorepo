@@ -79,11 +79,10 @@ export class ScanningController {
       if (!factory) {
         throw new Error('factory not found')
       }
-      console.log(factory.rpcLastBlockNumber,'===factory')
-      const result = await Promise.all([factory.rpcLastBlockNumber, factory.getLastScannedBlockNumber()]);
+      const result = await Promise.all([factory.rpcLastBlockNumber, factory.getLastScannedBlockNumber(), factory.getMemoryWaitScanBlockNumbers()]);
       const latestBlockNumber = +result[0]
       const lastScannedBlockNumber = +result[1];
-      const blocks = [];
+      const blocks = result[2];
       return {
         errno: 0,
         data: {
