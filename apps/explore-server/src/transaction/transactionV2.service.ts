@@ -437,6 +437,7 @@ export class TransactionV2Service {
       const createdData: BridgeTransactionAttributes = {
         sourceId: transfer.hash,
         sourceSymbol: transfer.symbol,
+        sourceAmount: transfer.amount,
         targetToken: null,
         sourceTime: transfer.timestamp,
         dealerAddress: null,
