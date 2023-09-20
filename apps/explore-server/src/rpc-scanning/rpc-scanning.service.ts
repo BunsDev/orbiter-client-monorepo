@@ -8,7 +8,7 @@ import {
   Context,
 } from './rpc-scanning.interface';
 import { IChainConfig } from '@orbiter-finance/config';
-import { isEmpty, sleep, equals, take, generateSequenceNumbers, promiseWithTimeout, JSONStringify } from '@orbiter-finance/utils';
+import { isEmpty, sleep, equals, promiseWithTimeout } from '@orbiter-finance/utils';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
 import DataProcessor from '../utils/dataProcessor';
@@ -163,10 +163,7 @@ export class RpcScanningService implements RpcScanningInterface {
     if (blockNumbers.length <= 0) {
       throw new Error('scanByBlocks missing block number');
     }
-    // const startTime = Date.now();
     const blocksResponse = await this.getBlocks(blockNumbers);
-    // const endTime = Date.now();
-
     const processBlock = async (row: RetryBlockRequestResponse) => {
       try {
         if (isEmpty(row) || row.error) {
@@ -181,7 +178,6 @@ export class RpcScanningService implements RpcScanningInterface {
           `RPCScan handle block success block:${row.number}, match:${transfers.length}/${result.length}`,
         );
         await callbackFun(null, row, transfers);
-
         return { block: row, transfers: transfers };
       } catch (error) {
         await callbackFun(error, row, null);
@@ -192,11 +188,7 @@ export class RpcScanningService implements RpcScanningInterface {
         return { block: row, transfers: [], error };
       }
     };
-
-    // const successBlock = blocksResponse.filter((row) => isEmpty(row.error));
-    // const failBlock = blocksResponse.filter((row) => !isEmpty(row.error));
     const result = await Promise.all(blocksResponse.map(processBlock));
-
     return result;
   }
   public getBlocks(
@@ -277,7 +269,6 @@ export class RpcScanningService implements RpcScanningInterface {
       data: null,
       error: null,
     };
-
     for (let retry = 1; retry <= retryCount; retry++) {
       try {
         // const startTime = Date.now();
@@ -301,36 +292,6 @@ export class RpcScanningService implements RpcScanningInterface {
 
     return result;
   }
-
-  // protected async setLastScannedBlockNumber(
-  //   blockNumber: number,
-  // ): Promise<void> {
-  //   // await this.pendingDBLock.runExclusive(async () => {
-  //   return await outputFile(
-  //     `runtime/scan/${this.chainId}`,
-  //     blockNumber.toString(),
-  //   );
-  //   // });
-  // }
-
-  // public async getLastScannedBlockNumber(): Promise<number> {
-  //   let lastScannedBlockNumber;
-  //   try {
-  //     lastScannedBlockNumber = +readFileSync(`runtime/scan/${this.chainId}`);
-  //   } catch (error) {
-  //     this.logger.error(
-  //       `getLastScannedBlockNumber error`,
-  //       error,
-  //     );
-  //   } finally {
-  //     if (!lastScannedBlockNumber) {
-  //       lastScannedBlockNumber = await this.getLatestBlockNumber();
-  //       this.setLastScannedBlockNumber(lastScannedBlockNumber);
-  //     }
-  //   }
-  //   return lastScannedBlockNumber;
-  // }
-
   protected getChainConfigToken(address: string) {
     return this.ctx.chainConfigService.getTokenByChain(
       String(this.chainId),

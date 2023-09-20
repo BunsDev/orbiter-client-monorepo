@@ -430,7 +430,7 @@ export class TransactionV2Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-      return this.errorBreakResult(`${transfer.hash} Status is in operation Operation not permitted`)
+      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`)
     }
     const t = await this.sequelize.transaction();
     try {
