@@ -8,7 +8,6 @@ import { sleep } from '@orbiter-finance/utils';
 @Injectable()
 export class ConsumerService {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
     private readonly connectionManager: RabbitmqConnectionManager,
     private alertService: AlertService
   ) {
@@ -26,13 +25,13 @@ export class ConsumerService {
     try {
       const channel = await this.connectionManager.createChannel();
       channel.on('close', () => {
-        this.logger.error('Channel closed');
+        Logger.error('Channel closed');
         this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
         this.consumeScanTransferReceiptMessages(callback)
       });
 
       channel.on('error', (err) => {
-        this.logger.error(`Channel error:${err.message}`, err.stack);
+        Logger.error(`Channel error:${err.message}`, err.stack);
         this.alertService.sendTelegramAlert('ERROR', `Channel error:${err.message}`);
       });
 
@@ -48,14 +47,14 @@ export class ConsumerService {
             // await this.transactionService.batchInsertTransactionReceipt(data);
             channel.ack(msg);
           } catch (error: any) {
-            this.logger.error(`consumeTransactionReceiptMessages Error ${error.message}`, error);
+            Logger.error(`consumeTransactionReceiptMessages Error ${error.message}`, error);
           }
         }
       });
     } catch (error) {
       await sleep(500);
       this.consumeScanTransferReceiptMessages(callback);
-      this.logger.error(`consumeScanTransferReceiptMessages error `, error);
+      Logger.error(`consumeScanTransferReceiptMessages error `, error);
     }
 
   }
@@ -75,13 +74,13 @@ export class ConsumerService {
       const queue = 'TransferWaitMatch';
       await channel.assertQueue(queue);
       channel.on('close', () => {
-        this.logger.error('Channel closed');
+        Logger.error('Channel closed');
         this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
         this.consumeScanTransferSaveDBAfterMessages(callback)
       });
 
       channel.on('error', (err) => {
-        this.logger.error(`Channel error:${err.message}`, err.stack);
+        Logger.error(`Channel error:${err.message}`, err.stack);
         this.alertService.sendTelegramAlert('ERROR', `Channel error:${err.message}`);
       });
       channel.prefetch(10);
@@ -92,17 +91,17 @@ export class ConsumerService {
             const data = JSON.parse(messageContent);
             // await this.transactionService.executeMatch(data);
             const result = await callback(data);
-            this.logger.log(`consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
+            Logger.log(`consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
             channel.ack(msg);
           } catch (error: any) {
-            this.logger.error(`consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
+            Logger.error(`consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
           }
         }
       });
     } catch (error) {
       await sleep(500);
       this.consumeScanTransferSaveDBAfterMessages(callback);
-      this.logger.error(`consumeScanTransferSaveDBAfterMessages error `, error);
+      Logger.error(`consumeScanTransferSaveDBAfterMessages error `, error);
     }
 
   }
@@ -122,13 +121,13 @@ export class ConsumerService {
       const queue = 'makerWaitTransfer';
       await channel.assertQueue(queue);
       channel.on('close', () => {
-        this.logger.error('Channel closed');
+        Logger.error('Channel closed');
         this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
         this.consumeMakerWaitTransferMessage(callback)
       });
 
       channel.on('error', (err) => {
-        this.logger.error(`Channel error:${err.message}`, err.stack);
+        Logger.error(`Channel error:${err.message}`, err.stack);
         this.alertService.sendTelegramAlert('ERROR', `Channel error:${err.message}`);
       });
       channel.prefetch(10);
@@ -151,7 +150,7 @@ export class ConsumerService {
     } catch (error) {
       await sleep(500);
       this.consumeMakerWaitTransferMessage(callback);
-      this.logger.error(`consumeMakerWaitTransferMessage error `, error);
+      Logger.error(`consumeMakerWaitTransferMessage error `, error);
     }
   }
 }

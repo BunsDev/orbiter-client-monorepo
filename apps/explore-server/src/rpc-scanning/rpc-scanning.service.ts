@@ -177,10 +177,10 @@ export class RpcScanningService implements RpcScanningInterface {
         this.logger.debug(
           `RPCScan handle block success block:${row.number}, match:${transfers.length}/${result.length}`,
         );
-        await callbackFun(null, row, transfers);
+        callbackFun(null, row, transfers);
         return { block: row, transfers: transfers };
       } catch (error) {
-        await callbackFun(error, row, null);
+        callbackFun(error, row, null);
         this.logger.error(
           `${this.chainId} handleBlock  error ${row.number} `,
           error,
