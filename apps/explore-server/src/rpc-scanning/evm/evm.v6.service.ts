@@ -172,6 +172,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       blockNumbers,
     }
     const blocks = await this.ctx.workerService.runTask(action, params);
+    this.logger.info(`getBlocks by runTask result => chainId: ${this.chainConfig.chainId}, blocks.length:${blocks?.length}`)
     return blocks;
   }
 
