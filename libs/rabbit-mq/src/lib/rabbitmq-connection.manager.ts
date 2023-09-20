@@ -10,10 +10,11 @@ export class RabbitmqConnectionManager
 {
   private connection: Connection;
   private channel: Channel;
-  private alertService: AlertService
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
-    private readonly envConfigService: ENVConfigService) {
+    private readonly envConfigService: ENVConfigService,
+    private alertService: AlertService
+    ) {
     this.connectToRabbitMQ();
   }
 
