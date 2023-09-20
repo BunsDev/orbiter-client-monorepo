@@ -12,6 +12,7 @@ import { isEmpty, sleep, equals, promiseWithTimeout } from '@orbiter-finance/uti
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
 import DataProcessor from '../utils/dataProcessor';
+import bluebird from 'bluebird'
 export class RpcScanningService implements RpcScanningInterface {
   public logger: winston.Logger;
   public rpcLastBlockNumber: number = 0;
@@ -196,10 +197,9 @@ export class RpcScanningService implements RpcScanningInterface {
         return { block: row, transfers: [], error };
       }
     };
-
-    const resultPromises = blocksResponse.map(processBlock);
-    const results = await Promise.all(resultPromises);
-    return results;
+    const result = bluebird.map(blocksResponse, processBlock, { concurrency: 10 })
+    // const result = await Promise.all(blocksResponse.map(processBlock));
+    return result;
   }
 
   public getBlocks(
