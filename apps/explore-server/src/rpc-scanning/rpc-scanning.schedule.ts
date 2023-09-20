@@ -87,7 +87,6 @@ export class RpcScanningSchedule {
             `executeCrawlBlock error `,
             error,
           );
-          process.exit(1)
         })
        
       });
