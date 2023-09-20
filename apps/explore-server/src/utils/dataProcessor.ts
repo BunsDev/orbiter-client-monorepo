@@ -8,7 +8,7 @@ export default class DataProcessor {
     private db: Level;
     private maxScanBlockNumber: number | undefined = undefined;
     constructor(private readonly chainId: string) {
-        this.db = new Level(`./runtime/data-test/${this.chainId}`);
+        this.db = new Level(`./runtime/data/${this.chainId}`);
         this.dataSet = new Set();
         this.initMaxScanBlockNumber();
         this.initStoreData();
