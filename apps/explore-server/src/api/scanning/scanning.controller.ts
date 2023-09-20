@@ -79,10 +79,10 @@ export class ScanningController {
       if (!factory) {
         throw new Error('factory not found')
       }
-      const result = await Promise.all([factory.rpcLastBlockNumber, factory.getLastScannedBlockNumber(), factory.getMemoryWaitScanBlockNumbers()]);
+      const result = await Promise.all([factory.rpcLastBlockNumber, factory.dataProcessor.getMaxScanBlockNumber(), factory.dataProcessor.getDataCount()]);
       const latestBlockNumber = +result[0]
       const lastScannedBlockNumber = +result[1];
-      const blocks = result[2];
+      const waitBlockCount = result[2];
       return {
         errno: 0,
         data: {
@@ -91,8 +91,9 @@ export class ScanningController {
           lastScannedBlockNumber,
           backward: latestBlockNumber - lastScannedBlockNumber,
           // failBlocks:blocks,
-          waitBlockCount: blocks.length,
+          waitBlockCount: waitBlockCount,
         },
+        timestamp: Date.now(),
         response: (Date.now() - startTime )/ 1000
       };
     } catch (error) {

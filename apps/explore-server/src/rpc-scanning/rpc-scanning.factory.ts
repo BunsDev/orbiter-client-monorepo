@@ -91,6 +91,7 @@ export class RpcScanningFactory {
         throw new Error(`${chainId} Not Config RPC Service Class`);
     }
     this.services[chainId] = service;
+    service.init()
     return this.services[chainId];
   }
 }

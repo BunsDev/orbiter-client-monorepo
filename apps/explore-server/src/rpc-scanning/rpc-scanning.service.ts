@@ -1,4 +1,3 @@
-import { readFileSync, outputFile } from 'fs-extra';
 import {
   RpcScanningInterface,
   RetryBlockRequestResponse,
@@ -8,136 +7,95 @@ import {
   TransactionResponse,
   Context,
 } from './rpc-scanning.interface';
-import { Level } from 'level';
 import { IChainConfig } from '@orbiter-finance/config';
 import { isEmpty, sleep, equals, take, generateSequenceNumbers, promiseWithTimeout, JSONStringify } from '@orbiter-finance/utils';
-import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
-import { ethers } from 'ethers6';
+import DataProcessor from '../utils/dataProcessor';
 export class RpcScanningService implements RpcScanningInterface {
-  // protected db: Level;
   public logger: winston.Logger;
-  public rpcLastBlockNumber: number;
+  public rpcLastBlockNumber: number = 0;
   protected batchLimit = 100;
   protected requestTimeout = 1000 * 60 * 5;
-  private pendingDBLock = new Mutex();
-  private pendingScanBlocks: Set<number> = new Set();
-  // private blockInProgress: Set<number> = new Set();
-  static levels: { [key: string]: Level } = {};
+  readonly dataProcessor: DataProcessor;
   constructor(
     public readonly chainId: string, public readonly ctx: Context
   ) {
-    if (!RpcScanningService.levels[chainId]) {
-      const db = new Level(`./runtime/data/${this.chainId}`);
-      RpcScanningService.levels[chainId] = db;
-    }
-    if (chainId) {
-      this.logger = createLoggerByName(`rpcscan-${this.chainId}`, {
-        label: this.chainConfig.name
-      });
-      this.init();
-    }
+    this.logger = createLoggerByName(`rpcscan-${this.chainId}`, {
+      label: this.chainConfig.name
+    });
+    this.dataProcessor = new DataProcessor(this.chainId);
   }
   get chainConfig(): IChainConfig {
     return this.ctx.chainConfigService.getChainInfo(this.chainId);
   }
   async init() {
-    const blockNumbers = await this.getStoreWaitScanBlocks(-1);
-    for (const block of blockNumbers) {
-      this.pendingScanBlocks.add(Number(block));
-    }
-    console.log(this.chainConfig.name, 'getStoreWaitScanBlocks', blockNumbers);
   }
-  getDB() {
-    return RpcScanningService.levels[this.chainId];
-  }
-  async getMemoryWaitScanBlockNumbers(limit = -1) {
-    if (limit > 0) {
-      return take(Array.from(this.pendingScanBlocks), limit).map(n => +n);
-    } else {
-      return Array.from(this.pendingScanBlocks).map(n => +n);
-    }
-  }
-  async getStoreWaitScanBlocks(limit = -1) {
-    const db = this.getDB();
-    const subDB = db.sublevel('pending-scan');
-    if (limit > 0) {
-      return await subDB.keys({ limit: limit }).all();
-    } else {
-      return await subDB.keys().all();
-    }
-  }
-
   async executeCrawlBlock() {
-    try {
-
-      const blockNumbers = await this.getMemoryWaitScanBlockNumbers(this.batchLimit);
-      // for (const blockNum of blockNumbers) {
-      //   this.blockInProgress.add(blockNum);
-      // }
-      if (blockNumbers.length <= 0) {
-        this.logger.info('executeCrawlBlock not blockNumbers');
-        return [];
-      }
-      this.logger.debug(
-        `executeCrawlBlock process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
-      );
-      const result = await this.scanByBlocks(
-        blockNumbers,
-        async (
-          error: Error,
-          block: RetryBlockRequestResponse,
-          transfers: TransferAmountTransaction[],
-        ) => {
-          // this.blockInProgress.delete(block.number);
-          // this.logger.info(`delete blockInProgress: ${block.number}, status: ${(transfers && isEmpty(error))}`)
-          if (isEmpty(error) && transfers) {
-            try {
-              // this.logger.debug(
-              //   `[failedREScan] RPCScan success block:${block.number}, match:${transfers.length}`,
-              // );
-              await this.handleScanBlockResult(error, block, transfers);
-              await this.delPendingScanBlocks([block.number]);
-            } catch (error) {
-              this.logger.error(
-                `executeCrawlBlock handleScanBlockResult ${block.number} error`,
-                error,
-              );
-            }
-          } else {
-            this.logger.error(`scanByBlocks block error Block: ${block.number} ${error.message}`)
-          }
-        },
-      );
-      this.logger.info('executeCrawlBlock end');
-      return result;
-    } catch (error) {
-      this.logger.error(`executeCrawlBlock error`, error);
+    const blockNumbers = await this.dataProcessor.getProcessNextBatchData(100);
+    if (blockNumbers.length <= 0) {
+      this.logger.info('executeCrawlBlock not blockNumbers');
+      return [];
     }
+    this.logger.debug(
+      `executeCrawlBlock process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
+    );
+    const noAcks = [];
+    const acks = [];
+    const result = await this.scanByBlocks(
+      blockNumbers,
+      async (
+        error: Error,
+        block: RetryBlockRequestResponse,
+        transfers: TransferAmountTransaction[],
+      ) => {
+        if (isEmpty(error) && transfers) {
+          try {
+            await this.handleScanBlockResult(error, block, transfers);
+            acks.push(block.number);
+          } catch (error) {
+            noAcks.push(block.number);
+            this.logger.error(
+              `executeCrawlBlock handleScanBlockResult ${block.number} error`,
+              error,
+            );
+          }
+        } else {
+          noAcks.push(block.number);
+          this.logger.error(`scanByBlocks block error Block: ${block.number} ${error.message}`)
+        }
+      },
+    );
+    noAcks.length > 0 && this.dataProcessor.noAck(noAcks);
+    acks.length > 0 && await this.dataProcessor.ack(acks);
+    this.logger.info('executeCrawlBlock end');
+    return result;
   }
 
   async checkLatestHeight(): Promise<any> {
     try {
-      const blockHeight = await promiseWithTimeout(this.getLatestBlockNumber(), 1000 * 20);
-      if (isEmpty(blockHeight)) {
+      const firstStart = isEmpty(this.rpcLastBlockNumber);
+      this.rpcLastBlockNumber = await promiseWithTimeout(this.getLatestBlockNumber(), 1000 * 20);
+      if (isEmpty(this.rpcLastBlockNumber)) {
         throw new Error('checkLatestHeight getLatestBlockNumber empty');
       }
-      this.rpcLastBlockNumber = this.rpcLastBlockNumber === 0 && blockHeight > this.batchLimit ? blockHeight - this.batchLimit : blockHeight;
-      const lastScannedBlockNumber = await this.getLastScannedBlockNumber();
+      let lastScannedBlockNumber = await this.dataProcessor.getMaxScanBlockNumber();
+      if (lastScannedBlockNumber && lastScannedBlockNumber>0) {
+        lastScannedBlockNumber+=1;
+      } else {
+        lastScannedBlockNumber = this.rpcLastBlockNumber - this.batchLimit;
+        this.dataProcessor.changeMaxScanBlockNumber(lastScannedBlockNumber);
+      }
+      if (firstStart) {
+        lastScannedBlockNumber = lastScannedBlockNumber>this.batchLimit ? lastScannedBlockNumber -this.batchLimit : lastScannedBlockNumber;
+      }
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
       this.chainConfig.debug && this.logger.debug(
         `checkLatestHeight check ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${this.rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
       );
       if (safetyBlockNumber > lastScannedBlockNumber) {
-        const blockNumbers = generateSequenceNumbers(
-          lastScannedBlockNumber,
-          safetyBlockNumber,
-        );
-        const endBlockNumber = blockNumbers[blockNumbers.length - 1];
-        await this.setPendingScanBlocks(blockNumbers);
-        await this.setLastScannedBlockNumber(endBlockNumber);
+        const blockNumbers = await this.dataProcessor.createRangeScannData(lastScannedBlockNumber,safetyBlockNumber )
         return blockNumbers;
       }
     } catch (error) {
@@ -157,7 +115,6 @@ export class RpcScanningService implements RpcScanningInterface {
           if (transfers && isEmpty(error)) {
             response = transfers;
             await this.handleScanBlockResult(error, block, transfers);
-            await this.delPendingScanBlocks([block.number]);
           }
         },
       );
@@ -182,13 +139,11 @@ export class RpcScanningService implements RpcScanningInterface {
     for (const transfer of transfers) {
       const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender);
       if (senderValid.exist) {
-        // transfer.version = senderValid.version;
         newList.push(transfer);
         continue;
       }
       const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.receiver);
       if (receiverValid.exist) {
-        // transfer.version = receiverValid.version;
         newList.push(transfer);
         continue;
       }
@@ -352,84 +307,34 @@ export class RpcScanningService implements RpcScanningInterface {
     return result;
   }
 
-  protected async setLastScannedBlockNumber(
-    blockNumber: number,
-  ): Promise<void> {
-    // await this.db.put("LastScannedBlockNumber", blockNumber.toString());
-    await this.pendingDBLock.runExclusive(async () => {
-      return await outputFile(
-        `runtime/scan/${this.chainId}`,
-        blockNumber.toString(),
-      );
-    });
-  }
+  // protected async setLastScannedBlockNumber(
+  //   blockNumber: number,
+  // ): Promise<void> {
+  //   // await this.pendingDBLock.runExclusive(async () => {
+  //   return await outputFile(
+  //     `runtime/scan/${this.chainId}`,
+  //     blockNumber.toString(),
+  //   );
+  //   // });
+  // }
 
-  public async getLastScannedBlockNumber(): Promise<number> {
-    let lastScannedBlockNumber;
-    try {
-      lastScannedBlockNumber = +readFileSync(`runtime/scan/${this.chainId}`);
-    } catch (error) {
-      this.logger.error(
-        `getLastScannedBlockNumber error`,
-        error,
-      );
-    } finally {
-      if (!lastScannedBlockNumber) {
-        lastScannedBlockNumber = await this.getLatestBlockNumber();
-        await this.setLastScannedBlockNumber(lastScannedBlockNumber);
-      }
-    }
-    return lastScannedBlockNumber;
-  }
-  protected async setPendingScanBlocks(blockNumber: number[]): Promise<void> {
-    return new Promise((resolve, reject) => {
-      return this.pendingDBLock.runExclusive(async () => {
-        try {
-          const db = this.getDB();
-          const subDB = db.sublevel('pending-scan');
-          const result = await subDB.batch(
-            blockNumber.map((num) => {
-              return {
-                type: 'put',
-                key: num.toString(),
-                value: '',
-              };
-            }),
-          );
-          for (const num of blockNumber) {
-            this.pendingScanBlocks.add(num)
-          }
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
-  }
-  protected async delPendingScanBlocks(blockNumber: number[]): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.pendingDBLock.runExclusive(async () => {
-        try {
-          const db = this.getDB();
-          const subDB = db.sublevel('pending-scan');
-          const result = await subDB.batch(
-            blockNumber.map((num) => {
-              return {
-                type: 'del',
-                key: num.toString(),
-              };
-            }),
-          );
-          for (const num of blockNumber) {
-            this.pendingScanBlocks.delete(num)
-          }
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      });
-    });
-  }
+  // public async getLastScannedBlockNumber(): Promise<number> {
+  //   let lastScannedBlockNumber;
+  //   try {
+  //     lastScannedBlockNumber = +readFileSync(`runtime/scan/${this.chainId}`);
+  //   } catch (error) {
+  //     this.logger.error(
+  //       `getLastScannedBlockNumber error`,
+  //       error,
+  //     );
+  //   } finally {
+  //     if (!lastScannedBlockNumber) {
+  //       lastScannedBlockNumber = await this.getLatestBlockNumber();
+  //       this.setLastScannedBlockNumber(lastScannedBlockNumber);
+  //     }
+  //   }
+  //   return lastScannedBlockNumber;
+  // }
 
   protected getChainConfigToken(address: string) {
     return this.ctx.chainConfigService.getTokenByChain(

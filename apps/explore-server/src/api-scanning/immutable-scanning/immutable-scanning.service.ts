@@ -30,7 +30,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       }
     } catch (error) {
       this.logger.error(
-        `${address} getAccount error `,
+        `${address} getAccount error`,
         error,
       );
       return [];

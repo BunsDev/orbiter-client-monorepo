@@ -74,7 +74,7 @@ export class RpcScanningSchedule {
     }
     this.checkLatestHeight();
   }
-  @Cron('*/1 * * * * *')
+  @Cron('*/2 * * * * *')
   executeCrawlBlock() {
     for (const scanner of this.scanService.values()) {
       if (scanner.reScanMutex.isLocked()) {
@@ -82,22 +82,24 @@ export class RpcScanningSchedule {
       }
       scanner.reScanMutex.runExclusive(async () => {
         scanner.service.logger.info(`rpc scan executeCrawlBlock start`)
-        const result: any = await scanner.service.executeCrawlBlock().catch(error => {
+        await scanner.service.executeCrawlBlock().then(result=> {
+          if (result) {
+            for (const row of result) {
+              if (row && row.block) {
+                scanner.service.logger.info(`executeCrawlBlock end ${row.block['number']} / transfers: ${row['transfers'].length}`)
+              } else {
+                scanner.service.logger.error(`executeCrawlBlock error ${JSONStringify(row || {})}`)
+              }
+            }
+          }
+        })
+        .catch(error => {
           this.logger.error(
             `executeCrawlBlock error `,
             error,
           );
         })
-        if (result) {
-          for (const row of result) {
-            if (row && row.block) {
-              scanner.service.logger.info(`executeCrawlBlock end ${row.block['number']} / transfers: ${row['transfers'].length}`)
-            } else {
-              scanner.service.logger.error(`executeCrawlBlock error ${JSONStringify(row || {})}`)
-            }
-          }
-        }
-
+       
       });
     }
   }
