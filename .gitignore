@@ -40,3 +40,4 @@ Thumbs.db
 logs
 .env
 .env.local
+worker_request.log

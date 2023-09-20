@@ -112,6 +112,11 @@ export class TransactionService {
     return transfers;
   }
   public async executeMatch(payload: TransfersModel) {
+    if (payload.status!=2) {{
+      return {
+        errmsg: `Transaction status is incorrect ${payload.status}/2`
+      }
+    }}
     try {
       let result;
       if (payload.version === '1-0') {

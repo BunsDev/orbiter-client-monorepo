@@ -8,7 +8,8 @@ import {
   equals,
   splitArrayBySize,
   fix0xPadStartAddress,
-  sleep
+  sleep,
+  JSONStringify
 } from '@orbiter-finance/utils';
 import {
   ExecuteCalldata,
@@ -19,10 +20,6 @@ import BigNumber from 'bignumber.js';
 import { RpcProvider, RPC } from 'starknet';
 export class StarknetRpcScanningService extends RpcScanningService {
   #provider: RpcProvider;
-  async init() {
-    this.batchLimit = 5;
-    this.requestTimeout = 1000 * 60 * 2;
-  }
   getProvider() {
     const chainConfig = this.chainConfig;
     const chainId = StarknetChainId[this.chainId];
@@ -50,12 +47,15 @@ export class StarknetRpcScanningService extends RpcScanningService {
     return transactions.filter((tx) => {
       if (tx['type'] === 'INVOKE') {
         // TODO: 
-        // const executeCalldata = this.decodeExecuteCalldata(tx['calldata']);
-        // if (executeCalldata) {
-        //   const parseData = this.parseContractCallData(executeCalldata);
-        //   return parseData && parseData.length > 0;
-        // }
-        return true;
+        const executeCalldata = this.decodeExecuteCalldataCairo0(tx['calldata']);
+        if (executeCalldata && executeCalldata.length > 0) {
+          return true;
+        }
+        const executeCalldata2 = this.decodeExecuteCalldataCairo1(tx['calldata']);
+        if (executeCalldata2 && executeCalldata2.length > 0) {
+          return true;
+        }
+        return false;
       }
       return false;
     });
@@ -68,8 +68,12 @@ export class StarknetRpcScanningService extends RpcScanningService {
     if (!transactions) {
       throw new Error(`${blockNumber} transactions empty `);
     }
+    const filterBeforeTransactions = await this.filterBeforeTransactions<any>(transactions);
+    if (filterBeforeTransactions.length <= 0) {
+      return [];
+    }
     const receipts = await Promise.all(
-      transactions.map((tx) =>
+      filterBeforeTransactions.map((tx) =>
         this.retryRequestGetTransactionReceipt(tx.transaction_hash),
       ),
     );
@@ -81,19 +85,19 @@ export class StarknetRpcScanningService extends RpcScanningService {
           isErrorTx,
         )}`,
       );
-      throw new Error(`handleBlock receipt error ${blockNumber}`);
+      throw new Error(`handleBlock block receipt ${blockNumber} ${JSONStringify(isErrorTx)}`);
     }
 
-    const filterBeforeTransactions =
-      await this.filterBeforeTransactions<any>(transactions);
 
     const txTransfersArray = await Promise.all(
       filterBeforeTransactions.map(async (transaction) => {
         const receipt = receipts.find(
           (tx) => tx.hash === transaction.transaction_hash,
         );
-        if (isEmpty(receipt.data)) {
-          this.logger.warn(`${transaction.transaction_hash} receipt not found`);
+        if (isEmpty(receipt) || isEmpty(receipt.data)) {
+          throw new Error(`${transaction.transaction_hash} receipt not found`);
+        }
+        if (receipt.data['finality_status'] === 'REVERTED') {
           return [];
         }
         return this.handleTransaction(transaction, receipt.data);
@@ -114,17 +118,25 @@ export class StarknetRpcScanningService extends RpcScanningService {
     return transfers;
   }
   private getStatus(receipt: any): TransferAmountTransactionStatus {
-    const status = receipt['status'] || receipt['finality_status'];
-    if (['ACCEPTED_ON_L1', 'ACCEPTED_ON_L2'].includes(status)) {
-      return TransferAmountTransactionStatus.confirmed;
-    } else if (['PENDING'].includes(status)) {
-      return TransferAmountTransactionStatus.pending;
-    }
-    if (
-      receipt['execution_status'] &&
-      receipt['execution_status'] != 'SUCCEEDED'
-    ) {
-      return TransferAmountTransactionStatus.failed;
+    if (receipt['finality_status'] && receipt['execution_status']) {
+      // cairo 1
+      if (receipt['execution_status'] === 'SUCCEEDED') {
+        // if (receipt['finality_status'] === 'ACCEPTED_ON_L2') {
+        //   return TransferAmountTransactionStatus.confirmed;
+        // }
+        // return TransferAmountTransactionStatus.pending;
+        return TransferAmountTransactionStatus.confirmed;
+      } else if (receipt['execution_status'] === 'REVERTED' || receipt['execution_status'] === 'REJECTED') {
+        return TransferAmountTransactionStatus.failed;
+      }
+    } else {
+      // cairo 0
+      const status = receipt['status'];
+      if (['ACCEPTED_ON_L1', 'ACCEPTED_ON_L2'].includes(status)) {
+        return TransferAmountTransactionStatus.confirmed;
+      } else if (['PENDING'].includes(status)) {
+        return TransferAmountTransactionStatus.pending;
+      }
     }
     return TransferAmountTransactionStatus.failed;
   }
@@ -132,17 +144,11 @@ export class StarknetRpcScanningService extends RpcScanningService {
     transaction: any,
     receipt?: RPC.TransactionReceipt,
   ): Promise<TransferAmountTransaction[]> {
-    // const hash = fix0xPadStartAddress(receipt.transaction_hash, 66);
-    const executeCalldata = this.decodeExecuteCalldata(transaction.calldata);
-    let parseData = this.parseContractCallData(executeCalldata);
+    let parseData = this.decodeExecuteCalldataCairo0(transaction.calldata);
     if (!parseData || parseData.length <= 0) {
-      parseData = this.decodeExecuteCalldata2(transaction.calldata) as any;
+      parseData = this.decodeExecuteCalldataCairo1(transaction.calldata) as any;
     }
     if (!parseData) {
-      return [];
-    }
-
-    if (!executeCalldata || executeCalldata.callArray.length <= 0) {
       return [];
     }
     const transfers: TransferAmountTransaction[] = [];
@@ -186,9 +192,10 @@ export class StarknetRpcScanningService extends RpcScanningService {
           signature: row.signature,
           receipt: receipt,
         };
-
+        if (parseData.length > 1) {
+          transfer.hash = `${transfer.hash}#${row.index}`;
+        }
         if (row.name) {
-          let isMatch = false;
           if (row.name === 'transfer') {
             transfer.receiver = fix0xPadStartAddress(args[0], 66);
             transfer.token = fix0xPadStartAddress(to, 66);
@@ -202,7 +209,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
                 .div(Math.pow(10, tokenInfo.decimals))
                 .toString();
             }
-            isMatch = true;
+            transfers.push(transfer);
           } else if (row.name === 'sign_pending_multisig_transaction') {
             // find
             const transferData = args[1].slice(-5) as any;
@@ -219,7 +226,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
                 .div(Math.pow(10, tokenInfo.decimals))
                 .toString();
             }
-            isMatch = true;
+            transfers.push(transfer);
           } else if (row.name === 'transferERC20') {
             const tokenAddress = fix0xPadStartAddress(args[0], 66);
             transfer.token = tokenAddress;
@@ -234,40 +241,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
                 .div(Math.pow(10, tokenInfo.decimals))
                 .toString();
             }
-            isMatch = true;
-          }
-
-          if (isMatch) {
-            // 0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9 = transfer event topic
-            const events = receipt['events'].filter(
-              (e) =>
-                e.keys[0] ===
-                '0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9' &&
-                equals(
-                  fix0xPadStartAddress(e.from_address, 66),
-                  transfer.token,
-                ),
-            );
-            const transferEvent = events.find((ev) => {
-              const fromAddress = fix0xPadStartAddress(ev.data[0], 66);
-              const toAddress = fix0xPadStartAddress(ev.data[1], 66);
-              const value = new BigNumber(ev.data[2]).toFixed(0);
-              return (
-                equals(fromAddress, transfer.sender) &&
-                equals(toAddress, transfer.receiver) &&
-                equals(value, transfer.value)
-              );
-            });
-            if (transferEvent) {
-              if (transfers.length > 0) {
-                transfer.hash = `${transfer.hash}#${row.index}`;
-              }
-              transfers.push(transfer);
-            } else {
-              this.logger.error(
-                `${transfer.hash} not find event ${JSON.stringify(row)}`,
-              );
-            }
+            transfers.push(transfer);
           }
         }
       } catch (error) {
@@ -276,6 +250,32 @@ export class StarknetRpcScanningService extends RpcScanningService {
           error,
         );
         throw error;
+      }
+    }
+    // valid event
+    for (const transfer of transfers) {
+      if (transfer.status === TransferAmountTransactionStatus.confirmed) {
+        // 0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9 = transfer event topic
+        const events = receipt['events'].filter(
+          (e) =>
+            e.keys[0] ===
+            '0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9' &&
+            equals(
+              fix0xPadStartAddress(e.from_address, 66),
+              transfer.token,
+            ),
+        );
+        const transferEvent = events.find((ev) => {
+          const fromAddress = fix0xPadStartAddress(ev.data[0], 66);
+          const toAddress = fix0xPadStartAddress(ev.data[1], 66);
+          const value = new BigNumber(ev.data[2]).toFixed(0);
+          return (
+            equals(fromAddress, transfer.sender) &&
+            equals(toAddress, transfer.receiver) &&
+            equals(value, transfer.value)
+          );
+        });
+        transfer.status = isEmpty(transferEvent) ? TransferAmountTransactionStatus.failed : transfer.status;
       }
     }
     return transfers.map((tx) => {
@@ -288,7 +288,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
       return tx;
     });
   }
-  decodeExecuteCalldata(inputs: string[]): ExecuteCalldata {
+  decodeExecuteCalldataCairo0(inputs: string[]): CalldataArg[] {
     if (!inputs) {
       return undefined;
     }
@@ -302,12 +302,13 @@ export class StarknetRpcScanningService extends RpcScanningService {
         const calldataLen = +inputs[index];
         index += 1;
         const calldata = inputs.slice(index, calldataLen + index);
-        return {
+        const data = {
           callArrayLen: callArrayLen,
           callArray: splitArrayBySize(callArray, 4),
           calldataLen: calldataLen,
           calldata,
         };
+        return this.parseContractCallData(data);
       }
     } catch (error) {
       this.logger.error(
@@ -317,7 +318,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
       throw error;
     }
   }
-  decodeExecuteCalldata2(inputs: string[]): CalldataArg {
+  decodeExecuteCalldataCairo1(inputs: string[]): CalldataArg[] {
     if (!inputs) {
       return undefined;
     }
@@ -388,7 +389,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
       }
     }
   }
-  parseContractCallData(data: ExecuteCalldata): CalldataArg[] {
+  private parseContractCallData(data: ExecuteCalldata): CalldataArg[] {
     try {
       const calldata: CalldataArg[] = [];
       let index = 0;
@@ -435,7 +436,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
       return null;
     }
   }
-  parseSignPendingMultisigCalldata(inputs: string[]): any[] {
+  private parseSignPendingMultisigCalldata(inputs: string[]): any[] {
     let index = 0;
     const call_array_len = +inputs[index];
     index = 1;
@@ -471,7 +472,9 @@ export class StarknetRpcScanningService extends RpcScanningService {
       return data;
     } catch (error) {
       if (error.message.includes('-32603')) {
-        return null;
+        return {
+          finality_status: "REVERTED"
+        };
       }
       throw new Error(
         `Failed to request transaction receipt: ${hash} ${error.message}`,
@@ -481,7 +484,13 @@ export class StarknetRpcScanningService extends RpcScanningService {
 
   async getTransactionReceipt(hash: string): Promise<RPC.TransactionReceipt> {
     const provider = this.getProvider();
-    const data = await provider.getTransactionReceipt(hash);
-    return data;
+    const receipt = await provider.getTransactionReceipt(hash);
+    if (isEmpty(receipt)) {
+      throw new Error(`${hash} receipt empty`);
+    }
+    if (receipt.transaction_hash != hash) {
+      throw new Error(`provider getTransactionReceipt hash inconsistent expect ${hash} get ${receipt.transaction_hash}`);
+    }
+    return receipt;
   }
 }

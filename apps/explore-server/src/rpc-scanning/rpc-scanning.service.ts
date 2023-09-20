@@ -15,7 +15,6 @@ import DataProcessor from '../utils/dataProcessor';
 export class RpcScanningService implements RpcScanningInterface {
   public logger: winston.Logger;
   public rpcLastBlockNumber: number = 0;
-  protected batchLimit = 100;
   protected requestTimeout = 1000 * 60 * 5;
   readonly dataProcessor: DataProcessor;
   constructor(
@@ -25,6 +24,9 @@ export class RpcScanningService implements RpcScanningInterface {
       label: this.chainConfig.name
     });
     this.dataProcessor = new DataProcessor(this.chainId);
+  }
+  get batchLimit():number {
+    return this.chainConfig['batchLimit'] || 100;
   }
   get chainConfig(): IChainConfig {
     return this.ctx.chainConfigService.getChainInfo(this.chainId);
@@ -285,13 +287,6 @@ export class RpcScanningService implements RpcScanningInterface {
           result.error = null;
           break;
         }
-        // if (retry > 1) {
-        //   this.logger.debug(
-        //     `[2-Single] retryRequestGetTransactionReceipt ${retry}/${retryCount} hash:${hash}, time consuming:${
-        //       (Date.now() - startTime) / 1000
-        //     }/s`,
-        //   );
-        // }
       } catch (error) {
         this.logger.error(
           `retryRequestGetTransactionReceipt error ${retry}/${retryCount} hash:${hash} `,

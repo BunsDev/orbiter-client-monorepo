@@ -82,18 +82,7 @@ export class RpcScanningSchedule {
       }
       scanner.reScanMutex.runExclusive(async () => {
         scanner.service.logger.info(`rpc scan executeCrawlBlock start`)
-        await scanner.service.executeCrawlBlock().then(result=> {
-          if (result) {
-            for (const row of result) {
-              if (row && row.block) {
-                scanner.service.logger.info(`executeCrawlBlock end ${row.block['number']} / transfers: ${row['transfers'].length}`)
-              } else {
-                scanner.service.logger.error(`executeCrawlBlock error ${JSONStringify(row || {})}`)
-              }
-            }
-          }
-        })
-        .catch(error => {
+        await scanner.service.executeCrawlBlock().catch(error => {
           this.logger.error(
             `executeCrawlBlock error `,
             error,

@@ -28,7 +28,7 @@ export default class DataProcessor {
         }
         if (result) {
             this.dataSet = new Set(result.map(n => +n));
-            console.log('initStoreData', this.dataSet.size)
+            console.log(`${this.chainId} initStoreData`, this.dataSet.size, 'maxScanBlockNumber ', this.maxScanBlockNumber)
         }
     }
     async createRangeScannData(min: number, max: number) {
@@ -99,7 +99,7 @@ export default class DataProcessor {
                 console.error(`ack data error ${block}`, error.message);
             }
         }
-        console.log('execute ack success', this.dataSet.size, this.processingSet.size)
+        console.log(`execute ack success count = ${blockNumbers.length}, now `, this.dataSet.size, this.processingSet.size)
     }
     deleteStoreData(blocks: number[]) {
         return new Promise(async (resolve, reject) => {
@@ -119,8 +119,8 @@ export default class DataProcessor {
 
     }
     noAck(blocks: number[] | number) {
-        blocks = typeof blocks === 'number' ? [blocks] : blocks;
-        for (const block of blocks) {
+        const blockNumbers = typeof blocks === 'number' ? [blocks] : blocks;
+        for (const block of blockNumbers) {
             try {
                 this.dataSet.add(block);
                 this.processingSet.delete(block);
@@ -128,6 +128,6 @@ export default class DataProcessor {
                 console.error(`noAck data error ${block}`, error.message);
             }
         }
-        console.log('execute NoAck success', this.dataSet.size, this.processingSet.size)
+        console.log(`execute noAck success count = ${blockNumbers.length}, now `, this.dataSet.size, this.processingSet.size)
     }
 }

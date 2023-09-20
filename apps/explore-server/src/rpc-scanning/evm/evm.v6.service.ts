@@ -292,6 +292,9 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
     const provider = this.getProvider();
     const receipt = await provider.getTransactionReceipt(hash);
+    if (!receipt) {
+      throw new Error(`${hash} receipt empty`);
+    }
     if (receipt.hash!=hash) {
       throw new Error(`provider getTransactionReceipt hash inconsistent expect ${hash} get ${receipt.hash}`);
     }
