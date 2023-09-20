@@ -35,8 +35,8 @@ export class SequencerScheduleService {
     private readonly consumerService: ConsumerService
   ) {
     this.checkDBTransactionRecords();
-    this.logger.log('start consumeBridgeTransactionMessages')
-    this.consumerService.consumeBridgeTransactionMessages(this.consumeMQTransactionRecords.bind(this))
+    this.logger.log('start consumeMakerWaitTransferMessage')
+    this.consumerService.consumeMakerWaitTransferMessage(this.consumeMQTransactionRecords.bind(this))
     // this.validatorService.validatingValueMatches("ETH", "1", "ETH", "2")
   }
 

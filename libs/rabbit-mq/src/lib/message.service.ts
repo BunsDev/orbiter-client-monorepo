@@ -5,7 +5,7 @@ import { JSONStringify } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 @Injectable()
 export class MessageService {
-  constructor(private readonly connectionManager: RabbitmqConnectionManager) {}
+  constructor(private readonly connectionManager: RabbitmqConnectionManager) { }
 
   async sendTransactionReceiptMessage(data: any) {
     const queue = 'TransactionReceipt';
@@ -35,7 +35,10 @@ export class MessageService {
   }
 
   async sendTransferToMakerClient(data: BridgeTransactionAttributes) {
-    const queue = 'makerTransferWaitMatch'
+    const queue = 'makerWaitTransfer'
+    if (data.version != '2-0') {
+      return;
+    }
     const channel = this.connectionManager.getChannel();
     try {
       await channel.assertQueue(queue);

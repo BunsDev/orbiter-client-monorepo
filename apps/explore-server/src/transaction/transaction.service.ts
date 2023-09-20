@@ -22,8 +22,8 @@ export class TransactionService {
     private transactionV2Service: TransactionV2Service,
     private makerService: MakerService
   ) {
-    this.consumerService.consumeTransferWaitMessages(this.executeMatch.bind(this))
-    this.consumerService.consumeTransactionReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
+    this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
+    this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
   }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],

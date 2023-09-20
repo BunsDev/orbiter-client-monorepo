@@ -13,7 +13,7 @@ export class ConsumerService {
     private alertService: AlertService
   ) {
   }
-  async consumeTransactionReceiptMessages(callback:(data:any) => Promise<any>) {
+  async consumeScanTransferReceiptMessages(callback:(data:any) => Promise<any>) {
     while(true) {
       const channel = this.connectionManager.getChannel();
       if (channel) {
@@ -27,7 +27,7 @@ export class ConsumerService {
     channel.on('close', () => {
       this.logger.error('Channel closed');
       this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
-      this.consumeTransactionReceiptMessages(callback)
+      this.consumeScanTransferReceiptMessages(callback)
     });
 
     channel.on('error', (err) => {
@@ -53,7 +53,7 @@ export class ConsumerService {
     });
   }
 
-  async consumeTransferWaitMessages(callback:(data:any) => Promise<any>) {
+  async consumeScanTransferSaveDBAfterMessages(callback:(data:any) => Promise<any>) {
     while(true) {
       const channel = this.connectionManager.getChannel();
       if (channel) {
@@ -69,7 +69,7 @@ export class ConsumerService {
     channel.on('close', () => {
       this.logger.error('Channel closed');
       this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
-      this.consumeTransferWaitMessages(callback)
+      this.consumeScanTransferSaveDBAfterMessages(callback)
     });
 
     channel.on('error', (err) => {
@@ -95,7 +95,7 @@ export class ConsumerService {
     });
   }
 
-  async consumeBridgeTransactionMessages(callback:(data:any) => Promise<any>) {
+  async consumeMakerWaitTransferMessage(callback:(data:any) => Promise<any>) {
     while(true) {
       const channel = this.connectionManager.getChannel();
       if (channel) {
@@ -106,12 +106,12 @@ export class ConsumerService {
       }
     }
     const channel = await this.connectionManager.createChannel();
-    const queue = 'makerTransferWaitMatch';
+    const queue = 'makerWaitTransfer';
     await channel.assertQueue(queue);
     channel.on('close', () => {
       this.logger.error('Channel closed');
       this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
-      this.consumeBridgeTransactionMessages(callback)
+      this.consumeMakerWaitTransferMessage(callback)
     });
 
     channel.on('error', (err) => {
