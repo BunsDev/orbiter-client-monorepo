@@ -15,11 +15,11 @@ import { MdcService } from '../thegraph/mdc/mdc.service';
 import { ZKSyncEraRpcScanningService } from './zksyncEra/zksyncEra.service'
 import { Context } from './rpc-scanning.interface'
 import { MakerService } from '../maker/maker.service'
-import {WorkerService} from './worker.service';
+import { WorkerService } from './worker.service';
 
 @Injectable()
 export class RpcScanningFactory {
-  private services:{[key:string]:RpcScanningService }= {}
+  private services: { [key: string]: RpcScanningService } = {}
   constructor(
     private chainConfigService: ChainConfigService,
     private transactionService: TransactionService,
@@ -32,8 +32,8 @@ export class RpcScanningFactory {
   createService(chainId: string): RpcScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
     const key = chainConfig.service && chainConfig.service['rpc'];
-    if  (this.services[chainId] ) {
-      return this.services[chainId] ;
+    if (this.services[chainId]) {
+      return this.services[chainId];
     }
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
@@ -45,44 +45,44 @@ export class RpcScanningFactory {
     let service;
     switch (key) {
       case 'ZKSyncEraRpcScanningService':
-        service= new ZKSyncEraRpcScanningService(
+        service = new ZKSyncEraRpcScanningService(
           chainId,
           ctx
         );
         break;
       case 'EVMRpcScanningV5Service':
-        service= new EVMRpcScanningV5Service(
+        service = new EVMRpcScanningV5Service(
           chainId,
           ctx
         );
         break;
       case 'EVMRpcScanningService':
       case 'EVMRpcScanningV6Service':
-        service= new EVMRpcScanningV6Service(
+        service = new EVMRpcScanningV6Service(
           chainId,
           ctx
         );
         break;
       case 'ArbitrumRpcScanningService':
-        service= new ArbitrumRpcScanningService(
+        service = new ArbitrumRpcScanningService(
           chainId,
           ctx
         );
         break;
       case 'OptimisticRpcScanningService':
-        return new OptimisticRpcScanningService(
+        service = new OptimisticRpcScanningService(
           chainId,
           ctx
         );
         break;
       case 'BaseRpcScanningService':
-        service= new BaseRpcScanningService(
+        service = new BaseRpcScanningService(
           chainId,
           ctx
         );
         break;
       case 'StarknetRpcScanningService':
-        service= new StarknetRpcScanningService(
+        service = new StarknetRpcScanningService(
           chainId,
           ctx
         );
@@ -91,6 +91,6 @@ export class RpcScanningFactory {
         throw new Error(`${chainId} Not Config RPC Service Class`);
     }
     this.services[chainId] = service;
-    return service;
+    return this.services[chainId];
   }
 }

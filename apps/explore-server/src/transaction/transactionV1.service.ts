@@ -464,6 +464,7 @@ export class TransactionV1Service {
           throw new Error(`${transfer.hash} Create Bridge Transaction Fail`);
         }
         createdData.id = createRow.id
+        this.logger.info(`reate bridgeTransaction ${createdData.sourceId}`);
         this.memoryMatchingService
           .addBridgeTransaction(createRow.toJSON())
           .catch((error) => {
