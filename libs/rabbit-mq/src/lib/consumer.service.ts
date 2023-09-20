@@ -83,13 +83,11 @@ export class ConsumerService {
           const messageContent = msg.content.toString();
           const data = JSON.parse(messageContent);
           // await this.transactionService.executeMatch(data);
-          await callback(data);
+          const result = await callback(data);
+          this.logger.log(`consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
           channel.ack(msg);
         } catch (error: any) {
-          console.error(
-            'consumeTransferWaitMessages Error processing message:',
-            error.message,
-          );
+          this.logger.error(`consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
         }
       }
     });

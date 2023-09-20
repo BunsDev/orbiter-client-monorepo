@@ -64,7 +64,7 @@ export class TransactionService {
         if (versionStr) {
           transfer.version = versionStr;
         }
-        const upsertData:any = {
+        const upsertData: any = {
           hash: transfer.hash,
           chainId: transfer.chainId,
           blockNumber: transfer.blockNumber.toString(),
@@ -112,25 +112,34 @@ export class TransactionService {
     return transfers;
   }
   public async executeMatch(payload: TransfersModel) {
-    let result;
-    if (payload.version === '1-0') {
-      result =
-        await this.transactionV1Service.handleTransferBySourceTx(payload);
-    } else if (payload.version === '1-1') {
-      result = await this.transactionV1Service.handleTransferByDestTx(payload);
-    } else if (payload.version === '2-0') {
-      result =
-        await this.transactionV2Service.handleTransferBySourceTx(payload);
-    } else if (payload.version === '2-1') {
-      result = await this.transactionV2Service.handleTransferByDestTx(payload);
-    } else {
-      throw new Error(` incorrect version ${payload.version}`);
+    try {
+      let result;
+      if (payload.version === '1-0') {
+        result = await this.transactionV1Service.handleTransferBySourceTx(payload);
+      } else if (payload.version === '1-1') {
+        result = await this.transactionV1Service.handleTransferByDestTx(payload);
+      } else if (payload.version === '2-0') {
+        result =
+          await this.transactionV2Service.handleTransferBySourceTx(payload);
+      } else if (payload.version === '2-1') {
+        result = await this.transactionV2Service.handleTransferByDestTx(payload);
+      } else {
+        throw new Error(` incorrect version ${payload.version}`);
+      }
+      // send to maker client when side is 0
+      if (['2-0'].includes(payload.version) && result && result.id && result.sourceId) {
+        this.messageService.sendTransferToMakerClient(result)
+      }
+      return result;
+    } catch (error) {
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        return {
+          errmsg: error.errors
+        }
+      } else {
+        throw error;
+      }
     }
 
-    // send to maker client when side is 0
-    if (['1-0', '2-0'].includes(payload.version) && result && result.id && result.sourceId) {
-      this.messageService.sendTransferToMakerClient(result)
-    }
-    return result;
   }
 }

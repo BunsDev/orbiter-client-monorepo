@@ -408,7 +408,6 @@ export class TransactionV1Service {
         errmsg: `${transfer.hash} Status is in operation Operation not permitted`
       }
     }
-
     const t = await this.sequelize.transaction();
     try {
       const createdData: BridgeTransactionAttributes = {
@@ -464,7 +463,7 @@ export class TransactionV1Service {
           throw new Error(`${transfer.hash} Create Bridge Transaction Fail`);
         }
         createdData.id = createRow.id
-        this.logger.info(`reate bridgeTransaction ${createdData.sourceId}`);
+        this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.memoryMatchingService
           .addBridgeTransaction(createRow.toJSON())
           .catch((error) => {

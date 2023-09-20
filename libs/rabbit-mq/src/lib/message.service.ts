@@ -36,9 +36,6 @@ export class MessageService {
 
   async sendTransferToMakerClient(data: BridgeTransactionAttributes) {
     const queue = 'makerWaitTransfer'
-    if (data.version != '2-0') {
-      return;
-    }
     const channel = this.connectionManager.getChannel();
     try {
       await channel.assertQueue(queue);
