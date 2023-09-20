@@ -1,26 +1,21 @@
 import { Module } from '@nestjs/common';
-import { RpcScanningModule } from './rpc-scanning/rpc-scanning.module';
-import { ApiModule } from './api/api.module';
-
-import { WinstonModule, utilities } from 'nest-winston';
-import { ApiScanningModule } from './api-scanning/api-scanning.module';
-import * as winston from 'winston';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
-import { AlertModule } from '@orbiter-finance/alert';
+import { AppService } from './app.service';
+import { TransactionModule } from './transaction/transaction.module';
+import { MdcService } from './thegraph/mdc/mdc.service';
+import { MakerService } from './maker/maker.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ScheduleModule } from '@nestjs/schedule';
 import { SequelizeModule } from '@nestjs/sequelize';
-import { OrbiterConfigModule, ENVConfigService,ChainConfigService } from '@orbiter-finance/config';
+import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
-import { join } from 'path';
+import { loggerFormat } from 'libs/utils/src/lib/logger';
+import { join } from 'lodash';
 import { KnexModule } from 'nest-knexjs';
+import { WinstonModule } from 'nest-winston';
 import { isEmpty } from '@orbiter-finance/utils';
+import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import {loggerFormat} from './utils/logger'
-dayjs.extend(utc);
-
+import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
+import { AlertModule } from '@orbiter-finance/alert';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -40,10 +35,10 @@ dayjs.extend(utc);
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath:"explore-data-service/chains.json",
+      chainConfigPath: "explore-data-service/chains.json",
       envConfigPath: "explore-data-service/config.yaml",
       makerV1RulePath: "explore-data-service/rules",
-      cachePath: join(__dirname,'runtime')
+      // cachePath: join(__dirname, 'runtime')
     }),
     WinstonModule.forRoot({
       exitOnError: false,
@@ -59,7 +54,7 @@ dayjs.extend(utc);
           format: loggerFormat(),
         }),
         new winston.transports.Console({
-          format:loggerFormat(),
+          format: loggerFormat(),
           handleExceptions: true,
         }),
       ],
@@ -67,15 +62,33 @@ dayjs.extend(utc);
         new winston.transports.File({ filename: './logs/exception.log' }),
       ],
     }),
+    SequelizeModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async (envConfig: ENVConfigService) => {
+        const config: any = await envConfig.getAsync('DATABASE_URL');
+        if (isEmpty(config)) {
+          console.error('Missing configuration DATABASE_URL');
+          process.exit(1);
+        }
+        return config;
+      },
+    }),
+    KnexModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async (envConfig: ENVConfigService) => {
+        const config: any = await envConfig.getAsync('DATABASE_THEGRAPH');
+        if (isEmpty(config)) {
+          console.error('Missing configuration DATABASE_THEGRAPH');
+          process.exit(1);
+        }
+        return { config };
+      },
+    }),
     AlertModule,
     RabbitMqModule,
     TransactionModule,
-    RpcScanningModule,
-    ApiScanningModule,
-    ApiModule,
-    ScheduleModule.forRoot(),
   ],
   controllers: [],
-  providers: [],
+  providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

@@ -1,0 +1,74 @@
+{
+  "name": "transaction-processing",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/transaction-processing/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/transaction-processing",
+        "main": "apps/transaction-processing/src/main.ts",
+        "tsConfig": "apps/transaction-processing/tsconfig.app.json",
+        "assets": [
+          "apps/transaction-processing/src/assets"
+        ],
+        "isolatedConfig": true,
+        "webpackConfig": "apps/transaction-processing/webpack.config.js"
+      },
+      "configurations": {
+        "development": {},
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "transaction-processing:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "transaction-processing:build:development"
+        },
+        "production": {
+          "buildTarget": "transaction-processing:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "apps/transaction-processing/**/*.ts"
+        ]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
+      "options": {
+        "jestConfig": "apps/transaction-processing/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    }
+  },
+  "tags": []
+}

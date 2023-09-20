@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { MdcService } from '../thegraph/mdc/mdc.service';
 import dayjs from 'dayjs';
 import { ThegraphManagerService } from '../thegraph/manager/manager.service';
-import { TransactionID } from '../utils';
 import { equals, addressPadStart64, padStart } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction, Transfers } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
@@ -10,14 +9,13 @@ import { ChainConfigService } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
-import { uniq } from '@orbiter-finance/utils';
-import { createLoggerByName } from '../utils/logger';
+import { uniq,logger ,TransactionID} from '@orbiter-finance/utils';
 import { Sequelize } from 'sequelize-typescript';
 import { MemoryMatchingService } from './memory-matching.service';
 
 @Injectable()
 export class TransactionV2Service {
-  private logger = createLoggerByName(`${TransactionV2Service.name}`);
+  private logger = logger.createLoggerByName(`${TransactionV2Service.name}`);
   constructor(
     private mdcService: MdcService,
     private thegraphManagerService: ThegraphManagerService,

@@ -2,20 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-
-
-// worker.js
-
 import { parentPort, workerData, isMainThread, threadId } from 'worker_threads';
-import { provider as Provider } from '@orbiter-finance/utils';
+import { provider as Provider,sleep } from '@orbiter-finance/utils';
 import fs from 'fs/promises'
-async function sleep(ms: number) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(null);
-        }, ms);
-    });
-}
+
 async function getBlock(provider: Provider.Orbiter6Provider, blockNumber: number) {
     try {
         const block = await Promise.race([

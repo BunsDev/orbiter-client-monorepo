@@ -2,12 +2,12 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { MdcService } from '../thegraph/mdc/mdc.service';
 import dayjs from 'dayjs';
 import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
-import { TransferAmountTransaction } from '../rpc-scanning/rpc-scanning.interface';
+import { TransferAmountTransaction } from 'apps/explore-server/src/rpc-scanning/rpc-scanning.interface';
 import { Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
-import { TransactionV1Service } from '../transaction/transactionV1.service';
-import { TransactionV2Service } from '../transaction/transactionV2.service';
+import { TransactionV1Service } from './transactionV1.service';
+import { TransactionV2Service } from './transactionV2.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MakerService } from '../maker/maker.service'
 @Injectable()
@@ -48,7 +48,7 @@ export class TransactionService {
         const tokenAddr = (transfer.token || '').toLocaleLowerCase();
         const contractAddr = (transfer.contract || '').toLocaleLowerCase();
         const calldata = BigIntToString(transfer.calldata);
-        const txTime = dayjs(transfer.timestamp).utc().toDate();
+        const txTime = dayjs(transfer.timestamp).toDate(); // TODO: time
 
         // valid v1 or v2
         let versionStr = null;

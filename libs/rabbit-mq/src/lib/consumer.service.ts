@@ -44,6 +44,7 @@ export class ConsumerService {
           try {
             const messageContent = msg.content.toString();
             const data = JSON.parse(messageContent);
+            console.log(data, '===data', messageContent)
             await callback(data);
             // await this.transactionService.batchInsertTransactionReceipt(data);
             channel.ack(msg);

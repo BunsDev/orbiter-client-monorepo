@@ -2,17 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config'
 import { InjectConnection } from 'nest-knexjs';
 import { Knex } from 'knex';
-import { uniq, maxBy } from '@orbiter-finance/utils'
+import { uniq, maxBy,logger } from '@orbiter-finance/utils'
 // import v1MakerRules from '../config/v1MakerConfig';
 import winston from 'winston';
-import { createLoggerByName } from '../utils/logger';
 @Injectable()
 export class MakerService {
     #v2Owners: string[] = [];
     #v2OwnerResponseMakers: string[] = [];
     #v2OwnerResponseMakersVid = 0;
     
-    private logger: winston.Logger = createLoggerByName(MakerService.name);
+    private logger: winston.Logger = logger.createLoggerByName(MakerService.name);
     constructor(protected envConfigService: ENVConfigService,
         @InjectConnection() private readonly knex: Knex,
         protected makerV1RuleService: MakerV1RuleService,

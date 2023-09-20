@@ -110,45 +110,4 @@ export class WorkerService {
         worker.postMessage(JSONStringify(msg))
       })
     }
-    // async runTask(chainInfo: any, blockNumbers: number[]): Promise<any> {
-    //     return new Promise((resolve, reject) => {
-    //         // 创建 Worker 线程
-    //         // const worker = new Worker(path.resolve('scripts/rpcRequest', 'worker.js'), {
-    //         //     workerData: {
-    //         //         chainInfo,
-    //         //         blockNumbers
-    //         //     },
-    //         // });
-    //         const workerPath = path.resolve(__filename)
-    //         console.log('-------workerPath', workerPath)
-    //         const worker = new Worker((workerPath), {
-    //           workerData: {
-    //               chainInfo,
-    //               blockNumbers
-    //           },
-    //         });
-    //         // 监听 Worker 的消息
-    //         worker.on('message', (message) => {
-    //             if (message.type === 'debug') {
-    //                 console.debug(JSONStringify(message.data))
-    //             } else if (message.type === 'data') {
-    //                 resolve(message.data);
-
-    //                 // worker.postMessage('close');
-    //                 worker.terminate()
-    //             }
-    //         });
-
-    //         // 监听 Worker 的错误
-    //         worker.on('error', (error) => {
-    //             reject(error);
-    //         });
-
-    //         // 向 Worker 发送消息
-    //         worker.postMessage(JSON.stringify({
-    //           chainInfo,
-    //           blockNumbers
-    //         }));
-    //     });
-    // }
 }

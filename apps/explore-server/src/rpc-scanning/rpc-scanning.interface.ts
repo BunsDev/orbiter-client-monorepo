@@ -2,9 +2,6 @@ import * as ethers from 'ethers6';
 import { Mutex } from 'async-mutex';
 import { RpcScanningService } from './rpc-scanning.service';
 import { ChainConfigService } from '@orbiter-finance/config';
-import { MdcService } from '../thegraph/mdc/mdc.service';
-import { TransactionService } from '../transaction/transaction.service';
-import { MakerService } from '../maker/maker.service'
 import { WorkerService } from './worker.service';
 
 export type Block = any;

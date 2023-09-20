@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { padEnd } from 'lodash';
 import dayjs from 'dayjs';
-import { TransactionID } from '../utils'
-import { equals, fix0xPadStartAddress } from '@orbiter-finance/utils';
+import { equals, fix0xPadStartAddress,TransactionID } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
@@ -11,11 +10,11 @@ import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
-import { createLoggerByName } from '../utils/logger';
+import { logger } from '@orbiter-finance/utils';
 import { Sequelize } from 'sequelize-typescript';
 @Injectable()
 export class TransactionV1Service {
-  private logger = createLoggerByName(`${TransactionV1Service.name}`);
+  private logger = logger.createLoggerByName(`${TransactionV1Service.name}`);
   constructor(
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,
