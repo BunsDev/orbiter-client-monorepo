@@ -41,7 +41,7 @@ export class RabbitmqConnectionManager
           'RabbitMQ connection closed. Attempting to reconnect...',
         );
         this.alertService.sendTelegramAlert("ERROR", "RabbitMQ connection closed. Attempting to reconnect...");
-        setTimeout(() => this.connectToRabbitMQ(), 1000);
+        // setTimeout(() => this.connectToRabbitMQ(), 1000);
       });
       this.channel = await this.connection.createChannel();
       this.logger.log('Connected to RabbitMQ');
