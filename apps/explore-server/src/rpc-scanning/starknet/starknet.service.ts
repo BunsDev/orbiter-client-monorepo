@@ -458,8 +458,11 @@ export class StarknetRpcScanningService extends RpcScanningService {
   }
   async getBlock(blockNumber: number): Promise<RPC.GetBlockWithTxs> {
     const provider = this.getProvider();
-    const result = await provider.getBlockWithTxs(blockNumber);
-    return result;
+    const data = await provider.getBlockWithTxs(blockNumber);
+    if(isEmpty(data)) {
+      throw new Error('Block isEmpty');
+    }
+    return data;
   }
   async requestTransactionReceipt(hash: string, timeoutMs: number) {
     try {

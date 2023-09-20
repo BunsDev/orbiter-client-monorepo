@@ -43,6 +43,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions; // TAG: v5/v6 difference
     if (!transactions) {
+      this.logger.info(`transactions empty: ${JSONStringify(block)}`);
       throw new Error(`${block.number} transactions empty `);
     }
     const filterBeforeTransactions =
@@ -200,6 +201,9 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   async getBlock(blockNumber: number): Promise<Block> {
     const provider = this.getProvider();
     const data = await provider.getBlockWithTransactions(blockNumber);
+    if(isEmpty(data)) {
+      throw new Error('Block isEmpty');
+    }
     return data;
   }
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {

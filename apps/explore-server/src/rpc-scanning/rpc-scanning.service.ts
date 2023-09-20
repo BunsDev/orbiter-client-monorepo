@@ -25,8 +25,8 @@ export class RpcScanningService implements RpcScanningInterface {
     });
     this.dataProcessor = new DataProcessor(this.chainId);
   }
-  get batchLimit():number {
-    return this.chainConfig['batchLimit'] || 100;
+  get batchLimit(): number {
+    return this.chainConfig['batchLimit'] || 50;
   }
   get chainConfig(): IChainConfig {
     return this.ctx.chainConfigService.getChainInfo(this.chainId);
@@ -34,7 +34,7 @@ export class RpcScanningService implements RpcScanningInterface {
   async init() {
   }
   async executeCrawlBlock() {
-    const blockNumbers = await this.dataProcessor.getProcessNextBatchData(100);
+    const blockNumbers = await this.dataProcessor.getProcessNextBatchData(this.batchLimit);
     if (blockNumbers.length <= 0) {
       this.logger.info('executeCrawlBlock not blockNumbers');
       return [];
@@ -67,7 +67,10 @@ export class RpcScanningService implements RpcScanningInterface {
           this.logger.error(`scanByBlocks block error Block: ${block.number} ${error.message}`)
         }
       },
-    );
+    ).catch(error => {
+      this.dataProcessor.noAck(blockNumbers);
+      throw error;
+    })
     noAcks.length > 0 && this.dataProcessor.noAck(noAcks);
     acks.length > 0 && await this.dataProcessor.ack(acks);
     this.logger.info('executeCrawlBlock end');
@@ -82,14 +85,14 @@ export class RpcScanningService implements RpcScanningInterface {
         throw new Error('checkLatestHeight getLatestBlockNumber empty');
       }
       let lastScannedBlockNumber = await this.dataProcessor.getMaxScanBlockNumber();
-      if (lastScannedBlockNumber && lastScannedBlockNumber>0) {
-        lastScannedBlockNumber+=1;
+      if (lastScannedBlockNumber && lastScannedBlockNumber > 0) {
+        lastScannedBlockNumber += 1;
       } else {
         lastScannedBlockNumber = this.rpcLastBlockNumber - this.batchLimit;
         this.dataProcessor.changeMaxScanBlockNumber(lastScannedBlockNumber);
       }
       if (firstStart) {
-        lastScannedBlockNumber = lastScannedBlockNumber>this.batchLimit ? lastScannedBlockNumber -this.batchLimit : lastScannedBlockNumber;
+        lastScannedBlockNumber = lastScannedBlockNumber > this.batchLimit ? lastScannedBlockNumber - this.batchLimit : lastScannedBlockNumber;
       }
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
@@ -97,7 +100,7 @@ export class RpcScanningService implements RpcScanningInterface {
         `checkLatestHeight check ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${this.rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
       );
       if (safetyBlockNumber > lastScannedBlockNumber) {
-        const blockNumbers = await this.dataProcessor.createRangeScannData(lastScannedBlockNumber,safetyBlockNumber )
+        const blockNumbers = await this.dataProcessor.createRangeScannData(lastScannedBlockNumber, safetyBlockNumber)
         return blockNumbers;
       }
     } catch (error) {
@@ -168,8 +171,13 @@ export class RpcScanningService implements RpcScanningInterface {
       try {
         if (isEmpty(row) || row.error) {
           callbackFun(row.error, row, []);
+          this.logger.error(
+            `${this.chainId} handleBlock error ${row.number}`,
+            row.error,
+          );
           return { block: row, transfers: [], error: row.error };
         }
+
         const result: TransferAmountTransaction[] = await this.handleBlock(
           row.block,
         );
@@ -182,15 +190,18 @@ export class RpcScanningService implements RpcScanningInterface {
       } catch (error) {
         callbackFun(error, row, null);
         this.logger.error(
-          `${this.chainId} handleBlock  error ${row.number} `,
+          `${this.chainId} handleBlock catch error ${row.number}`,
           error,
         );
         return { block: row, transfers: [], error };
       }
     };
-    const result = await Promise.all(blocksResponse.map(processBlock));
-    return result;
+
+    const resultPromises = blocksResponse.map(processBlock);
+    const results = await Promise.all(resultPromises);
+    return results;
   }
+
   public getBlocks(
     blockNumbers: number[],
   ): Promise<RetryBlockRequestResponse[]> {
@@ -212,14 +223,7 @@ export class RpcScanningService implements RpcScanningInterface {
     };
     for (let retry = 1; retry <= retryCount; retry++) {
       try {
-        // const startTime = Date.now();
-        // this.logger.debug(`start scan ${blockNumber}`, 'retryBlockRequest');
-        const data: Block | null = await Promise.race([
-          this.getBlock(blockNumber),
-          sleep(timeoutMs).then(() => {
-            throw new Error('Block request timed out');
-          }),
-        ]);
+        const data: Block | null = await promiseWithTimeout(this.getBlock(blockNumber), timeoutMs)
         if (!isEmpty(data)) {
           result.error = null;
           result.block = data;
@@ -231,7 +235,6 @@ export class RpcScanningService implements RpcScanningInterface {
           error,
         );
         if (retry >= retryCount) {
-
           result.error = error;
           result.block = null;
         }
@@ -242,12 +245,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async requestTransactionReceipt(hash: string, timeoutMs: number) {
     try {
-      const data = await Promise.race([
-        this.getTransactionReceipt(hash),
-        sleep(timeoutMs).then(() => {
-          throw new Error('RequestTransactionReceipt request timed out');
-        }),
-      ]);
+      const data = await promiseWithTimeout(this.getTransactionReceipt(hash), timeoutMs)
       return data;
     } catch (error) {
       throw new Error(

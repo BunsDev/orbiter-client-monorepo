@@ -99,7 +99,7 @@ export default class DataProcessor {
                 console.error(`ack data error ${block}`, error.message);
             }
         }
-        console.log(`execute ack success count = ${blockNumbers.length}, now `, this.dataSet.size, this.processingSet.size)
+        console.log(`${this.chainId} execute ack success count = ${blockNumbers.length}, now `, this.dataSet.size, this.processingSet.size)
     }
     deleteStoreData(blocks: number[]) {
         return new Promise(async (resolve, reject) => {
@@ -128,6 +128,6 @@ export default class DataProcessor {
                 console.error(`noAck data error ${block}`, error.message);
             }
         }
-        console.log(`execute noAck success count = ${blockNumbers.length}, now `, this.dataSet.size, this.processingSet.size)
+        console.log(`${this.chainId} execute noAck success count = ${blockNumbers.length}, now `, this.dataSet.size, this.processingSet.size)
     }
 }
