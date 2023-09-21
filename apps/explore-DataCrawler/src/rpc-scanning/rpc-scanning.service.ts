@@ -46,6 +46,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async executeCrawlBlock() {
     const blockNumbers = await this.dataProcessor.getProcessNextBatchData(this.batchLimit);
+    this.logger.info(`Status = ${this.dataProcessor.getDataCount()}, ${this.dataProcessor.getProcessingCount()}`);
     if (blockNumbers.length <= 0) {
       this.logger.info('executeCrawlBlock: No block numbers to process.');
       return [];
@@ -84,7 +85,7 @@ export class RpcScanningService implements RpcScanningInterface {
       this.dataProcessor.noAck(blockNumbers);
       throw error;
     });
-
+    this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks}`);
     if (noAcks.length > 0) {
       this.dataProcessor.noAck(noAcks);
     }

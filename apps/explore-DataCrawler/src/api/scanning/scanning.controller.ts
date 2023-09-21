@@ -75,18 +75,19 @@ export class ScanningController {
       if (!factory) {
         throw new Error('factory not found')
       }
-      const result = await Promise.all([factory.rpcLastBlockNumber, factory.dataProcessor.getMaxScanBlockNumber(), factory.dataProcessor.getDataCount()]);
-      const latestBlockNumber = +result[0]
-      const lastScannedBlockNumber = +result[1];
-      const waitBlockCount = result[2];
+      const latestBlockNumber = await factory.getLatestBlockNumber();
+      const localLatestBlockNumber = factory.rpcLastBlockNumber;
+      const lastScannedBlockNumber = await factory.dataProcessor.getMaxScanBlockNumber()
       return {
         errno: 0,
         data: {
           chainId: factory.chainId,
           latestBlockNumber,
+          localLatestBlockNumber,
           lastScannedBlockNumber,
-          backward: latestBlockNumber - lastScannedBlockNumber,
-          waitBlockCount: waitBlockCount,
+          behind: latestBlockNumber - lastScannedBlockNumber,
+          processingCount: factory.dataProcessor.getProcessingCount(),
+          waitBlockCount: factory.dataProcessor.getDataCount(),
         },
         timestamp: Date.now(),
         response: (Date.now() - startTime) / 1000
