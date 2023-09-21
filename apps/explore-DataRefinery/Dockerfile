@@ -11,7 +11,6 @@ COPY package.json ./
 # COPY package.json yarn.lock ./
 
 # Configure Yarn to use a Taobao registry for faster package downloads.
-# RUN yarn config set registry https://registry.npm.taobao.org
 RUN npm install -g node-gyp
 
 # Install application dependencies with Yarn, with an increased network timeout.

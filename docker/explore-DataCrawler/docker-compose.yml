@@ -4,10 +4,7 @@ networks:
     driver: bridge
 services:
   explore-transactionScan:
-    image: explore-DataCrawler:latest
-    # build:
-      # dockerfile: apps/explore-DataCrawler/Dockerfile
-    container_name: OB-ExploreServer
+    image: orbiter/explore-data-crawler:latest
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'
@@ -21,17 +18,12 @@ services:
       - './runtime:/app/runtime'
       - './logs:/app/logs'
   explore-transactionProcessing:
-    image: explore-transactionProcessing:latest
-    # build:
-      # dockerfile: apps/explore-DataCrawler/Dockerfile
-    container_name: OB-ExploreServer
+    image: orbiter/explore-data-refinery:latest
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'
       CONSUL_PORT: '${CONSUL_PORT}'
       CONSUL_TOKEN: '${CONSUL_TOKEN}'
-    ports:
-      - '3002:3000'
     networks:
       - app-network
     volumes:
