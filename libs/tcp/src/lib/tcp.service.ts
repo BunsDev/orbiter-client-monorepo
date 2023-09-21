@@ -8,9 +8,9 @@ export class TcpService {
   constructor(private readonly envConfigService: ENVConfigService) {
   }
 
-  start(callback: (msg) => void) {
+  async start(callback: (msg) => void) {
     const _this = this;
-    const port = this.envConfigService.get('TCP_PORT');
+    const port = await this.envConfigService.getAsync('TCP_PORT');
     if (!port) {
       _this.logger.error("TCP_PORT not configured");
       return;

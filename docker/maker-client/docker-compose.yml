@@ -15,6 +15,7 @@ services:
       CONSUL_TOKEN: '${CONSUL_TOKEN}'
     ports:
       - '3002:3002'
+      - '8000:8000'
     networks:
       - app-network
     volumes:
