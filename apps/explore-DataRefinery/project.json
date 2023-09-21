@@ -68,6 +68,12 @@
           "codeCoverage": true
         }
       }
+    },
+    "docker-build": {
+      "dependsOn": [
+        "build"
+      ],
+      "command": "docker build -f apps/explore-DataRefinery/Dockerfile . -t orbiter/explore-data-refinery"
     }
   },
   "tags": []

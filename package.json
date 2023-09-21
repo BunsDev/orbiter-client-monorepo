@@ -11,6 +11,7 @@
     "build:explore-DataCrawler": "npx nx run explore-DataCrawler:build",
     "build:*": "npm run build:maker-client && npm run build:explore-DataCrawler",
     "build-docker:explore-DataCrawler": "nx run explore-DataCrawler:docker-build",
+    "build-docker:explore-DataRefinery": "nx run explore-DataRefinery:docker-build",
     "build-docker:maker-client": "nx run maker-client:docker-build",
     "build-docker:explore-open-api": "npx nx run explore-open-api:docker-build"
   },

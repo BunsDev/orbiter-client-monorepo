@@ -19,7 +19,7 @@ RUN yarn config set ignore-engines true
 RUN yarn install --network-timeout 600000
 
 # Copy the application code to the container.
-COPY dist/apps/explore-DataCrawler explore-DataCrawler
+COPY dist/apps/explore-DataRefinery explore-DataRefinery
 
 # Stage 2: Run the Application
 FROM docker.io/node:lts-alpine
@@ -41,6 +41,7 @@ COPY --from=builder /app .
 # Change ownership of the copied files to the orbiter user.
 RUN chown -R orbiter:orbiter .
 
-EXPOSE 3000
-# Start the explore-DataCrawler application.
-CMD [ "node", "explore-DataCrawler/main.js" ]
+EXPOSE $PORT
+# Start the explore-DataRefinery application.
+CMD [ "node", "explore-DataRefinery/main.js" ]
+
