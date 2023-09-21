@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 // message.service.ts
 import { Injectable } from '@nestjs/common';
 import { RabbitmqConnectionManager } from './rabbitmq-connection.manager';
@@ -7,6 +8,7 @@ import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 export class MessageService {
   constructor(private readonly connectionManager: RabbitmqConnectionManager) { }
 
+  
   async sendTransactionReceiptMessage(data: any) {
     const queue = 'TransactionReceipt';
     const channel = this.connectionManager.getChannel();
@@ -14,7 +16,7 @@ export class MessageService {
       await channel.assertQueue(queue);
       return await channel.sendToQueue(queue, Buffer.from(JSONStringify(data)));
     } catch (error) {
-      console.error('Failed to send message:', (error as any).message);
+      Logger.error('Failed to send message:', (error as any).message);
       throw error;
     }
   }
@@ -29,7 +31,7 @@ export class MessageService {
       );
       return result;
     } catch (error) {
-      console.error('Failed to send message:', (error as any).message);
+      Logger.error('Failed to send message:', (error as any).message);
       throw error;
     }
   }
@@ -45,7 +47,7 @@ export class MessageService {
       );
       return result;
     } catch (error) {
-      console.error('Failed to send message:', (error as any).message);
+      Logger.error('Failed to send message:', (error as any).message);
       throw error;
     }
   }
@@ -56,7 +58,7 @@ export class MessageService {
       await channel.assertQueue(queue);
       await channel.sendToQueue(queue, Buffer.from(message));
     } catch (error) {
-      console.error('Failed to send message:', (error as any).message);
+      Logger.error('Failed to send message:', (error as any).message);
     }
   }
 }

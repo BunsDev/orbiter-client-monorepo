@@ -34,13 +34,14 @@ export class RabbitmqConnectionManager
       this.connection.on('error', (error) => {
         this.alertService.sendTelegramAlert("ERROR",  `RabbitMQ connection error:${error.message}`);
         this.logger.error('RabbitMQ connection error:', error.message);
+        setTimeout(() => this.connectToRabbitMQ(), 1000);
       });
       this.connection.on('close', () => {
         this.logger.warn(
           'RabbitMQ connection closed. Attempting to reconnect...',
         );
         this.alertService.sendTelegramAlert("ERROR", "RabbitMQ connection closed. Attempting to reconnect...");
-        setTimeout(() => this.connectToRabbitMQ(), 5000);
+        // setTimeout(() => this.connectToRabbitMQ(), 1000);
       });
       this.channel = await this.connection.createChannel();
       this.logger.log('Connected to RabbitMQ');

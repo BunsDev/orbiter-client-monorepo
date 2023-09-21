@@ -286,6 +286,9 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   async getBlock(blockNumber: number): Promise<Block> {
     const provider = this.getProvider();
     const data = await provider.getBlock(blockNumber, true);
+    if(isEmpty(data)) {
+      throw new Error('Block isEmpty');
+    }
     return data;
   }
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {

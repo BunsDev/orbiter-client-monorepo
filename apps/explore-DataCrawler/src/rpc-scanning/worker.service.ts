@@ -89,8 +89,8 @@ export class WorkerService {
           type: 'request'
         }
         const rejectTimer = setTimeout(() => {
-          reject()
-        }, 1000 * 30)
+          reject(`RunTask Timeout ${msgId}`)
+        }, 1000 * 60 * 2)
         const callback = (error, responseData) => {
           if (error) {
             reject(error)

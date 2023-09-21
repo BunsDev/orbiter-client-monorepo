@@ -74,7 +74,7 @@ export class RpcScanningSchedule {
     }
     this.checkLatestHeight();
   }
-  @Cron('*/2 * * * * *')
+  @Cron('*/1 * * * * *')
   executeCrawlBlock() {
     for (const scanner of this.scanService.values()) {
       if (scanner.reScanMutex.isLocked()) {
