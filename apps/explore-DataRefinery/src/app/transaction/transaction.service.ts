@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { MdcService } from '../thegraph/mdc/mdc.service';
 import dayjs from 'dayjs';
 import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
-import { TransferAmountTransaction } from 'apps/explore-server/src/rpc-scanning/rpc-scanning.interface';
+import { TransferAmountTransaction } from 'apps/explore-crawling/src/rpc-scanning/rpc-scanning.interface';
 import { Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';

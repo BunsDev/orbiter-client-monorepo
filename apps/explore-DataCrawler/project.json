@@ -1,7 +1,7 @@
 {
-  "name": "explore-server",
+  "name": "explore-DataCrawler",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "apps/explore-server/src",
+  "sourceRoot": "apps/explore-DataCrawler/src",
   "projectType": "application",
   "targets": {
     "build": {
@@ -13,11 +13,11 @@
       "options": {
         "target": "node",
         "compiler": "tsc",
-        "outputPath": "dist/apps/explore-server",
-        "main": "apps/explore-server/src/main.ts",
-        "tsConfig": "apps/explore-server/tsconfig.app.json",
+        "outputPath": "dist/apps/explore-DataCrawler",
+        "main": "apps/explore-DataCrawler/src/main.ts",
+        "tsConfig": "apps/explore-DataCrawler/tsconfig.app.json",
         "isolatedConfig": true,
-        "webpackConfig": "apps/explore-server/webpack.config.js"
+        "webpackConfig": "apps/explore-DataCrawler/webpack.config.js"
       },
       "configurations": {
         "development": {},
@@ -28,14 +28,14 @@
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
       "options": {
-        "buildTarget": "explore-server:build"
+        "buildTarget": "explore-DataCrawler:build"
       },
       "configurations": {
         "development": {
-          "buildTarget": "explore-server:build:development"
+          "buildTarget": "explore-DataCrawler:build:development"
         },
         "production": {
-          "buildTarget": "explore-server:build:production"
+          "buildTarget": "explore-DataCrawler:build:production"
         }
       }
     },
@@ -46,7 +46,7 @@
       ],
       "options": {
         "lintFilePatterns": [
-          "apps/explore-server/**/*.ts"
+          "apps/explore-DataCrawler/**/*.ts"
         ]
       }
     },
@@ -56,7 +56,7 @@
         "{workspaceRoot}/coverage/{projectRoot}"
       ],
       "options": {
-        "jestConfig": "apps/explore-server/jest.config.ts",
+        "jestConfig": "apps/explore-DataCrawler/jest.config.ts",
         "passWithNoTests": true
       },
       "configurations": {
@@ -70,7 +70,7 @@
       "dependsOn": [
         "build"
       ],
-      "command": "docker build -f apps/explore-server/Dockerfile . -t explore-server"
+      "command": "docker build -f apps/explore-DataCrawler/Dockerfile . -t orbiter/explore-data-crawler"
     }
   },
   "tags": []

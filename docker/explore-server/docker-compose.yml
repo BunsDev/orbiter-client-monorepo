@@ -3,10 +3,27 @@ networks:
   app-network:
     driver: bridge
 services:
-  bridge-server:
-    image: explore-server:latest
+  explore-transactionScan:
+    image: explore-DataCrawler:latest
     # build:
-      # dockerfile: apps/explore-server/Dockerfile
+      # dockerfile: apps/explore-DataCrawler/Dockerfile
+    container_name: OB-ExploreServer
+    restart: always
+    environment:
+      CONSUL_HOST: '${CONSUL_HOST}'
+      CONSUL_PORT: '${CONSUL_PORT}'
+      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+    ports:
+      - '3002:3000'
+    networks:
+      - app-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'
+  explore-transactionProcessing:
+    image: explore-transactionProcessing:latest
+    # build:
+      # dockerfile: apps/explore-DataCrawler/Dockerfile
     container_name: OB-ExploreServer
     restart: always
     environment:

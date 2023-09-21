@@ -1,8 +1,8 @@
 {
-  "name": "transaction-processing-e2e",
+  "name": "explore-DataRefinery-e2e",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "implicitDependencies": [
-    "transaction-processing"
+    "explore-DataRefinery"
   ],
   "targets": {
     "e2e": {
@@ -11,7 +11,7 @@
         "{workspaceRoot}/coverage/{e2eProjectRoot}"
       ],
       "options": {
-        "jestConfig": "apps/transaction-processing-e2e/jest.config.ts",
+        "jestConfig": "apps/explore-DataRefinery-e2e/jest.config.ts",
         "passWithNoTests": true
       }
     },
@@ -22,7 +22,7 @@
       ],
       "options": {
         "lintFilePatterns": [
-          "apps/transaction-processing-e2e/**/*.{js,ts}"
+          "apps/explore-DataRefinery-e2e/**/*.{js,ts}"
         ]
       }
     }

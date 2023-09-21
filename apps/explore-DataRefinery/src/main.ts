@@ -12,7 +12,7 @@ import { AppModule } from './app/app.module';
 
 async function bootstrap() {
   await NestFactory.createApplicationContext(AppModule);
-  Logger.log(`🚀 Application is running on: transaction-processing`);
+  Logger.log(`🚀 Application is running on: explore-DataRefinery`);
 }
 
 bootstrap();

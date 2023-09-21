@@ -1,7 +1,7 @@
 {
-  "name": "transaction-processing",
+  "name": "explore-DataRefinery",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "apps/transaction-processing/src",
+  "sourceRoot": "apps/explore-DataRefinery/src",
   "projectType": "application",
   "targets": {
     "build": {
@@ -13,14 +13,14 @@
       "options": {
         "target": "node",
         "compiler": "tsc",
-        "outputPath": "dist/apps/transaction-processing",
-        "main": "apps/transaction-processing/src/main.ts",
-        "tsConfig": "apps/transaction-processing/tsconfig.app.json",
+        "outputPath": "dist/apps/explore-DataRefinery",
+        "main": "apps/explore-DataRefinery/src/main.ts",
+        "tsConfig": "apps/explore-DataRefinery/tsconfig.app.json",
         "assets": [
-          "apps/transaction-processing/src/assets"
+          "apps/explore-DataRefinery/src/assets"
         ],
         "isolatedConfig": true,
-        "webpackConfig": "apps/transaction-processing/webpack.config.js"
+        "webpackConfig": "apps/explore-DataRefinery/webpack.config.js"
       },
       "configurations": {
         "development": {},
@@ -31,14 +31,14 @@
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
       "options": {
-        "buildTarget": "transaction-processing:build"
+        "buildTarget": "explore-DataRefinery:build"
       },
       "configurations": {
         "development": {
-          "buildTarget": "transaction-processing:build:development"
+          "buildTarget": "explore-DataRefinery:build:development"
         },
         "production": {
-          "buildTarget": "transaction-processing:build:production"
+          "buildTarget": "explore-DataRefinery:build:production"
         }
       }
     },
@@ -49,7 +49,7 @@
       ],
       "options": {
         "lintFilePatterns": [
-          "apps/transaction-processing/**/*.ts"
+          "apps/explore-DataRefinery/**/*.ts"
         ]
       }
     },
@@ -59,7 +59,7 @@
         "{workspaceRoot}/coverage/{projectRoot}"
       ],
       "options": {
-        "jestConfig": "apps/transaction-processing/jest.config.ts",
+        "jestConfig": "apps/explore-DataRefinery/jest.config.ts",
         "passWithNoTests": true
       },
       "configurations": {

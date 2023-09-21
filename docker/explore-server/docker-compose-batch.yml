@@ -4,7 +4,7 @@ networks:
     driver: bridge
 services:
   ethereum:
-    image: explore-server:latest
+    image: explore-DataCrawler:latest
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'
@@ -19,7 +19,7 @@ services:
       - './runtime:/app/runtime'
       - './logs:/app/logs'
   arbitrum:
-    image: explore-server:latest
+    image: explore-DataCrawler:latest
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'
@@ -34,7 +34,7 @@ services:
       - './runtime:/app/runtime'
       - './logs:/app/logs'
   zksynclite:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -49,7 +49,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   starknet:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -64,7 +64,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   polygon:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -79,7 +79,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   optimism:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -94,7 +94,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   immutablex:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -109,7 +109,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   loopring:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -124,7 +124,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   metis:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -139,7 +139,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   zkspace:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -154,7 +154,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   boba:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -169,7 +169,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   zksyncera:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -184,7 +184,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   bnbchain:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -199,7 +199,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   arbitrumnova:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -214,7 +214,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   polygonzkevm:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -229,7 +229,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   linea:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -244,7 +244,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   mantle:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -259,7 +259,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   base:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -274,7 +274,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   zora:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'
@@ -289,7 +289,7 @@ services:
         - './runtime:/app/runtime'
         - './logs:/app/logs'
   opbnb:
-      image: explore-server:latest
+      image: explore-DataCrawler:latest
       restart: always
       environment:
         CONSUL_HOST: '${CONSUL_HOST}'

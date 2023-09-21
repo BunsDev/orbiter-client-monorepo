@@ -6,7 +6,7 @@ services:
   maker-client:
     image: maker-client:latest
     # build:
-      # dockerfile: apps/explore-server/Dockerfile
+      # dockerfile: apps/explore-DataCrawler/Dockerfile
     container_name: OB-MakerClient
     restart: always
     environment:
