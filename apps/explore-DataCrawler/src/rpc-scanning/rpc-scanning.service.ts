@@ -202,7 +202,7 @@ export class RpcScanningService implements RpcScanningInterface {
     const processBlock = async (row: RetryBlockRequestResponse) => {
       try {
         if (isEmpty(row) || row.error) {
-          callbackFun(row.error, row, []);
+          await callbackFun(row.error, row, []);
           this.logger.error(
             `handleBlock error: Chain ${this.chainId}, Block ${row.number}`,
             row.error,
@@ -217,10 +217,10 @@ export class RpcScanningService implements RpcScanningInterface {
         this.logger.debug(
           `handleBlock success - Block: ${row.number}, Matched: ${transfers.length}/${result.length}`,
         );
-        callbackFun(null, row, transfers);
+        await callbackFun(null, row, transfers);
         return { block: row, transfers: transfers };
       } catch (error) {
-        callbackFun(error, row, null);
+        await callbackFun(error, row, null);
         this.logger.error(
           `handleBlock catch error - Chain ${this.chainId}, Block ${row.number}`,
           error,
