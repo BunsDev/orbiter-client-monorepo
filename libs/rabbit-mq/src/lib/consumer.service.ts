@@ -35,10 +35,10 @@ export class ConsumerService {
             const messageContent = msg.content.toString();
             const data = JSON.parse(messageContent);
             await callback(data);
-            // await this.transactionService.batchInsertTransactionReceipt(data);
             channel.ack(msg);
           } catch (error: any) {
             Logger.error(`consumeTransactionReceiptMessages Error ${error.message}`, error);
+            channel.nack(msg);
           }
         }
       });
@@ -47,7 +47,6 @@ export class ConsumerService {
       this.consumeScanTransferReceiptMessages(callback);
       Logger.error(`consumeScanTransferReceiptMessages error `, error);
     }
-
   }
 
   async consumeScanTransferSaveDBAfterMessages(callback: (data: any) => Promise<any>) {
@@ -71,12 +70,12 @@ export class ConsumerService {
           try {
             const messageContent = msg.content.toString();
             const data = JSON.parse(messageContent);
-            // await this.transactionService.executeMatch(data);
             const result = await callback(data);
             Logger.log(`consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
             channel.ack(msg);
           } catch (error: any) {
             Logger.error(`consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
+            channel.reject(msg);
           }
         }
       });
@@ -109,7 +108,6 @@ export class ConsumerService {
           try {
             const messageContent = msg.content.toString();
             const data = JSON.parse(messageContent);
-            // await this.transactionService.executeMatch(data);
             await callback(data);
             channel.ack(msg);
           } catch (error: any) {
@@ -117,6 +115,7 @@ export class ConsumerService {
               'consumeTransferWaitMessages Error processing message:',
               error,
             );
+            channel.reject(msg);
           }
         }
       });
