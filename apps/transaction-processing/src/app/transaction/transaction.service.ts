@@ -129,7 +129,7 @@ export class TransactionService {
       } else if (payload.version === '2-1') {
         result = await this.transactionV2Service.handleTransferByDestTx(payload);
       } else {
-        throw new Error(` incorrect version ${payload.version}`);
+        this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
       if (['2-0'].includes(payload.version) && result && result.id && result.sourceId) {

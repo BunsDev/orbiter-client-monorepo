@@ -14,15 +14,6 @@ export class ConsumerService {
   ) {
   }
   async consumeScanTransferReceiptMessages(callback: (data: any) => Promise<any>) {
-    // while(true) {
-    //   const channel = this.connectionManager.getChannel();
-    //   if (channel) {
-    //     // TAG： Waiting for optimization
-    //     break;
-    //   } else {
-    //     await sleep(50)
-    //   }
-    // }
     try {
       const channel = await this.connectionManager.createChannel();
       channel.on('close', () => {
@@ -44,12 +35,12 @@ export class ConsumerService {
           try {
             const messageContent = msg.content.toString();
             const data = JSON.parse(messageContent);
-            console.log(data, '===data', messageContent)
             await callback(data);
             // await this.transactionService.batchInsertTransactionReceipt(data);
             channel.ack(msg);
           } catch (error: any) {
             this.logger.error(`consumeTransactionReceiptMessages Error ${error.message}`, error);
+            channel.nack(msg);
           }
         }
       });
@@ -62,15 +53,6 @@ export class ConsumerService {
   }
 
   async consumeScanTransferSaveDBAfterMessages(callback: (data: any) => Promise<any>) {
-    // while(true) {
-    //   const channel = this.connectionManager.getChannel();
-    //   if (channel) {
-    //     // TODO:Waiting for optimization
-    //     break;
-    //   } else {
-    //     await sleep(50)
-    //   }
-    // }
     try {
       const channel = await this.connectionManager.createChannel();
       const queue = 'TransferWaitMatch';
@@ -91,33 +73,24 @@ export class ConsumerService {
           try {
             const messageContent = msg.content.toString();
             const data = JSON.parse(messageContent);
-            // await this.transactionService.executeMatch(data);
             const result = await callback(data);
             this.logger.log(`consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
             channel.ack(msg);
           } catch (error: any) {
             this.logger.error(`consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
+            channel.nack(msg);
           }
         }
       });
     } catch (error) {
       await sleep(500);
       this.consumeScanTransferSaveDBAfterMessages(callback);
-      this.logger.error(`consumeScanTransferSaveDBAfterMessages error `, error);
+      this.logger.error(`consumeScanTransferSaveDBAfterMessages catch error `, error);
     }
 
   }
 
   async consumeMakerWaitTransferMessage(callback: (data: any) => Promise<any>) {
-    // while(true) {
-    //   const channel = this.connectionManager.getChannel();
-    //   if (channel) {
-    //     // TODO:Waiting for optimization
-    //     break;
-    //   } else {
-    //     await sleep(50)
-    //   }
-    // }
     try {
       const channel = await this.connectionManager.createChannel();
       const queue = 'makerWaitTransfer';
@@ -146,6 +119,7 @@ export class ConsumerService {
               'consumeTransferWaitMessages Error processing message:',
               error,
             );
+            channel.nack(msg);
           }
         }
       });

@@ -1,14 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AppService } from './app.service';
 import { TransactionModule } from './transaction/transaction.module';
-import { MdcService } from './thegraph/mdc/mdc.service';
-import { MakerService } from './maker/maker.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { loggerFormat } from 'libs/utils/src/lib/logger';
-import { join } from 'lodash';
 import { KnexModule } from 'nest-knexjs';
 import { WinstonModule } from 'nest-winston';
 import { isEmpty } from '@orbiter-finance/utils';
@@ -16,6 +13,8 @@ import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
 import { AlertModule } from '@orbiter-finance/alert';
+import { RedisModule } from '@liaoliaots/nestjs-redis';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -40,6 +39,7 @@ import { AlertModule } from '@orbiter-finance/alert';
       makerV1RulePath: "explore-data-service/rules",
       // cachePath: join(__dirname, 'runtime')
     }),
+
     WinstonModule.forRoot({
       exitOnError: false,
       level: 'debug',
@@ -61,6 +61,12 @@ import { AlertModule } from '@orbiter-finance/alert';
       exceptionHandlers: [
         new winston.transports.File({ filename: './logs/exception.log' }),
       ],
+    }),
+    RedisModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async(configService: ENVConfigService) => {
+        return await configService.getAsync("REDIS");
+      },
     }),
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],

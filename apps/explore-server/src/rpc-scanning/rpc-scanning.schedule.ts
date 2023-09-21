@@ -26,7 +26,7 @@ export class RpcScanningSchedule {
   private async initializeTransactionScanners() {
     const SCAN_CHAINS = (
       this.configSercie.get('SCAN_CHAINS') || this.envConfigService.get<string>('SCAN_CHAINS')
-    ).split(',');
+    ) || ''.split(',');
     const chains = this.chainConfigService.getAllChains();
     if (isEmpty(chains)) {
       return;
@@ -88,7 +88,7 @@ export class RpcScanningSchedule {
             error,
           );
         })
-       
+
       });
     }
   }

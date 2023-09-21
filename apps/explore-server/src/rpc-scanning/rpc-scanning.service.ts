@@ -18,14 +18,14 @@ export class RpcScanningService implements RpcScanningInterface {
   protected requestTimeout = 1000 * 60 * 5;
   readonly dataProcessor: DataProcessor;
   constructor(
-    public readonly chainId: string, public readonly ctx: Context
+    public readonly chainId: string, public readonly ctx: Context,
   ) {
     this.logger = createLoggerByName(`rpcscan-${this.chainId}`, {
       label: this.chainConfig.name
     });
     this.dataProcessor = new DataProcessor(this.chainId);
   }
-  get batchLimit():number {
+  get batchLimit(): number {
     return this.chainConfig['batchLimit'] || 100;
   }
   get chainConfig(): IChainConfig {
@@ -82,14 +82,14 @@ export class RpcScanningService implements RpcScanningInterface {
         throw new Error('checkLatestHeight getLatestBlockNumber empty');
       }
       let lastScannedBlockNumber = await this.dataProcessor.getMaxScanBlockNumber();
-      if (lastScannedBlockNumber && lastScannedBlockNumber>0) {
-        lastScannedBlockNumber+=1;
+      if (lastScannedBlockNumber && lastScannedBlockNumber > 0) {
+        lastScannedBlockNumber += 1;
       } else {
         lastScannedBlockNumber = this.rpcLastBlockNumber - this.batchLimit;
         this.dataProcessor.changeMaxScanBlockNumber(lastScannedBlockNumber);
       }
       if (firstStart) {
-        lastScannedBlockNumber = lastScannedBlockNumber>this.batchLimit ? lastScannedBlockNumber -this.batchLimit : lastScannedBlockNumber;
+        lastScannedBlockNumber = lastScannedBlockNumber > this.batchLimit ? lastScannedBlockNumber - this.batchLimit : lastScannedBlockNumber;
       }
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
@@ -97,7 +97,7 @@ export class RpcScanningService implements RpcScanningInterface {
         `checkLatestHeight check ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${this.rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
       );
       if (safetyBlockNumber > lastScannedBlockNumber) {
-        const blockNumbers = await this.dataProcessor.createRangeScannData(lastScannedBlockNumber,safetyBlockNumber )
+        const blockNumbers = await this.dataProcessor.createRangeScannData(lastScannedBlockNumber, safetyBlockNumber)
         return blockNumbers;
       }
     } catch (error) {
@@ -132,25 +132,28 @@ export class RpcScanningService implements RpcScanningInterface {
     transfers: TransferAmountTransaction[],
   ) {
     if (transfers && isEmpty(error)) {
-      await this.ctx.transactionService.execCreateTransactionReceipt(transfers);
+      await this.ctx.transactionService.handleTransactionReceipt(transfers)
     }
     return { error, block, transfers };
+  }
+  protected async isWatchAddress(address: string) {
+    return await this.ctx.transactionService.isWatchAddress(address);
   }
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
     const newList = [];
     for (const transfer of transfers) {
-      const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender);
-      if (senderValid.exist) {
+      const senderValid = await this.isWatchAddress(transfer.sender);
+      if (senderValid) {
         newList.push(transfer);
         continue;
       }
-      const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.receiver);
-      if (receiverValid.exist) {
+      const receiverValid = await this.isWatchAddress(transfer.receiver);
+      if (receiverValid) {
         newList.push(transfer);
         continue;
       }
     }
-    return newList;
+    return transfers;
   }
   public async scanByBlocks(
     blockNumbers: number[],

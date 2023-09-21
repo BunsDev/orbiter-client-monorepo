@@ -1,21 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { ChainConfigService } from '@orbiter-finance/config';
 import { ApiScanningService } from './api-scanning.service';
-import { TransactionService } from '../transaction/transaction.service';
 import { ZKLiteApiScanningService } from './zklite-scanning/zklite-scanning.service';
 import { ImmutableApiScanningService } from './immutable-scanning/immutable-scanning.service';
 import { LoopringApiScanningService } from './loopring-scanning/loopring-scanning.service';
 import { ZKSpaceApiScanningService } from './zkspace-scanning/zkspace-scanning.service';
-import { MdcService } from '../thegraph/mdc/mdc.service';
-import {MakerService} from '../maker/maker.service'
 import {Context} from './api-scanning.interface'
 @Injectable()
 export class ApiScanningFactory {
   constructor(
     private chainConfigService: ChainConfigService,
-    protected transactionService: TransactionService,
-    protected mdcService: MdcService,
-    protected makerService: MakerService,
   ) {}
 
   createService(chainId: string): ApiScanningService {
@@ -23,9 +17,6 @@ export class ApiScanningFactory {
     const key = chainConfig.service && chainConfig.service['api'];
     const ctx:Context = {
       chainConfigService: this.chainConfigService,
-      transactionService: this.transactionService,
-      mdcService: this.mdcService,
-      makerService: this.makerService,
     }
     switch (key) {
       case 'ZKSpaceApiScanningService':

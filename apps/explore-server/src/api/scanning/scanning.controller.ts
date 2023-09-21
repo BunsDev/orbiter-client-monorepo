@@ -3,16 +3,12 @@ import { ApiScanningFactory } from './../../api-scanning/api-scanning.factory';
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { RpcScanningFactory } from '../../rpc-scanning/rpc-scanning.factory';
 import { BigIntToString } from '@orbiter-finance/utils';
-import { TransactionService } from '../../transaction/transaction.service';
-import { MakerService } from '../../maker/maker.service';
 @Controller('scanning')
 export class ScanningController {
   constructor(
     private rpcScanningFactory: RpcScanningFactory,
     private apiScanningFactory: ApiScanningFactory,
-    protected transactionService: TransactionService,
     protected chainConfigService: ChainConfigService,
-    protected makerService: MakerService,
   ) { }
   @Get('/status')
   async rpcStatus() {
@@ -58,18 +54,18 @@ export class ScanningController {
       };
     }
   }
-  @Get('/owners')
-  async owners() {
-    let startTime = Date.now();
-    return {
-      errno: 0,
-      data: {
-        owners: await this.makerService.getV1MakerOwners(),
-        responses: await this.makerService.getV1MakerOwnerResponse()
-      },
-      response: (Date.now() - startTime) / 1000
-    }
-  }
+  // @Get('/owners')
+  // async owners() {
+  //   let startTime = Date.now();
+  //   return {
+  //     errno: 0,
+  //     data: {
+  //       owners: await this.makerService.getV1MakerOwners(),
+  //       responses: await this.makerService.getV1MakerOwnerResponse()
+  //     },
+  //     response: (Date.now() - startTime) / 1000
+  //   }
+  // }
   @Get('/status/:chainId')
   async status(@Param() params) {
     const { chainId } = params;
@@ -111,16 +107,16 @@ export class ScanningController {
     const result = await factory.manualScanBlocks([+block]);
     return BigIntToString(result);
   }
-  @Get('/api-scan/:chainId/:address')
-  async apiScan(@Param() params, @Query() query: any) {
-    const { chainId, address } = params;
-    const factory = this.apiScanningFactory.createService(chainId);
-    const { error, transfers } = await factory.getTransactions(address, query);
-    if (!error && transfers.length > 0) {
-      const result =
-        await this.transactionService.execCreateTransactionReceipt(transfers);
-      return BigIntToString(result);
-    }
-    return BigIntToString(transfers);
-  }
+  // @Get('/api-scan/:chainId/:address')
+  // async apiScan(@Param() params, @Query() query: any) {
+  //   const { chainId, address } = params;
+  //   const factory = this.apiScanningFactory.createService(chainId);
+  //   const { error, transfers } = await factory.getTransactions(address, query);
+  //   if (!error && transfers.length > 0) {
+  //     const result =
+  //       await this.transactionService.execCreateTransactionReceipt(transfers);
+  //     return BigIntToString(result);
+  //   }
+  //   return BigIntToString(transfers);
+  // }
 }

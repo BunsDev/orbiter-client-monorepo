@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RpcScanningModule } from './rpc-scanning/rpc-scanning.module';
 import { ApiModule } from './api/api.module';
-
-import { WinstonModule, utilities } from 'nest-winston';
+import { WinstonModule } from 'nest-winston';
 import { ApiScanningModule } from './api-scanning/api-scanning.module';
 import * as winston from 'winston';
 import dayjs from 'dayjs';
@@ -11,14 +10,13 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { AlertModule } from '@orbiter-finance/alert';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { SequelizeModule } from '@nestjs/sequelize';
-import { OrbiterConfigModule, ENVConfigService,ChainConfigService } from '@orbiter-finance/config';
+import { ENVConfigService, OrbiterConfigModule} from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { join } from 'path';
-import { KnexModule } from 'nest-knexjs';
-import { isEmpty } from '@orbiter-finance/utils';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import {loggerFormat} from './utils/logger'
+import { TransactionModule } from './transaction/transaction.module';
+import { RedisModule } from '@liaoliaots/nestjs-redis';
 dayjs.extend(utc);
 
 @Module({
@@ -67,13 +65,19 @@ dayjs.extend(utc);
         new winston.transports.File({ filename: './logs/exception.log' }),
       ],
     }),
+    RedisModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async(configService: ENVConfigService) => {
+        return await configService.getAsync("REDIS");
+      },
+    }),
     AlertModule,
     RabbitMqModule,
-    TransactionModule,
     RpcScanningModule,
     ApiScanningModule,
     ApiModule,
     ScheduleModule.forRoot(),
+    TransactionModule,
   ],
   controllers: [],
   providers: [],

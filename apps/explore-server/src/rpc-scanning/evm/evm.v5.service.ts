@@ -30,16 +30,16 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     const provider = this.getProvider();
     return await provider.getBlockNumber();
   }
-  async filterTransfers(transfers: TransferAmountTransaction[]) {
-    transfers =  await super.filterTransfers(transfers)
-    return transfers.filter(row=> {
-      if(isAddress(row.sender) && isAddress(row.receiver)) {
-        return true;
-      }
-      this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
-      return false;
-    })
-  }
+  // async filterTransfers(transfers: TransferAmountTransaction[]) {
+  //   transfers =  await super.filterTransfers(transfers)
+  //   return transfers.filter(row=> {
+  //     if(isAddress(row.sender) && isAddress(row.receiver)) {
+  //       return true;
+  //     }
+  //     this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
+  //     return false;
+  //   })
+  // }
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions; // TAG: v5/v6 difference
     if (!transactions) {
@@ -236,14 +236,14 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           rows.push(row);
           continue;
         }
-        const senderValid = await this.ctx.makerService.isWhiteWalletAddress(fromAddrLower);
-        if (senderValid.exist) {
+        const senderValid = await this.isWatchAddress(fromAddrLower);
+        if (senderValid) {
           // transfer.version = senderValid.version;
           rows.push(row);
           continue;
         }
-        const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(toAddrLower);
-        if (receiverValid.exist) {
+        const receiverValid = await this.isWatchAddress(toAddrLower);
+        if (receiverValid) {
           // transfer.version = receiverValid.version;
           rows.push(row);
           continue;
@@ -266,8 +266,8 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
                 continue;
               }
               const erc20Receiver = result.args[0];
-              const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(erc20Receiver);
-              if (receiverValid.exist) {
+              const receiverValid = await this.isWatchAddress(erc20Receiver);
+              if (receiverValid) {
                 rows.push(row);
                 continue;
               }

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { padEnd } from 'lodash';
 import dayjs from 'dayjs';
-import { equals, fix0xPadStartAddress,TransactionID } from '@orbiter-finance/utils';
+import { equals, fix0xPadStartAddress, TransactionID } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
@@ -406,6 +406,7 @@ export class TransactionV1Service {
     }
     const t = await this.sequelize.transaction();
     try {
+      
       const createdData: BridgeTransactionAttributes = {
         sourceId: transfer.hash,
         sourceAddress: transfer.sender,
@@ -433,21 +434,13 @@ export class TransactionV1Service {
           errmsg: `${transfer.hash} There is an issue with the transaction format`
         }
       }
+
       if (sourceBT && sourceBT.id) {
-        if (sourceBT.status < 90) {
-          sourceBT.targetChain = createdData.targetChain;
-          await sourceBT.update(
-            createdData as any,
-            {
-              where: {
-                id: sourceBT.id,
-              },
-            },
-            {
-              transaction: t,
-            },
-          );
-        }
+        sourceBT.targetChain = createdData.targetChain;
+        await sourceBT.update(createdData, {
+          where: { id: sourceBT.id },
+          transaction: t,
+        })
       } else {
         const createRow = await this.bridgeTransactionModel.create(
           createdData,

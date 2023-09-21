@@ -1,8 +1,6 @@
 import { ChainConfigService } from '@orbiter-finance/config';
 import { TransferAmountTransaction } from '../rpc-scanning/rpc-scanning.interface';
 import { readFileSync, outputFile } from 'fs-extra';
-import { TransactionService } from '../transaction/transaction.service';
-import { MdcService } from '../thegraph/mdc/mdc.service';
 import { equals, uniq } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
 import { createLoggerByName } from '../utils/logger';
@@ -32,19 +30,29 @@ export class ApiScanningService {
   async init() {
     console.log('init');
   }
-  async getScanAddressList() {
-    const ownerList = uniq([
-      ...this.prevExecute.fail,
-      ...(await this.ctx.makerService.getWhiteWalletAddress()),
-    ]);
-    return ownerList;
+
+  protected async handleScanBlockResult(
+    transfers: TransferAmountTransaction[],
+  ) {
+    // TODO: 
+    return transfers;
   }
+  async getScanAddressList() {
+    // const ownerList = uniq([
+    //   ...this.prevExecute.fail,
+    //   ...(await this.ctx.makerService.getWhiteWalletAddress()),
+    // ]);
+    // return ownerList;
+    return []
+  }
+  
   async getScanEVMAddressList() {
-    const ownerList = uniq([
-      ...this.prevExecute.fail,
-      ...(await this.ctx.makerService.getWhiteWalletAddress()),
-    ]);
-    return ownerList.filter(ethers.isAddress);
+    // const ownerList = uniq([
+    //   ...this.prevExecute.fail,
+    //   ...(await this.ctx.makerService.getWhiteWalletAddress()),
+    // ]);
+    // return ownerList.filter(ethers.isAddress);
+    return []
   }
 
   async bootstrap() {
@@ -73,23 +81,24 @@ export class ApiScanningService {
     }
   }
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
-    const newList = [];
-    for (const transfer of transfers) {
-      const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender)
-      if (senderValid.exist) {
-        // transfer.version = senderValid.version;
-        newList.push(transfer);
-        continue;
-      }
-      const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.receiver)
+    // const newList = [];
+    // for (const transfer of transfers) {
+    //   const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender)
+    //   if (senderValid.exist) {
+    //     // transfer.version = senderValid.version;
+    //     newList.push(transfer);
+    //     continue;
+    //   }
+    //   const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.receiver)
 
-      if (receiverValid.exist) {
-        // transfer.version = receiverValid.version;
-        newList.push(transfer);
-        continue;
-      }
-    }
-    return newList;
+    //   if (receiverValid.exist) {
+    //     // transfer.version = receiverValid.version;
+    //     newList.push(transfer);
+    //     continue;
+    //   }
+    // }
+    // return newList;
+    return transfers;
   }
 
   getToken(id: number | string) {

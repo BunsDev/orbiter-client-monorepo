@@ -52,9 +52,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       );
       if (senderTransfers.length > 0) {
         const newTransfers = await this.filterTransfers(senderTransfers);
-        await this.ctx.transactionService.execCreateTransactionReceipt(
-          newTransfers,
-        );
+        const result =await this.handleScanBlockResult(newTransfers);
         senderPosition = this.generateLastScannedPositionData(newTransfers);
         transfers.push(...newTransfers);
       }
@@ -71,9 +69,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       );
       if (receiverTransfers.length > 0) {
         const newTransfers = await this.filterTransfers(receiverTransfers);
-        await this.ctx.transactionService.execCreateTransactionReceipt(
-          newTransfers,
-        );
+        const result =await this.handleScanBlockResult(newTransfers);
         transfers.push(...newTransfers);
         receiverPosition = this.generateLastScannedPositionData(newTransfers);
       }

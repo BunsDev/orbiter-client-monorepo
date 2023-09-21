@@ -54,9 +54,7 @@ export class LoopringApiScanningService extends ApiScanningService {
         this.logger.debug(
           `${this.chainId} timedTetTransactions address ${address},  data total: ${transfers.length} / ${newTransfers.length}`,
         );
-        await this.ctx.transactionService.execCreateTransactionReceipt(
-          newTransfers,
-        );
+        const result =await this.handleScanBlockResult(newTransfers);
       },
       position,
       endTime,

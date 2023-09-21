@@ -72,10 +72,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
         `${this.chainId} timedTetTransactions address ${address},  data total: ${transfers.length} / ${newTransfers.length}`,
       );
       if (newTransfers.length > 0) {
-        const result =
-          await this.ctx.transactionService.execCreateTransactionReceipt(
-            newTransfers,
-          );
+          const result =await this.handleScanBlockResult(newTransfers);
         const scanPosition = this.generateLastScannedPositionData(result);
         await this.setLastScannedPosition(address, scanPosition);
       } else {

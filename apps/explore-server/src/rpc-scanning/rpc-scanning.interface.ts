@@ -3,6 +3,7 @@ import { Mutex } from 'async-mutex';
 import { RpcScanningService } from './rpc-scanning.service';
 import { ChainConfigService } from '@orbiter-finance/config';
 import { WorkerService } from './worker.service';
+import { TransactionService } from '../transaction/transaction.service';
 
 export type Block = any;
 export type TransactionResponse = ethers.TransactionResponse | any;
@@ -67,8 +68,9 @@ export interface TransferAmountTransaction {
 
 export interface Context {
    chainConfigService: ChainConfigService,
-   transactionService: TransactionService,
-   mdcService: MdcService,
-   makerService: MakerService,
    workerService: WorkerService
+   transactionService: TransactionService
+  //  transactionService: TransactionService,
+  //  mdcService: MdcService,
+  //  makerService: MakerService,
 }

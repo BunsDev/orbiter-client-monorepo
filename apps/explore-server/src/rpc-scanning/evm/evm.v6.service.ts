@@ -39,8 +39,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
     const contractList = this.chainConfig.contract
-    ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())
-    : [];
+      ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())
+      : [];
     for (const row of transactions) {
       try {
         if (row['to'] == ZeroAddress) {
@@ -53,15 +53,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           rows.push(row);
           continue;
         }
-        const senderValid = await this.ctx.makerService.isWhiteWalletAddress(fromAddrLower);
-        if (senderValid.exist) {
-          // transfer.version = senderValid.version;
+        const senderValid = await this.isWatchAddress(fromAddrLower);
+        if (senderValid) {
           rows.push(row);
           continue;
         }
-        const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(toAddrLower);
-        if (receiverValid.exist) {
-          // transfer.version = receiverValid.version;
+        const receiverValid = await this.isWatchAddress(toAddrLower);
+        if (receiverValid) {
           rows.push(row);
           continue;
         }
@@ -83,8 +81,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
               }
               const erc20Receiver = result.args[0];
               const senderValid =
-                await this.ctx.makerService.isWhiteWalletAddress(erc20Receiver);
-              if (senderValid.exist) {
+                await this.isWatchAddress(erc20Receiver);
+              if (senderValid) {
                 rows.push(row);
                 continue;
               }
@@ -100,16 +98,16 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     }
     return rows;
   }
-  async filterTransfers(transfers: TransferAmountTransaction[]) {
-    transfers =  await super.filterTransfers(transfers)
-    return transfers.filter(row=> {
-      if(isAddress(row.sender) && isAddress(row.receiver)) {
-        return true;
-      }
-      this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
-      return false;
-    })
-  }
+  // async filterTransfers(transfers: TransferAmountTransaction[]) {
+  //   transfers = await super.filterTransfers(transfers)
+  //   return transfers.filter(row => {
+  //     if (isAddress(row.sender) && isAddress(row.receiver)) {
+  //       return true;
+  //     }
+  //     this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
+  //     return false;
+  //   })
+  // }
 
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     if (!block) {
@@ -124,7 +122,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     const filterBeforeTransactions =
       await this.filterBeforeTransactions<TransactionResponse>(transactions);
     // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
-    if (filterBeforeTransactions.length<=0) {
+    if (filterBeforeTransactions.length <= 0) {
       return [];
     }
     const receipts = await Promise.all(
@@ -183,7 +181,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     try {
       let transfers: TransferAmountTransaction[] = [];
       if (transaction.to == ZeroAddress) {
-          return transfers;
+        return transfers;
       }
       const provider = this.getProvider();
       if (!receipt.blockNumber || !receipt.blockHash) {
@@ -271,7 +269,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
           .toString();
 
-        tx.status = status === TransferAmountTransactionStatus.failed ?TransferAmountTransactionStatus.failed:tx.status;
+        tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
         return tx;
       });
       return transfers;
@@ -296,7 +294,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     if (!receipt) {
       throw new Error(`${hash} receipt empty`);
     }
-    if (receipt.hash!=hash) {
+    if (receipt.hash != hash) {
       throw new Error(`provider getTransactionReceipt hash inconsistent expect ${hash} get ${receipt.hash}`);
     }
     return receipt;

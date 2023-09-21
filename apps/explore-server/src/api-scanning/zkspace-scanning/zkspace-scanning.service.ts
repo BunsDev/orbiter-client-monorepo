@@ -35,9 +35,7 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
             newTransfers.length
           }`,
         );
-        await this.ctx.transactionService.execCreateTransactionReceipt(
-          newTransfers,
-        );
+        await this.handleScanBlockResult(newTransfers);
       },
       prevTime,
     );

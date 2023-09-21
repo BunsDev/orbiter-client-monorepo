@@ -9,24 +9,19 @@ import { BaseRpcScanningService } from './base/base.service';
 import { EVMRpcScanningV6Service } from './evm/evm.v6.service';
 import { RpcScanningService } from './rpc-scanning.service';
 import { StarknetRpcScanningService } from './starknet/starknet.service';
-import { TransactionService } from '../transaction/transaction.service';
 import { EVMRpcScanningV5Service } from './evm/evm.v5.service';
-import { MdcService } from '../thegraph/mdc/mdc.service';
 import { ZKSyncEraRpcScanningService } from './zksyncEra/zksyncEra.service'
 import { Context } from './rpc-scanning.interface'
-import { MakerService } from '../maker/maker.service'
 import { WorkerService } from './worker.service';
+import { TransactionService } from '../transaction/transaction.service';
 
 @Injectable()
 export class RpcScanningFactory {
   private services: { [key: string]: RpcScanningService } = {}
   constructor(
     private chainConfigService: ChainConfigService,
-    private transactionService: TransactionService,
-    protected mdcService: MdcService,
-    protected makerService: MakerService,
-    protected workerService: WorkerService,
-
+    private workerService: WorkerService,
+    private transactionService: TransactionService
   ) { }
 
   createService(chainId: string): RpcScanningService {
@@ -37,10 +32,8 @@ export class RpcScanningFactory {
     }
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
-      transactionService: this.transactionService,
-      mdcService: this.mdcService,
-      makerService: this.makerService,
-      workerService: this.workerService
+      workerService: this.workerService,
+      transactionService: this.transactionService
     }
     let service;
     switch (key) {
