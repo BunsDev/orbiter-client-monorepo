@@ -21,6 +21,8 @@ export class RpcScanningService implements RpcScanningInterface {
   public rpcLastBlockNumber: number = 0;
   protected requestTimeout = 1000 * 60 * 5;
   readonly dataProcessor: DataProcessor;
+  private blockCount: number = 0;
+  private firstStartTime: number;
 
   constructor(
     public readonly chainId: string,
@@ -30,6 +32,7 @@ export class RpcScanningService implements RpcScanningInterface {
       label: this.chainConfig.name
     });
     this.dataProcessor = new DataProcessor(this.chainId);
+    this.firstStartTime = Date.now()
   }
 
   get batchLimit(): number {
@@ -42,6 +45,11 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async init() {
     // TODO: Implement initialization logic if needed.
+  }
+
+  getRate() {
+    const diff = parseInt(`${(Date.now() - this.firstStartTime) / 1000}`)
+    return `${(this.blockCount / diff).toFixed(4)}/s`
   }
 
   async executeCrawlBlock() {
@@ -85,7 +93,8 @@ export class RpcScanningService implements RpcScanningInterface {
       this.dataProcessor.noAck(blockNumbers);
       throw error;
     });
-    this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks}`);
+    this.blockCount += acks.length;
+    this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks},  avgRate: ${this.getRate()}`);
     if (noAcks.length > 0) {
       this.dataProcessor.noAck(noAcks);
     }
@@ -93,7 +102,7 @@ export class RpcScanningService implements RpcScanningInterface {
       await this.dataProcessor.ack(acks);
     }
 
-    this.logger.info('executeCrawlBlock: Execution completed.');
+    this.logger.info(`executeCrawlBlock: Execution completed`);
     return result;
   }
 

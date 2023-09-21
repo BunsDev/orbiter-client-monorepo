@@ -88,6 +88,7 @@ export class ScanningController {
           behind: latestBlockNumber - lastScannedBlockNumber,
           processingCount: factory.dataProcessor.getProcessingCount(),
           waitBlockCount: factory.dataProcessor.getDataCount(),
+          rate: factory.getRate(),
         },
         timestamp: Date.now(),
         response: (Date.now() - startTime) / 1000
