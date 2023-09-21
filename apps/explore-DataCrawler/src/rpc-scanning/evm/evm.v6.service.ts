@@ -160,18 +160,18 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     return transfers;
   }
 
-  public async getBlocks(
-    blockNumbers: number[],
-  ): Promise<RetryBlockRequestResponse[]> {
-    const action = 'getBlocks'
-    const params = {
-      chainInfo: this.chainConfig,
-      blockNumbers,
-    }
-    const blocks = await this.ctx.workerService.runTask(action, params);
-    this.logger.info(`getBlocks by runTask result => chainId: ${this.chainConfig.chainId}, blocks.length:${blocks?.length}`)
-    return blocks;
-  }
+  // public async getBlocks(
+  //   blockNumbers: number[],
+  // ): Promise<RetryBlockRequestResponse[]> {
+  //   const action = 'getBlocks'
+  //   const params = {
+  //     chainInfo: this.chainConfig,
+  //     blockNumbers,
+  //   }
+  //   const blocks = await this.ctx.workerService.runTask(action, params);
+  //   this.logger.info(`getBlocks by runTask result => chainId: ${this.chainConfig.chainId}, blocks.length:${blocks?.length}`)
+  //   return blocks;
+  // }
 
   async handleTransaction(
     transaction: TransactionResponse,
