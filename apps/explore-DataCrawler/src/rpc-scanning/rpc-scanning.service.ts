@@ -52,7 +52,7 @@ export class RpcScanningService implements RpcScanningInterface {
     }
 
     this.logger.debug(
-      `executeCrawlBlock: Processing blocks - blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
+      `executeCrawlBlock: Processing blocks - blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)}, total: ${this.dataProcessor.getDataCount()} batchLimit:${this.batchLimit}`,
     );
 
     const noAcks = [];
