@@ -41,3 +41,5 @@ logs
 .env
 .env.local
 worker_request.log
+
+cmd/.env
