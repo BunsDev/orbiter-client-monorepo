@@ -2,11 +2,11 @@ import { Module } from '@nestjs/common';
 import { AppService } from './app.service';
 import { TransactionModule } from './transaction/transaction.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { SequelizeModule } from '@nestjs/sequelize';
+import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { loggerFormat } from 'libs/utils/src/lib/logger';
-import { KnexModule } from 'nest-knexjs';
+import { KnexModule, KnexModuleOptions } from 'nest-knexjs';
 import { WinstonModule } from 'nest-winston';
 import { isEmpty } from '@orbiter-finance/utils';
 import winston from 'winston';
@@ -71,7 +71,7 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (envConfig: ENVConfigService) => {
-        const config: any = await envConfig.getAsync('DATABASE_URL');
+        const config: SequelizeModuleOptions = await envConfig.getAsync('DATABASE_URL');
         if (isEmpty(config)) {
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
@@ -82,7 +82,7 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
     KnexModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (envConfig: ENVConfigService) => {
-        const config: any = await envConfig.getAsync('DATABASE_THEGRAPH');
+        const config: KnexModuleOptions = await envConfig.getAsync('DATABASE_THEGRAPH');
         if (isEmpty(config)) {
           console.error('Missing configuration DATABASE_THEGRAPH');
           process.exit(1);

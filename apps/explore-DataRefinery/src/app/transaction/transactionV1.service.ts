@@ -27,7 +27,7 @@ export class TransactionV1Service {
     protected makerV1RuleService: MakerV1RuleService,
   ) {
     this.matchScheduleTask()
-      .then((res) => {
+      .then((_res) => {
         this.matchSenderScheduleTask();
       })
       .catch((error) => {

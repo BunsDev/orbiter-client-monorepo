@@ -6,10 +6,12 @@ import { ImmutableApiScanningService } from './immutable-scanning/immutable-scan
 import { LoopringApiScanningService } from './loopring-scanning/loopring-scanning.service';
 import { ZKSpaceApiScanningService } from './zkspace-scanning/zkspace-scanning.service';
 import {Context} from './api-scanning.interface'
+import { TransactionService } from '../transaction/transaction.service';
 @Injectable()
 export class ApiScanningFactory {
   constructor(
     private chainConfigService: ChainConfigService,
+    private transactionService: TransactionService
   ) {}
 
   createService(chainId: string): ApiScanningService {
@@ -17,6 +19,7 @@ export class ApiScanningFactory {
     const key = chainConfig.service && chainConfig.service['api'];
     const ctx:Context = {
       chainConfigService: this.chainConfigService,
+      transactionService: this.transactionService
     }
     switch (key) {
       case 'ZKSpaceApiScanningService':

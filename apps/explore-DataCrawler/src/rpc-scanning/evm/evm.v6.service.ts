@@ -11,10 +11,9 @@ import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 import {
   RetryBlockRequestResponse,
-  TransferAmountTransaction,
-  TransferAmountTransactionStatus,
 } from '../rpc-scanning.interface';
 import EVMV6Utils from './lib/v6';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 
 export class EVMRpcScanningV6Service extends RpcScanningService {
   #provider: provider.Orbiter6Provider;

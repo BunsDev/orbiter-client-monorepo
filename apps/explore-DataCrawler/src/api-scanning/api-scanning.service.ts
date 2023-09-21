@@ -1,74 +1,70 @@
-import { ChainConfigService } from '@orbiter-finance/config';
-import { TransferAmountTransaction } from '../rpc-scanning/rpc-scanning.interface';
 import { readFileSync, outputFile } from 'fs-extra';
-import { equals, uniq } from '@orbiter-finance/utils';
 import { Mutex } from 'async-mutex';
-import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
-import { IChainConfig } from '@orbiter-finance/config'
-import { Context } from './api-scanning.interface'
 import { ethers } from 'ethers6';
+import { TransferAmountTransaction } from '../transaction/transaction.interface';
+import { Context } from './api-scanning.interface';
+import { equals, logger } from '@orbiter-finance/utils'
+
 export class ApiScanningService {
   protected logger: winston.Logger;
   private lock = new Mutex();
 
-  protected prevExecute = {
+  private prevExecute = {
     time: Date.now(),
     fail: [],
     state: {},
   };
+
   constructor(
     protected readonly chainId: string,
     protected readonly ctx: Context,
   ) {
-    this.logger = createLoggerByName(`API-${this.chainId}`);
-    this.init();
+    this.logger = logger.createLoggerByName(`API-${this.chainId}`);
   }
-  get chainConfig(): IChainConfig {
+
+  // Get chain configuration
+  protected get chainConfig() {
     return this.ctx.chainConfigService.getChainInfo(this.chainId);
   }
-  async init() {
-    console.log('init');
-  }
 
-  protected async handleScanBlockResult(
+
+  // Process transactions
+  protected async processTransaction(
     transfers: TransferAmountTransaction[],
-  ) {
-    // TODO: 
+  ): Promise<TransferAmountTransaction[]> {
+    await this.ctx.transactionService.handleTransfer(transfers);
     return transfers;
   }
-  async getScanAddressList() {
-    // const ownerList = uniq([
-    //   ...this.prevExecute.fail,
-    //   ...(await this.ctx.makerService.getWhiteWalletAddress()),
-    // ]);
-    // return ownerList;
-    return []
-  }
-  
-  async getScanEVMAddressList() {
-    // const ownerList = uniq([
-    //   ...this.prevExecute.fail,
-    //   ...(await this.ctx.makerService.getWhiteWalletAddress()),
-    // ]);
-    // return ownerList.filter(ethers.isAddress);
-    return []
+
+  // Get the list of addresses to scan
+  protected async getScanAddressList(): Promise<string[]> {
+    return this.ctx.transactionService.getWatchAddress();
   }
 
-  async bootstrap() {
+  // Get a list of valid EVM addresses to scan
+  protected async getScanEVMAddressList(): Promise<string[]> {
+    const addressList: string[] = await this.ctx.transactionService.getWatchAddress();
+    return addressList.filter(ethers.isAddress);
+  }
+
+  // Bootstrap the scanning process
+  public async bootstrap() {
     const ownerList = await this.getScanAddressList();
     const interval = Date.now() - this.prevExecute.time;
+
     for (const addr of ownerList) {
       try {
         await this.timedTetTransactions(addr);
         this.prevExecute.state[addr] = Date.now();
-        const index = this.prevExecute.fail.findIndex((addr) =>
-          equals(addr, addr),
+        const index = this.prevExecute.fail.findIndex((failedAddr) =>
+          equals(failedAddr, addr),
         );
         this.prevExecute.fail.splice(index, 1);
+
         if (interval >= 6000 * 2) {
           this.logger.debug(
-            `${addr} prev scan time ${JSON.stringify(
+            `${addr} - Previous scan time: ${JSON.stringify(
               this.prevExecute.state[addr],
             )}`,
           );
@@ -76,39 +72,40 @@ export class ApiScanningService {
         }
       } catch (error) {
         this.prevExecute.fail.push(addr);
-        this.logger.error(`${addr} api scan error`, error);
+        this.logger.error(`${addr} - API scan error`, error);
       }
     }
   }
-  protected async filterTransfers(transfers: TransferAmountTransaction[]) {
-    // const newList = [];
-    // for (const transfer of transfers) {
-    //   const senderValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.sender)
-    //   if (senderValid.exist) {
-    //     // transfer.version = senderValid.version;
-    //     newList.push(transfer);
-    //     continue;
-    //   }
-    //   const receiverValid = await this.ctx.makerService.isWhiteWalletAddress(transfer.receiver)
 
-    //   if (receiverValid.exist) {
-    //     // transfer.version = receiverValid.version;
-    //     newList.push(transfer);
-    //     continue;
-    //   }
-    // }
-    // return newList;
-    return transfers;
+  // Filter valid transfers from a list of transactions
+  protected async filterTransfers(transfers: TransferAmountTransaction[]): Promise<TransferAmountTransaction[]> {
+    const newList: TransferAmountTransaction[] = [];
+
+    for (const transfer of transfers) {
+      const senderValid = await this.ctx.transactionService.isWatchAddress(transfer.sender);
+
+      if (senderValid) {
+        newList.push(transfer);
+        continue;
+      }
+
+      const receiverValid = await this.ctx.transactionService.isWatchAddress(transfer.receiver);
+
+      if (receiverValid) {
+        newList.push(transfer);
+      }
+    }
+
+    return newList;
   }
 
-  getToken(id: number | string) {
+  // Get a token by its ID
+  protected getToken(id: number | string) {
     return this.ctx.chainConfigService.getTokenByChain(this.chainId, id);
   }
 
-  protected async setLastScannedPosition(
-    prefix: string,
-    position: string,
-  ): Promise<void> {
+  // Set the last scanned position
+  protected async setLastScannedPosition(prefix: string, position: string): Promise<void> {
     return await this.lock.runExclusive(async () => {
       return await outputFile(
         `runtime/api-scan/${prefix}-${this.chainId}`,
@@ -117,6 +114,7 @@ export class ApiScanningService {
     });
   }
 
+  // Get the last scanned position
   protected async getLastScannedPosition(prefix: string): Promise<string> {
     try {
       const position = readFileSync(
@@ -129,17 +127,23 @@ export class ApiScanningService {
     }
     return '';
   }
-  generateLastScannedPositionData(
-    _transfers: TransferAmountTransaction[],
+
+  // Generate data for the last scanned position
+  protected generateLastScannedPositionData(
+  _transfers: TransferAmountTransaction[],
   ): string {
     throw new Error(
-      `${this.chainId} generateLastScannedPositionData not implemented`,
+      `${this.chainId} - generateLastScannedPositionData not implemented`,
     );
   }
-  timedTetTransactions(_address: string): Promise<TransferAmountTransaction[]> {
-    throw new Error(`${this.chainId} ApiScan not implemented`);
+
+  // Timed transactions scanning
+  protected async timedTetTransactions(_address: string): Promise<TransferAmountTransaction[]> {
+    throw new Error(`${this.chainId} - ApiScan not implemented`);
   }
-  getTransactions(
+
+  // Get transactions
+  public getTransactions(
     _address: string,
     _params: any,
   ): Promise<{
@@ -147,9 +151,11 @@ export class ApiScanningService {
     response: any;
     error?: any;
   }> {
-    throw new Error(`${this.chainId} ApiScan not implemented`);
+    throw new Error(`${this.chainId} - ApiScan not implemented`);
   }
-  manualScanBlocks(_params: any) {
-    throw new Error(`${this.chainId} manualScanBlocks not implemented`);
+
+  // Manually scan blocks
+  public manualScanBlocks(_params: any) {
+    throw new Error(`${this.chainId} - manualScanBlocks not implemented`);
   }
 }

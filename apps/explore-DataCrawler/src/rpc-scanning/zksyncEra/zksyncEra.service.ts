@@ -8,9 +8,8 @@ import {
     Block,
     TransactionReceipt,
     TransactionResponse,
-    TransferAmountTransaction,
-    TransferAmountTransactionStatus,
 } from '../rpc-scanning.interface';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 export class ZKSyncEraRpcScanningService extends EVMRpcScanningV5Service {
     async handleTransaction(
         transaction: TransactionResponse,

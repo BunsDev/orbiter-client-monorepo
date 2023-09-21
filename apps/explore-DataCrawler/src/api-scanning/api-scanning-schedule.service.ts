@@ -2,31 +2,26 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Mutex } from 'async-mutex';
 import { ChainConfigService } from '@orbiter-finance/config';
-import { isEmpty } from '@orbiter-finance/utils';
+import { isEmpty,logger } from '@orbiter-finance/utils';
 import { ApiScanningFactory } from './api-scanning.factory';
 import { ApiScanningScheduleService } from './api-scanning.interface';
 import { ENVConfigService } from '@orbiter-finance/config';
-import { createLoggerByName } from '../utils/logger';
 import { AlertService } from '@orbiter-finance/alert';
-import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class ApiScanningSchedule {
-  private readonly logger = createLoggerByName(ApiScanningSchedule.name);
+  private readonly logger = logger.createLoggerByName(ApiScanningSchedule.name);
   private scanService: Map<string, ApiScanningScheduleService> = new Map();
   constructor(
     private chainConfigService: ChainConfigService,
     private envConfigService: ENVConfigService,
     private apiScanningFactory: ApiScanningFactory,
-    private alertService: AlertService,
-    private configSercie: ConfigService,
+    private alertService: AlertService
   ) {
     this.initializeTransactionScanners();
   }
   @Cron('*/10 * * * * *')
   private async initializeTransactionScanners() {
-    const SCAN_CHAINS = (
-      this.configSercie.get('SCAN_CHAINS') || this.envConfigService.get<string>('SCAN_CHAINS')
-    )||''.split(',');
+    const SCAN_CHAINS = (this.envConfigService.get<string>('SCAN_CHAINS') || '').split(',');
     const chains = this.chainConfigService.getAllChains();
     if (isEmpty(chains)) {
       return;

@@ -1,7 +1,3 @@
-import {
-  TransferAmountTransaction,
-  TransferAmountTransactionStatus,
-} from '../rpc-scanning.interface';
 import { RpcScanningService } from '../rpc-scanning.service';
 import {
   isEmpty,
@@ -18,6 +14,7 @@ import {
 } from './starknet.interface';
 import BigNumber from 'bignumber.js';
 import { RpcProvider, RPC } from 'starknet';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 export class StarknetRpcScanningService extends RpcScanningService {
   #provider: RpcProvider;
   getProvider() {

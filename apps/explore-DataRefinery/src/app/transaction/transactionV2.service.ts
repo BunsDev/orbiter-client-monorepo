@@ -27,7 +27,7 @@ export class TransactionV2Service {
     protected memoryMatchingService: MemoryMatchingService,
   ) {
     this.matchScheduleUserSendTask()
-      .then((res) => {
+      .then((_) => {
         this.matchScheduleMakerSendTask();
       })
       .catch((error) => {

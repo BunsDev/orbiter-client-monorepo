@@ -1,6 +1,8 @@
 import { Mutex } from 'async-mutex';
 import { ApiScanningService } from './api-scanning.service';
 import { ChainConfigService } from '@orbiter-finance/config';
+import { TransactionService } from '../transaction/transaction.service';
+
 export interface ApiScanning { }
 
 export interface ApiScanningScheduleService {
@@ -12,7 +14,5 @@ export interface ApiScanningScheduleService {
 
 export interface Context {
   chainConfigService: ChainConfigService,
-  // transactionService: TransactionService,
-  // mdcService: MdcService,
-  // makerService: MakerService,
+  transactionService: TransactionService
 }

@@ -31,7 +31,7 @@ export default class DataProcessor {
             console.log(`${this.chainId} initStoreData`, this.dataSet.size, 'maxScanBlockNumber ', this.maxScanBlockNumber)
         }
     }
-    async createRangeScannData(min: number, max: number) {
+    async createRangeScanData(min: number, max: number) {
         const blockNumbers = generateSequenceNumbers(
             min,
             max,

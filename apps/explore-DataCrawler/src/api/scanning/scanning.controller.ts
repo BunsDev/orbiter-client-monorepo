@@ -12,7 +12,7 @@ export class ScanningController {
   ) { }
   @Get('/status')
   async rpcStatus() {
-    let startTime = Date.now();
+    const startTime = Date.now();
     try {
       const result = {};
       for (const chain of this.chainConfigService.getAllChains()) {
@@ -70,7 +70,7 @@ export class ScanningController {
   async status(@Param() params) {
     const { chainId } = params;
     try {
-      let startTime = Date.now();
+      const startTime = Date.now();
       const factory = this.rpcScanningFactory.createService(chainId);
       if (!factory) {
         throw new Error('factory not found')

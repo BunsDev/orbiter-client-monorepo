@@ -1,47 +1,60 @@
-import {
-  RpcScanningInterface,
-  RetryBlockRequestResponse,
-  TransferAmountTransaction,
-  Block,
-  TransactionReceipt,
-  TransactionResponse,
-  Context,
-} from './rpc-scanning.interface';
-import { IChainConfig } from '@orbiter-finance/config';
-import { isEmpty, sleep, equals, promiseWithTimeout } from '@orbiter-finance/utils';
-import { createLoggerByName } from '../utils/logger';
 import winston from 'winston';
+import { Mutex } from 'async-mutex';
+import { ethers } from 'ethers6';
+import { TransferAmountTransaction } from '../transaction/transaction.interface';
+import { IChainConfig } from '@orbiter-finance/config';
+import { Block, Context, RetryBlockRequestResponse, TransactionReceipt, TransactionResponse } from './rpc-scanning.interface';
+import { equals, isEmpty, promiseWithTimeout } from '@orbiter-finance/utils';
+import { logger } from '@orbiter-finance/utils';
 import DataProcessor from '../utils/dataProcessor';
+
+// Define the RPC scanning interface
+export interface RpcScanningInterface {
+  init(): Promise<void>;
+  executeCrawlBlock(): Promise<any[]>;
+  checkLatestHeight(): Promise<any>;
+  manualScanBlocks(blockNumbers: number[]): Promise<any>;
+}
+
 export class RpcScanningService implements RpcScanningInterface {
   public logger: winston.Logger;
   public rpcLastBlockNumber: number = 0;
   protected requestTimeout = 1000 * 60 * 5;
   readonly dataProcessor: DataProcessor;
+
   constructor(
-    public readonly chainId: string, public readonly ctx: Context,
+    public readonly chainId: string,
+    public readonly ctx: Context,
   ) {
-    this.logger = createLoggerByName(`rpcscan-${this.chainId}`, {
+    this.logger = logger.createLoggerByName(`rpcscan-${this.chainId}`, {
       label: this.chainConfig.name
     });
     this.dataProcessor = new DataProcessor(this.chainId);
   }
+
   get batchLimit(): number {
     return this.chainConfig['batchLimit'] || 100;
   }
+
   get chainConfig(): IChainConfig {
     return this.ctx.chainConfigService.getChainInfo(this.chainId);
   }
+
   async init() {
+    // TODO: Implement initialization logic if needed.
   }
+
   async executeCrawlBlock() {
     const blockNumbers = await this.dataProcessor.getProcessNextBatchData(this.batchLimit);
     if (blockNumbers.length <= 0) {
-      this.logger.info('executeCrawlBlock not blockNumbers');
+      this.logger.info('executeCrawlBlock: No block numbers to process.');
       return [];
     }
+
     this.logger.debug(
-      `executeCrawlBlock process,blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
+      `executeCrawlBlock: Processing blocks - blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)} batchLimit:${this.batchLimit}`,
     );
+
     const noAcks = [];
     const acks = [];
     const result = await this.scanByBlocks(
@@ -53,27 +66,33 @@ export class RpcScanningService implements RpcScanningInterface {
       ) => {
         if (isEmpty(error) && transfers) {
           try {
-            await this.handleScanBlockResult(error, block, transfers);
+            await this.processTransaction(error, block, transfers);
             acks.push(block.number);
           } catch (error) {
             noAcks.push(block.number);
             this.logger.error(
-              `executeCrawlBlock handleScanBlockResult ${block.number} error`,
+              `executeCrawlBlock: handleScanBlockResult ${block.number} error`,
               error,
             );
           }
         } else {
           noAcks.push(block.number);
-          this.logger.error(`scanByBlocks block error Block: ${block.number} ${error.message}`)
+          this.logger.error(`scanByBlocks: Block error Block: ${block.number} ${error.message}`);
         }
       },
     ).catch(error => {
       this.dataProcessor.noAck(blockNumbers);
       throw error;
-    })
-    noAcks.length > 0 && this.dataProcessor.noAck(noAcks);
-    acks.length > 0 && await this.dataProcessor.ack(acks);
-    this.logger.info('executeCrawlBlock end');
+    });
+
+    if (noAcks.length > 0) {
+      this.dataProcessor.noAck(noAcks);
+    }
+    if (acks.length > 0) {
+      await this.dataProcessor.ack(acks);
+    }
+
+    this.logger.info('executeCrawlBlock: Execution completed.');
     return result;
   }
 
@@ -82,8 +101,9 @@ export class RpcScanningService implements RpcScanningInterface {
       const firstStart = isEmpty(this.rpcLastBlockNumber);
       this.rpcLastBlockNumber = await promiseWithTimeout(this.getLatestBlockNumber(), 1000 * 20);
       if (isEmpty(this.rpcLastBlockNumber)) {
-        throw new Error('checkLatestHeight getLatestBlockNumber empty');
+        throw new Error('checkLatestHeight: getLatestBlockNumber returned empty value.');
       }
+
       let lastScannedBlockNumber = await this.dataProcessor.getMaxScanBlockNumber();
       if (lastScannedBlockNumber && lastScannedBlockNumber > 0) {
         lastScannedBlockNumber += 1;
@@ -91,22 +111,26 @@ export class RpcScanningService implements RpcScanningInterface {
         lastScannedBlockNumber = this.rpcLastBlockNumber - this.batchLimit;
         this.dataProcessor.changeMaxScanBlockNumber(lastScannedBlockNumber);
       }
+
       if (firstStart) {
         lastScannedBlockNumber = lastScannedBlockNumber > this.batchLimit ? lastScannedBlockNumber - this.batchLimit : lastScannedBlockNumber;
       }
+
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
       this.chainConfig.debug && this.logger.debug(
-        `checkLatestHeight check ${targetConfirmation}/lastScannedBlockNumber=${lastScannedBlockNumber}/safetyBlockNumber=${safetyBlockNumber}/rpcLastBlockNumber=${this.rpcLastBlockNumber}, batchLimit:${this.batchLimit}`,
+        `checkLatestHeight: Checking - Target Confirmation: ${targetConfirmation}, lastScannedBlockNumber: ${lastScannedBlockNumber}, safetyBlockNumber: ${safetyBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}, batchLimit: ${this.batchLimit}`,
       );
+
       if (safetyBlockNumber > lastScannedBlockNumber) {
-        const blockNumbers = await this.dataProcessor.createRangeScannData(lastScannedBlockNumber, safetyBlockNumber)
+        const blockNumbers = await this.dataProcessor.createRangeScanData(lastScannedBlockNumber, safetyBlockNumber);
         return blockNumbers;
       }
     } catch (error) {
-      this.logger.error(`checkLatestHeight error `, error);
+      this.logger.error(`checkLatestHeight: Error - ${error}`);
     }
   }
+
   public async manualScanBlocks(blockNumbers: number[]): Promise<any> {
     try {
       let response = [];
@@ -119,29 +143,31 @@ export class RpcScanningService implements RpcScanningInterface {
         ) => {
           if (transfers && isEmpty(error)) {
             response = transfers;
-            await this.handleScanBlockResult(error, block, transfers);
+            await this.processTransaction(error, block, transfers);
           }
         },
       );
       return response;
     } catch (error) {
-      this.logger.error(`manualScanBlocks error`, error);
+      this.logger.error(`manualScanBlocks: Error - ${error}`);
     }
   }
 
-  protected async handleScanBlockResult(
+  protected async processTransaction(
     error: Error,
     block: RetryBlockRequestResponse,
     transfers: TransferAmountTransaction[],
   ) {
     if (transfers && isEmpty(error)) {
-      await this.ctx.transactionService.handleTransactionReceipt(transfers)
+      await this.ctx.transactionService.handleTransfer(transfers);
     }
     return { error, block, transfers };
   }
+
   protected async isWatchAddress(address: string) {
     return await this.ctx.transactionService.isWatchAddress(address);
   }
+
   protected async filterTransfers(transfers: TransferAmountTransaction[]) {
     const newList = [];
     for (const transfer of transfers) {
@@ -158,6 +184,7 @@ export class RpcScanningService implements RpcScanningInterface {
     }
     return transfers;
   }
+
   public async scanByBlocks(
     blockNumbers: number[],
     callbackFun: (
@@ -167,15 +194,16 @@ export class RpcScanningService implements RpcScanningInterface {
     ) => Promise<any>,
   ): Promise<{ block: any; transfers: any }[]> {
     if (blockNumbers.length <= 0) {
-      throw new Error('scanByBlocks missing block number');
+      throw new Error('scanByBlocks: Missing block numbers.');
     }
+
     const blocksResponse = await this.getBlocks(blockNumbers);
     const processBlock = async (row: RetryBlockRequestResponse) => {
       try {
         if (isEmpty(row) || row.error) {
           callbackFun(row.error, row, []);
           this.logger.error(
-            `${this.chainId} handleBlock error ${row.number}`,
+            `handleBlock error: Chain ${this.chainId}, Block ${row.number}`,
             row.error,
           );
           return { block: row, transfers: [], error: row.error };
@@ -186,19 +214,20 @@ export class RpcScanningService implements RpcScanningInterface {
         );
         const transfers = await this.filterTransfers(result);
         this.logger.debug(
-          `RPCScan handle block success block:${row.number}, match:${transfers.length}/${result.length}`,
+          `handleBlock success - Block: ${row.number}, Matched: ${transfers.length}/${result.length}`,
         );
         callbackFun(null, row, transfers);
         return { block: row, transfers: transfers };
       } catch (error) {
         callbackFun(error, row, null);
         this.logger.error(
-          `${this.chainId} handleBlock catch error ${row.number}`,
+          `handleBlock catch error - Chain ${this.chainId}, Block ${row.number}`,
           error,
         );
         return { block: row, transfers: [], error };
       }
     };
+
     const result = await Promise.all(blocksResponse.map(processBlock));
     return result;
   }
@@ -217,14 +246,14 @@ export class RpcScanningService implements RpcScanningInterface {
     retryCount = 2,
     timeoutMs: number = this.requestTimeout,
   ): Promise<RetryBlockRequestResponse> {
-    let result = {
+    const result = {
       number: blockNumber,
       block: null,
       error: null,
     };
     for (let retry = 1; retry <= retryCount; retry++) {
       try {
-        const data: Block | null = await promiseWithTimeout(this.getBlock(blockNumber), timeoutMs)
+        const data: Block | null = await promiseWithTimeout(this.getBlock(blockNumber), timeoutMs);
         if (!isEmpty(data)) {
           result.error = null;
           result.block = data;
@@ -232,7 +261,7 @@ export class RpcScanningService implements RpcScanningInterface {
         }
       } catch (error) {
         this.logger.error(
-          `retryBlockRequest error ${retry}/${retryCount} block:${blockNumber} `,
+          `retryBlockRequest error ${retry}/${retryCount} - Block:${blockNumber}`,
           error,
         );
         if (retry >= retryCount) {
@@ -246,7 +275,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async requestTransactionReceipt(hash: string, timeoutMs: number) {
     try {
-      const data = await promiseWithTimeout(this.getTransactionReceipt(hash), timeoutMs)
+      const data = await promiseWithTimeout(this.getTransactionReceipt(hash), timeoutMs);
       return data;
     } catch (error) {
       throw new Error(
@@ -261,7 +290,7 @@ export class RpcScanningService implements RpcScanningInterface {
     timeoutMs = this.requestTimeout,
   ) {
     if (isEmpty(hash)) {
-      throw new Error('Missing hash parameter')
+      throw new Error('Missing hash parameter');
     }
     const result = {
       hash: hash,
@@ -270,7 +299,6 @@ export class RpcScanningService implements RpcScanningInterface {
     };
     for (let retry = 1; retry <= retryCount; retry++) {
       try {
-        // const startTime = Date.now();
         const data = await this.requestTransactionReceipt(hash, timeoutMs);
         if (data) {
           result.data = data;
@@ -279,24 +307,24 @@ export class RpcScanningService implements RpcScanningInterface {
         }
       } catch (error) {
         this.logger.error(
-          `retryRequestGetTransactionReceipt error ${retry}/${retryCount} hash:${hash} `,
+          `retryRequestGetTransactionReceipt error ${retry}/${retryCount} - Hash:${hash}`,
           error,
         );
         if (retry >= retryCount) {
-
           result.error = error.message;
         }
       }
     }
-
     return result;
   }
+
   protected getChainConfigToken(address: string) {
     return this.ctx.chainConfigService.getTokenByChain(
       String(this.chainId),
       address,
     );
   }
+
   protected getChainConfigContract(toAddress: string) {
     if (this.chainConfig.contract) {
       for (const [addr, name] of Object.entries(this.chainConfig.contract)) {
@@ -323,11 +351,13 @@ export class RpcScanningService implements RpcScanningInterface {
   async getBlock(_blockNumber: number): Promise<any> {
     throw new Error(`${this.chainId} getBlock method not implemented`);
   }
+
   async getTransactionReceipt(_hash: string): Promise<any> {
     throw new Error(
       `${this.chainId} getTransactionReceipt method not implemented`,
     );
   }
+
   async handleBlock(_block: Block): Promise<TransferAmountTransaction[]> {
     throw new Error(`${this.chainId} handleBlock method not implemented`);
   }

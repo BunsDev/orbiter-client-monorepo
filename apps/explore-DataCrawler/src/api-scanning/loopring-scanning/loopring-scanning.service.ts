@@ -1,15 +1,18 @@
 import { ApiScanningService } from '../api-scanning.service';
 import BigNumber from 'bignumber.js';
-import {
-  TransferAmountTransaction,
-  TransferAmountTransactionStatus,
-} from '../../rpc-scanning/rpc-scanning.interface';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
+
 import { HTTPGet, maxBy } from '@orbiter-finance/utils';
 import dayjs from 'dayjs';
+import { Context } from '../api-scanning.interface';
 
 export class LoopringApiScanningService extends ApiScanningService {
   private addressMapAccountId: Map<string, number> = new Map();
-  async init() {
+  constructor(
+    protected readonly chainId: string,
+    protected readonly ctx: Context,
+  ) {
+    super(chainId, ctx)
     this.addressMapAccountId = new Map();
     this.addressMapAccountId.set(
       '0x80c67432656d59144ceff962e8faf8926599bcf8',
@@ -54,7 +57,7 @@ export class LoopringApiScanningService extends ApiScanningService {
         this.logger.debug(
           `${this.chainId} timedTetTransactions address ${address},  data total: ${transfers.length} / ${newTransfers.length}`,
         );
-        const result =await this.handleScanBlockResult(newTransfers);
+        const result =await this.processTransaction(newTransfers);
       },
       position,
       endTime,

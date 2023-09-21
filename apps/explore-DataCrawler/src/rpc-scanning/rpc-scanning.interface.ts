@@ -4,6 +4,7 @@ import { RpcScanningService } from './rpc-scanning.service';
 import { ChainConfigService } from '@orbiter-finance/config';
 import { WorkerService } from './worker.service';
 import { TransactionService } from '../transaction/transaction.service';
+import { TransferAmountTransaction } from '../transaction/transaction.interface';
 
 export type Block = any;
 export type TransactionResponse = ethers.TransactionResponse | any;
@@ -36,41 +37,9 @@ export interface RetryBlockRequestResponse {
   number: number;
   block: Block | null;
 }
-export enum TransferAmountTransactionStatus {
-  none,
-  pending,
-  confirmed,
-  failed,
-}
-export interface TransferAmountTransaction {
-  chainId: string;
-  hash: string;
-  blockNumber: number;
-  sender: string;
-  receiver: string;
-  amount: string;
-  value: string;
-  token: string;
-  symbol: string;
-  fee: string;
-  feeAmount: string;
-  timestamp: number;
-  status: TransferAmountTransactionStatus;
-  nonce: number;
-  calldata?: object;
-  contract?: string;
-  selector?: string;
-  signature?: string;
-  version?: string;
-  feeToken: string;
-  receipt?: any;
-}
 
 export interface Context {
    chainConfigService: ChainConfigService,
    workerService: WorkerService
    transactionService: TransactionService
-  //  transactionService: TransactionService,
-  //  mdcService: MdcService,
-  //  makerService: MakerService,
 }

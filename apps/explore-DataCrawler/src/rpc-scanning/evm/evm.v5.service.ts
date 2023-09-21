@@ -6,10 +6,9 @@ import {
   Block,
   TransactionReceipt,
   TransactionResponse,
-  TransferAmountTransaction,
-  TransferAmountTransactionStatus,
 } from '../rpc-scanning.interface';
 import EVMV5Utils from './lib/v6';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 export class EVMRpcScanningV5Service extends RpcScanningService {
   #provider: provider.Orbiter5Provider;
   getProvider() {

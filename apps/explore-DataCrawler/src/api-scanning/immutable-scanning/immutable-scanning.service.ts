@@ -1,15 +1,19 @@
 import { ApiScanningService } from '../api-scanning.service';
 import BigNumber from 'bignumber.js';
-import {
-  TransferAmountTransaction,
-  TransferAmountTransactionStatus,
-} from '../../rpc-scanning/rpc-scanning.interface';
+
 import { ImmutableX, Config } from '@imtbl/core-sdk';
 import dayjs from 'dayjs';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
+import { Context } from '../api-scanning.interface';
 
 export class ImmutableApiScanningService extends ApiScanningService {
   private client: ImmutableX;
-  async init() {
+
+  constructor(
+    protected readonly chainId: string,
+    protected readonly ctx: Context,
+  ) {
+    super(chainId, ctx)
     const chainConfig = this.chainConfig;
     if (+chainConfig.networkId == 1) {
       this.client = new ImmutableX(Config.PRODUCTION);
@@ -52,7 +56,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       );
       if (senderTransfers.length > 0) {
         const newTransfers = await this.filterTransfers(senderTransfers);
-        const result =await this.handleScanBlockResult(newTransfers);
+        const result = await this.processTransaction(newTransfers);
         senderPosition = this.generateLastScannedPositionData(newTransfers);
         transfers.push(...newTransfers);
       }
@@ -69,7 +73,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       );
       if (receiverTransfers.length > 0) {
         const newTransfers = await this.filterTransfers(receiverTransfers);
-        const result =await this.handleScanBlockResult(newTransfers);
+        const result = await this.processTransaction(newTransfers);
         transfers.push(...newTransfers);
         receiverPosition = this.generateLastScannedPositionData(newTransfers);
       }

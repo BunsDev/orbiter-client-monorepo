@@ -1,9 +1,7 @@
 import { ApiScanningService } from '../api-scanning.service';
 import BigNumber from 'bignumber.js';
-import {
-  TransferAmountTransaction,
-  TransferAmountTransactionStatus,
-} from '../../rpc-scanning/rpc-scanning.interface';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
+
 import { HTTPGet, maxBy } from '@orbiter-finance/utils';
 import dayjs from 'dayjs';
 
@@ -35,7 +33,7 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
             newTransfers.length
           }`,
         );
-        await this.handleScanBlockResult(newTransfers);
+        await this.processTransaction(newTransfers);
       },
       prevTime,
     );

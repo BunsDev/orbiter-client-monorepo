@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { get, set, clone, isEmpty, isEqual } from 'lodash';
 import { Inject, Injectable } from '@nestjs/common';
 import { outputFile } from 'fs-extra';
@@ -18,6 +19,7 @@ export class ENVConfigService {
     #init: boolean = false;
     constructor(
         private readonly consul: ConsulService,
+        private readonly configService: ConfigService,
         @Inject(ORBITER_CONFIG_MODULE_OPTS) private readonly options: ConfigModuleOptions
     ) {
         ENVConfigService.configs = {};
@@ -30,7 +32,7 @@ export class ENVConfigService {
                         this.#init = true;
                         if (!isEqual(data, ENVConfigService.configs)) {
                             ENVConfigService.configs = data;
-                            this.write();
+                            // this.write();
                         }
                     },
                 );
@@ -44,6 +46,9 @@ export class ENVConfigService {
 
     }
     get<T = any>(name: string): T {
+        if (!isEmpty(this.configService.get(name))) {
+            return this.configService.get(name) as T;
+        }
         return getConfig(name);
     }
     async initAsync(): Promise<void> {
@@ -53,33 +58,36 @@ export class ENVConfigService {
         }
     }
     async getAsync<T = any>(name: string): Promise<T> {
+        if (!isEmpty(this.configService.get(name))) {
+            return this.configService.get(name) as T;
+        }
         await this.initAsync();
         return getConfig(name);
     }
-    getAll() {
+    getCloudConfig() {
         return ENVConfigService.configs;
     }
-    async set(name: string, value: any) {
-        set(ENVConfigService.configs, name, value);
-        await this.write();
-    }
-    async write() {
-        if (isEmpty(ENVConfigService.configs)) {
-            throw new Error('no configuration to write');
-        }
-        const envConfigPath = this.options.envConfigPath;
-        if (!envConfigPath) {
-            throw new Error('Missing configuration path');
-        }
-        if(!this.options.cachePath) {
-            return console.warn('Missing cache path');
-        }
-        if (ENVConfigService.configs) {
-            const cloneConfig = clone(ENVConfigService.configs);
-            delete cloneConfig['privateKey'];
-            const data = yaml.dump(cloneConfig);
-            const filePath = join(this.options.cachePath, envConfigPath);
-            await outputFile(filePath, data);
-        }
-    }
+    // async set(name: string, value: any) {
+    //     set(ENVConfigService.configs, name, value);
+    //     await this.write();
+    // }
+    // async write() {
+    //     if (isEmpty(ENVConfigService.configs)) {
+    //         throw new Error('no configuration to write');
+    //     }
+    //     const envConfigPath = this.options.envConfigPath;
+    //     if (!envConfigPath) {
+    //         throw new Error('Missing configuration path');
+    //     }
+    //     if (!this.options.cachePath) {
+    //         return console.warn('Missing cache path');
+    //     }
+    //     if (ENVConfigService.configs) {
+    //         const cloneConfig = clone(ENVConfigService.configs);
+    //         delete cloneConfig['privateKey'];
+    //         const data = yaml.dump(cloneConfig);
+    //         const filePath = join(this.options.cachePath, envConfigPath);
+    //         await outputFile(filePath, data);
+    //     }
+    // }
 }

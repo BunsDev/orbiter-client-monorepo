@@ -1,11 +1,8 @@
 import { Interface, id, TransactionDescription, LogDescription } from 'ethers6';
-import {
-  TransferAmountTransaction,
-  TransferAmountTransactionStatus,
-} from '../../rpc-scanning.interface';
 import { IChainConfig } from '@orbiter-finance/config';
 import { abis, equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 
 export default class EVMVUtils {
   public static isERC20Transfer(data: string) {

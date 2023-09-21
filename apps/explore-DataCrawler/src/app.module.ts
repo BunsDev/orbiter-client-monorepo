@@ -10,13 +10,13 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { AlertModule } from '@orbiter-finance/alert';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ENVConfigService, OrbiterConfigModule} from '@orbiter-finance/config';
+import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { join } from 'path';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import {loggerFormat} from './utils/logger'
 import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { logger } from '@orbiter-finance/utils'
 dayjs.extend(utc);
 
 @Module({
@@ -38,10 +38,10 @@ dayjs.extend(utc);
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath:"explore-data-service/chains.json",
+      chainConfigPath: "explore-data-service/chains.json",
       envConfigPath: "explore-data-service/config.yaml",
       makerV1RulePath: "explore-data-service/rules",
-      cachePath: join(__dirname,'runtime')
+      cachePath: join(__dirname, 'runtime')
     }),
     WinstonModule.forRoot({
       exitOnError: false,
@@ -54,10 +54,10 @@ dayjs.extend(utc);
           zippedArchive: true,
           maxSize: '20m',
           maxFiles: '14d',
-          format: loggerFormat(),
+          format: logger.loggerFormat(),
         }),
         new winston.transports.Console({
-          format:loggerFormat(),
+          format: logger.loggerFormat(),
           handleExceptions: true,
         }),
       ],
@@ -67,7 +67,7 @@ dayjs.extend(utc);
     }),
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
-      useFactory: async(configService: ENVConfigService) => {
+      useFactory: async (configService: ENVConfigService) => {
         return await configService.getAsync("REDIS");
       },
     }),
@@ -82,4 +82,4 @@ dayjs.extend(utc);
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

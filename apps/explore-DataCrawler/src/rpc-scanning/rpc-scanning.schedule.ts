@@ -5,28 +5,23 @@ import { ChainConfigService } from '@orbiter-finance/config';
 import { ENVConfigService } from '@orbiter-finance/config';
 import { RpcScanningScheduleService } from './rpc-scanning.interface';
 import { RpcScanningFactory } from './rpc-scanning.factory';
-import { JSONStringify, isEmpty } from '@orbiter-finance/utils';
-import { createLoggerByName } from '../utils/logger';
+import { JSONStringify, isEmpty,logger } from '@orbiter-finance/utils';
 import { AlertService } from '@orbiter-finance/alert'
-import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class RpcScanningSchedule {
-  private readonly logger = createLoggerByName(RpcScanningSchedule.name);
+  private readonly logger = logger.createLoggerByName(RpcScanningSchedule.name);
   private scanService: Map<string, RpcScanningScheduleService> = new Map();
   constructor(
     private chainConfigService: ChainConfigService,
     private envConfigService: ENVConfigService,
     private rpcScanningFactory: RpcScanningFactory,
-    private alertService: AlertService,
-    private configSercie: ConfigService,
+    private alertService: AlertService
   ) {
     this.initializeTransactionScanners();
   }
   @Cron('*/5 * * * * *')
   private async initializeTransactionScanners() {
-    const SCAN_CHAINS = (
-      this.configSercie.get('SCAN_CHAINS') || this.envConfigService.get<string>('SCAN_CHAINS')
-    ) || ''.split(',');
+    const SCAN_CHAINS = (this.envConfigService.get<string>('SCAN_CHAINS') || '').split(',');
     const chains = this.chainConfigService.getAllChains();
     if (isEmpty(chains)) {
       return;

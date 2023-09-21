@@ -1,14 +1,14 @@
 import { MessageService } from '@orbiter-finance/rabbit-mq';
 import { Injectable } from '@nestjs/common';
-import { TransferAmountTransaction } from '../rpc-scanning/rpc-scanning.interface';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
+import { TransferAmountTransaction } from './transaction.interface';
 @Injectable()
 export class TransactionService {
     constructor(private readonly messageSerice: MessageService, @InjectRedis() private readonly redis: Redis) {
 
     }
-    public async handleTransactionReceipt(
+    public async handleTransfer(
         transfers: TransferAmountTransaction[],
     ) {
         if (transfers.length > 0) {
@@ -30,5 +30,11 @@ export class TransactionService {
             return true;
         }
         return false;
+    }
+
+    public async getWatchAddress():Promise<string[]> {
+        const result = await this.redis.smembers('v1FakeMaker');
+        console.log(result, '==result')
+        return result as any || [];
     }
 }

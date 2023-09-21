@@ -1,12 +1,9 @@
 import { ApiScanningService } from '../api-scanning.service';
 import BigNumber from 'bignumber.js';
-import {
-  TransferAmountTransaction,
-  TransferAmountTransactionStatus,
-} from '../../rpc-scanning/rpc-scanning.interface';
 import { objectToQueryString, HTTPGet, isEmpty, uniq } from '@orbiter-finance/utils';
 import * as ethers from 'ethers6';
 import dayjs from 'dayjs';
+import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 export class ZKLiteApiScanningService extends ApiScanningService {
   protected async getLastScannedPosition(prefix: string): Promise<string> {
     return super.getLastScannedPosition(prefix);
@@ -72,7 +69,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
         `${this.chainId} timedTetTransactions address ${address},  data total: ${transfers.length} / ${newTransfers.length}`,
       );
       if (newTransfers.length > 0) {
-          const result =await this.handleScanBlockResult(newTransfers);
+          const result =await this.processTransaction(newTransfers);
         const scanPosition = this.generateLastScannedPositionData(result);
         await this.setLastScannedPosition(address, scanPosition);
       } else {
