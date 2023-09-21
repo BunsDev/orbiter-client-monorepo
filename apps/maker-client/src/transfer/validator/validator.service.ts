@@ -10,6 +10,7 @@ import { AccountFactoryService } from "../../account/factory";
 import { take } from "lodash";
 import type OrbiterAccount from "../../account/orbiterAccount"
 // import { createLoggerByName } from "../../lib/logger";
+import { PrivateKeyService } from "../../service/privatekey.service";
 @Injectable()
 export class ValidatorService {
   private readonly logger = new Logger(ValidatorService.name);
@@ -174,6 +175,7 @@ export class ValidatorService {
 
   public getSenderPrivateKey(from: string) {
     from = from.toLocaleLowerCase();
+    if (PrivateKeyService.InjectedPrivateKey[from]) return PrivateKeyService.InjectedPrivateKey[from];
     const privateKey =
       process.env[from] ||
       this.configService.get[from];

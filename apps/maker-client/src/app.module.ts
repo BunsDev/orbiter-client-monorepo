@@ -12,6 +12,7 @@ import { WinstonModule, utilities } from 'nest-winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import * as winston from 'winston';
 import { AlertModule } from '@orbiter-finance/alert'
+import { TcpModule } from "@orbiter-finance/tcp";
 @Module({
     imports: [
         ConfigModule.forRoot({
@@ -84,6 +85,7 @@ import { AlertModule } from '@orbiter-finance/alert'
         AlertModule,
         TransferModule,
         RabbitMqModule,
+        TcpModule,
         ScheduleModule.forRoot(),
     ],
     providers: [

@@ -42,6 +42,9 @@
       ],
       "@orbiter-finance/rabbit-mq": [
         "libs/rabbit-mq/src/index.ts"
+      ],
+      "@orbiter-finance/tcp": [
+        "libs/tcp/src/index.ts"
       ]
     }
   },
