@@ -6,7 +6,7 @@ import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { loggerFormat } from 'libs/utils/src/lib/logger';
-import { KnexModule, KnexModuleOptions } from 'nest-knexjs';
+import { KnexModule, KnexModuleAsyncOptions, KnexModuleOptions } from 'nest-knexjs';
 import { WinstonModule } from 'nest-winston';
 import { isEmpty } from '@orbiter-finance/utils';
 import winston from 'winston';
@@ -82,7 +82,7 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
     KnexModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (envConfig: ENVConfigService) => {
-        const config: KnexModuleOptions = await envConfig.getAsync('DATABASE_THEGRAPH');
+        const config: any = await envConfig.getAsync('DATABASE_THEGRAPH');
         if (isEmpty(config)) {
           console.error('Missing configuration DATABASE_THEGRAPH');
           process.exit(1);
