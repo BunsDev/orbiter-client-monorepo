@@ -197,7 +197,7 @@ export class RpcScanningService implements RpcScanningInterface {
         return { block: row, transfers: [], error };
       }
     };
-    const result = bluebird.map(blocksResponse, processBlock, { concurrency: 10 })
+    const result = bluebird.map(blocksResponse, processBlock, { concurrency: 100 })
     // const result = await Promise.all(blocksResponse.map(processBlock));
     return result;
   }
