@@ -273,8 +273,11 @@ export default class EVMAccount extends OrbiterAccount {
         tos,
         values,
       ]);
+      transactionRequest.from = this.wallet.address;
       transactionRequest.data = data;
       transactionRequest.to = router;
+      transactionRequest.value = "0x0";
+      transactionRequest.chainId = Number(this.chainConfig.networkId);
       await timeoutPromise(() => this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendBeforeError(error.message);
