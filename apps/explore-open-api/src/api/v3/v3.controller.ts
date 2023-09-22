@@ -38,9 +38,9 @@ export class V3Controller {
         case 'orbiter_collectUserTransaction': {
           return { id, jsonrpc, result: await this.v2Service.collectUserTransaction(params) };
         }
-        // case 'orbiter_getDealerRuleLatest': {
-        //   return { id, jsonrpc, result: await v3Service.getDealerRuleLatest(params) };
-        // }
+        case 'orbiter_getDealerRuleLatest': {
+          return { id, jsonrpc, result: await v3Service.getDealerRuleLatest(params) };
+        }
         case 'orbiter_txList': {
           return { id, jsonrpc, result: await v3Service.getTxList(params) };
         }
