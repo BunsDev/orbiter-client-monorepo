@@ -11,14 +11,12 @@ import Redis from 'ioredis';
 @Injectable()
 export class MakerService {
     #v2Owners: string[] = [];
-    private subgraphClient: SubgraphClient;
     private logger: winston.Logger = logger.createLoggerByName(MakerService.name);
     constructor(
         @InjectRedis() private readonly redis: Redis,
         protected envConfigService: ENVConfigService,
         protected makerV1RuleService: MakerV1RuleService,
     ) {
-        this.subgraphClient = new SubgraphClient(this.envConfigService.get("SubgrapheEndpoint"));
     }
     async getV2ChainInfo(chainId: string) {
         return await this.redis.hget('chains', chainId).then(data => data && JSON.parse(data));
@@ -47,7 +45,8 @@ export class MakerService {
         }
         const owner = transfer.receiver;
         const txTimestamp = dayjs(transfer.timestamp).unix();
-        const securityCodeInfo = await this.subgraphClient.maker.getCrossChainMakerSecurityCodeInfo(owner, dealerIndex, ebcIndex, targetChainIdIndex, txTimestamp);
+        const subgraphClient = new SubgraphClient(await this.envConfigService.getAsync("SubgrapheEndpoint"));
+        const securityCodeInfo = await subgraphClient.maker.getCrossChainMakerSecurityCodeInfo(owner, dealerIndex, ebcIndex, targetChainIdIndex, txTimestamp);
         if (!securityCodeInfo) {
             return {
                 errno: 1000,
@@ -99,7 +98,7 @@ export class MakerService {
         }
         const targetChainData = await this.getV2ChainInfo(targetChain.chainId);
         const targetToken = targetChainData.tokens.find(token => equals(token.mainnetToken, sourceToken.mainnetToken));
-        const rule = await this.subgraphClient.maker.getCrossChainMakerSecurityCodeInfoRule(owner, ebc.ebcAddr, +sourceChainData.id, +targetChain.chainId, sourceToken.tokenAddress, targetToken.tokenAddress, txTimestamp);
+        const rule = await subgraphClient.maker.getCrossChainMakerSecurityCodeInfoRule(owner, ebc.ebcAddr, +sourceChainData.id, +targetChain.chainId, sourceToken.tokenAddress, targetToken.tokenAddress, txTimestamp);
         return {
             code: 0,
             data: {
@@ -128,7 +127,8 @@ export class MakerService {
     }
 
     async syncV2MakerOwnersToCache() {
-        const v2Owners = await this.subgraphClient.factory.getOwners();
+        const subgraphClient = new SubgraphClient(this.envConfigService.get("SubgrapheEndpoint"));
+        const v2Owners = await subgraphClient.factory.getOwners();
         if (v2Owners) {
             if (v2Owners && v2Owners.length > 0) {
                 if (this.#v2Owners.length != v2Owners.length) {

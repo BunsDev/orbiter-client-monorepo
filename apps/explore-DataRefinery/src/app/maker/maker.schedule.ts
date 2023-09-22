@@ -7,12 +7,10 @@ import { SubgraphClient } from '@orbiter-finance/subgraph-sdk'
 import { ENVConfigService } from '@orbiter-finance/config';
 @Injectable()
 export class MakerScheduuleService {
-    private subgraphClient: SubgraphClient;
     constructor(
         protected envConfigService: ENVConfigService,
         private readonly makerService: MakerService,
         @InjectRedis() private readonly redis: Redis) {
-        this.subgraphClient = new SubgraphClient(this.envConfigService.get("SubgrapheEndpoint"));
         this.syncV1Owners()
 
         this.syncV2ChainTokens()
@@ -21,7 +19,8 @@ export class MakerScheduuleService {
     }
     @Cron('* */1 * * * *')
     async syncV2ChainTokens() {
-        const chains = await this.subgraphClient.factory.getChainTokens();
+        const subgraphClient = new SubgraphClient(await this.envConfigService.getAsync("SubgrapheEndpoint"));
+        const chains = await subgraphClient.factory.getChainTokens();
         const chainMap = {
         }
         for (const chain of chains) {
@@ -32,7 +31,8 @@ export class MakerScheduuleService {
 
     @Cron('* */1 * * * *')
     async syncV2Owners() {
-        const owners = await this.subgraphClient.factory.getOwners();
+        const subgraphClient = new SubgraphClient(await this.envConfigService.getAsync("SubgrapheEndpoint"));
+        const owners = await subgraphClient.factory.getOwners();
         const v2OwnersCount = await this.redis.scard("v2Owners");
         if (owners.length > 0 && v2OwnersCount != owners.length) {
             await this.redis.sadd("v2Owners", owners)

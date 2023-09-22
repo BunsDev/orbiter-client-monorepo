@@ -7,10 +7,8 @@ RUN apk add g++ make python3
 WORKDIR /app
 
 # Copy package.json and yarn.lock to the container.
-COPY package.json ./
-# COPY package.json yarn.lock ./
+COPY package.json yarn.lock ./
 
-# Configure Yarn to use a Taobao registry for faster package downloads.
 RUN npm install -g node-gyp
 
 # Install application dependencies with Yarn, with an increased network timeout.

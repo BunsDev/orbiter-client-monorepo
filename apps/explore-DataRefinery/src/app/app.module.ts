@@ -64,6 +64,13 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async(configService: ENVConfigService) => {
+        if (configService.get('REDIS_URL')) {
+          return {
+            config: {
+              url:configService.get('REDIS_URL')
+            }
+          }
+        }
         return await configService.getAsync("REDIS");
       },
     }),

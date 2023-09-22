@@ -23,6 +23,9 @@ export class SubgraphClient{
     public factory:Factory;
     public maker:MakerService;
     constructor(url:string){
+        if (!url) {
+          throw new Error('SubgrapheEndpoint not found');
+        }
         this.ctx = new Context(url);
         this.factory = new Factory(this.ctx);
         this.maker = new MakerService(this.ctx);
