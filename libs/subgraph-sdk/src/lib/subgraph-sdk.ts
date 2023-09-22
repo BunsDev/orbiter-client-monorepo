@@ -1,4 +1,5 @@
 import {Factory} from './factory';
+import { MakerService } from './maker';
 export class Context {
     constructor(private readonly url:string){}
     async query(query:string, variables:any = {}) {
@@ -17,11 +18,13 @@ export class Context {
       
     }
 }
-export default class SubgraphClient{
+export class SubgraphClient{
     public readonly ctx:Context;
     public factory:Factory;
-    constructor(url:string = 'https://api.studio.thegraph.com/proxy/49058/cabin/version/latest'){
+    public maker:MakerService;
+    constructor(url:string){
         this.ctx = new Context(url);
         this.factory = new Factory(this.ctx);
+        this.maker = new MakerService(this.ctx);
     }
 }
