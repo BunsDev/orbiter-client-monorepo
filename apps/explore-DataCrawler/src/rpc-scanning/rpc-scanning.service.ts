@@ -21,6 +21,8 @@ export class RpcScanningService implements RpcScanningInterface {
   public rpcLastBlockNumber: number = 0;
   protected requestTimeout = 1000 * 60 * 5;
   readonly dataProcessor: DataProcessor;
+  private blockCount: number = 0;
+  private firstStartTime: number;
 
   constructor(
     public readonly chainId: string,
@@ -30,6 +32,7 @@ export class RpcScanningService implements RpcScanningInterface {
       label: this.chainConfig.name
     });
     this.dataProcessor = new DataProcessor(this.chainId);
+    this.firstStartTime = Date.now()
   }
 
   get batchLimit(): number {
@@ -42,6 +45,11 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async init() {
     // TODO: Implement initialization logic if needed.
+  }
+
+  getRate() {
+    const diff = parseInt(`${(Date.now() - this.firstStartTime) / 1000}`)
+    return `${(this.blockCount / diff).toFixed(4)}/s`
   }
 
   async executeCrawlBlock() {
@@ -85,7 +93,8 @@ export class RpcScanningService implements RpcScanningInterface {
       this.dataProcessor.noAck(blockNumbers);
       throw error;
     });
-    this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks}`);
+    this.blockCount += acks.length;
+    this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks},  avgRate: ${this.getRate()}`);
     if (noAcks.length > 0) {
       this.dataProcessor.noAck(noAcks);
     }
@@ -93,7 +102,7 @@ export class RpcScanningService implements RpcScanningInterface {
       await this.dataProcessor.ack(acks);
     }
 
-    this.logger.info('executeCrawlBlock: Execution completed.');
+    this.logger.info(`executeCrawlBlock: Execution completed`);
     return result;
   }
 
@@ -202,7 +211,7 @@ export class RpcScanningService implements RpcScanningInterface {
     const processBlock = async (row: RetryBlockRequestResponse) => {
       try {
         if (isEmpty(row) || row.error) {
-          callbackFun(row.error, row, []);
+          await callbackFun(row.error, row, []);
           this.logger.error(
             `handleBlock error: Chain ${this.chainId}, Block ${row.number}`,
             row.error,
@@ -217,10 +226,10 @@ export class RpcScanningService implements RpcScanningInterface {
         this.logger.debug(
           `handleBlock success - Block: ${row.number}, Matched: ${transfers.length}/${result.length}`,
         );
-        callbackFun(null, row, transfers);
+        await callbackFun(null, row, transfers);
         return { block: row, transfers: transfers };
       } catch (error) {
-        callbackFun(error, row, null);
+        await callbackFun(error, row, null);
         this.logger.error(
           `handleBlock catch error - Chain ${this.chainId}, Block ${row.number}`,
           error,
