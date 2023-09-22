@@ -3,8 +3,9 @@ networks:
   app-network:
     driver: bridge
 services:
-  open-api-server:
+  explore-open-api:
     image: orbiter/explore-open-api:latest
+    container_name: OB-OpenApi
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'
