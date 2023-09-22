@@ -107,7 +107,7 @@ export class Transfers
   @Column({
     allowNull: true,
     type: DataType.INTEGER,
-    comment: '0=默认待处理,1=已处理,2=规则错误',
+    comment: '0=pending,1=ok,2=rule fail,3=ig',
     defaultValue: Sequelize.literal('0'),
   })
   @Index({ name: 'transfers_opStatus_idx', using: 'btree', unique: false })

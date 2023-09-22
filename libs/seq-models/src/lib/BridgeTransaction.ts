@@ -68,11 +68,11 @@ import {
     @Column({ allowNull: true, type: DataType.STRING(255) })
     targetId?: string;
   
-    @Column({ allowNull: true, type: DataType.STRING(20) })
+    @Column({ allowNull: true, type: DataType.STRING(255) })
     @Index({ name: 'sourceId', using: 'btree', unique: true })
     sourceChain?: string;
   
-    @Column({ allowNull: true, type: DataType.STRING(20) })
+    @Column({ allowNull: true, type: DataType.STRING(255) })
     @Index({
       name: 'bridge_transaction_targetChain_targetAmount_targetAddress_t_idx',
       using: 'btree',
@@ -113,7 +113,7 @@ import {
     @Column({ allowNull: true, type: DataType.STRING(20) })
     sourceSymbol?: string;
   
-    @Column({ allowNull: true, type: DataType.STRING(20) })
+    @Column({ allowNull: true, type: DataType.STRING(255) })
     @Index({
       name: 'bridge_transaction_targetChain_targetAmount_targetAddress_t_idx',
       using: 'btree',

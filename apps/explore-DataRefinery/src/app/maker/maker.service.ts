@@ -1,23 +1,117 @@
 import { Injectable } from '@nestjs/common';
 import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config'
-import { InjectConnection } from 'nest-knexjs';
-import { Knex } from 'knex';
-import { uniq, maxBy,logger } from '@orbiter-finance/utils'
+import { uniq, maxBy, logger, addressPadStart64, equals } from '@orbiter-finance/utils'
 // import v1MakerRules from '../config/v1MakerConfig';
 import winston from 'winston';
+import { SubgraphClient } from '@orbiter-finance/subgraph-sdk';
+import { Transfers } from '@orbiter-finance/seq-models';
+import dayjs from 'dayjs';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import Redis from 'ioredis';
 @Injectable()
 export class MakerService {
     #v2Owners: string[] = [];
-    #v2OwnerResponseMakers: string[] = [];
-    #v2OwnerResponseMakersVid = 0;
-    
+    private subgraphClient: SubgraphClient;
     private logger: winston.Logger = logger.createLoggerByName(MakerService.name);
-    constructor(protected envConfigService: ENVConfigService,
-        @InjectConnection() private readonly knex: Knex,
+    constructor(
+        @InjectRedis() private readonly redis: Redis,
+        protected envConfigService: ENVConfigService,
         protected makerV1RuleService: MakerV1RuleService,
     ) {
+        this.subgraphClient = new SubgraphClient(this.envConfigService.get("SubgrapheEndpoint"));
     }
+    async getV2ChainInfo(chainId: string) {
+        return await this.redis.hget('chains', chainId).then(data => data && JSON.parse(data));
+    }
+    async getV2ChainInfoTokenByMainnetToken(chainId: string, tokenAddr: string) {
+        const chain = await this.redis.hget('chains', chainId).then(data => data && JSON.parse(data));
+        if (chain && chain.tokens) {
+            return chain.tokens.find(token => equals(token.tokenAddress, tokenAddr));
+        }
+        return null;
+    }
+    async getV2RuleByTransfer(transfer: Transfers, dealerIndex: number, ebcIndex: number, targetChainIdIndex: number) {
+        const sourceChainData = await this.getV2ChainInfo(transfer.chainId);
+        if (!sourceChainData) {
+            return {
+                errno: 1000,
+                errmsg: 'sourceChainData not found'
+            }
+        }
+        const sourceToken = sourceChainData.tokens.find(token => equals(token.tokenAddress, addressPadStart64(transfer.token)));
+        if (!sourceChainData) {
+            return {
+                errno: 1000,
+                errmsg: 'sourceToken not found'
+            }
+        }
+        const owner = transfer.receiver;
+        const txTimestamp = dayjs(transfer.timestamp).unix();
+        const securityCodeInfo = await this.subgraphClient.maker.getCrossChainMakerSecurityCodeInfo(owner, dealerIndex, ebcIndex, targetChainIdIndex, txTimestamp);
+        if (!securityCodeInfo) {
+            return {
+                errno: 1000,
+                errmsg: 'securityCodeInfo not found'
+            }
+        }
+        const ebcSnapshot = securityCodeInfo.ebcSnapshot;
+        if (ebcSnapshot.length !== 1 || !ebcSnapshot[0]['ebcMappingSnapshot']) {
+            return {
+                errno: 1000,
+                errmsg: 'ebcSnapshot not found'
+            }
+        }
+        const dealerSnapshot = securityCodeInfo.dealerSnapshot;
+        if (dealerSnapshot.length !== 1 || !dealerSnapshot[0]['dealerMappingSnapshot']) {
+            return {
+                errno: 1000,
+                errmsg: 'dealerSnapshot not found'
+            }
+        }
+        const chainIdSnapshot = securityCodeInfo.chainIdSnapshot;
+        if (chainIdSnapshot.length !== 1 || !chainIdSnapshot[0]['chainIdMappingSnapshot']) {
+            return {
+                errno: 1000,
+                errmsg: 'chainIdSnapshot not found'
+            }
+        }
 
+        const ebc = ebcSnapshot[0]['ebcMappingSnapshot'][0];
+        if (!ebc) {
+            return {
+                errno: 1000,
+                errmsg: 'ebc not found'
+            }
+        }
+        const dealer = dealerSnapshot[0]['dealerMappingSnapshot'][0];
+        if (!dealer) {
+            return {
+                errno: 1000,
+                errmsg: 'dealer not found'
+            }
+        }
+        const targetChain = chainIdSnapshot[0]['chainIdMappingSnapshot'][0];
+        if (!targetChain) {
+            return {
+                errno: 1000,
+                errmsg: 'targetChain not found'
+            }
+        }
+        const targetChainData = await this.getV2ChainInfo(targetChain.chainId);
+        const targetToken = targetChainData.tokens.find(token => equals(token.mainnetToken, sourceToken.mainnetToken));
+        const rule = await this.subgraphClient.maker.getCrossChainMakerSecurityCodeInfoRule(owner, ebc.ebcAddr, +sourceChainData.id, +targetChain.chainId, sourceToken.tokenAddress, targetToken.tokenAddress, txTimestamp);
+        return {
+            code: 0,
+            data: {
+                rule,
+                ebc,
+                dealer,
+                sourceToken,
+                targetToken
+            }
+        };
+
+    }
     async getV1MakerOwners() {
         const v1MakerRules = this.makerV1RuleService.getAll();
         return uniq(v1MakerRules.filter(r => r.makerAddress).map(r => r.makerAddress.toLocaleLowerCase()));
@@ -33,70 +127,25 @@ export class MakerService {
         return uniq(list).map(a => a.toLocaleLowerCase());
     }
 
-    private async getV2MakerOwners() {
-        const row = await this.knex('factory_manager')
-            .column(['vid', 'owners'])
-            .orderBy('vid', 'desc')
-            .first();
-        return row ? row.owners.map(addr => addr.toLocaleLowerCase()) : [];
-    }
     async syncV2MakerOwnersToCache() {
-        this.getV2MakerOwners().then((result) => {
-            if (result && result.length > 0) {
-                if (this.#v2Owners.length != result.length) {
-                    this.logger.info(`syncV2MakerOwnersToCache:${JSON.stringify(result)}`);
+        const v2Owners = await this.subgraphClient.factory.getOwners();
+        if (v2Owners) {
+            if (v2Owners && v2Owners.length > 0) {
+                if (this.#v2Owners.length != v2Owners.length) {
+                    this.logger.info(`syncV2MakerOwnersToCache:${JSON.stringify(v2Owners)}`);
                 }
-                this.#v2Owners = result.map(addr => addr.toLocaleLowerCase());
+                this.#v2Owners = v2Owners.map(addr => addr.toLocaleLowerCase());
             }
-        }).catch(error => {
-            this.logger.error(`asyncV2MakerOwnersFromCache error: ${error}`, error);
-        })
+        }
     }
     async getV2MakerOwnersFromCache() {
-        // if (this.#v2Owners.length <= 0) {
-        //     this.#v2Owners = await this.getV2MakerOwners();
-        // }
         return this.#v2Owners;
-    }
-    private async getV2MakerOwnerResponse(vid = 0) {
-        const rows = await this.knex('response_maker')
-            .distinct('id')
-            .column(['vid'])
-            .where('vid', '>', vid);
-        if (rows && rows.length > 0) {
-            const row = maxBy(rows, ['vid']);
-            this.#v2OwnerResponseMakersVid = row.vid;
-            const v2OwnerResponseMakers = rows.map((row) => row.id.toLocaleLowerCase());
-            return v2OwnerResponseMakers;
-        }
-        return []
-    }
-    async syncV2MakerOwnerResponseToCache() {
-        const lastId = this.#v2OwnerResponseMakersVid;
-        this.getV2MakerOwnerResponse(lastId).then((result) => {
-            if (result && result.length > 0) {
-                this.#v2OwnerResponseMakers.push(...result);
-                this.#v2OwnerResponseMakers = uniq(this.#v2OwnerResponseMakers);
-                if (lastId != this.#v2OwnerResponseMakersVid) {
-                    this.logger.info(`syncV2MakerOwnerResponseToCache:${JSON.stringify(this.#v2OwnerResponseMakers)}`);
-                }
-            }
-        }).catch(error => {
-            this.logger.error(`asyncV2MakerOwnerResponseToCache error: ${error}`, error);
-        })
-    }
-    async getV2MakerOwnerResponseFromCache() {
-        // if (this.#v2OwnerResponseMakers.length <= 0) {
-        //     this.#v2OwnerResponseMakers = await this.getV2MakerOwnerResponse();
-        // }
-        return this.#v2OwnerResponseMakers;
     }
     async getWhiteWalletAddress() {
         const v1Owners = await this.getV1MakerOwners();
         const v1Responses = await this.getV1MakerOwnerResponse();
         const v2Owners = await this.getV2MakerOwnersFromCache();
-        const v2Responses = await this.getV2MakerOwnerResponseFromCache();
-        return uniq([...v1Owners, ...v1Responses, ...v2Owners, ...v2Responses]);
+        return uniq([...v1Owners, ...v1Responses, ...v2Owners]);
     }
     public async isWhiteWalletAddress(address: string) {
         if (!address) {
@@ -106,7 +155,6 @@ export class MakerService {
             };
         }
         address = address.toLocaleLowerCase();
-
         try {
             const v1Owners = await this.getV1MakerOwners();
             if (v1Owners.includes(address)) {
@@ -128,13 +176,6 @@ export class MakerService {
         try {
             const v2Owners = await this.getV2MakerOwnersFromCache();
             if (v2Owners.includes(address)) {
-                return {
-                    version: '2',
-                    exist: true,
-                };
-            }
-            const v2Responses = await this.getV2MakerOwnerResponseFromCache();
-            if (v2Responses.includes(address)) {
                 return {
                     version: '2',
                     exist: true,
@@ -165,6 +206,7 @@ export class MakerService {
         }
         return false;
     }
+
     public async isV2WhiteWalletAddress(address: string): Promise<boolean> {
         if (!address) {
             return false;
@@ -172,10 +214,6 @@ export class MakerService {
         address = address.toLocaleLowerCase();
         const v2Owners = await this.getV2MakerOwnersFromCache();
         if (v2Owners.includes(address)) {
-            return true;
-        }
-        const v2Responses = await this.getV2MakerOwnerResponseFromCache();
-        if (v2Responses.includes(address)) {
             return true;
         }
         return false;

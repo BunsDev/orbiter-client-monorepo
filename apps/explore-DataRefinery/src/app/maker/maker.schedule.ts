@@ -1,51 +1,55 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { MakerService } from './maker.service'
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
-
+import { SubgraphClient } from '@orbiter-finance/subgraph-sdk'
+import { ENVConfigService } from '@orbiter-finance/config';
 @Injectable()
 export class MakerScheduuleService {
-
-    constructor(private readonly makerService: MakerService,
+    private subgraphClient: SubgraphClient;
+    constructor(
+        protected envConfigService: ENVConfigService,
+        private readonly makerService: MakerService,
         @InjectRedis() private readonly redis: Redis) {
-        this.syncV2Owners()
-        this.syncV2MakerOwnerResponseToCache()
+        this.subgraphClient = new SubgraphClient(this.envConfigService.get("SubgrapheEndpoint"));
         this.syncV1Owners()
-        this.syncV1MakerOwnerResponseToCache()
+
+        this.syncV2ChainTokens()
+        this.syncV2Owners()
+
     }
     @Cron('* */1 * * * *')
+    async syncV2ChainTokens() {
+        const chains = await this.subgraphClient.factory.getChainTokens();
+        const chainMap = {
+        }
+        for (const chain of chains) {
+            chainMap[chain.id] = JSON.stringify(chain);
+        }
+        await this.redis.hmset('chains', chainMap)
+    }
+
+    @Cron('* */1 * * * *')
     async syncV2Owners() {
-        await this.makerService.syncV2MakerOwnersToCache();
-        const afterList = await this.makerService.getV2MakerOwnersFromCache();
+        const owners = await this.subgraphClient.factory.getOwners();
         const v2OwnersCount = await this.redis.scard("v2Owners");
-        if (afterList.length > 0 && v2OwnersCount != afterList.length) {
-            const result = await this.redis.sadd("v2Owners", afterList)
+        if (owners.length > 0 && v2OwnersCount != owners.length) {
+            await this.redis.sadd("v2Owners", owners)
+            Logger.log(`syncV2Owners ${JSON.stringify(owners)}`)
         }
     }
     @Cron('* */2 * * * *')
-    async syncV2MakerOwnerResponseToCache() {
-        this.makerService.syncV2MakerOwnerResponseToCache();
-        const afterList = await this.makerService.getV2MakerOwnerResponseFromCache();
-        const v2FakeMakerCount = await this.redis.scard("v2FakeMaker");
-        if (afterList.length > 0 && v2FakeMakerCount != afterList.length) {
-            const result = await this.redis.sadd("v2FakeMaker", afterList)
-        }
-    }
-    @Cron('* */1 * * * *')
     async syncV1Owners() {
-        const afterList = await this.makerService.getV1MakerOwners();
+        const v1Makers = await this.makerService.getV1MakerOwners();
         const v1OwnersCount = await this.redis.scard("v1Owners");
-        if (afterList.length > 0 && v1OwnersCount != afterList.length) {
-            const result = await this.redis.sadd("v1Owners", afterList)
+        if (v1Makers.length > 0 && v1OwnersCount != v1Makers.length) {
+            const result = await this.redis.sadd("v1Owners", v1Makers)
         }
-    }
-    @Cron('* */1 * * * *')
-    async syncV1MakerOwnerResponseToCache() {
-        const afterList = await this.makerService.getV1MakerOwnerResponse();
+        const fakeMakerList = await this.makerService.getV1MakerOwnerResponse();
         const v1FakeMakerCount = await this.redis.scard("v1FakeMaker");
-        if (afterList.length > 0 && v1FakeMakerCount != afterList.length) {
-            const result = await this.redis.sadd("v1FakeMaker", afterList)
+        if (fakeMakerList.length > 0 && v1FakeMakerCount != fakeMakerList.length) {
+            const result = await this.redis.sadd("v1FakeMaker", fakeMakerList)
         }
     }
 }
