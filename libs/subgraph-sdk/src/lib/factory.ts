@@ -1,31 +1,33 @@
 import { Context } from './subgraph-sdk'
 export class Factory {
-    constructor(private readonly ctx: Context) {
+  constructor(private readonly ctx: Context) {
+  }
+  async getChainTokens() {
+    const queryStr = `
+    query chainTokens {
+      chainRels {
+        id
+        nativeToken
+        tokens {
+          id
+          tokenAddress
+          chainId
+          decimals
+          name
+          symbol
+          mainnetToken
+        }
+        batchLimit
+        latestUpdateHash
+        latestUpdateTimestamp
+        latestUpdateBlockNumber
+      }
     }
-    async GetChainIdMapping() {
-        const queryStr = `
-        query GetChainIdMapping($owner: String!, $timestamp: Int!, $chainIndex: Int!) {
-            chainIdMappings(
-              first: 1
-              orderBy: latestUpdateBlockNumber
-              orderDirection: desc
-              where: {enableTimestamp_lt:$timestamp, owner: $owner, chainIdIndex: $chainIndex}
-            ) {
-              id
-              index
-              chainId
-              updatedBlock
-            }
-          }
           `
-        const result = await this.ctx.query(queryStr, {
-            owner: '0x',
-            timestamp:Date.now(),
-            chainIndex: 0
-        });
-        return result;
-    }
-    async getOwners() {
+    const result = await this.ctx.query(queryStr);
+    return result['chainRels'];
+  }
+  async getOwners() {
     const queryStr = `
         query Owners {
             factoryManagers {
@@ -36,5 +38,5 @@ export class Factory {
     const result = await this.ctx.query(queryStr);
     return result['factoryManagers'][0]['owners'];
 
-}
+  }
 }
