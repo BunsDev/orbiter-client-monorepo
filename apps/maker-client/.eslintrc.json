@@ -5,6 +5,10 @@
   "ignorePatterns": [
     "!**/*"
   ],
+  "plugins": [
+    "unused-imports",
+    "simple-import-sort"
+  ],
   "overrides": [
     {
       "files": [

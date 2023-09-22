@@ -4,10 +4,10 @@ networks:
     driver: bridge
 services:
   maker-client:
-    image: maker-client:latest
+    image: orbiter/maker-client:latest
     # build:
-      # dockerfile: apps/explore-server/Dockerfile
-    container_name: OB-MakerClient
+      # dockerfile: apps/explore-DataCrawler/Dockerfile
+    # container_name: OB-MakerClient
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'

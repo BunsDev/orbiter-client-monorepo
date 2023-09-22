@@ -73,7 +73,7 @@
       "dependsOn": [
         "build"
       ],
-      "command": "docker build -f apps/maker-client/Dockerfile . -t maker-client"
+      "command": "docker build -f apps/maker-client/Dockerfile . -t orbiter/maker-client"
     }
   },
   "tags": []

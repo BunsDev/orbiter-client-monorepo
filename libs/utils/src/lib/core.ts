@@ -1,8 +1,8 @@
 
-import { padStart } from 'lodash';
+import {padStart} from '@orbiter-finance/utils'
 import * as JSONbig from 'json-bigint';
 import crypto from 'crypto';
-
+import dayjs from 'dayjs';
 export function JSONStringify(data: any) {
     return JSONbig.stringify(data);
 }
@@ -174,7 +174,7 @@ export function arePropertyValuesConsistent<T>(
 }
 
 
-export function MD5(value: string) {
+export function md5(value: string) {
     const md5 = crypto.createHash('md5');
     return md5.update(value).digest('hex');
 }
@@ -247,3 +247,31 @@ export function promiseWithTimeout<T>(
     });
   }
   
+export function TransactionID(
+    fromAddress: string,
+    fromChainId: number | string,
+    fromTxNonce: string | number,
+    symbol: string | undefined,
+    timestamp?: number,
+  ) {
+    let ext = '';
+    if ([8, 88].includes(Number(fromChainId))) {
+      ext = timestamp ? `_${dayjs(timestamp).unix()}` : '';
+    }
+    return `${fromAddress}${padStart(String(fromChainId), 4, '0')}${
+      symbol || 'NULL'
+    }${fromTxNonce}${ext}`.toLowerCase();
+  }
+  
+
+export function TransferId(
+  toChainId: string,
+  replyAccount: string,
+  userNonce: number | string,
+  toSymbol: string,
+  toValue: string,
+) {
+  return md5(
+    `${toChainId}_${replyAccount}_${userNonce}_${toSymbol}_${toValue}`.toLowerCase(),
+  ).toString();
+}

@@ -3,11 +3,8 @@ networks:
   app-network:
     driver: bridge
 services:
-  bridge-server:
-    image: explore-server:latest
-    # build:
-      # dockerfile: apps/explore-server/Dockerfile
-    container_name: OB-ExploreServer
+  explore-DataCrawler:
+    image: orbiter/explore-data-crawler:latest
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'
@@ -15,6 +12,18 @@ services:
       CONSUL_TOKEN: '${CONSUL_TOKEN}'
     ports:
       - '3002:3000'
+    networks:
+      - app-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'
+  explore-DataRefinery:
+    image: orbiter/explore-data-refinery:latest
+    restart: always
+    environment:
+      CONSUL_HOST: '${CONSUL_HOST}'
+      CONSUL_PORT: '${CONSUL_PORT}'
+      CONSUL_TOKEN: '${CONSUL_TOKEN}'
     networks:
       - app-network
     volumes:
