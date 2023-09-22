@@ -70,7 +70,7 @@
       "dependsOn": [
         "build"
       ],
-      "command": "docker build -f apps/explore-open-api/Dockerfile . -t explore-open-api"
+      "command": "docker build -f apps/explore-open-api/Dockerfile . -t orbiter/explore-open-api"
     }
   },
   "tags": []
