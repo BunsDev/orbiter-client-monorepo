@@ -1,0 +1,80 @@
+{
+  "name": "explore-DataRefinery",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/explore-DataRefinery/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/explore-DataRefinery",
+        "main": "apps/explore-DataRefinery/src/main.ts",
+        "tsConfig": "apps/explore-DataRefinery/tsconfig.app.json",
+        "assets": [
+          "apps/explore-DataRefinery/src/assets"
+        ],
+        "isolatedConfig": true,
+        "webpackConfig": "apps/explore-DataRefinery/webpack.config.js"
+      },
+      "configurations": {
+        "development": {},
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "explore-DataRefinery:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "explore-DataRefinery:build:development"
+        },
+        "production": {
+          "buildTarget": "explore-DataRefinery:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "apps/explore-DataRefinery/**/*.ts"
+        ]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
+      "options": {
+        "jestConfig": "apps/explore-DataRefinery/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    },
+    "docker-build": {
+      "dependsOn": [
+        "build"
+      ],
+      "command": "docker build -f apps/explore-DataRefinery/Dockerfile . -t orbiter/explore-data-refinery"
+    }
+  },
+  "tags": []
+}

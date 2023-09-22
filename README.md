@@ -40,7 +40,7 @@ To start using this cross-chain bridge, follow these steps:
 
     - Explore Server
     ```
-        npm run dev:explore-server
+        npm run dev:explore-DataCrawler
     ```
     - Maker Client
     ```
@@ -50,7 +50,7 @@ To start using this cross-chain bridge, follow these steps:
 ## Build Docker
   - Explore Server
     ```
-        npm run build-docker:explore-server
+        npm run build-docker:explore-DataCrawler
     ```
   - Maker Client
     ```

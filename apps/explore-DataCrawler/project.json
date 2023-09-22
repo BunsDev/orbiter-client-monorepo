@@ -1,0 +1,77 @@
+{
+  "name": "explore-DataCrawler",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/explore-DataCrawler/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/explore-DataCrawler",
+        "main": "apps/explore-DataCrawler/src/main.ts",
+        "tsConfig": "apps/explore-DataCrawler/tsconfig.app.json",
+        "isolatedConfig": true,
+        "webpackConfig": "apps/explore-DataCrawler/webpack.config.js"
+      },
+      "configurations": {
+        "development": {},
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "explore-DataCrawler:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "explore-DataCrawler:build:development"
+        },
+        "production": {
+          "buildTarget": "explore-DataCrawler:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "apps/explore-DataCrawler/**/*.ts"
+        ]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
+      "options": {
+        "jestConfig": "apps/explore-DataCrawler/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    },
+    "docker-build": {
+      "dependsOn": [
+        "build"
+      ],
+      "command": "docker build -f apps/explore-DataCrawler/Dockerfile . -t orbiter/explore-data-crawler"
+    }
+  },
+  "tags": []
+}

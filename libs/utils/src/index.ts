@@ -4,6 +4,7 @@ export * from './lib/request';
 export * as abis from './lib/abi';
 export * as provider from './lib/provider';
 export * from './lib/nonceManager';
+export * as logger from './lib/logger';
 export {
   groupBy,
   orderBy,
