@@ -17,6 +17,7 @@ export class TransactionService {
         return transfers;
     }
     public async isWatchAddress(address: string) {
+        address = address.toLowerCase()
         const v1Exists = await this.redis.sismember('v1FakeMaker', address);
         if (+v1Exists == 1) {
             return true;
