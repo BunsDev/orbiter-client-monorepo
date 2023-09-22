@@ -17,6 +17,7 @@ import {
   INetState,
   NetState
 } from "@orbiter-finance/v1-seq-models";
+import { IMakerConfig, IMakerDataConfig } from "./v2.interface";
 
 const keyv = new Keyv();
 
@@ -282,7 +283,7 @@ export class V2Service {
 
 const { google } = require("googleapis");
 const auth = new google.auth.GoogleAuth({
-  keyFile: "./src/biz_config/google/sheet-377710-b8d7c8d145e9.json",
+  keyFile: "./src/google/sheet-377710-b8d7c8d145e9.json",
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 

@@ -4,8 +4,8 @@ networks:
     driver: bridge
 services:
   open-api-server:
-    build:
-      dockerfile: ../../apps/explore-open-api/Dockerfile
+    image: explore-open-api:latest
+    container_name: open-api
     restart: always
     environment:
       CONSUL_HOST: '${CONSUL_HOST}'

@@ -65,6 +65,12 @@
           "codeCoverage": true
         }
       }
+    },
+    "docker-build": {
+      "dependsOn": [
+        "build"
+      ],
+      "command": "docker build -f apps/explore-open-api/Dockerfile . -t explore-open-api"
     }
   },
   "tags": []
