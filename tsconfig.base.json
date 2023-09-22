@@ -42,6 +42,9 @@
       ],
       "@orbiter-finance/v1-seq-models": [
         "libs/v1-seq-models/src/index.ts"
+      ],
+      "@orbiter-finance/tcp": [
+        "libs/tcp/src/index.ts"
       ]
     }
   },
