@@ -24,6 +24,9 @@ export class RpcScanningFactory {
 
   createService(chainId: string): RpcScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
+    if (!chainConfig) {
+      throw new Error(`${chainId} chainConfig not found`);
+    }
     const key = chainConfig.service && chainConfig.service['rpc'];
     if (this.services[chainId]) {
       return this.services[chainId];

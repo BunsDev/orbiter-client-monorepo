@@ -73,6 +73,7 @@ export class RpcScanningService implements RpcScanningInterface {
       ) => {
         if (isEmpty(error) && transfers) {
           try {
+            this.logger.debug(`scanByBlocks success ${block.number} processTransaction ${transfers.length}`);
             await this.processTransaction(error, block, transfers);
             acks.push(block.number);
           } catch (error) {
@@ -167,9 +168,7 @@ export class RpcScanningService implements RpcScanningInterface {
     block: RetryBlockRequestResponse,
     transfers: TransferAmountTransaction[],
   ) {
-    if (transfers && isEmpty(error)) {
-      await this.ctx.transactionService.handleTransfer(transfers);
-    }
+    await this.ctx.transactionService.handleTransfer(transfers);
     return { error, block, transfers };
   }
 

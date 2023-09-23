@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, Interval } from '@nestjs/schedule';
 import { Mutex } from 'async-mutex';
 import { ChainConfigService } from '@orbiter-finance/config';
 import { ENVConfigService } from '@orbiter-finance/config';
@@ -19,14 +19,13 @@ export class RpcScanningSchedule {
   ) {
     this.initializeTransactionScanners();
   }
-  @Cron('*/5 * * * * *')
+  @Interval(1000 * 60)
   private async initializeTransactionScanners() {
     const SCAN_CHAINS = (this.envConfigService.get<string>('SCAN_CHAINS') || '').split(',');
     const chains = this.chainConfigService.getAllChains();
     if (isEmpty(chains)) {
       return;
     }
-
     for (const chain of chains) {
       if (SCAN_CHAINS[0] != '*') {
         if (!SCAN_CHAINS.includes(chain.chainId)) {
@@ -69,7 +68,7 @@ export class RpcScanningSchedule {
     }
     this.checkLatestHeight();
   }
-  @Cron('*/1 * * * * *')
+  @Interval(1000)
   executeCrawlBlock() {
     for (const scanner of this.scanService.values()) {
       if (scanner.reScanMutex.isLocked()) {
@@ -87,6 +86,7 @@ export class RpcScanningSchedule {
       });
     }
   }
+  @Interval(1000)
   private async checkLatestHeight() {
     for (const scanner of this.scanService.values()) {
       try {
