@@ -17,13 +17,16 @@ export class MakerService {
         protected envConfigService: ENVConfigService,
         protected makerV1RuleService: MakerV1RuleService,
     ) {
+        this.redis.smembers('v2Owners').then(data => {
+            this.#v2Owners = data || [];
+        })
     }
-    async getSubClient():Promise<SubgraphClient> {
+    async getSubClient(): Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
-        if(!SubgraphEndpoint) {
+        if (!SubgraphEndpoint) {
             throw new Error('SubgraphEndpoint not found');
         }
-        return  new SubgraphClient(SubgraphEndpoint);
+        return new SubgraphClient(SubgraphEndpoint);
     }
     async getV2ChainInfo(chainId: string) {
         return await this.redis.hget('chains', chainId).then(data => data && JSON.parse(data));
@@ -133,69 +136,10 @@ export class MakerService {
         return uniq(list).map(a => a.toLocaleLowerCase());
     }
 
-    async syncV2MakerOwnersToCache() {
-        const subgraphClient = await this.getSubClient();
-        const v2Owners = await subgraphClient.factory.getOwners();
-        if (v2Owners) {
-            if (v2Owners && v2Owners.length > 0) {
-                if (this.#v2Owners.length != v2Owners.length) {
-                    this.logger.info(`syncV2MakerOwnersToCache:${JSON.stringify(v2Owners)}`);
-                }
-                this.#v2Owners = v2Owners.map(addr => addr.toLocaleLowerCase());
-            }
-        }
-    }
-    async getV2MakerOwnersFromCache() {
-        return this.#v2Owners;
-    }
-    async getWhiteWalletAddress() {
-        const v1Owners = await this.getV1MakerOwners();
-        const v1Responses = await this.getV1MakerOwnerResponse();
-        const v2Owners = await this.getV2MakerOwnersFromCache();
-        return uniq([...v1Owners, ...v1Responses, ...v2Owners]);
-    }
-    public async isWhiteWalletAddress(address: string) {
-        if (!address) {
-            return {
-                version: '0',
-                exist: false,
-            };
-        }
-        address = address.toLocaleLowerCase();
-        try {
-            const v1Owners = await this.getV1MakerOwners();
-            if (v1Owners.includes(address)) {
-                return {
-                    version: '1',
-                    exist: true,
-                };
-            }
-            const v1Responses = await this.getV1MakerOwnerResponse();
-            if (v1Responses.includes(address)) {
-                return {
-                    version: '1',
-                    exist: true,
-                };
-            }
-        } catch (error) {
-            throw new Error(`isWhiteWalletAddress v1 error ${error.message}`);
-        }
-        try {
-            const v2Owners = await this.getV2MakerOwnersFromCache();
-            if (v2Owners.includes(address)) {
-                return {
-                    version: '2',
-                    exist: true,
-                };
-            }
-        } catch (error) {
-            throw new Error(`isWhiteWalletAddress v2 error ${error.message}`);
-        }
-
-        return {
-            version: '0',
-            exist: false,
-        };
+    async getV2MakerOwnersFromRedis() {
+        const owners = await this.redis.smembers('v2Owners');
+        this.#v2Owners = owners;
+        return owners;
     }
 
     public async isV1WhiteWalletAddress(address: string): Promise<boolean> {
@@ -219,8 +163,12 @@ export class MakerService {
             return false;
         }
         address = address.toLocaleLowerCase();
-        const v2Owners = await this.getV2MakerOwnersFromCache();
-        if (v2Owners.includes(address)) {
+        // redis
+        if (this.#v2Owners.includes(address)) {
+            return true;
+        }
+        const v2FakeMakerExists = await this.redis.sismember('v2FakeMaker', address);
+        if (+v2FakeMakerExists == 1) {
             return true;
         }
         return false;

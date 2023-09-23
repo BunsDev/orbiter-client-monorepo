@@ -5,8 +5,11 @@ import Redis from 'ioredis';
 import { TransferAmountTransaction } from './transaction.interface';
 @Injectable()
 export class TransactionService {
+    #v2Owners: string[] = [];
     constructor(private readonly messageSerice: MessageService, @InjectRedis() private readonly redis: Redis) {
-
+        this.redis.smembers('v2Owners').then(data => {
+            this.#v2Owners = data || [];
+        })
     }
     public async handleTransfer(
         transfers: TransferAmountTransaction[],
@@ -18,6 +21,9 @@ export class TransactionService {
     }
     public async isWatchAddress(address: string) {
         address = address.toLowerCase()
+        if (this.#v2Owners.includes(address)) {
+            return true;
+        }
         const v1Exists = await this.redis.sismember('v1FakeMaker', address);
         if (+v1Exists == 1) {
             return true;
@@ -33,9 +39,8 @@ export class TransactionService {
         return false;
     }
 
-    public async getWatchAddress():Promise<string[]> {
+    public async getWatchAddress(): Promise<string[]> {
         const result = await this.redis.smembers('v1FakeMaker');
-        console.log(result, '==result')
         return result as any || [];
     }
 }

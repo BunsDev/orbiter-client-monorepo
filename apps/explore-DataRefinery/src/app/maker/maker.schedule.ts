@@ -55,7 +55,6 @@ export class MakerScheduuleService {
             console.error(error);
             this.logger.error('syncV2Owners error:', error);
         }
-
     }
     @Interval(1000 * 60)
     async syncV1Owners() {
