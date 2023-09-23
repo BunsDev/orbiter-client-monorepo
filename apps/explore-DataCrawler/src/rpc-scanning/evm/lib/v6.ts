@@ -47,7 +47,7 @@ export default class EVMVUtils {
         chainId: chainInfo.chainId,
         hash: transaction.hash,
         blockNumber: transaction.blockNumber,
-        sender:  transaction.from,
+        sender: transaction.from,
         receiver: parsedData.args[0],
         amount: null,
         value: null,
@@ -58,7 +58,7 @@ export default class EVMVUtils {
         feeToken: chainInfo.nativeCurrency.symbol,
         timestamp: 0,
         status: +receipt.status
-          ? TransferAmountTransactionStatus.none
+          ? TransferAmountTransactionStatus.confirmed
           : TransferAmountTransactionStatus.failed,
         nonce,
         // contract: transaction.to,
@@ -67,22 +67,21 @@ export default class EVMVUtils {
         signature: parsedData.signature,
       };
 
-      const logs = receipt.logs;
-      const event = EVMVUtils.getTransferEvent(
-        logs,
-        transaction.from,
-        parsedData.args[0],
-        parsedData.args[1],
-      );
       txData.value = new BigNumber(parsedData.args[1]).toFixed(0);
       txData.amount = new BigNumber(txData.value)
         .div(Math.pow(10, tokenInfo.decimals))
         .toString();
-      if (event) {
-        // txData.receiver = parsedData.args[0];
-        txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
-      }
-
+      // TAG: event
+      // const logs = receipt.logs;
+      //   const event = EVMVUtils.getTransferEvent(
+      //     logs,
+      //     transaction.from,
+      //     parsedData.args[0],
+      //     parsedData.args[1],
+      //   );
+      // if (event) {
+      //   txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
+      // }
       transfers.push(txData);
     }
 
@@ -142,7 +141,7 @@ export default class EVMVUtils {
       feeToken: chainInfo.nativeCurrency.symbol,
       timestamp: 0,
       status: +receipt.status
-        ? TransferAmountTransactionStatus.none
+        ? TransferAmountTransactionStatus.confirmed
         : TransferAmountTransactionStatus.failed,
       nonce,
       calldata: parsedData.args.toArray(),
@@ -169,26 +168,37 @@ export default class EVMVUtils {
       // get event
       const [token, to, amount, ext] = parsedData.args;
       txData.token = token;
-      const event = EVMVUtils.getTransferEvent(
-        receipt.logs,
-        transaction.from,
-        to,
-        amount,
+      const tokenInfo = chainInfo.tokens.find((t) =>
+        equals(t.address, token),
       );
-      if (event) {
-        // find token
-        const tokenInfo = chainInfo.tokens.find((t) =>
-          equals(t.address, parsedData.args[0]),
-        );
-        txData.symbol = tokenInfo.symbol;
-        txData.sender = event.args[0];
-        txData.receiver = event.args[1];
-        txData.value = new BigNumber(event.args[2]).toFixed(0);
-        txData.amount = new BigNumber(txData.value)
-          .div(Math.pow(10, tokenInfo.decimals))
-          .toString();
-        txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
-      }
+      txData.symbol = tokenInfo.symbol;
+      txData.sender = transaction.from;
+      txData.receiver = to;
+      txData.value = new BigNumber(amount).toFixed(0);
+      txData.amount = new BigNumber(txData.value)
+        .div(Math.pow(10, tokenInfo.decimals))
+        .toString();
+        // TAG: event
+      // const event = EVMVUtils.getTransferEvent(
+      //   receipt.logs,
+      //   transaction.from,
+      //   to,
+      //   amount,
+      // );
+      // if (event) {
+      //   // find token
+      //   const tokenInfo = chainInfo.tokens.find((t) =>
+      //     equals(t.address, parsedData.args[0]),
+      //   );
+      //   txData.symbol = tokenInfo.symbol;
+      //   txData.sender = event.args[0];
+      //   txData.receiver = event.args[1];
+      //   txData.value = new BigNumber(event.args[2]).toFixed(0);
+      //   txData.amount = new BigNumber(txData.value)
+      //     .div(Math.pow(10, tokenInfo.decimals))
+      //     .toString();
+      //   txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
+      // }
       transfers.push(txData);
     }
     return transfers;
@@ -222,8 +232,8 @@ export default class EVMVUtils {
       feeToken: chainInfo.nativeCurrency.symbol,
       timestamp: 0,
       status: +receipt.status
-      ? TransferAmountTransactionStatus.none
-      : TransferAmountTransactionStatus.failed,
+        ? TransferAmountTransactionStatus.confirmed
+        : TransferAmountTransactionStatus.failed,
       nonce,
       calldata: parsedData.args.toArray(),
       contract: transaction.to,
@@ -253,13 +263,12 @@ export default class EVMVUtils {
               .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
               .toString(),
           });
-          txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
+          // txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
         }
       }
     } else if (
       parsedData.signature === 'transferTokens(address, address[],uint256[])'
     ) {
-      // const event = EVMRpcScanningV6Service.getTransferEvent(logs, transaction.from, parsedData[0], amount)
       for (const log of logs) {
         const parsedLogData = contractInterface.parseLog(log as any);
         if (
@@ -285,7 +294,7 @@ export default class EVMVUtils {
               .div(Math.pow(10, tokenInfo.decimals))
               .toString(),
           });
-          txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
+          // txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
         }
       }
     } else if (

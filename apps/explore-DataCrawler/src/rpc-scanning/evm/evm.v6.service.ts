@@ -14,6 +14,7 @@ import {
 } from '../rpc-scanning.interface';
 import EVMV6Utils from './lib/v6';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
+import EVMVUtils from './lib/v6';
 
 export class EVMRpcScanningV6Service extends RpcScanningService {
   #provider: provider.Orbiter6Provider;
@@ -97,16 +98,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     }
     return rows;
   }
-  // async filterTransfers(transfers: TransferAmountTransaction[]) {
-  //   transfers = await super.filterTransfers(transfers)
-  //   return transfers.filter(row => {
-  //     if (isAddress(row.sender) && isAddress(row.receiver)) {
-  //       return true;
-  //     }
-  //     this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
-  //     return false;
-  //   })
-  // }
 
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     if (!block) {
@@ -159,19 +150,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
 
     return transfers;
   }
-
-  // public async getBlocks(
-  //   blockNumbers: number[],
-  // ): Promise<RetryBlockRequestResponse[]> {
-  //   const action = 'getBlocks'
-  //   const params = {
-  //     chainInfo: this.chainConfig,
-  //     blockNumbers,
-  //   }
-  //   const blocks = await this.ctx.workerService.runTask(action, params);
-  //   this.logger.info(`getBlocks by runTask result => chainId: ${this.chainConfig.chainId}, blocks.length:${blocks?.length}`)
-  //   return blocks;
-  // }
 
   async handleTransaction(
     transaction: TransactionResponse,
@@ -267,11 +245,10 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         tx.feeAmount = new BigNumber(tx.fee)
           .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
           .toString();
-
         tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
         return tx;
       });
-      return transfers;
+      return await this.handleTransactionAfter(transfers);
     } catch (error) {
       console.error(error);
       this.logger.error(
@@ -281,11 +258,35 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       throw error;
     }
   }
-
+  async handleTransactionAfter(transfers: TransferAmountTransaction[]): Promise<TransferAmountTransaction[]> {
+    return transfers.map(transfer => {
+      if (transfer.status === TransferAmountTransactionStatus.confirmed) {
+        if (this.ctx.chainConfigService.inValidMainToken(transfer.chainId, transfer.token)) {
+          // erc20
+          // TAG: event
+          if (!transfer.receipt) {
+            transfer.status = TransferAmountTransactionStatus.failed;
+            return transfer;
+          }
+          const logs = transfer.receipt.logs;
+          const event = EVMVUtils.getTransferEvent(
+            logs,
+            transfer.sender,
+            transfer.receiver,
+            transfer.value,
+          );
+          transfer.status = !isEmpty(event) ? TransferAmountTransactionStatus.confirmed : transfer.status;
+        }
+      } else {
+        // main token
+      }
+      return transfer;
+    });
+  }
   async getBlock(blockNumber: number): Promise<Block> {
     const provider = this.getProvider();
     const data = await provider.getBlock(blockNumber, true);
-    if(isEmpty(data)) {
+    if (isEmpty(data)) {
       throw new Error('Block isEmpty');
     }
     return data;

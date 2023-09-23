@@ -12,7 +12,6 @@ import { StarknetRpcScanningService } from './starknet/starknet.service';
 import { EVMRpcScanningV5Service } from './evm/evm.v5.service';
 import { ZKSyncEraRpcScanningService } from './zksyncEra/zksyncEra.service'
 import { Context } from './rpc-scanning.interface'
-import { WorkerService } from './worker.service';
 import { TransactionService } from '../transaction/transaction.service';
 
 @Injectable()
@@ -20,7 +19,6 @@ export class RpcScanningFactory {
   private services: { [key: string]: RpcScanningService } = {}
   constructor(
     private chainConfigService: ChainConfigService,
-    private workerService: WorkerService,
     private transactionService: TransactionService
   ) { }
 
@@ -32,7 +30,6 @@ export class RpcScanningFactory {
     }
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
-      workerService: this.workerService,
       transactionService: this.transactionService
     }
     let service;

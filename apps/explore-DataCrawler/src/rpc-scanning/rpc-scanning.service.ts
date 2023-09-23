@@ -36,7 +36,7 @@ export class RpcScanningService implements RpcScanningInterface {
   }
 
   get batchLimit(): number {
-    return this.chainConfig['batchLimit'] || 100;
+    return Number(this.chainConfig['batchLimit'] || 100);
   }
 
   get chainConfig(): IChainConfig {

@@ -1,7 +1,7 @@
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
-import { ZeroAddress,isAddress } from 'ethers6';
+import { ZeroAddress, isAddress } from 'ethers6';
 import {
   Block,
   TransactionReceipt,
@@ -9,6 +9,7 @@ import {
 } from '../rpc-scanning.interface';
 import EVMV5Utils from './lib/v6';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
+import EVMVUtils from './lib/v6';
 export class EVMRpcScanningV5Service extends RpcScanningService {
   #provider: provider.Orbiter5Provider;
   getProvider() {
@@ -46,9 +47,9 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       throw new Error(`${block.number} transactions empty `);
     }
     const filterBeforeTransactions =
-    await this.filterBeforeTransactions<TransactionResponse>(transactions);
+      await this.filterBeforeTransactions<TransactionResponse>(transactions);
     // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
-    if (filterBeforeTransactions.length<=0) {
+    if (filterBeforeTransactions.length <= 0) {
       return [];
     }
     const receipts = await Promise.all(
@@ -58,8 +59,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     const isErrorTx = receipts.find((row) => !isEmpty(row.error));
     if (isErrorTx) {
       this.logger.error(
-        `handleBlock ${
-          block.number
+        `handleBlock ${block.number
         } retryRequestGetTransactionReceipt error:${JSON.stringify(
           isErrorTx,
         )} `,
@@ -68,7 +68,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     }
 
 
-      const txTransfersArray = await Promise.all(
+    const txTransfersArray = await Promise.all(
       filterBeforeTransactions.map(async (transaction) => {
         const receipt = receipts.find((tx) => tx.hash === transaction.hash);
         if (isEmpty(receipt) || isEmpty(receipt.data)) {
@@ -99,7 +99,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     try {
       let transfers: TransferAmountTransaction[] = [];
       if (transaction.to == ZeroAddress) {
-          return transfers;
+        return transfers;
       }
       const provider = this.getProvider();
       if (!receipt.blockNumber || !receipt.blockHash) {
@@ -184,10 +184,10 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         tx.feeAmount = new BigNumber(tx.fee)
           .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
           .toString();
-        tx.status = status === TransferAmountTransactionStatus.failed ?TransferAmountTransactionStatus.failed:tx.status;
+        tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
         return tx;
       });
-      return transfers;
+      return await this.handleTransactionAfter(transfers);
     } catch (error) {
       this.logger.error(
         `handleTransaction error ${transaction.hash} `,
@@ -196,11 +196,35 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       throw error;
     }
   }
-
+  async handleTransactionAfter(transfers: TransferAmountTransaction[]): Promise<TransferAmountTransaction[]> {
+    return transfers.map(transfer => {
+      if (transfer.status === TransferAmountTransactionStatus.confirmed) {
+        if (this.ctx.chainConfigService.inValidMainToken(transfer.chainId, transfer.token)) {
+          // erc20
+          // TAG: event
+          if (!transfer.receipt) {
+            transfer.status = TransferAmountTransactionStatus.failed;
+            return transfer;
+          }
+          const logs = transfer.receipt.logs;
+          const event = EVMVUtils.getTransferEvent(
+            logs,
+            transfer.sender,
+            transfer.receiver,
+            transfer.value,
+          );
+          transfer.status = !isEmpty(event) ? TransferAmountTransactionStatus.confirmed : transfer.status;
+        }
+      } else {
+        // main token
+      }
+      return transfer;
+    });
+  }
   async getBlock(blockNumber: number): Promise<Block> {
     const provider = this.getProvider();
     const data = await provider.getBlockWithTransactions(blockNumber);
-    if(isEmpty(data)) {
+    if (isEmpty(data)) {
       throw new Error('Block isEmpty');
     }
     return data;
@@ -208,7 +232,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
     const provider = this.getProvider();
     const receipt = await provider.getTransactionReceipt(hash);
-    if (receipt.transactionHash!=hash) {
+    if (receipt.transactionHash != hash) {
       throw new Error(`provider getTransactionReceipt hash inconsistent expect ${hash} get ${receipt.transactionHash}`);
     }
     return receipt;
@@ -223,9 +247,9 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   }
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
-    const contractList = this.chainConfig.contract  
-    ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())  
-    : [];
+    const contractList = this.chainConfig.contract
+      ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())
+      : [];
 
     for (const row of transactions) {
       try {
