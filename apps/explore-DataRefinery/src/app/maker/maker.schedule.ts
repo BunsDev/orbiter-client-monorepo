@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, Interval } from '@nestjs/schedule';
 import { MakerService } from './maker.service'
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
@@ -7,53 +7,72 @@ import { SubgraphClient } from '@orbiter-finance/subgraph-sdk'
 import { ENVConfigService } from '@orbiter-finance/config';
 @Injectable()
 export class MakerScheduuleService {
+    private logger: Logger = new Logger(MakerScheduuleService.name, { timestamp: true })
     constructor(
         protected envConfigService: ENVConfigService,
         private readonly makerService: MakerService,
         @InjectRedis() private readonly redis: Redis) {
         this.syncV1Owners()
-
         this.syncV2ChainTokens()
         this.syncV2Owners()
 
     }
-    async getSubClient():Promise<SubgraphClient> {
+    async getSubClient(): Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
-        return  new SubgraphClient(SubgraphEndpoint);
+        if (!SubgraphEndpoint) {
+            throw new Error('SubgraphEndpoint not found');
+        }
+        return new SubgraphClient(SubgraphEndpoint);
     }
-    @Cron('* */1 * * * *')
+    @Interval(1000 * 30)
     async syncV2ChainTokens() {
-        const subgraphClient= await this.getSubClient();
-        const chains = await subgraphClient.factory.getChainTokens();
-        const chainMap = {
+        try {
+            const subgraphClient = await this.getSubClient();
+            const chains = await subgraphClient.factory.getChainTokens();
+            const chainMap = {
+            }
+            for (const chain of chains) {
+                chainMap[chain.id] = JSON.stringify(chain);
+            }
+            await this.redis.hmset('chains', chainMap)
+        } catch (error) {
+            this.logger.error('syncV2ChainTokens error:', error);
         }
-        for (const chain of chains) {
-            chainMap[chain.id] = JSON.stringify(chain);
-        }
-        await this.redis.hmset('chains', chainMap)
+
     }
 
-    @Cron('* */1 * * * *')
+    @Interval(1000 * 10)
     async syncV2Owners() {
-        const subgraphClient = await this.getSubClient()
-        const owners = await subgraphClient.factory.getOwners();
-        const v2OwnersCount = await this.redis.scard("v2Owners");
-        if (owners.length > 0 && v2OwnersCount != owners.length) {
-            await this.redis.sadd("v2Owners", owners)
-            Logger.log(`syncV2Owners ${JSON.stringify(owners)}`)
+        try {
+            const subgraphClient = await this.getSubClient()
+            const owners = await subgraphClient.factory.getOwners();
+            const v2OwnersCount = await this.redis.scard("v2Owners");
+            if (owners.length > 0 && v2OwnersCount != owners.length) {
+                await this.redis.sadd("v2Owners", owners)
+                Logger.log(`syncV2Owners ${JSON.stringify(owners)}`)
+            }
+        } catch (error) {
+            console.error(error);
+            this.logger.error('syncV2Owners error:', error);
         }
+
     }
-    @Cron('* */2 * * * *')
+    @Interval(1000 * 60)
     async syncV1Owners() {
-        const v1Makers = await this.makerService.getV1MakerOwners();
-        const v1OwnersCount = await this.redis.scard("v1Owners");
-        if (v1Makers.length > 0 && v1OwnersCount != v1Makers.length) {
-            const result = await this.redis.sadd("v1Owners", v1Makers)
+        try {
+            const v1Makers = await this.makerService.getV1MakerOwners();
+            const v1OwnersCount = await this.redis.scard("v1Owners");
+            if (v1Makers.length > 0 && v1OwnersCount != v1Makers.length) {
+                const result = await this.redis.sadd("v1Owners", v1Makers)
+            }
+            const fakeMakerList = await this.makerService.getV1MakerOwnerResponse();
+            const v1FakeMakerCount = await this.redis.scard("v1FakeMaker");
+            if (fakeMakerList.length > 0 && v1FakeMakerCount != fakeMakerList.length) {
+                const result = await this.redis.sadd("v1FakeMaker", fakeMakerList)
+            }
+        } catch (error) {
+            this.logger.error('syncV1Owners error:', error);
         }
-        const fakeMakerList = await this.makerService.getV1MakerOwnerResponse();
-        const v1FakeMakerCount = await this.redis.scard("v1FakeMaker");
-        if (fakeMakerList.length > 0 && v1FakeMakerCount != fakeMakerList.length) {
-            const result = await this.redis.sadd("v1FakeMaker", fakeMakerList)
-        }
+
     }
 }

@@ -13,6 +13,7 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
 import { AlertModule } from '@orbiter-finance/alert';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
     AlertModule,
     RabbitMqModule,
     TransactionModule,
+    ScheduleModule.forRoot()
   ],
   controllers: [],
   providers: [AppService],

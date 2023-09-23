@@ -20,6 +20,9 @@ export class MakerService {
     }
     async getSubClient():Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
+        if(!SubgraphEndpoint) {
+            throw new Error('SubgraphEndpoint not found');
+        }
         return  new SubgraphClient(SubgraphEndpoint);
     }
     async getV2ChainInfo(chainId: string) {
