@@ -82,7 +82,15 @@ import { TcpModule } from "@orbiter-finance/tcp";
                 return config;
             },
         }),
-        AlertModule,
+        AlertModule.registerAsync({
+          inject:[ENVConfigService],
+          useFactory:async(configService:ENVConfigService) => {
+            const tgConfig = await configService.getAsync("TELEGRAM");
+            return {
+              telegram: tgConfig
+            }
+          }
+        }),
         TransferModule,
         RabbitMqModule,
         TcpModule,

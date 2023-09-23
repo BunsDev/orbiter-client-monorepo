@@ -74,7 +74,15 @@ dayjs.extend(utc);
         return await configService.getAsync("REDIS");
       },
     }),
-    AlertModule,
+    AlertModule.registerAsync({
+      inject:[ENVConfigService],
+      useFactory:async(configService:ENVConfigService) => {
+        const tgConfig = await configService.getAsync("TELEGRAM");
+        return {
+          telegram: tgConfig
+        }
+      }
+    }),
     RabbitMqModule,
     RpcScanningModule,
     ApiScanningModule,

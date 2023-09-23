@@ -82,7 +82,15 @@ import { ScheduleModule } from '@nestjs/schedule';
         return config;
       },
     }),
-    AlertModule,
+    AlertModule.registerAsync({
+      inject:[ENVConfigService],
+      useFactory:async(configService:ENVConfigService) => {
+        const tgConfig = await configService.getAsync("TELEGRAM");
+        return {
+          telegram: tgConfig
+        }
+      }
+    }),
     RabbitMqModule,
     TransactionModule,
     ScheduleModule.forRoot()

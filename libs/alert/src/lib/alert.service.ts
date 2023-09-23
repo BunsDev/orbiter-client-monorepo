@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { ENVConfigService } from '@orbiter-finance/config'
+import { Inject, Injectable } from '@nestjs/common';
 import {HTTPPost} from '@orbiter-finance/utils'
+import { AlertModuleOpts } from './alert.module';
 @Injectable()
 export class AlertService {
-    constructor(readonly envConfigService: ENVConfigService,) {
+    constructor(
+        @Inject("AlertModuleOpts") private readonly opts:AlertModuleOpts,) {
     }
     //   async sendTelegramAlert(botToken: string, chatId: string, message: string) {
     //     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -31,14 +32,13 @@ export class AlertService {
     //     }
     //   }
     async sendTelegramAlert(level:string, message: string) {
-        const telegram:any = await this.envConfigService.getAsync("TELEGRAM");
-        if (!telegram) {
+        if (!this.opts.telegram) {
             throw new Error('telegram config not');
         }
-        const url = `https://api.telegram.org/bot${telegram.token}/sendMessage`;
+        const url = `https://api.telegram.org/bot${this.opts.telegram.token}/sendMessage`;
         const data = {
-            chat_id: telegram.chatId,
-            text: message,
+            chat_id: this.opts.telegram.chatId,
+            text:`${level}-${message}`,
         };
 
         try {
