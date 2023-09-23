@@ -54,16 +54,14 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async executeCrawlBlock() {
     const blockNumbers = await this.dataProcessor.getProcessNextBatchData(this.batchLimit);
-    this.logger.info(`Status = ${this.dataProcessor.getDataCount()}, ${this.dataProcessor.getProcessingCount()}`);
+    let nextScanMaxBlockNumber = await this.dataProcessor.getNextScanMaxBlockNumber();
     if (blockNumbers.length <= 0) {
       this.logger.info('executeCrawlBlock: No block numbers to process.');
       return [];
     }
-
     this.logger.debug(
-      `executeCrawlBlock: Processing blocks - blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)}, total: ${this.dataProcessor.getDataCount()} batchLimit:${this.batchLimit}`,
+      `executeCrawlBlock: Processing blocks - blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)}, total: ${this.dataProcessor.getDataCount()} batchLimit:${this.batchLimit}, nextScanMaxBlockNumber: ${nextScanMaxBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}`,
     );
-
     const noAcks = [];
     const acks = [];
     const result = await this.scanByBlocks(
@@ -114,18 +112,18 @@ export class RpcScanningService implements RpcScanningInterface {
         throw new Error('checkLatestHeight: getLatestBlockNumber returned empty value.');
       }
 
-      let lastScannedBlockNumber = await this.dataProcessor.getMaxScanBlockNumber();
-      if (lastScannedBlockNumber && lastScannedBlockNumber > 0) {
-        lastScannedBlockNumber += 1;
-      } else {
+      let lastScannedBlockNumber = await this.dataProcessor.getNextScanMaxBlockNumber();
+      if (!lastScannedBlockNumber) {
         lastScannedBlockNumber = this.rpcLastBlockNumber - this.batchLimit;
+        this.logger.info(`checkLatestHeight: Initialize ${lastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
         this.dataProcessor.changeMaxScanBlockNumber(lastScannedBlockNumber);
       }
 
       if (firstStart) {
-        lastScannedBlockNumber = lastScannedBlockNumber > this.batchLimit ? lastScannedBlockNumber - this.batchLimit : lastScannedBlockNumber;
+        const newLastScannedBlockNumber = lastScannedBlockNumber > this.batchLimit ? lastScannedBlockNumber - this.batchLimit : lastScannedBlockNumber;
+        this.logger.info(`checkLatestHeight: restart app, go back ${lastScannedBlockNumber} change ${newLastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
+        lastScannedBlockNumber = newLastScannedBlockNumber;
       }
-
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
       this.chainConfig.debug && this.logger.debug(

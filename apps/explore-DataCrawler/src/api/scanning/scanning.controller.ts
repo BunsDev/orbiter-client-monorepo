@@ -25,7 +25,7 @@ export class ScanningController {
             const factory = this.rpcScanningFactory.createService(
               chain.chainId,
             );
-            const result = await Promise.all([factory.rpcLastBlockNumber, factory.dataProcessor.getMaxScanBlockNumber(), factory.dataProcessor.getDataCount()]);
+            const result = await Promise.all([factory.rpcLastBlockNumber, factory.dataProcessor.getNextScanMaxBlockNumber(), factory.dataProcessor.getDataCount()]);
             const latestBlockNumber = +result[0]
             const lastScannedBlockNumber = +result[1];
             const waitBlockCount = result[2];
@@ -77,7 +77,7 @@ export class ScanningController {
       }
       const latestBlockNumber = await factory.getLatestBlockNumber();
       const localLatestBlockNumber = factory.rpcLastBlockNumber;
-      const lastScannedBlockNumber = await factory.dataProcessor.getMaxScanBlockNumber()
+      const lastScannedBlockNumber = await factory.dataProcessor.getNextScanMaxBlockNumber()
       return {
         errno: 0,
         data: {

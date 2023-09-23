@@ -6,7 +6,7 @@ export default class DataProcessor {
     private dataSet: Set<number> = new Set();
     private processingSet: Set<number> = new Set();
     private db: Level;
-    private maxScanBlockNumber: number | undefined = undefined;
+    private nextMaxScanBlockNumber: number | undefined = undefined;
     constructor(private readonly chainId: string) {
         this.db = new Level(`./runtime/data/${this.chainId}`);
         this.dataSet = new Set();
@@ -28,7 +28,7 @@ export default class DataProcessor {
         }
         if (result) {
             this.dataSet = new Set(result.map(n => +n));
-            console.log(`${this.chainId} initStoreData`, this.dataSet.size, 'maxScanBlockNumber ', this.maxScanBlockNumber)
+            console.log(`${this.chainId} initStoreData`, this.dataSet.size, 'maxScanBlockNumber ', this.nextMaxScanBlockNumber)
         }
     }
     async createRangeScanData(min: number, max: number) {
@@ -38,7 +38,7 @@ export default class DataProcessor {
         );
         await this.push(blockNumbers);
         const maxBlockNumber = blockNumbers[blockNumbers.length - 1];
-        await this.changeMaxScanBlockNumber(maxBlockNumber);
+        await this.changeMaxScanBlockNumber(maxBlockNumber + 1);
         return blockNumbers;
     }
     async changeMaxScanBlockNumber(
@@ -48,14 +48,14 @@ export default class DataProcessor {
             `runtime/scan/${this.chainId}`,
             blockNumber.toString(),
         );
-        this.maxScanBlockNumber = blockNumber;
+        this.nextMaxScanBlockNumber = blockNumber;
         return result
     }
-    public async getMaxScanBlockNumber(): Promise<number> {
-        if (this.maxScanBlockNumber === undefined) {
+    public async getNextScanMaxBlockNumber(): Promise<number> {
+        if (this.nextMaxScanBlockNumber === undefined) {
             await this.initMaxScanBlockNumber();
         }
-        return this.maxScanBlockNumber;
+        return this.nextMaxScanBlockNumber;
     }
     public async initMaxScanBlockNumber(): Promise<number> {
         let blockNumber;
@@ -64,8 +64,8 @@ export default class DataProcessor {
         } catch (error) {
             blockNumber = 0;
         }
-        this.maxScanBlockNumber = blockNumber;
-        return this.maxScanBlockNumber;
+        this.nextMaxScanBlockNumber = blockNumber;
+        return this.nextMaxScanBlockNumber;
     }
     async getProcessNextBatchData(batchSize: number): Promise<number[]> {
         const batch = [...this.dataSet].filter((data) => !this.processingSet.has(data)).slice(0, batchSize);
