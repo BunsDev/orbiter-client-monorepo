@@ -6,29 +6,12 @@ NODE_CONTAINER_NAME ?= node-app
 NODE_IMAGE_NAME ?= your-node-app-image
 NODE_APP_PORT ?= 3000
 REDIS_PASSWORD ?= $(shell openssl rand -hex 12)
-CURRENT_OS := $(shell lsb_release -si 2>/dev/null || echo "unknown")
-
-install-node:
-ifeq ($(CURRENT_OS), Ubuntu)
-    @# Ubuntu 
-    @sudo apt-get update
-    @sudo apt-get install -y nodejs npm
-else ifeq ($(CURRENT_OS), CentOS)
-    @# CentOS 
-    @sudo yum install -y nodejs npm
-else
-    @echo "Unsupported Linux distribution: $(CURRENT_OS)"
-    @exit 1
-endif
-
-install-nx:
-    @npm install -g @nrwl/cli
-
-install: install-node install-nx
 
 # Default target
-all: start
-
+all: 
+	@echo "Installing Node.js and npm and NX..."
+	@sudo yum install -y nodejs npm
+	@sudo npm install --global nx@latest
 # Target to start the Node.js application
 start:
 	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d
