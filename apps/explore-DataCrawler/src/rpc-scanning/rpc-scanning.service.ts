@@ -132,6 +132,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
       if (safetyBlockNumber >= lastScannedBlockNumber) {
         const blockNumbers = await this.dataProcessor.createRangeScanData(lastScannedBlockNumber, safetyBlockNumber);
+        this.logger.debug(`createRangeScanData ${JSON.stringify(blockNumbers)}`);
         return blockNumbers;
       }
     } catch (error) {
