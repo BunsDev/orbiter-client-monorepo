@@ -45,7 +45,7 @@ export class MakerService {
         }
         const owner = transfer.receiver;
         const txTimestamp = dayjs(transfer.timestamp).unix();
-        const subgraphClient = new SubgraphClient(await this.envConfigService.getAsync("SubgrapheEndpoint"));
+        const subgraphClient = new SubgraphClient(await this.envConfigService.getAsync("SubgraphEndpoint"));
         const securityCodeInfo = await subgraphClient.maker.getCrossChainMakerSecurityCodeInfo(owner, dealerIndex, ebcIndex, targetChainIdIndex, txTimestamp);
         if (!securityCodeInfo) {
             return {
@@ -127,7 +127,7 @@ export class MakerService {
     }
 
     async syncV2MakerOwnersToCache() {
-        const subgraphClient = new SubgraphClient(this.envConfigService.get("SubgrapheEndpoint"));
+        const subgraphClient = new SubgraphClient(this.envConfigService.get("SubgraphEndpoint"));
         const v2Owners = await subgraphClient.factory.getOwners();
         if (v2Owners) {
             if (v2Owners && v2Owners.length > 0) {

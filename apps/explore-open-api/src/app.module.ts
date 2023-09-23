@@ -23,11 +23,7 @@ dayjs.extend(utc);
       useFactory: (config: ConfigService) => {
         return {
           name: 'explore-open-api',
-          host: config.get('CONSUL_HOST'),
-          port: config.get('CONSUL_PORT'),
-          defaults: {
-            token: config.get('CONSUL_TOKEN'),
-          },
+          url:config.get("CONSUL_URL")
         };
       },
     }),
@@ -35,7 +31,7 @@ dayjs.extend(utc);
       chainConfigPath: "explore-open-api/chains.json",
       envConfigPath: "explore-open-api/config.yaml",
       tradingPairsPath: "common/trading-pairs",
-      cachePath: join(__dirname,'runtime')
+      // cachePath: join(__dirname,'runtime')
     }),
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],

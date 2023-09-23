@@ -23,12 +23,8 @@ import { RedisModule } from '@liaoliaots/nestjs-redis';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         return {
-          name: 'BlockExploreData',
-          host: config.get('CONSUL_HOST'),
-          port: config.get('CONSUL_PORT'),
-          defaults: {
-            token: config.get('CONSUL_TOKEN'),
-          },
+          name: 'DataRefinery',
+          url:config.get("CONSUL_URL")
         };
       },
     }),

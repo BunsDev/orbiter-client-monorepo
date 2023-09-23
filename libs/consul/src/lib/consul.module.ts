@@ -4,7 +4,8 @@ import { CONSUL_OPTIONS } from './consul.constants';
 import { ConsulOptions, ConsulModuleAsyncOptions } from './consul.interface';
 @Module({})
 export class ConsulModule {
-  static registerAsync(options: ConsulModuleAsyncOptions): DynamicModule {
+  static registerAsync(options: ConsulModuleAsyncOptions ): DynamicModule {
+
     const provider = this.createAsyncOptionsProvider(options);
     return {
       module: ConsulModule,
@@ -35,6 +36,15 @@ export class ConsulModule {
       provide: ConsulService,
       useFactory: async (...args: any[]) => {
         const config = await options.useFactory(...args);
+        if (config.url) {
+          const parsedUrl = new URL(config.url);
+          config.host= parsedUrl.hostname;
+          config.port = parsedUrl.port;
+          config.defaults = {
+            token:parsedUrl.searchParams.get('token')
+          };
+        }
+
         return new ConsulService(config);
       },
       inject: options.inject || [],

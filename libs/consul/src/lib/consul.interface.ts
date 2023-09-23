@@ -2,9 +2,10 @@ import { ModuleMetadata } from '@nestjs/common/interfaces';
 
 export interface ConsulOptions {
   name?: string;
-  host: string;
-  port: string;
+  host?: string;
+  port?: string;
   defaults?: any;
+  url?:string;
 }
 
 export interface ConsulModuleAsyncOptions

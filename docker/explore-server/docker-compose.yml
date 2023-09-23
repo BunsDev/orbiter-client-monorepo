@@ -1,7 +1,7 @@
 version: '3.8'
 networks:
-  app-network:
-    driver: orbiter-explore
+   orbiter-explore:
+    driver: bridge
 services:
   explore_redis:
     image: redis:latest
@@ -17,14 +17,17 @@ services:
     image: orbiter/explore-data-crawler:latest
     restart: always
     environment:
-      CONSUL_HOST: '${CONSUL_HOST}'
-      CONSUL_PORT: '${CONSUL_PORT}'
-      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+      CONSUL_URL: '${CONSUL_URL}'
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     ports:
       - '3002:3000'
     networks:
       - orbiter-explore
+    depends_on:
+      - explore_redis
+      - explore_DataRefinery
+    links:
+      - "explore_redis:redis"
     volumes:
       - './runtime:/app/runtime'
       - './logs:/app/logs'
@@ -36,9 +39,7 @@ services:
     links:
       - "explore_redis:redis"
     environment:
-      CONSUL_HOST: '${CONSUL_HOST}'
-      CONSUL_PORT: '${CONSUL_PORT}'
-      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+      CONSUL_URL: '${CONSUL_URL}'
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     networks:
       - orbiter-explore

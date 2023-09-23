@@ -7,9 +7,7 @@ services:
     image: explore-DataCrawler:latest
     restart: always
     environment:
-      CONSUL_HOST: '${CONSUL_HOST}'
-      CONSUL_PORT: '${CONSUL_PORT}'
-      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+      CONSUL_URL: '${CONSUL_URL}'
       SCAN_CHAINS: "1"
     ports:
       - '3001:3000'
@@ -22,9 +20,7 @@ services:
     image: explore-DataCrawler:latest
     restart: always
     environment:
-      CONSUL_HOST: '${CONSUL_HOST}'
-      CONSUL_PORT: '${CONSUL_PORT}'
-      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+      CONSUL_URL: '${CONSUL_URL}'
       SCAN_CHAINS: "42161"
     ports:
       - '3002:3000'
@@ -37,9 +33,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "zksync"
       ports:
         - '3004:3000'
@@ -52,9 +46,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "SN_MAIN"
       ports:
         - '3005:3000'
@@ -67,9 +59,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "137"
       ports:
         - '3006:3000'
@@ -82,9 +72,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "10"
       ports:
         - '3007:3000'
@@ -97,9 +85,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "immutableX"
       ports:
         - '3008:3000'
@@ -112,9 +98,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "loopring"
       ports:
         - '3009:3000'
@@ -127,9 +111,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "1088"
       ports:
         - '3010:3000'
@@ -142,9 +124,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "ZKSpace"
       ports:
         - '3011:3000'
@@ -157,9 +137,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "288"
       ports:
         - '3012:3000'
@@ -172,9 +150,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "324"
       ports:
         - '3013:3000'
@@ -187,9 +163,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "56"
       ports:
         - '3014:3000'
@@ -202,9 +176,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "42170"
       ports:
         - '3015:3000'
@@ -217,9 +189,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "1101"
       ports:
         - '3016:3000'
@@ -232,9 +202,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "59144"
       ports:
         - '3017:3000'
@@ -247,9 +215,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "5000"
       ports:
         - '3018:3000'
@@ -262,9 +228,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "8453"
       ports:
         - '3019:3000'
@@ -277,9 +241,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "7777777"
       ports:
         - '3020:3000'
@@ -292,9 +254,7 @@ services:
       image: explore-DataCrawler:latest
       restart: always
       environment:
-        CONSUL_HOST: '${CONSUL_HOST}'
-        CONSUL_PORT: '${CONSUL_PORT}'
-        CONSUL_TOKEN: '${CONSUL_TOKEN}'
+        CONSUL_URL: '${CONSUL_URL}'
         SCAN_CHAINS: "204"
       ports:
         - '3021:3000'

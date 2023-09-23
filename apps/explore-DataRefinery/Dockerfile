@@ -13,7 +13,7 @@ RUN npm install -g node-gyp
 
 # Install application dependencies with Yarn, with an increased network timeout.
 RUN yarn config set ignore-engines true
-RUN yarn install --network-timeout 600000
+RUN yarn install --network-timeout 600000 --only=production
 
 # Copy the application code to the container.
 COPY dist/apps/explore-DataRefinery explore-DataRefinery

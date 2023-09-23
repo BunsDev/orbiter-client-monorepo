@@ -19,8 +19,16 @@ stop:
 	docker-compose -f $(DOCKER_COMPOSE_FILE) down
 
 # Target to build the Docker image for Node.js application
-build:
-	docker build -t $(NODE_IMAGE_NAME) .
+build-all: build-crawler build-refinery build-openapi
+
+build-crawler:
+	# docker build -t $(NODE_IMAGE_NAME) .
+	nx run explore-DataCrawler:docker-build
+build-refinery:
+	nx run explore-DataRefinery:docker-build
+build-openapi:
+	nx run explore-open-api:docker-build
+
 
 # Target to push the Docker image to a registry (optional)
 push:
@@ -36,6 +44,11 @@ logs:
 
 # Target to generate the configuration file with a random Redis password
 generate-config:
-	echo "REDIS_PASSWORD=$(REDIS_PASSWORD)" > .env
+	@echo "Generating configuration with user input..."
+	@read -p "Enter Consul URL: " CONSUL_URL; \
+		echo "CONSUL_URL=$$CONSUL_URL" > .env
+	@echo "REDIS_PASSWORD=$(REDIS_PASSWORD)" >> .env
+
+
 
 .PHONY: all start stop build push clean logs generate-config

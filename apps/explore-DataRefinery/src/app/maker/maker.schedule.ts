@@ -19,7 +19,7 @@ export class MakerScheduuleService {
     }
     @Cron('* */1 * * * *')
     async syncV2ChainTokens() {
-        const subgraphClient = new SubgraphClient(await this.envConfigService.getAsync("SubgrapheEndpoint"));
+        const subgraphClient = new SubgraphClient(await this.envConfigService.getAsync("SubgraphEndpoint"));
         const chains = await subgraphClient.factory.getChainTokens();
         const chainMap = {
         }
@@ -31,7 +31,9 @@ export class MakerScheduuleService {
 
     @Cron('* */1 * * * *')
     async syncV2Owners() {
-        const subgraphClient = new SubgraphClient(await this.envConfigService.getAsync("SubgrapheEndpoint"));
+        const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
+        console.log(SubgraphEndpoint, '==SubgraphEndpoint')
+        const subgraphClient = new SubgraphClient(SubgraphEndpoint);
         const owners = await subgraphClient.factory.getOwners();
         const v2OwnersCount = await this.redis.scard("v2Owners");
         if (owners.length > 0 && v2OwnersCount != owners.length) {
