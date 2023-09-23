@@ -127,10 +127,10 @@ export class RpcScanningService implements RpcScanningInterface {
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
       this.chainConfig.debug && this.logger.debug(
-        `checkLatestHeight: Checking - Target Confirmation: ${targetConfirmation}, lastScannedBlockNumber: ${lastScannedBlockNumber}, safetyBlockNumber: ${safetyBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}, batchLimit: ${this.batchLimit}`,
+        `checkLatestHeight: Checking - Target Confirmation: ${targetConfirmation}, lastScannedBlockNumber: ${lastScannedBlockNumber}, safetyBlockNumber: ${safetyBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}, batchLimit: ${this.batchLimit}, nextScanBlock: ${this.dataProcessor.getNextScanMaxBlockNumber()}`,
       );
 
-      if (safetyBlockNumber > lastScannedBlockNumber) {
+      if (safetyBlockNumber >= lastScannedBlockNumber) {
         const blockNumbers = await this.dataProcessor.createRangeScanData(lastScannedBlockNumber, safetyBlockNumber);
         return blockNumbers;
       }
