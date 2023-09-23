@@ -11,7 +11,7 @@ REDIS_PASSWORD ?= $(shell openssl rand -hex 12)
 all: 
 	@echo "Installing Node.js and npm and NX..."
 	@sudo yum install -y nodejs npm
-	@sudo npm install --global nx@latest
+	@npm install --global nx@latest
 # Target to start the Node.js application
 start:
 	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d
