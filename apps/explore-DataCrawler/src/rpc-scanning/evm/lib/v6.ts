@@ -1,6 +1,6 @@
 import { Interface, id, TransactionDescription, LogDescription } from 'ethers6';
 import { IChainConfig } from '@orbiter-finance/config';
-import { abis, equals } from '@orbiter-finance/utils';
+import { abis, clone, equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 
@@ -35,12 +35,7 @@ export default class EVMVUtils {
     }
 
     const { nonce } = transaction;
-    const tokenInfo = chainInfo.tokens.find((t) =>
-      equals(t.address, transaction.to),
-    );
-    if (!tokenInfo) {
-      return transfers;
-    }
+
     if (parsedData && parsedData.signature === 'transfer(address,uint256)') {
       // find log
       const txData: TransferAmountTransaction = {
@@ -52,7 +47,7 @@ export default class EVMVUtils {
         amount: null,
         value: null,
         token: transaction.to,
-        symbol: tokenInfo.symbol,
+        symbol: '',
         fee: null,
         feeAmount: null,
         feeToken: chainInfo.nativeCurrency.symbol,
@@ -68,20 +63,15 @@ export default class EVMVUtils {
       };
 
       txData.value = new BigNumber(parsedData.args[1]).toFixed(0);
-      txData.amount = new BigNumber(txData.value)
-        .div(Math.pow(10, tokenInfo.decimals))
-        .toString();
-      // TAG: event
-      // const logs = receipt.logs;
-      //   const event = EVMVUtils.getTransferEvent(
-      //     logs,
-      //     transaction.from,
-      //     parsedData.args[0],
-      //     parsedData.args[1],
-      //   );
-      // if (event) {
-      //   txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
-      // }
+      const tokenInfo = chainInfo.tokens.find((t) =>
+        equals(t.address, transaction.to),
+      );
+      if (tokenInfo) {
+        txData.amount = new BigNumber(txData.value)
+          .div(Math.pow(10, tokenInfo.decimals))
+          .toString();
+        txData.symbol = tokenInfo.symbol;
+      }
       transfers.push(txData);
     }
 
@@ -153,10 +143,9 @@ export default class EVMVUtils {
       signature: parsedData.signature,
       receipt,
     };
-    let tokenInfo;
     // const chainInfo = ChainUtil.getChainInfoByChainId(chainId);
     if (parsedData.signature == 'transfer(address,bytes)') {
-      tokenInfo = chainInfo.nativeCurrency;
+      const tokenInfo = chainInfo.nativeCurrency;
       txData.value = new BigNumber(transaction.value.toString()).toFixed(0);
       txData.amount = new BigNumber(txData.value)
         .div(Math.pow(10, tokenInfo.decimals))
@@ -171,37 +160,19 @@ export default class EVMVUtils {
       // get event
       const [token, to, amount, ext] = parsedData.args;
       txData.token = token;
-      const tokenInfo = chainInfo.tokens.find((t) =>
-        equals(t.address, token),
-      );
-      txData.symbol = tokenInfo.symbol;
       txData.sender = transaction.from;
       txData.receiver = to;
       txData.value = new BigNumber(amount).toFixed(0);
-      txData.amount = new BigNumber(txData.value)
-        .div(Math.pow(10, tokenInfo.decimals))
-        .toString();
-        // TAG: event
-      // const event = EVMVUtils.getTransferEvent(
-      //   receipt.logs,
-      //   transaction.from,
-      //   to,
-      //   amount,
-      // );
-      // if (event) {
-      //   // find token
-      //   const tokenInfo = chainInfo.tokens.find((t) =>
-      //     equals(t.address, parsedData.args[0]),
-      //   );
-      //   txData.symbol = tokenInfo.symbol;
-      //   txData.sender = event.args[0];
-      //   txData.receiver = event.args[1];
-      //   txData.value = new BigNumber(event.args[2]).toFixed(0);
-      //   txData.amount = new BigNumber(txData.value)
-      //     .div(Math.pow(10, tokenInfo.decimals))
-      //     .toString();
-      //   txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
-      // }
+      const tokenInfo = chainInfo.tokens.find((t) =>
+        equals(t.address, token),
+      );
+      if (tokenInfo) {
+        txData.symbol = tokenInfo.symbol;
+        txData.amount = new BigNumber(txData.value)
+          .div(Math.pow(10, tokenInfo.decimals))
+          .toString();
+      }
+
       transfers.push(txData);
     }
     return transfers;
@@ -255,18 +226,16 @@ export default class EVMVUtils {
           '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
         ) {
           const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
-          transfers.push({
-            ...txData,
-            hash: `${txData.hash}#${transfers.length}`,
-            token: chainInfo.nativeCurrency.address,
-            symbol: chainInfo.nativeCurrency.symbol,
-            receiver: parsedLogData.args[0],
-            value,
-            amount: new BigNumber(value)
-              .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
-              .toString(),
-          });
-          // txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
+          const copyTxData = clone(txData);
+          copyTxData.hash = `${txData.hash}#${transfers.length}`;
+          copyTxData.token = chainInfo.nativeCurrency.address;
+          copyTxData.symbol = chainInfo.nativeCurrency.symbol;
+          copyTxData.receiver = parsedLogData.args[0];
+          copyTxData.value = value;
+          copyTxData.amount = new BigNumber(value)
+          .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
+          .toString();
+          transfers.push(copyTxData);
         }
       }
     } else if (
@@ -280,24 +249,23 @@ export default class EVMVUtils {
           parsedLogData.topic ===
           '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
         ) {
-          // }
-          const tokenInfo = chainInfo.tokens.find((t) =>
-            equals(t.address, parsedData.args[0]),
-          );
+          const copyTxData = clone(txData);
           const value = new BigNumber(parsedLogData.args[2]).toFixed(0);
-          transfers.push({
-            ...txData,
-            hash: `${txData.hash}#${transfers.length}`,
-            token: parsedData.args[0],
-            symbol: tokenInfo.symbol,
-            sender: parsedLogData.args[0],
-            receiver: parsedLogData.args[1],
-            value,
-            amount: new BigNumber(value)
+          copyTxData.hash = `${txData.hash}#${transfers.length}`;
+          copyTxData.token = parsedData.args[0];
+          copyTxData.sender = parsedLogData.args[0];
+          copyTxData.receiver = parsedLogData.args[1];
+          copyTxData.value = value;
+          const tokenInfo = chainInfo.tokens.find((t) =>
+            equals(t.address, copyTxData.token),
+          );
+          if (tokenInfo) {
+            copyTxData.symbol = tokenInfo.symbol;
+            copyTxData.amount = new BigNumber(value)
               .div(Math.pow(10, tokenInfo.decimals))
-              .toString(),
-          });
-          // txData.status = txData.status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : TransferAmountTransactionStatus.confirmed;
+              .toString();
+          }
+          transfers.push(copyTxData);
         }
       }
     } else if (
@@ -329,7 +297,7 @@ export default class EVMVUtils {
       hash: transaction.hash,
       blockNumber: transaction.blockNumber,
       sender: transaction.from,
-      receiver: parsedData.args[0],
+      receiver: '',
       amount: null,
       value: null,
       token: null,
@@ -339,8 +307,8 @@ export default class EVMVUtils {
       feeToken: chainInfo.nativeCurrency.symbol,
       timestamp: 0,
       status: +receipt.status
-      ? TransferAmountTransactionStatus.none
-      : TransferAmountTransactionStatus.failed,
+        ? TransferAmountTransactionStatus.confirmed
+        : TransferAmountTransactionStatus.failed,
       nonce,
       calldata: parsedData.args.toArray(),
       contract: transaction.to,
@@ -348,68 +316,34 @@ export default class EVMVUtils {
       signature: parsedData.signature,
       receipt,
     };
-    const logs = receipt.logs;
     if (parsedData.signature === 'swap(address,address,uint256,bytes)') {
-      const recipient = parsedData.args[0].toLowerCase()
-      const token = parsedData.args[1].toLowerCase()
-      const amount = parsedData.args[2]
+      txData.receiver = parsedData.args[0].toLowerCase()
+      txData.token = parsedData.args[1].toLowerCase()
+      txData.value = parsedData.args[2]
       const tokenInfo = chainInfo.tokens.find((t) =>
-        equals(t.address.toLowerCase(), token),
+        equals(t.address.toLowerCase(), txData.token),
       );
-
-      const transferEvent = logs.find(log => {
-        if (log.topics[0] !== '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
-          return false
-        }
-        const transferValue = new BigNumber(log.data)
-        const from = `0x${new BigNumber(log.topics[1]).toString(16).toLowerCase()}`
-        const to = `0x${new BigNumber(log.topics[2]).toString(16).toLowerCase()}`
-        return from === receipt.from.toLowerCase() && to === recipient && transferValue.eq(new BigNumber(amount))
-      })
-      if (transferEvent && tokenInfo) {
-        transfers.push({
-          ...txData,
-          hash: `${txData.hash}`,
-          token: token,
-          symbol: tokenInfo.symbol,
-          sender: receipt.from.toLowerCase(),
-          receiver: recipient,
-          value: amount.toString(),
-          amount: new BigNumber(amount)
-            .div(Math.pow(10, tokenInfo.decimals))
-            .toString(),
-        })
+      if (tokenInfo) {
+        txData.symbol = tokenInfo.symbol;
+        txData.amount = new BigNumber(txData.value)
+          .div(Math.pow(10, tokenInfo.decimals))
+          .toString();
       }
+      transfers.push(txData);
     } else if (parsedData.signature === 'swapAnswer(address,address,uint256,bytes)') {
-      const recipient = parsedData.args[0].toLowerCase()
-      const token = parsedData.args[1].toLowerCase()
-      const amount = parsedData.args[2]
+      txData.receiver = parsedData.args[0].toLowerCase()
+      txData.token = parsedData.args[1].toLowerCase()
+      txData.value = parsedData.args[2]
       const tokenInfo = chainInfo.tokens.find((t) =>
-        equals(t.address.toLowerCase(), token),
+        equals(t.address.toLowerCase(), txData.token),
       );
-      const transferEvent = logs.find(log => {
-        if (log.topics[0] !== '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
-          return false
-        }
-        const transferValue = new BigNumber(log.data)
-        const from = `0x${new BigNumber(log.topics[1]).toString(16).toLowerCase()}`
-        const to = `0x${new BigNumber(log.topics[2]).toString(16).toLowerCase()}`
-        return from === receipt.from.toLowerCase() && to === recipient && transferValue.eq(new BigNumber(amount))
-      })
-      if (transferEvent && tokenInfo) {
-        transfers.push({
-          ...txData,
-          hash: `${txData.hash}`,
-          token: token,
-          symbol: tokenInfo.symbol,
-          sender: receipt.from.toLowerCase(),
-          receiver: recipient,
-          value: amount.toString(),
-          amount: new BigNumber(amount)
-            .div(Math.pow(10, tokenInfo.decimals))
-            .toString(),
-        })
+      if (tokenInfo) {
+        txData.symbol = tokenInfo.symbol;
+        txData.amount = new BigNumber(txData.value)
+          .div(Math.pow(10, tokenInfo.decimals))
+          .toString();
       }
+      transfers.push(txData);
     }
     return transfers
   }
