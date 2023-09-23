@@ -17,3 +17,4 @@ services:
       - app-network
     volumes:
       - './runtime:/app/runtime'
+      - './google:/app/google'

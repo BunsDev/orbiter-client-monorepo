@@ -43,4 +43,4 @@ logs
 worker_request.log
 
 cmd/.env
-/apps/explore-open-api/src/google
+/docker/explore-open-api/google

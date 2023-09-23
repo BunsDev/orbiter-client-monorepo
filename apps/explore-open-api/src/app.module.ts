@@ -2,10 +2,14 @@ import { Module } from '@nestjs/common';
 import { ApiModule } from './api/api.module';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { OrbiterConfigModule } from '@orbiter-finance/config';
+import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ConsulModule } from "@orbiter-finance/consul";
 import { join } from "path";
+import { SequelizeModule } from "@nestjs/sequelize";
+import { isEmpty } from "@orbiter-finance/utils";
+import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
+import { MakerTransaction, NetState, Transaction, UserHistory } from "@orbiter-finance/v1-seq-models";
 
 dayjs.extend(utc);
 
@@ -33,30 +37,29 @@ dayjs.extend(utc);
       tradingPairsPath: "common/trading-pairs",
       cachePath: join(__dirname,'runtime')
     }),
-    // SequelizeModule.forRootAsync({
-    //   inject: [ENVConfigService],
-    //   useFactory: async (envConfig: ENVConfigService) => {
-    //     const config: any = await envConfig.getAsync('V1_DATABASE_URL');
-    //     if (isEmpty(config)) {
-    //       console.error('Missing configuration V1_DATABASE_URL');
-    //       process.exit(1);
-    //     }
-    //     return config;
-    //   },
-    // }),
-    // SequelizeModule.forRootAsync({
-    //   inject: [ENVConfigService],
-    //   useFactory: async (envConfig: ENVConfigService) => {
-    //     const config: any = await envConfig.getAsync('DATABASE_URL');
-    //     if (isEmpty(config)) {
-    //       console.error('Missing configuration DATABASE_URL');
-    //       process.exit(1);
-    //     }
-    //     return config;
-    //   },
-    // }),
+    SequelizeModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async (envConfig: ENVConfigService) => {
+        const config: any = await envConfig.getAsync('V1_DATABASE_URL');
+        if (isEmpty(config)) {
+          console.error('Missing configuration V1_DATABASE_URL');
+          process.exit(1);
+        }
+        return { ...config, autoLoadModels: false, models: [MakerTransaction, Transaction, NetState, UserHistory] };
+      },
+    }),
+    SequelizeModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async (envConfig: ENVConfigService) => {
+        const config: any = await envConfig.getAsync('DATABASE_URL');
+        if (isEmpty(config)) {
+          console.error('Missing configuration DATABASE_URL');
+          process.exit(1);
+        }
+        return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
+      },
+    }),
     ApiModule,
-    // ScheduleModule.forRoot(),
   ],
   controllers: [],
   providers: [],

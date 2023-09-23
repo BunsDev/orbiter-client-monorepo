@@ -283,7 +283,7 @@ export class V2Service {
 
 const { google } = require("googleapis");
 const auth = new google.auth.GoogleAuth({
-  keyFile: "./src/google/sheet-377710-b8d7c8d145e9.json",
+  keyFile: "/app/google/sheet-377710-b8d7c8d145e9.json",
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
