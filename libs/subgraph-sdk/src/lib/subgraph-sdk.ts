@@ -1,5 +1,5 @@
 import {Factory} from './factory';
-import { MakerService } from './maker.service.ts';
+import { MakerService } from './maker.service';
 export class Context {
     constructor(private readonly url:string){}
     async query(query:string, variables:any = {}) {
