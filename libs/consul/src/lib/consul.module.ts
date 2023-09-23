@@ -39,7 +39,7 @@ export class ConsulModule {
         if (config.url) {
           const parsedUrl = new URL(config.url);
           config.host= parsedUrl.hostname;
-          config.port = parsedUrl.port;
+          config.port = parsedUrl.port || '80';
           config.defaults = {
             token:parsedUrl.searchParams.get('token')
           };
