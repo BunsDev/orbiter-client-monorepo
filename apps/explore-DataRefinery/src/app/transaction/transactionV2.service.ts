@@ -130,6 +130,16 @@ export class TransactionV2Service {
       transfer.value,
     );
     if (+transfer.nonce > 9999) {
+      await this.transfersModel.update(
+        {
+          opStatus: 5,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return this.errorBreakResult(`${transfer.hash} Exceeded the maximum nonce value ${transfer.nonce} / 9999`,)
     }
     const result = await this.makerService.getV2RuleByTransfer(transfer, +dealerId, +ebcId, +targetChainIdIndex);

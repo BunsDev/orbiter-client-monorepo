@@ -93,6 +93,16 @@ export class TransactionV1Service {
   public async validSourceTxInfo(transfer: TransfersModel) {
     const result: any = {};
     if (+transfer.nonce >= 9000) {
+      await this.transfersModel.update(
+        {
+          opStatus: 5,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return {
         code: 1,
         errmsg: `Exceeded the maximum nonce value ${transfer.nonce} / 9000`,
