@@ -313,7 +313,7 @@ export class SequencerService {
           "sequencer.schedule batchSendTransactionByTransfer error",
           error
         );
-        this.alertService.sendTelegramAlert('ERROR', `sequencer.schedule batchSendTransactionByTransfer error: ${error.message}`).catch((e) => {
+        this.alertService.sendMessage(`sequencer.schedule batchSendTransactionByTransfer error: ${error.message}`, 'TG').catch((e) => {
           this.logger.error(
             "sequencer.schedule sendTelegramAlert error",
             error

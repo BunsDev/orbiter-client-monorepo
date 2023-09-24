@@ -5,8 +5,15 @@ export interface TelegramOpts {
   chatId: string;
   token: string
 }
+export interface SMSOpts {
+  host: string;
+  uid:string;
+  token: string
+  phoneNumbers:string[]
+}
 export interface AlertModuleOpts {
-  telegram?: TelegramOpts
+  telegram?: TelegramOpts,
+  sms?: SMSOpts
 }
 export interface AlertModuleAsyncOptions
   extends Pick<ModuleMetadata, 'imports'> {

@@ -32,7 +32,7 @@ export class RabbitmqConnectionManager
       const url = await this.envConfigService.getAsync<string>('RABBITMQ_URL');
       this.connection = await connect(url);
       this.connection.on('error', (error) => {
-        this.alertService.sendTelegramAlert("ERROR",  `RabbitMQ connection error:${error.message}`);
+        this.alertService.sendMessage(`RabbitMQ connection error:${error.message}`, 'TG');
         this.logger.error('RabbitMQ connection error:', error.message);
         setTimeout(() => this.connectToRabbitMQ(), 1000);
       });
@@ -40,13 +40,13 @@ export class RabbitmqConnectionManager
         this.logger.warn(
           'RabbitMQ connection closed. Attempting to reconnect...',
         );
-        this.alertService.sendTelegramAlert("ERROR", "RabbitMQ connection closed. Attempting to reconnect...");
+        this.alertService.sendMessage("RabbitMQ connection closed. Attempting to reconnect...", 'TG');
         // setTimeout(() => this.connectToRabbitMQ(), 1000);
       });
       this.channel = await this.connection.createChannel();
       this.logger.log('Connected to RabbitMQ');
     } catch (error) {
-      this.alertService.sendTelegramAlert("ERROR",  `Failed to connect to RabbitMQ:${error.message}`);
+      this.alertService.sendMessage(`Failed to connect to RabbitMQ:${error.message}`, 'TG');
       this.logger.error(
         `Failed to connect to RabbitMQ`,
         error,
@@ -62,7 +62,7 @@ export class RabbitmqConnectionManager
     }
     if (this.connection) {
       await this.connection.close();
-      this.alertService.sendTelegramAlert("ERROR",  'Disconnected from RabbitMQ');
+      this.alertService.sendMessage('Disconnected from RabbitMQ');
       this.logger.log('Disconnected from RabbitMQ');
     }
   }

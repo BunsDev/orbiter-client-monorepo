@@ -17,13 +17,13 @@ export class ConsumerService {
       const channel = await this.connectionManager.createChannel();
       channel.on('close', () => {
         Logger.error('Channel closed');
-        this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
+        this.alertService.sendMessage('Channel closed', 'TG');
         this.consumeScanTransferReceiptMessages(callback)
       });
 
       channel.on('error', (err) => {
         Logger.error(`Channel error:${err.message}`, err.stack);
-        this.alertService.sendTelegramAlert('ERROR', `Channel error:${err.message}`);
+        this.alertService.sendMessage(`Channel error:${err.message}`, 'TG');
       });
 
       const queue = 'TransactionReceipt';
@@ -56,13 +56,13 @@ export class ConsumerService {
       await channel.assertQueue(queue);
       channel.on('close', () => {
         Logger.error('Channel closed');
-        this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
+        this.alertService.sendMessage(`${queue} Channel closed`, 'TG');
         this.consumeScanTransferSaveDBAfterMessages(callback)
       });
 
       channel.on('error', (err) => {
         Logger.error(`Channel error:${err.message}`, err.stack);
-        this.alertService.sendTelegramAlert('ERROR', `Channel error:${err.message}`);
+        this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
       });
       channel.prefetch(10);
       channel.consume(queue, async (msg: Message | null) => {
@@ -94,13 +94,13 @@ export class ConsumerService {
       await channel.assertQueue(queue);
       channel.on('close', () => {
         Logger.error('Channel closed');
-        this.alertService.sendTelegramAlert('ERROR', 'Channel closed');
+        this.alertService.sendMessage(`${queue} Channel closed`, 'TG');
         this.consumeMakerWaitTransferMessage(callback)
       });
 
       channel.on('error', (err) => {
         Logger.error(`Channel error:${err.message}`, err.stack);
-        this.alertService.sendTelegramAlert('ERROR', `Channel error:${err.message}`);
+        this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
       });
       channel.prefetch(10);
       channel.consume(queue, async (msg: Message | null) => {
