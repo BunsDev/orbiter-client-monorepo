@@ -10,9 +10,7 @@ services:
     # container_name: OB-MakerClient
     restart: always
     environment:
-      CONSUL_HOST: '${CONSUL_HOST}'
-      CONSUL_PORT: '${CONSUL_PORT}'
-      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+      CONSUL_URL: '${CONSUL_URL}'
     ports:
       - '3002:3002'
       - '8000:8000'
