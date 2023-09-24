@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config'
-import { uniq, maxBy, logger, addressPadStart64, equals } from '@orbiter-finance/utils'
+import { uniq, logger, addressPadStart64, equals } from '@orbiter-finance/utils'
 // import v1MakerRules from '../config/v1MakerConfig';
 import winston from 'winston';
 import { SubgraphClient } from '@orbiter-finance/subgraph-sdk';

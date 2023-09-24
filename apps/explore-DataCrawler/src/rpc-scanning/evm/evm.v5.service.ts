@@ -1,7 +1,7 @@
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
-import { ZeroAddress, isAddress } from 'ethers6';
+import { ZeroAddress } from 'ethers6';
 import {
   Block,
   TransactionReceipt,

@@ -50,7 +50,8 @@
       "options": {
         "lintFilePatterns": [
           "apps/maker-client/**/*.ts"
-        ]
+        ],
+        "fix": true
       }
     },
     "test": {

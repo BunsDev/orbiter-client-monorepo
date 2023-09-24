@@ -1,5 +1,5 @@
 import { TransferModule } from "./transfer/transfer.module";
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OrbiterConfigModule, ENVConfigService} from '@orbiter-finance/config';

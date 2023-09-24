@@ -13,7 +13,6 @@ import {
 import { arePropertyValuesConsistent, isEmpty } from "@orbiter-finance/utils";
 import { StoreService } from "../store/store.service";
 import { Op } from "sequelize";
-import { AccountFactoryService } from "../../account/factory";
 import dayjs from "dayjs";
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';

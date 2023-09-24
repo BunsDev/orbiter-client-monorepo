@@ -1,6 +1,4 @@
 import winston from 'winston';
-import { Mutex } from 'async-mutex';
-import { ethers } from 'ethers6';
 import { TransferAmountTransaction } from '../transaction/transaction.interface';
 import { IChainConfig } from '@orbiter-finance/config';
 import { Block, Context, RetryBlockRequestResponse, TransactionReceipt, TransactionResponse } from './rpc-scanning.interface';
@@ -54,7 +52,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async executeCrawlBlock() {
     const blockNumbers = await this.dataProcessor.getProcessNextBatchData(this.batchLimit);
-    let nextScanMaxBlockNumber = await this.dataProcessor.getNextScanMaxBlockNumber();
+    const nextScanMaxBlockNumber = await this.dataProcessor.getNextScanMaxBlockNumber();
     if (blockNumbers.length <= 0) {
       this.logger.info('executeCrawlBlock: No block numbers to process.');
       return [];

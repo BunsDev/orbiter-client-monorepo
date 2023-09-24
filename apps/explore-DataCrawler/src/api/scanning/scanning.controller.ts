@@ -1,6 +1,6 @@
 import { ChainConfigService } from '@orbiter-finance/config';
 import { ApiScanningFactory } from '../../api-scanning/api-scanning.factory';
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { RpcScanningFactory } from '../../rpc-scanning/rpc-scanning.factory';
 import { BigIntToString } from '@orbiter-finance/utils';
 @Controller('scanning')

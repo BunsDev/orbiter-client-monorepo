@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, Interval } from '@nestjs/schedule';
+import { Interval } from '@nestjs/schedule';
 import { MakerService } from './maker.service'
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';

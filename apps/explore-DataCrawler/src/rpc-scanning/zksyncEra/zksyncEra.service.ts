@@ -1,17 +1,9 @@
-import BigNumber from 'bignumber.js';
-import { ZeroAddress } from 'ethers6';
-import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import EVMV5Utils from '../evm/lib/v6';
 
 import { EVMRpcScanningV5Service } from '../evm/evm.v5.service';
-import { EVMRpcScanningV6Service } from '../evm/evm.v6.service'
-import {
-    Block,
-    TransactionReceipt,
-    TransactionResponse,
-} from '../rpc-scanning.interface';
+
+
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
-import EVMVUtils from '../evm/lib/v6';
 export class ZKSyncEraRpcScanningService extends EVMRpcScanningV5Service {
     // async handleTransaction(
     //     transaction: TransactionResponse,

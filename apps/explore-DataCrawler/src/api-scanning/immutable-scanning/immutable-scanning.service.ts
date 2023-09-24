@@ -56,7 +56,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       );
       if (senderTransfers.length > 0) {
         const newTransfers = await this.filterTransfers(senderTransfers);
-        const result = await this.processTransaction(newTransfers);
+        await this.processTransaction(newTransfers);
         senderPosition = this.generateLastScannedPositionData(newTransfers);
         transfers.push(...newTransfers);
       }

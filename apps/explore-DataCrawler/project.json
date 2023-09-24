@@ -47,7 +47,8 @@
       "options": {
         "lintFilePatterns": [
           "apps/explore-DataCrawler/**/*.ts"
-        ]
+        ],
+        "fix": true
       }
     },
     "test": {

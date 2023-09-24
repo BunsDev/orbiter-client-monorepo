@@ -1,7 +1,6 @@
 import { ApiScanningService } from '../api-scanning.service';
 import BigNumber from 'bignumber.js';
-import { objectToQueryString, HTTPGet, isEmpty, uniq } from '@orbiter-finance/utils';
-import * as ethers from 'ethers6';
+import { objectToQueryString, HTTPGet, isEmpty } from '@orbiter-finance/utils';
 import dayjs from 'dayjs';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 export class ZKLiteApiScanningService extends ApiScanningService {

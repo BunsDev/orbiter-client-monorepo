@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 
-import * as data from '@orbiter-finance/config';
 
 import { ChainConfigService } from '@orbiter-finance/config';
 import { ArbitrumRpcScanningService } from './arbitrum/arbitrum.service';

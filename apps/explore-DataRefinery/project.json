@@ -50,7 +50,8 @@
       "options": {
         "lintFilePatterns": [
           "apps/explore-DataRefinery/**/*.ts"
-        ]
+        ],
+        "fix": true
       }
     },
     "test": {

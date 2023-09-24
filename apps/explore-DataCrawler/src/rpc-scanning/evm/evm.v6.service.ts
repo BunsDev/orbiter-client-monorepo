@@ -2,16 +2,13 @@ import {
   TransactionResponse,
   TransactionReceipt,
   ZeroAddress,
-  Block,
-  ethers,
-  isAddress
+  Block
 } from 'ethers6';
 import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
-import {
-  RetryBlockRequestResponse,
-} from '../rpc-scanning.interface';
+
+
 import EVMV6Utils from './lib/v6';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 import EVMVUtils from './lib/v6';

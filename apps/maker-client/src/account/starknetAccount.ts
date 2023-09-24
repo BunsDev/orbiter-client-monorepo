@@ -1,13 +1,10 @@
-import { BigNumberish, ethers } from 'ethers';
-import { Account, Contract, defaultProvider, ec, json, number, SequencerProvider, stark, hash, uint256, cairo, RpcProvider, CallData } from 'starknet';
+import { Account, Contract, cairo, RpcProvider } from 'starknet';
 import OrbiterAccount from './orbiterAccount';
 import { equals } from '@orbiter-finance/utils'
 import { abis, NonceManager,MaxBigInt } from "@orbiter-finance/utils";
 import {
     TransactionRequest,
-    TransactionResponse,
     TransferResponse,
-    Context,
 } from "./IAccount";
 
 
@@ -17,7 +14,6 @@ export default class StarknetAccount extends OrbiterAccount  {
     async connect(privateKey: string, address:string) {
         const provider = this.getProviderV4();
         const classInfo = await provider.getClassAt(address);
-        console.log(classInfo, '==classInfo')
         const account = new Account(
             provider,
             address,

@@ -50,7 +50,7 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
   }
   async getPipeTransactions(
     address: string,
-    callback: any,
+    callback: Function,
     prevTime: number,
     offset = 0,
   ): Promise<TransferAmountTransaction[]> {

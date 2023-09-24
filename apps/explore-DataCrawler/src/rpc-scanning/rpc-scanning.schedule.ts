@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Cron, Interval } from '@nestjs/schedule';
+import { Interval } from '@nestjs/schedule';
 import { Mutex } from 'async-mutex';
 import { ChainConfigService } from '@orbiter-finance/config';
 import { ENVConfigService } from '@orbiter-finance/config';
 import { RpcScanningScheduleService } from './rpc-scanning.interface';
 import { RpcScanningFactory } from './rpc-scanning.factory';
-import { JSONStringify, isEmpty,logger } from '@orbiter-finance/utils';
+import { isEmpty,logger } from '@orbiter-finance/utils';
 import { AlertService } from '@orbiter-finance/alert'
 @Injectable()
 export class RpcScanningSchedule {
