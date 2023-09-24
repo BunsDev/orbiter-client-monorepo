@@ -13,6 +13,5 @@ describe('EvmRpcScanningService', () => {
 
   it('should be defined', async () => {
     const res = await service.provider.getBlock(9404888, true);
-    console.log(res, '====');
   }, 180000);
 });

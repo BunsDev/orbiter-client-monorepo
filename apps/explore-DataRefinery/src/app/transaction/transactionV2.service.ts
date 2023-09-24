@@ -219,7 +219,6 @@ export class TransactionV2Service {
       await t.commit();
       return createdData
     } catch (error) {
-      console.log(error, '=error')
       this.logger.error(
         `handleTransferBySourceTx ${transfer.hash} error`,
         error,

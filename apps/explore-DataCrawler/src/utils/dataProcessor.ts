@@ -1,36 +1,52 @@
 import { generateSequenceNumbers } from "@orbiter-finance/utils";
 import { Level } from "level";
 import { readFileSync, outputFile } from 'fs-extra';
+import winston from "winston";
 
 export default class DataProcessor {
     private dataSet: Set<number> = new Set();
     private processingSet: Set<number> = new Set();
     private db: Level;
     private nextMaxScanBlockNumber: number | undefined = undefined;
-    constructor(private readonly chainId: string) {
+
+    constructor(
+        private readonly chainId: string,
+        private readonly logger: winston.Logger
+    ) {
+        // Initialize the LevelDB instance
         this.db = new Level(`./runtime/data/${this.chainId}`);
+
+        // Initialize data sets and retrieve the max scan block number
         this.dataSet = new Set();
         this.initMaxScanBlockNumber();
         this.initStoreData();
     }
+
+    // Get the count of data in the data set
     getDataCount() {
         return this.dataSet.size;
     }
+
+    // Get the count of data in the processing set
     getProcessingCount() {
         return this.processingSet.size;
     }
+
+    // Initialize and retrieve data from LevelDB
     private async initStoreData(limit = -1) {
         let result;
         if (limit > 0) {
-            result = await this.db.keys({ limit: limit }).all();
+            result = await this.db.keys({ limit }).all();
         } else {
             result = await this.db.keys().all();
         }
         if (result) {
             this.dataSet = new Set(result.map(n => +n));
-            console.log(`${this.chainId} initStoreData`, this.dataSet.size, 'maxScanBlockNumber ', this.nextMaxScanBlockNumber)
+            this.logger.info(`${this.chainId} initStoreData`, this.dataSet.size, 'maxScanBlockNumber ', this.nextMaxScanBlockNumber);
         }
     }
+
+    // Create a range of scan data and update max scan block number
     async createRangeScanData(min: number, max: number) {
         const blockNumbers = generateSequenceNumbers(
             min,
@@ -41,6 +57,8 @@ export default class DataProcessor {
         await this.changeMaxScanBlockNumber(maxBlockNumber + 1);
         return blockNumbers;
     }
+
+    // Change the max scan block number
     async changeMaxScanBlockNumber(
         blockNumber: number,
     ): Promise<void> {
@@ -49,14 +67,18 @@ export default class DataProcessor {
             blockNumber.toString(),
         );
         this.nextMaxScanBlockNumber = blockNumber;
-        return result
+        return result;
     }
+
+    // Get the next max scan block number
     public async getNextScanMaxBlockNumber(): Promise<number> {
         if (this.nextMaxScanBlockNumber === undefined) {
             await this.initMaxScanBlockNumber();
         }
         return this.nextMaxScanBlockNumber;
     }
+
+    // Initialize the max scan block number from file
     public async initMaxScanBlockNumber(): Promise<number> {
         let blockNumber;
         try {
@@ -67,27 +89,38 @@ export default class DataProcessor {
         this.nextMaxScanBlockNumber = blockNumber;
         return this.nextMaxScanBlockNumber;
     }
+
+    // Get the next batch of data for processing
     async getProcessNextBatchData(batchSize: number): Promise<number[]> {
-        const batch = [...this.dataSet].filter((data) => !this.processingSet.has(data)).slice(0, batchSize);
-        for (const data of batch) {
-            this.processingSet.add(data);
+        const batch: number[] = [];
+        for (const data of this.dataSet) {
+            if (!this.processingSet.has(data)) {
+                this.processingSet.add(data);
+                batch.push(data);
+                if (batch.length === batchSize) {
+                    break;
+                }
+            }
         }
         return batch;
     }
+
+    // Push data to the data set
     async push(blocks: number[] | number) {
         const blockNumbers = typeof blocks === 'number' ? [blocks] : blocks;
         const batchList = blockNumbers.map(num => {
+            this.dataSet.add(num);
+            this.processingSet.delete(num);
             return {
                 type: 'put',
                 key: num.toString(),
                 value: Date.now()
-            }
+            };
         });
-        await this.db.batch(batchList as any)
-        for (const data of blockNumbers) {
-            this.dataSet.add(data)
-        }
+        await this.db.batch(batchList as any);
     }
+
+    // Acknowledge processed data
     async ack(blocks: number[] | number) {
         const blockNumbers = typeof blocks === 'number' ? [blocks] : blocks;
         await this.deleteStoreData(blockNumbers);
@@ -96,11 +129,13 @@ export default class DataProcessor {
                 this.dataSet.delete(block);
                 this.processingSet.delete(block);
             } catch (error) {
-                console.error(`ack data error ${block}`, error.message);
+                this.logger.error(`ack data error ${block}`, error);
             }
         }
-        console.log(`${this.chainId} execute ack success count = ${blockNumbers.length}, now `, this.dataSet.size, this.processingSet.size)
+        this.logger.info(`${this.chainId} execute ack success count = ${blockNumbers.length}, dataSet: ${this.dataSet.size} processingSet: ${this.processingSet.size}`);
     }
+
+    // Delete data from LevelDB
     deleteStoreData(blocks: number[]) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -108,16 +143,18 @@ export default class DataProcessor {
                     return {
                         type: 'del',
                         key: num.toString(),
-                    }
+                    };
                 });
                 await this.db.batch(batchs as any);
                 resolve(blocks);
             } catch (error) {
-                reject(error)
+                this.logger.error(`deleteStoreData error`, error);
+                reject(error);
             }
-        })
-
+        });
     }
+
+    // Mark data as not acknowledged for processing
     noAck(blocks: number[] | number) {
         const blockNumbers = typeof blocks === 'number' ? [blocks] : blocks;
         for (const block of blockNumbers) {
@@ -125,9 +162,9 @@ export default class DataProcessor {
                 this.dataSet.add(block);
                 this.processingSet.delete(block);
             } catch (error) {
-                console.error(`noAck data error ${block}`, error.message);
+                this.logger.error(`noAck data error ${block}`, error);
             }
         }
-        console.log(`${this.chainId} execute noAck success count = ${blockNumbers.length}, now `, this.dataSet.size, this.processingSet.size)
+        this.logger.info(`${this.chainId} execute noAck success count = ${blockNumbers.length}, dataSet: ${this.dataSet.size} processingSet: ${this.processingSet.size}`);
     }
 }

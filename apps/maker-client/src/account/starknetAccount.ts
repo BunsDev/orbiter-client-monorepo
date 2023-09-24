@@ -192,14 +192,13 @@ export default class StarknetAccount extends OrbiterAccount  {
             throw new Error(`starknet estimateFee error ${error.message}`);
         }
         try {
-            console.log('exec---')
             const executeHash = await this.account.execute(invocation, null, transactionsDetail);
             submit()
             console.log(executeHash, '====executeHash')
             this.account.waitForTransaction(executeHash.transaction_hash).then(res => {
-                console.log('成功', res);
+                console.log('success', res);
             }).catch(error => {
-                console.log('失败', error);
+                console.log('fail', error);
             })
             console.log(executeHash, '==executeHash')
             return {} as any;

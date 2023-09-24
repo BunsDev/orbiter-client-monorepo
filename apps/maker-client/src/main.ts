@@ -1,10 +1,12 @@
 import { characterPattern } from '@orbiter-finance/utils';
-console.log(characterPattern);
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { Logger } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 async function bootstrap() {
-  await NestFactory.createApplicationContext(AppModule);
+  const app = await NestFactory.createApplicationContext(AppModule);
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+  Logger.log(characterPattern);
   Logger.log(`🚀 Application is running on: Maker Client`);
 }
 process.on("uncaughtException", (err) => {

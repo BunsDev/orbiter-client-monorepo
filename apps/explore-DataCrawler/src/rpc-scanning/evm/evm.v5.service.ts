@@ -144,7 +144,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           receipt,
         );
       } else {
-        if (transaction.data === '0x') {
+        if (transaction.data === '0x' || await provider.getCode(transaction.to) === '0x') {
           // tag:
           const value = transaction.value.toString();
           transfers.push({

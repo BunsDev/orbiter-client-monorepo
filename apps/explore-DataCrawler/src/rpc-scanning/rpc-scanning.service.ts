@@ -29,7 +29,7 @@ export class RpcScanningService implements RpcScanningInterface {
     this.logger = logger.createLoggerByName(`rpcscan-${this.chainId}`, {
       label: this.chainConfig.name
     });
-    this.dataProcessor = new DataProcessor(this.chainId);
+    this.dataProcessor = new DataProcessor(this.chainId, this.logger);
     this.firstStartTime = Date.now()
   }
 
@@ -131,7 +131,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
       if (safetyBlockNumber >= lastScannedBlockNumber) {
         const blockNumbers = await this.dataProcessor.createRangeScanData(lastScannedBlockNumber, safetyBlockNumber);
-        this.logger.debug(`createRangeScanData ${JSON.stringify(blockNumbers)}`);
+        this.logger.debug(`createRangeScanData ${blockNumbers.length}/count ${JSON.stringify(blockNumbers)}`);
         return blockNumbers;
       }
     } catch (error) {
