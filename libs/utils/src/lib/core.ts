@@ -77,6 +77,7 @@ export function addressPadStart64(address: string) {
     if (address.length < 64) {
         return `0x${padStart(address, 64, '0')}`;
     }
+    return address;
 }
 export function isObject(obj: any) {
     if (Buffer.isBuffer(obj)) {
