@@ -32,12 +32,12 @@ export class V2Service {
     const _this = this;
     // TODO: reomve
     // v1MakerConfigService.init(async function (makerConfig) {
-    //   const chainList = chainConfigService.getAllChains();
-    //   chainList.forEach(item => {
-    //     V2Service.idMap[+item.internalId] = item.chainId;
-    //   });
     //   V2Service.tradingPairs = _this.convertMakerConfig(chainList, makerConfig);
     // });
+    const chainList = chainConfigService.getAllChains();
+    chainList.forEach(item => {
+      V2Service.idMap[+item.internalId] = item.chainId;
+    });
   }
 
   @InjectModel(Transaction) private TransactionModel: typeof Transaction;

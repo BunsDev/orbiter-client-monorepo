@@ -8,9 +8,7 @@ services:
     container_name: OB-OpenApi
     restart: always
     environment:
-      CONSUL_HOST: '${CONSUL_HOST}'
-      CONSUL_PORT: '${CONSUL_PORT}'
-      CONSUL_TOKEN: '${CONSUL_TOKEN}'
+      CONSUL_URL: '${CONSUL_URL}'
     ports:
       - '9003:3000'
     networks:
