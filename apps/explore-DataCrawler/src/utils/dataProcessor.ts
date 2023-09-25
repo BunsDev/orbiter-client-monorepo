@@ -26,6 +26,10 @@ export default class DataProcessor {
     getDataCount() {
         return this.dataSet.size;
     }
+    async getDataByStorage() {
+        const keys = await this.db.keys({ limit: 100 }).all()
+        return keys;
+    }
 
     // Get the count of data in the processing set
     getProcessingCount() {
