@@ -63,43 +63,22 @@ export class MakerService {
                 errmsg: 'securityCodeInfo not found'
             }
         }
-        const ebcSnapshot = securityCodeInfo.ebcSnapshot;
-        if (ebcSnapshot.length !== 1 || !ebcSnapshot[0]['ebcMappingSnapshot']) {
-            return {
-                errno: 1000,
-                errmsg: 'ebcSnapshot not found'
-            }
-        }
-        const dealerSnapshot = securityCodeInfo.dealerSnapshot;
-        if (dealerSnapshot.length !== 1 || !dealerSnapshot[0]['dealerMappingSnapshot']) {
-            return {
-                errno: 1000,
-                errmsg: 'dealerSnapshot not found'
-            }
-        }
-        const chainIdSnapshot = securityCodeInfo.chainIdSnapshot;
-        if (chainIdSnapshot.length !== 1 || !chainIdSnapshot[0]['chainIdMappingSnapshot']) {
-            return {
-                errno: 1000,
-                errmsg: 'chainIdSnapshot not found'
-            }
-        }
 
-        const ebc = ebcSnapshot[0]['ebcMappingSnapshot'][0];
+        const ebc = securityCodeInfo['ebcMappingSnapshots'][0];
         if (!ebc) {
             return {
                 errno: 1000,
                 errmsg: 'ebc not found'
             }
         }
-        const dealer = dealerSnapshot[0]['dealerMappingSnapshot'][0];
+        const dealer = securityCodeInfo['dealerMappingSnapshots'][0];
         if (!dealer) {
             return {
                 errno: 1000,
                 errmsg: 'dealer not found'
             }
         }
-        const targetChain = chainIdSnapshot[0]['chainIdMappingSnapshot'][0];
+        const targetChain = securityCodeInfo['chainIdMappingSnapshots'][0];
         if (!targetChain) {
             return {
                 errno: 1000,
@@ -109,6 +88,21 @@ export class MakerService {
         const targetChainData = await this.getV2ChainInfo(targetChain.chainId);
         const targetToken = targetChainData.tokens.find(token => equals(token.mainnetToken, sourceToken.mainnetToken));
         const rule = await subgraphClient.maker.getCrossChainMakerSecurityCodeInfoRule(owner, ebc.ebcAddr, +sourceChainData.id, +targetChain.chainId, sourceToken.tokenAddress, targetToken.tokenAddress, txTimestamp);
+        if (!rule) {
+            return {
+                errno: 1000,
+                errmsg: 'rule not found',
+                data: {
+                    owner,
+                    ebcAddr: ebc.ebcAddr,
+                    sourceChain: +sourceChainData.id,
+                    targetChain: +targetChain.chainId,
+                    sourceToken: sourceToken.tokenAddress,
+                    targetToken: targetToken.tokenAddress,
+                    txTimestamp
+                }
+            }
+        }
         return {
             code: 0,
             data: {
