@@ -28,7 +28,7 @@ export class TcpService {
         try {
           callback(JSON.parse(chunk.toString()));
         } catch (error) {
-          _this.logger.error('TCP Server receive handle error:', { data: chunk.toString() });
+          _this.logger.error(`TCP Server receive handle error: ${error.message}`);
         }
       });
 
