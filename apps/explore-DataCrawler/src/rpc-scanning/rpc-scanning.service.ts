@@ -194,7 +194,7 @@ export class RpcScanningService implements RpcScanningInterface {
         continue;
       }
     }
-    return transfers;
+    return newList;
   }
 
   public async scanByBlocks(
