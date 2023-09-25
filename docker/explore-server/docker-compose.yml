@@ -29,7 +29,7 @@ services:
     links:
       - "explore_redis:redis"
     volumes:
-      - './runtime:/app/runtime'
+      - './runtime-refinery:/app/runtime'
       - './logs-crawler:/app/logs'
   explore_DataRefinery:
     image: orbiter/explore-data-refinery:latest
@@ -44,5 +44,5 @@ services:
     networks:
       - orbiter-explore
     volumes:
-      - './runtime:/app/runtime'
+      - './runtime-refinery:/app/runtime'
       - './logs-refinery:/app/logs'
