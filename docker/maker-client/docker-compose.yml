@@ -12,7 +12,6 @@ services:
     environment:
       CONSUL_URL: '${CONSUL_URL}'
     ports:
-      - '3002:3002'
       - '8000:8000'
     networks:
       - app-network
