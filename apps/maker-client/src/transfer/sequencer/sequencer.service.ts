@@ -50,7 +50,9 @@ export class SequencerService {
         transfer.sourceAmount,
         transfer.targetSymbol,
         transfer.targetAmount
-      );
+      ).catch((error)=> {
+        throw new TransactionSendBeforeError(`validatingValueMatche error ${error.message}`)
+      })
       if (!success) {
         throw new TransactionSendBeforeError(
           `validatingValueMatches Trading with loss and risk ${transfer.sourceAmount} ${transfer.sourceSymbol} To ${transfer.targetAmount} ${transfer.targetSymbol}`
