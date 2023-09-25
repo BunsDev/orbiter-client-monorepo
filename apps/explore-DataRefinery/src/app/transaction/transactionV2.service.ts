@@ -142,11 +142,12 @@ export class TransactionV2Service {
       );
       return this.errorBreakResult(`${transfer.hash} Exceeded the maximum nonce value ${transfer.nonce} / 9999`,)
     }
+    const txTimestamp = dayjs(transfer.timestamp).unix();
     const result = await this.makerService.getV2RuleByTransfer(transfer, +dealerId, +ebcId, +targetChainIdIndex);
     if (!result) {
       return this.errorBreakResult(`${transfer.hash} getV2RuleByTransfer result not found`)
     }
-    this.logger.info(`handleTransferBySourceTx  dealerId: ${dealerId}, ebcId: ${ebcId}. targetChainIdIndex: ${targetChainIdIndex}, owners: ${transfer.receiver}`);
+    this.logger.info(`handleTransferBySourceTx ${transfer.hash}  dealerId: ${dealerId}, ebcId: ${ebcId}. targetChainIdIndex: ${targetChainIdIndex}, txTimestamp: ${txTimestamp}, owners: ${transfer.receiver}`);
     if (result.code != 0) {
       return this.errorBreakResult(`${transfer.hash} getV2RuleByTransfer fail ${result.errmsg} ${JSON.stringify(result)}`)
     }
