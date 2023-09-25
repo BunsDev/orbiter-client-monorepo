@@ -156,7 +156,7 @@ export class SequencerScheduleService {
         return;
       }
       const TransferInterval =
-        this.envConfig.get(`${store.chainId}.TransferInterval`) || 1000 * 10;
+        this.envConfig.get(`${store.chainId}.TransferInterval`) || 1000;
       if (Date.now() - storesState.lastSubmit >= TransferInterval) {
         const wthData = store.getSymbolsWithData();
         if (wthData.length > 0) {
