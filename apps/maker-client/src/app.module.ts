@@ -24,12 +24,8 @@ import { logger } from '@orbiter-finance/utils'
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         return {
-          name: 'MakerClient',
-          host: config.get('CONSUL_HOST'),
-          port: config.get('CONSUL_PORT'),
-          defaults: {
-            token: config.get('CONSUL_TOKEN'),
-          },
+          name: 'Maker-Client',
+          url:config.get("CONSUL_URL")
         };
       },
     }),
