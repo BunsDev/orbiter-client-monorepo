@@ -34,9 +34,9 @@ dayjs.extend(utc);
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-data-service/chains.json",
-      envConfigPath: "explore-data-service/config.yaml",
-      makerV1RulePath: "explore-data-service/rules",
+      chainConfigPath: "explore-data-refinery/chains.json",
+      envConfigPath: "explore-data-refinery/config.yaml",
+      makerV1RulePath: "explore-data-refinery/rules",
       cachePath: join(__dirname, 'runtime')
     }),
     WinstonModule.forRoot({
