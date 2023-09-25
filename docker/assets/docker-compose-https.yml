@@ -1,0 +1,16 @@
+version: '3.8'
+networks:
+  app-network:
+    driver: bridge
+services:
+  assets:
+    image: nginx:stable-alpine
+    container_name: assets
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - './https:/etc/nginx/conf.d'
+      - './static:/static'
+    networks:
+      - app-network
