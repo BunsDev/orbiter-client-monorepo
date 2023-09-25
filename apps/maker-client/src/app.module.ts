@@ -37,40 +37,51 @@ import { TcpModule } from "@orbiter-finance/tcp";
             envConfigPath: "explore-data-service/config.yaml",
             cachePath: join(__dirname,'runtime')
         }),
-        WinstonModule.forRoot({
-          exitOnError: false,
-          level: 'debug',
-          transports: [
-            new DailyRotateFile({
-              dirname: `logs`,
-              filename: '%DATE%.log',
-              datePattern: 'YYYY-MM-DD',
-              zippedArchive: true,
-              maxSize: '20m',
-              maxFiles: '14d',
-              format: winston.format.combine(
-                winston.format.timestamp({
-                  format: 'YYYY-MM-DD HH:mm:ss',
+        WinstonModule.forRootAsync({
+            inject: [ENVConfigService],
+            useFactory: async (envConfig: ENVConfigService) => {
+              const winstonHost = await envConfig.getAsync('WINSTON_HOST');
+              const winstonPort = await envConfig.getAsync('WINSTON_PORT');
+              const transports: any[] = [
+                new DailyRotateFile({
+                  dirname: `logs`,
+                  filename: '%DATE%.log',
+                  datePattern: 'YYYY-MM-DD',
+                  zippedArchive: true,
+                  maxSize: '20m',
+                  maxFiles: '14d',
+                  format: winston.format.combine(
+                    winston.format.timestamp({
+                      format: 'YYYY-MM-DD HH:mm:ss',
+                    }),
+                    winston.format.json(),
+                  ),
                 }),
-                winston.format.json(),
-              ),
-            }),
-            new winston.transports.Console({
-              format: winston.format.combine(
-                winston.format.timestamp(),
-                winston.format.ms(),
-                utilities.format.nestLike('makerClient', {
-                  colors: true,
-                  prettyPrint: true,
+                new winston.transports.Console({
+                  format: winston.format.combine(
+                    winston.format.timestamp(),
+                    winston.format.ms(),
+                    utilities.format.nestLike('makerClient', {
+                      colors: true,
+                      prettyPrint: true,
+                    }),
+                  ),
+                  handleExceptions: true,
                 }),
-              ),
-              handleExceptions: true,
-            }),
-          ],
-          exceptionHandlers: [
-            new winston.transports.File({ filename: './logs/exception.log' }),
-          ],
-        }),
+              ];
+              if (winstonHost && winstonPort) {
+                transports.push(new winston.transports.Http({ host: winstonHost, port: winstonPort }));
+              }
+              return {
+                exitOnError: false,
+                level: 'debug',
+                transports: transports,
+                exceptionHandlers: [
+                  new winston.transports.File({ filename: './logs/exception.log' }),
+                ],
+              };
+            },
+          }),
         SequelizeModule.forRootAsync({
             inject: [ENVConfigService],
             useFactory: async (envConfig: ENVConfigService) => {
