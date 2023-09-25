@@ -32,7 +32,7 @@ import { logger } from '@orbiter-finance/utils'
     OrbiterConfigModule.forRoot({
       chainConfigPath: "explore-data-service/chains.json",
       envConfigPath: "explore-data-service/config.yaml",
-      cachePath: join(__dirname, 'runtime')
+      // makerV1RulePath: "explore-data-service/rules",
     }),
     WinstonModule.forRootAsync({
       inject: [ENVConfigService],

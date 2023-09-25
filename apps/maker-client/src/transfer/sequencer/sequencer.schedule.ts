@@ -116,7 +116,7 @@ export class SequencerScheduleService {
   }
 
   private async consumeMQTransactionRecords(bridgeTransaction: BridgeTransactionAttributes) {
-    this.logger.log('consumeMQTransactionRecords', JSON.stringify(bridgeTransaction))
+    this.logger.log(`consumeMQTransactionRecords ${JSON.stringify(bridgeTransaction)}`)
     const owners = this.envConfig.get("MAKERS") || [];
     const chains = this.chainConfigService.getAllChains()
     const targetChainInfo = chains.find(chain => String(chain.chainId) === bridgeTransaction.targetChain)

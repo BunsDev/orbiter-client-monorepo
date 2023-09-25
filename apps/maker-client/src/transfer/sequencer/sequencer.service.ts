@@ -38,7 +38,7 @@ export class SequencerService {
       transfer.targetChain,
       transfer.targetToken
     );
-    this.logger.debug(
+    this.logger.log(
       `execSingleTransfer: ${sourceChainId}-${sourceHash}, owner:${wallet.address}`
     );
     const transaction =
@@ -134,14 +134,12 @@ export class SequencerService {
         transfer
       );
       if (transferToken.isNative) {
-        this.logger.debug(`transfer`)
         transferResult = await wallet.transfer(
           transfer.targetAddress,
           BigInt(transferAmount.toFixed(0)),
           requestParams
         );
       } else {
-        this.logger.debug(`transferToken`)
         transferResult = await wallet.transferToken(
           transferToken.address,
           transfer.targetAddress,
@@ -206,7 +204,7 @@ export class SequencerService {
     store: StoreService,
     hash: string
   ) {
-    this.logger.debug(`singleSendTransactionByTransfer: ${hash}`)
+    this.logger.log(`singleSendTransactionByTransfer: ${hash}`)
     try {
       const transfer = store.getTransaction(hash);
       const wallet = await this.validatorService.transactionGetPrivateKey(
@@ -227,11 +225,11 @@ export class SequencerService {
         );
         try {
           const senderAddress = wallet.address.toLocaleLowerCase();
-          this.logger.debug(`ready for sending step1  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
+          this.logger.log(`ready for sending step1  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
           const result = await store.accountRunExclusive(
             senderAddress,
             async () => {
-              this.logger.debug(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
+              this.logger.log(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
               await this.execSingleTransfer(transfer, wallet.account, store).catch(error=> {
                 this.logger.error(`execSingleTransfer error`, error)
                 if (error instanceof TransactionSendBeforeError) {
@@ -272,7 +270,7 @@ export class SequencerService {
       for (const transfer of transfers) {
         const record = await store.getSerialRecord(transfer.sourceId);
         if (record) {
-          this.logger.warn(
+          this.logger.error(
             `${transfer.sourceId} batchSendTransaction getSerialRecord exist`
           );
           await store.removeTransaction(token, transfer.sourceId);
@@ -285,7 +283,7 @@ export class SequencerService {
           transfer.targetAmount
         );
         if (!success) {
-          this.logger.warn(
+          this.logger.error(
             `validatingValueMatches Trading with loss and risk ${transfer.sourceAmount}-${transfer.sourceSymbol} To ${transfer.targetAmount}-${transfer.targetSymbol}`
           );
           continue;

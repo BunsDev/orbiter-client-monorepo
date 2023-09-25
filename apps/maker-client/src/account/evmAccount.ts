@@ -320,13 +320,13 @@ export default class EVMAccount extends OrbiterAccount {
       if (tx.value) {
         tx.value = new BigNumber(String(tx.value)).toFixed(0);
       }
-      this.logger.debug(
+      this.logger.log(
         `${chainConfig.name} sendTransaction:${JSONStringify(tx)}`
       );
       const signedTx = await this.wallet.signTransaction(tx);
       txHash = keccak256(signedTx);
       const response = await provider.broadcastTransaction(signedTx);
-      this.logger.debug(
+      this.logger.log(
         `${chainConfig.name} sendTransaction txHash:${txHash}`
       );
       await this.store.saveSerialRelTxHash(serialIds, txHash);
