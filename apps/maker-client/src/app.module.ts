@@ -37,7 +37,7 @@ import { logger } from '@orbiter-finance/utils'
     WinstonModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (envConfig: ENVConfigService) => {
-        const winstonHost = await envConfig.getAsync('WINSTON__HOST');
+        const winstonHost = await envConfig.getAsync('WINSTON_HOST');
         const winstonPort = await envConfig.getAsync('WINSTON_PORT');
         const transports: any[] = [
           new DailyRotateFile({
