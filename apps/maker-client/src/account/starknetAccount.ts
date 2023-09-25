@@ -115,7 +115,7 @@ export default class StarknetAccount extends OrbiterAccount  {
                 // amount: value
             }
         }
-        console.log('发送参数:', invocation);
+        console.log('send params:', invocation);
         try {
             const { suggestedMaxFee } = await this.account.estimateFee(invocation);
             console.log(suggestedMaxFee, '==suggestedMaxFee')
@@ -131,7 +131,6 @@ export default class StarknetAccount extends OrbiterAccount  {
                 // maxFee
             }
             );
-            console.log(executeHash, '==executeHash')
             return {} as any;
             // this.logger.info('transfer response:', executeHash);
             // // console.log(`Waiting for Tx to be Accepted on Starknet - Transfer...`, executeHash.transaction_hash);

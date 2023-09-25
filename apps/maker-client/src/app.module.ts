@@ -32,12 +32,12 @@ import { logger } from '@orbiter-finance/utils'
     OrbiterConfigModule.forRoot({
       chainConfigPath: "explore-data-service/chains.json",
       envConfigPath: "explore-data-service/config.yaml",
-      cachePath: join(__dirname, 'runtime')
+      // makerV1RulePath: "explore-data-service/rules",
     }),
     WinstonModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (envConfig: ENVConfigService) => {
-        const winstonHost = await envConfig.getAsync('WINSTON__HOST');
+        const winstonHost = await envConfig.getAsync('WINSTON_HOST');
         const winstonPort = await envConfig.getAsync('WINSTON_PORT');
         const transports: any[] = [
           new DailyRotateFile({

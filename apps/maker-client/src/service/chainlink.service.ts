@@ -2,8 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { BigNumber } from "bignumber.js";
 import { JsonRpcProvider, ethers } from "ethers6";
 import {abis} from "@orbiter-finance/utils";
+import { ChainConfigService } from "@orbiter-finance/config";
+
 @Injectable()
 export class ChainLinkService {
+  constructor(private readonly chainConfigService: ChainConfigService,){
+  }
   private readonly pairs: Record<string, string> = {
     "eth/usd": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
     "dai/usd": "0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9",
@@ -27,7 +31,11 @@ export class ChainLinkService {
     if (!addr) {
       return new BigNumber(0);
     }
-    const provider = new JsonRpcProvider("https://ethereum.publicnode.com");
+    const mainnetChain = this.chainConfigService.getChainInfo("1");
+    if (!mainnetChain) {
+      throw new Error('mainnetChain not found')
+    }
+    const provider = new JsonRpcProvider(mainnetChain.rpc[0]);
     const priceFeed = new ethers.Contract(
       addr,
       abis.ChainLinkAggregatorV3,

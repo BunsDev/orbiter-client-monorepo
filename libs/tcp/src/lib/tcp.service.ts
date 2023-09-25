@@ -1,16 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import net from "net";
-import { ENVConfigService } from "@orbiter-finance/config";
 @Injectable()
 export class TcpService {
   private readonly logger = new Logger(TcpService.name);
-
-  constructor(private readonly envConfigService: ENVConfigService) {
+  constructor() {
   }
 
   async start(callback: (msg) => void) {
     const _this = this;
-    const port = await this.envConfigService.getAsync('TCP_PORT');
+    const port = 8000;
     if (!port) {
       _this.logger.error("TCP_PORT not configured");
       return;
