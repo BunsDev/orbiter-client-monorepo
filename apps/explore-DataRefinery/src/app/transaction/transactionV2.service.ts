@@ -146,8 +146,9 @@ export class TransactionV2Service {
     if (!result) {
       return this.errorBreakResult(`${transfer.hash} getV2RuleByTransfer result not found`)
     }
+    this.logger.info(`handleTransferBySourceTx  dealerId: ${dealerId}, ebcId: ${ebcId}. targetChainIdIndex: ${targetChainIdIndex}, owners: ${transfer.receiver}`);
     if (result.code != 0) {
-      return this.errorBreakResult(`${transfer.hash} getV2RuleByTransfer fail ${result.errmsg}`)
+      return this.errorBreakResult(`${transfer.hash} getV2RuleByTransfer fail ${result.errmsg} ${JSON.stringify(result)}`)
     }
     const { ebc, dealer, sourceToken, targetToken, rule } = result.data;
     const targetTokenAddrSub = `0x${targetToken.tokenAddress.substring(26).toLocaleLowerCase()}`;
