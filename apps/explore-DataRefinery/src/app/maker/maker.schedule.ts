@@ -45,7 +45,7 @@ export class MakerScheduuleService {
     async syncV2Owners() {
         try {
             const subgraphClient = await this.getSubClient()
-            const owners = await subgraphClient.factory.getOwners();
+            const owners = await subgraphClient.factory.getOwners() || [];
             const v2OwnersCount = await this.redis.scard("v2Owners");
             if (owners.length > 0 && v2OwnersCount != owners.length) {
                 await this.redis.sadd("v2Owners", owners)

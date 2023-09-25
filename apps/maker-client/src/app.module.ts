@@ -30,8 +30,8 @@ import { logger } from '@orbiter-finance/utils'
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-data-service/chains.json",
-      envConfigPath: "explore-data-service/config.yaml",
+      chainConfigPath: "maker-client/chains.json",
+      envConfigPath: "maker-client/config.yaml",
       // makerV1RulePath: "explore-data-service/rules",
     }),
     WinstonModule.forRootAsync({

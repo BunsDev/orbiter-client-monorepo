@@ -36,7 +36,9 @@ export class Factory {
           }
           `
     const result = await this.ctx.query(queryStr);
-    return result['factoryManagers'][0]['owners'];
-
+    if (result['factoryManagers'].length>0) {
+      return result['factoryManagers'][0]['owners'];
+    }
+    return []
   }
 }
