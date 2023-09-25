@@ -30,7 +30,7 @@ services:
       - "explore_redis:redis"
     volumes:
       - './runtime:/app/runtime'
-      - './logs:/app/logs'
+      - './logs-crawler:/app/logs'
   explore_DataRefinery:
     image: orbiter/explore-data-refinery:latest
     restart: always
@@ -45,4 +45,4 @@ services:
       - orbiter-explore
     volumes:
       - './runtime:/app/runtime'
-      - './logs:/app/logs'
+      - './logs-refinery:/app/logs'

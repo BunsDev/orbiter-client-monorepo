@@ -52,7 +52,6 @@ export class MakerScheduuleService {
                 Logger.log(`syncV2Owners ${JSON.stringify(owners)}`)
             }
         } catch (error) {
-            console.error(error);
             this.logger.error('syncV2Owners error:', error);
         }
     }
