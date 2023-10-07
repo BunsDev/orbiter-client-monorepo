@@ -1,6 +1,6 @@
 import * as winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-const ecsFormat = require('@elastic/ecs-winston-format')
+import ecsFormat from '@elastic/ecs-winston-format'
 export type OrbiterLogger = winston.Logger;
 export function loggerFormat() {
   // return winston.format.combine(
