@@ -140,22 +140,20 @@ export default class DataProcessor {
     }
 
     // Delete data from LevelDB
-    deleteStoreData(blocks: number[]) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const batchs = blocks.map(num => {
-                    return {
-                        type: 'del',
-                        key: num.toString(),
-                    };
-                });
-                await this.db.batch(batchs as any);
-                resolve(blocks);
-            } catch (error) {
-                this.logger.error(`deleteStoreData error`, error);
-                reject(error);
-            }
-        });
+    async deleteStoreData(blocks: number[]) {
+        try {
+            const batchs = blocks.map(num => {
+                return {
+                    type: 'del',
+                    key: num.toString(),
+                };
+            });
+            await this.db.batch(batchs as any);
+            return blocks;
+        } catch (error) {
+            this.logger.error(`deleteStoreData error`, error);
+            throw error;
+        }
     }
 
     // Mark data as not acknowledged for processing

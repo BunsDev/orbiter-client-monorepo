@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { InjectModel } from "@nestjs/sequelize";
 import { Mutex } from "async-mutex";
@@ -10,7 +10,7 @@ import {
   type MonitorState,
   type TransferAmountTransaction,
 } from "./sequencer.interface";
-import { arePropertyValuesConsistent, isEmpty } from "@orbiter-finance/utils";
+import { LoggerDecorator, arePropertyValuesConsistent, isEmpty,OrbiterLogger } from "@orbiter-finance/utils";
 import { StoreService } from "../store/store.service";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
@@ -18,23 +18,20 @@ import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';
 @Injectable()
 export class SequencerScheduleService {
-  private readonly logger = new Logger(SequencerService.name);
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
   private readonly stores = new Map<string, StoreService>(); // chainId + owner
   private storesState: Record<string, MonitorState> = {};
 
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
-    @InjectModel(TransfersModel)
-    private readonly transfersModel: typeof TransfersModel,
     @InjectModel(BridgeTransactionModel)
     private readonly bridgeTransactionModel: typeof BridgeTransactionModel,
     private readonly sequencerService: SequencerService,
     private readonly envConfig: ENVConfigService,
-    private readonly consumerService: ConsumerService
-  ) {
+    private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
-    this.logger.log('start consumeMakerWaitTransferMessage')
     this.consumerService.consumeMakerWaitTransferMessage(this.consumeMQTransactionRecords.bind(this))
     // this.validatorService.validatingValueMatches("ETH", "1", "ETH", "2")
   }
@@ -116,7 +113,7 @@ export class SequencerScheduleService {
   }
 
   private async consumeMQTransactionRecords(bridgeTransaction: BridgeTransactionAttributes) {
-    this.logger.log(`consumeMQTransactionRecords ${JSON.stringify(bridgeTransaction)}`)
+    this.logger.info(`consumeMQTransactionRecords ${JSON.stringify(bridgeTransaction)}`)
     const owners = this.envConfig.get("MAKERS") || [];
     const chains = this.chainConfigService.getAllChains()
     const targetChainInfo = chains.find(chain => String(chain.chainId) === bridgeTransaction.targetChain)
@@ -142,6 +139,7 @@ export class SequencerScheduleService {
 
   @Cron("*/1 * * * * *")
   private checkStoreWaitSend() {
+
     const storeKeys = this.stores.keys();
     for (const k of storeKeys) {
       const store = this.stores.get(k);

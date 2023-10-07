@@ -1,13 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { MakerService } from './maker.service'
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { SubgraphClient } from '@orbiter-finance/subgraph-sdk'
 import { ENVConfigService } from '@orbiter-finance/config';
+import { OrbiterLogger } from '@orbiter-finance/utils';
+import { LoggerDecorator } from '@orbiter-finance/utils';
 @Injectable()
 export class MakerScheduuleService {
-    private logger: Logger = new Logger(MakerScheduuleService.name, { timestamp: true })
+    @LoggerDecorator()
+    private readonly logger: OrbiterLogger;
     constructor(
         protected envConfigService: ENVConfigService,
         private readonly makerService: MakerService,
@@ -49,7 +52,7 @@ export class MakerScheduuleService {
             const v2OwnersCount = await this.redis.scard("v2Owners");
             if (owners.length > 0 && v2OwnersCount != owners.length) {
                 await this.redis.sadd("v2Owners", owners)
-                Logger.log(`syncV2Owners ${JSON.stringify(owners)}`)
+                this.logger.info(`syncV2Owners ${JSON.stringify(owners)}`)
             }
         } catch (error) {
             this.logger.error('syncV2Owners error:', error);
@@ -61,12 +64,12 @@ export class MakerScheduuleService {
             const v1Makers = await this.makerService.getV1MakerOwners();
             const v1OwnersCount = await this.redis.scard("v1Owners");
             if (v1Makers.length > 0 && v1OwnersCount != v1Makers.length) {
-                const result = await this.redis.sadd("v1Owners", v1Makers)
+                const _result = await this.redis.sadd("v1Owners", v1Makers)
             }
             const fakeMakerList = await this.makerService.getV1MakerOwnerResponse();
             const v1FakeMakerCount = await this.redis.scard("v1FakeMaker");
             if (fakeMakerList.length > 0 && v1FakeMakerCount != fakeMakerList.length) {
-                const result = await this.redis.sadd("v1FakeMaker", fakeMakerList)
+                const _result = await this.redis.sadd("v1FakeMaker", fakeMakerList)
             }
         } catch (error) {
             this.logger.error('syncV1Owners error:', error);

@@ -1,22 +1,30 @@
-import { characterPattern } from '@orbiter-finance/utils';
-import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./app.module";
-import { Logger } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+/**
+ * This is not a production server yet!
+ * This is only a minimal backend to get started.
+ */
+import { NestFactory } from '@nestjs/core';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
+import { AppModule } from './app.module';
+import { WinstonModule } from 'nest-winston';
+import { logger, characterPattern } from '@orbiter-finance/utils'
+const sysLogger = logger.createLoggerByName('app', { service: { name: "maker-client" } });
+
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  Logger.log(characterPattern);
-  Logger.log(`🚀 Application is running on: Maker Client`);
+    console.debug(characterPattern);
+    await NestFactory.createApplicationContext(AppModule, {
+    logger: WinstonModule.createLogger({
+      instance: sysLogger
+    })
+  });
+  sysLogger.info(`🚀 Application is running on: maker-client`);
 }
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err);
-  process.exit(1);
+process.on('uncaughtException', (err) => {
+  sysLogger.error('Unhandled Exception at:', err)
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
-  process.exit(1);
+process.on('unhandledRejection', (reason, promise) => {
+  sysLogger.error(`Unhandled Rejection at: ${reason}`)
 });
-
 bootstrap();
