@@ -217,6 +217,8 @@ export class V3Service {
         const newData = BigIntToString(row);
         // newData.profit = row.tradeFee;
         // delete newData.tradeFee;
+        newData.sourceTime = dayjs(row.sourceTime).valueOf();
+        newData.targetTime = dayjs(row.targetTime).valueOf();
         const token = this.chainConfigService.getTokenBySymbol(String(row.sourceChain),row.sourceSymbol)
         if (token) {
           newData.tradeFee = new BigNumber(row.tradeFee).times(10**token.decimals).toFixed(0);
