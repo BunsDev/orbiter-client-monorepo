@@ -1,15 +1,10 @@
 import { Module } from '@nestjs/common';
-import { AppService } from './app.service';
 import { TransactionModule } from './transaction/transaction.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
-import { loggerFormat } from 'libs/utils/src/lib/logger';
-import { WinstonModule } from 'nest-winston';
 import { isEmpty } from '@orbiter-finance/utils';
-import winston from 'winston';
-import DailyRotateFile from 'winston-daily-rotate-file';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
 import { AlertModule } from '@orbiter-finance/alert';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
@@ -30,34 +25,12 @@ import { ScheduleModule } from '@nestjs/schedule';
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-data-service/chains.json",
-      envConfigPath: "explore-data-service/config.yaml",
-      makerV1RulePath: "explore-data-service/rules",
+      chainConfigPath: "explore-data-refinery/chains.json",
+      envConfigPath: "explore-data-refinery/config.yaml",
+      makerV1RulePath: "explore-data-refinery/rules",
       // cachePath: join(__dirname, 'runtime')
     }),
-
-    WinstonModule.forRoot({
-      exitOnError: false,
-      level: 'debug',
-      transports: [
-        new DailyRotateFile({
-          dirname: `logs`,
-          filename: '%DATE%.log',
-          datePattern: 'YYYY-MM-DD',
-          zippedArchive: true,
-          maxSize: '20m',
-          maxFiles: '14d',
-          format: loggerFormat(),
-        }),
-        new winston.transports.Console({
-          format: loggerFormat(),
-          handleExceptions: true,
-        }),
-      ],
-      exceptionHandlers: [
-        new winston.transports.File({ filename: './logs/exception.log' }),
-      ],
-    }),
+    RabbitMqModule,
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async(configService: ENVConfigService) => {
@@ -91,11 +64,10 @@ import { ScheduleModule } from '@nestjs/schedule';
         }
       }
     }),
-    RabbitMqModule,
     TransactionModule,
     ScheduleModule.forRoot()
   ],
   controllers: [],
-  providers: [AppService],
+  providers: [],
 })
 export class AppModule { }

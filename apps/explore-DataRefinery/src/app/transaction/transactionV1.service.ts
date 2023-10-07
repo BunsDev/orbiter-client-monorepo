@@ -10,11 +10,13 @@ import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
-import { logger } from '@orbiter-finance/utils';
 import { Sequelize } from 'sequelize-typescript';
+import { OrbiterLogger } from '@orbiter-finance/utils';
+import { LoggerDecorator } from '@orbiter-finance/utils';
 @Injectable()
 export class TransactionV1Service {
-  private logger = logger.createLoggerByName(`${TransactionV1Service.name}`);
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
   constructor(
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,

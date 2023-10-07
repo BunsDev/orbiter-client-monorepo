@@ -3,18 +3,18 @@ import IAccount, {
   TransactionRequest,
   TransferResponse,
 } from "./IAccount";
-import { Logger } from '@nestjs/common'
 import { type TransferAmountTransaction } from "../transfer/sequencer/sequencer.interface";
 import { StoreService } from "../transfer/store/store.service";
 import { IChainConfig } from "@orbiter-finance/config";
+import { OrbiterLogger,logger } from "@orbiter-finance/utils";
 
 export default class OrbiterAccount extends IAccount {
-  public logger!: Logger;
+  
+  public logger!: OrbiterLogger;
   public store: StoreService;
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
-    // this.logger = createLoggerByName(`${this.chainConfig.chainId}`);
-    this.logger = new Logger(`${chainId}`);
+    this.logger = logger.createLoggerByName(`account-${chainId}`);
     this.store = new StoreService(chainId);
   }
 

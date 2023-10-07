@@ -2,11 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { BridgeTransactionAttributes, TransfersAttributes} from '@orbiter-finance/seq-models';
 import dayjs from 'dayjs';
-import { equals,logger } from '@orbiter-finance/utils';
+import { equals } from '@orbiter-finance/utils';
 
 @Injectable()
 export class MemoryMatchingService {
-  private logger = logger.createLoggerByName(`${MemoryMatchingService.name}`);
   private maxTimeMS = 1000 * 60 * 10;
   private transfersID: { [key: string]: Set<string> } = {}; // version hash
   private transfers: TransfersAttributes[] = [];

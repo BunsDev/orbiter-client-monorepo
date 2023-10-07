@@ -1,0 +1,32 @@
+filebeat.inputs:
+- type: filestream
+  enabled: true
+  paths:
+    - /var/log/*.log
+    - /var/log/*/*.log
+  parsers:
+    - ndjson:
+      overwrite_keys: true 
+      add_error_key: true 
+      expand_keys: true 
+
+output.logstash:
+  # hosts: ["192.168.1.29:5044"]
+  hosts: ['${LOGSTASH_HOST}']
+processors: 
+  - add_host_metadata: ~
+
+setup.kibana:
+  host: '${KIBANA_HOST_PORT}'
+  username: '${ELASTIC_USERNAME}'
+  password: '${ELASTIC_PASSWORD}'
+
+# 可选的 Filebeat 配置选项
+filebeat.config:
+  inputs:
+    enabled: true
+    path: inputs.d/*.yml
+  modules:
+    enabled: true
+    path: modules.d/*.yml
+

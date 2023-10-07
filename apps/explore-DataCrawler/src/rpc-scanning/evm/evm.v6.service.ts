@@ -247,7 +247,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       });
       return await this.handleTransactionAfter(transfers);
     } catch (error) {
-      console.error(error);
       this.logger.error(
         `handleTransaction error ${transaction.hash}`,
         error,

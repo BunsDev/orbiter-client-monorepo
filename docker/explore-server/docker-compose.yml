@@ -29,8 +29,8 @@ services:
     links:
       - "explore_redis:redis"
     volumes:
-      - './runtime:/app/runtime'
-      - './logs:/app/logs'
+      - './runtime-crawler:/app/runtime'
+      - './logs-crawler:/app/logs'
   explore_DataRefinery:
     image: orbiter/explore-data-refinery:latest
     restart: always
@@ -44,5 +44,5 @@ services:
     networks:
       - orbiter-explore
     volumes:
-      - './runtime:/app/runtime'
-      - './logs:/app/logs'
+      - './runtime-refinery:/app/runtime'
+      - './logs-refinery:/app/logs'

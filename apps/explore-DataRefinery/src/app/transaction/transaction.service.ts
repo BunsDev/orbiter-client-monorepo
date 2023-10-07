@@ -1,4 +1,4 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { BigIntToString } from '@orbiter-finance/utils';
 import { TransferAmountTransaction } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
@@ -7,12 +7,14 @@ import { InjectModel } from '@nestjs/sequelize';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { TransactionV1Service } from './transactionV1.service';
 import { TransactionV2Service } from './transactionV2.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MakerService } from '../maker/maker.service'
+import { OrbiterLogger } from '@orbiter-finance/utils';
+import { LoggerDecorator } from '@orbiter-finance/utils';
 @Injectable()
 export class TransactionService {
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,
     private messageService: MessageService,

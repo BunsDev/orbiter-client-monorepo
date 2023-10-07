@@ -2,14 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Mutex } from 'async-mutex';
 import { ChainConfigService } from '@orbiter-finance/config';
-import { isEmpty,logger } from '@orbiter-finance/utils';
+import { isEmpty } from '@orbiter-finance/utils';
 import { ApiScanningFactory } from './api-scanning.factory';
 import { ApiScanningScheduleService } from './api-scanning.interface';
 import { ENVConfigService } from '@orbiter-finance/config';
 import { AlertService } from '@orbiter-finance/alert';
+import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
 @Injectable()
 export class ApiScanningSchedule {
-  private readonly logger = logger.createLoggerByName(ApiScanningSchedule.name);
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
   private scanService: Map<string, ApiScanningScheduleService> = new Map();
   constructor(
     private chainConfigService: ChainConfigService,
@@ -18,6 +20,14 @@ export class ApiScanningSchedule {
     private alertService: AlertService
   ) {
     this.initializeTransactionScanners();
+  }
+  private removeScanServiceById(chainId: string) {
+    if (this.scanService.has(chainId)) {
+      this.scanService.delete(chainId);
+      this.logger.info(
+        `change scan chain ${chainId} delete scan api service`,
+      );
+    }
   }
   @Cron('*/10 * * * * *')
   private async initializeTransactionScanners() {
@@ -29,12 +39,7 @@ export class ApiScanningSchedule {
     for (const chain of chains) {
       if (SCAN_CHAINS[0] != '*') {
         if (!SCAN_CHAINS.includes(chain.chainId)) {
-          if (this.scanService.has(chain.chainId)) {
-            this.scanService.delete(chain.chainId);
-            this.logger.info(
-              `change scan chain ${chain.chainId}-${chain.name} delete scan api service`,
-            );
-          }
+          this.removeScanServiceById(chain.chainId)
           continue;
         }
       }
@@ -44,12 +49,7 @@ export class ApiScanningSchedule {
       }
       const serviceKeys = Object.keys(chain.service);
       if (!serviceKeys.includes('api')) {
-        if (this.scanService.has(chain.chainId)) {
-          this.scanService.delete(chain.chainId);
-          this.logger.info(
-            `change service chain ${chain.chainId}-${chain.name} delete scan api service`,
-          );
-        }
+        this.removeScanServiceById(chain.chainId)
         continue;
       }
 
@@ -64,16 +64,21 @@ export class ApiScanningSchedule {
         this.alertService.sendMessage(`CREATE RPC SCAN SERVICE ${chain.name}`, 'TG')
       }
     }
-    this.start();
+    this.execute();
   }
 
-  private async start() {
+  private async execute() {
+    if (Date.now() % 30 === 0) {
+      if (this.scanService.size <= 0) {
+        this.logger.warn('RPC chain scanning service not created');
+      }
+    }
     for (const scanner of this.scanService.values()) {
       if (scanner.mutex) {
         await scanner.mutex.runExclusive(async () => {
           return await scanner.service.bootstrap().catch((error) => {
             this.logger.error(
-              `scan bootstrap error ${error.message}`,error
+              `scan bootstrap error ${error.message}`, error
             );
           });
         });

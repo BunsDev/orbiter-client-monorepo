@@ -12,6 +12,6 @@ describe('EvmRpcScanningService', () => {
   // });
 
   it('should be defined', async () => {
-    const res = await service.provider.getBlock(9404888, true);
+    const _res = await service.provider.getBlock(9404888, true);
   }, 180000);
 });
