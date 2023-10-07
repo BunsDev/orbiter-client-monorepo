@@ -21,20 +21,23 @@ export function loggerFormat() {
 }
 
 export function createLoggerByName(context: string, meta: any = {}):OrbiterLogger {
+  const dirName = __dirname.substring(__dirname.lastIndexOf('/') + 1);
   const transports = [new winston.transports.Console(), new DailyRotateFile({
     filename: `logs/${context || "app"}/app-%DATE%.log`,
     datePattern: 'YYYY-MM-DD', //
     maxSize: '20m',
     maxFiles: '7d',
   }),];
+  
   const logger = winston.createLogger({
     level: 'debug',
     format: loggerFormat(),
     defaultMeta: {
-      // service: {
-      //   name: name
-      // },
-      ...meta,
+      ...Object.assign(meta, {
+        service: {
+          name: dirName
+        }
+      }),
       context:context,
     },
     transports,

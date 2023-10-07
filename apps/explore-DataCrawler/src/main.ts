@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { WinstonModule } from 'nest-winston';
 import { logger,characterPattern } from '@orbiter-finance/utils'
-const sysLogger = logger.createLoggerByName('app', { service: { name: "explore-DataCrawler" } });
+const sysLogger = logger.createLoggerByName('app');
 async function bootstrap() {
   console.debug(characterPattern);
   const app = await NestFactory.create(AppModule, {
