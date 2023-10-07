@@ -29,7 +29,7 @@ export function createLoggerByName(context: string, meta: any = {}): OrbiterLogg
     }),];
 
   const logger = winston.createLogger({
-    level: 'debug',
+    level: process.env['LOG_LEVEL'] || 'debug',
     defaultMeta: {
       ...Object.assign(meta, {
         service: {
