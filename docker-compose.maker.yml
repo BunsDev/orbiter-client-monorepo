@@ -1,0 +1,20 @@
+version: '3.8'
+networks:
+  app-network:
+    driver: bridge
+services:
+  maker-client:
+    image: orbiter/maker-client:latest
+    build:
+      dockerfile: ./apps/maker-client/Dockerfile
+    # container_name: OB-MakerClient
+    restart: always
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+    ports:
+      - '8000:8000'
+    networks:
+      - app-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'

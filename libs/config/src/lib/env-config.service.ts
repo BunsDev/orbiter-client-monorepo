@@ -25,7 +25,7 @@ export class ENVConfigService {
         ENVConfigService.configs = {};
         if (this.options.envConfigPath) {
             try {
-                this.consul.watchKey(
+                this.consul.watchConsulConfig(
                     this.options.envConfigPath,
                     (config: KeyValueResult) => {
                         const data = config.yamlToJSON();

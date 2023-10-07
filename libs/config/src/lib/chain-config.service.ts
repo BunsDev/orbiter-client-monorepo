@@ -20,7 +20,7 @@ export class ChainConfigService {
         ChainConfigService.configs = [];
         if (this.options.chainConfigPath) {
             try {
-                this.consul.watchKey(
+                this.consul.watchConsulConfig(
                     this.options.chainConfigPath,
                     (config: KeyValueResult) => {
                         const data = config.toJSON();
