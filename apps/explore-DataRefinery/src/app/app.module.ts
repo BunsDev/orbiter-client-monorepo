@@ -25,9 +25,9 @@ import { ScheduleModule } from '@nestjs/schedule';
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-data-refinery/chains.json",
-      envConfigPath: "explore-data-refinery/config.yaml",
-      makerV1RulePath: "explore-data-refinery/rules",
+      chainConfigPath: "explore-server/chains.json",
+      envConfigPath: "explore-server/config.yaml",
+      makerV1RulePath: "rules",
       // cachePath: join(__dirname, 'runtime')
     }),
     RabbitMqModule,

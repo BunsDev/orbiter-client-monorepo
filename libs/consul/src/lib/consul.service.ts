@@ -25,33 +25,44 @@ export class ConsulService implements OnModuleInit {
   }
 
   async get(key: string): Promise<KeyValueResult | void> {
-    const result:any = await this.consulClient.kv.get(`${this.options.nameSpace || ""}${key}`);
-    if (result) {
-      return new KeyValueResult(result.Value);
+    const result = await this.consulClient.kv.get(`${this.options.nameSpace || ""}${key}`);
+    if (result && typeof result === 'object') {
+      return new KeyValueResult((result as any)['Value']);
     }
   }
   async set(key: string, value: string): Promise<void> {
     await this.consulClient.kv.set(`${this.options.nameSpace || ""}${key}`, value);
   }
-  watchConsulConfig(keyPrefix:string, callback:any) {
+  async keys(key: string): Promise<string[]> {
+    const path = `${this.options.nameSpace || ""}${key}`;
+    const keys: string[] = await this.consulClient.kv.keys(path);
+    return keys;
+  }
+
+  watchConsulConfig(keyPrefix: string, callback: any) {
     const client = this.consulClient;
+    const opts:any = {
+      key: `${this.options.nameSpace || ""}${keyPrefix}`,
+    };
+    if (this.options.defaults && this.options.defaults.token) {
+      opts['token'] = this.options.defaults.token;
+    }
+
     const watcher = client.watch({
       method: client.kv.get,
-      options: {
-        key:`${this.options.nameSpace || ""}${keyPrefix}`,
-      },
+      options: opts
     });
-  
+
     watcher.on('change', (data, res) => {
       if (data) {
-        callback(data);
+        return callback(new KeyValueResult(data.Value));
       }
     });
-  
+
     watcher.on('error', (err) => {
       console.error(`Consul Watcher Error: ${keyPrefix}`, err);
     });
-  
+
     return function stopWatching() {
       watcher.end(); // stop
     };
