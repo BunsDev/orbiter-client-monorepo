@@ -68,9 +68,9 @@ export class ValidatorService {
           address,
           transfer.targetChain
         );
+        await account.connect(privateKey, address);
         const balance = await account.getBalance(address, transfer.targetToken);
         if (balance && balance > transferAmount) {
-          await account.connect(privateKey);
           return {
             account,
             token,

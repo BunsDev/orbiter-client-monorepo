@@ -8,6 +8,9 @@ import IMXAccount from "./imxAccount";
 // import LoopringAccount from "./loopringAccount";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import type OrbiterAccount from "./orbiterAccount";
+import ZkSyncAccount from "./zksyncAccount";
+import ZkSpaceAccount from "./zkspaceAccount";
+
 @Injectable()
 export class AccountFactoryService {
   constructor(private readonly chainConfigService: ChainConfigService, private readonly envConfigService:ENVConfigService) {}
@@ -35,10 +38,10 @@ export class AccountFactoryService {
     switch (+chainConfig.internalId) {
       case 3:
       case 33:
-        // wallet = new ZKSyncAccount(
-        //   toChainId,
-        //   privateKey
-        // );
+        wallet = new ZkSyncAccount(
+          toChainId,
+          ctx
+        );
         break;
       case 4:
       case 44:
@@ -94,10 +97,10 @@ export class AccountFactoryService {
         // }
         break;
       case 512:
-        // wallet = new ZKSpaceAccount(
-        //   toChainId,
-        //   privateKey
-        // );
+        wallet = new ZkSpaceAccount(
+          toChainId,
+          ctx
+        );
         break;
       default:
         throw new Error("Chain Not implemented");
