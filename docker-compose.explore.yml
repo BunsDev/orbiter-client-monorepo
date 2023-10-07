@@ -1,0 +1,52 @@
+version: '3.8'
+networks:
+   orbiter-explore:
+    driver: bridge
+services:
+  explore_redis:
+    image: redis:latest
+    restart: always
+    volumes:
+      - ./redis/data:/data:rw
+    networks:
+      - orbiter-explore
+    ports:
+      - '6389:6379'
+    command: ["redis-server", "--requirepass ${REDIS_PASSWORD}"]
+  explore-DataCrawler:
+    image: orbiter/explore-data-crawler:latest
+    build:
+      dockerfile: ./apps/explore-DataCrawler/Dockerfile
+    restart: always
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    ports:
+      - '3002:3000'
+    networks:
+      - orbiter-explore
+    depends_on:
+      - explore_redis
+      - explore_DataRefinery
+    links:
+      - "explore_redis:redis"
+    volumes:
+      - './runtime-crawler:/app/runtime'
+      - './logs-crawler:/app/logs'
+  explore_DataRefinery:
+    image: orbiter/explore-data-refinery:latest
+    build:
+      dockerfile: ./apps/explore-DataRefinery/Dockerfile
+    restart: always
+    depends_on:
+      - explore_redis
+    links:
+      - "explore_redis:redis"
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    networks:
+      - orbiter-explore
+    volumes:
+      - './runtime-refinery:/app/runtime'
+      - './logs-refinery:/app/logs'
