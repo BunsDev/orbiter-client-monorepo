@@ -3,17 +3,15 @@ import dayjs from "dayjs";
 import BigNumber from "bignumber.js";
 import { ChainConfigService ,ENVConfigService} from "@orbiter-finance/config";
 import { ConfigService } from "@nestjs/config";
-import { groupBy, isEmpty, uniq } from "@orbiter-finance/utils";
+import { LoggerDecorator, OrbiterLogger, groupBy, isEmpty, uniq } from "@orbiter-finance/utils";
 import { ChainLinkService } from "../../service/chainlink.service";
 import { type TransferAmountTransaction } from "../sequencer/sequencer.interface";
 import { AccountFactoryService } from "../../account/factory";
 import { take } from "lodash";
 import type OrbiterAccount from "../../account/orbiterAccount"
-// import { createLoggerByName } from "../../lib/logger";
 import { PrivateKeyService } from "../../service/privatekey.service";
 @Injectable()
 export class ValidatorService {
-  private readonly logger = new Logger(ValidatorService.name);
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly envConfig: ENVConfigService,

@@ -1,8 +1,7 @@
 // consumer.service.ts
-import { Injectable, Inject, Logger, LoggerService } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RabbitmqConnectionManager } from './rabbitmq-connection.manager';
 import { Message } from 'amqplib';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AlertService } from '@orbiter-finance/alert';
 import { sleep } from '@orbiter-finance/utils';
 @Injectable()
@@ -14,6 +13,11 @@ export class ConsumerService {
   }
   async consumeScanTransferReceiptMessages(callback: (data: any) => Promise<any>) {
     try {
+      if (!this.connectionManager.getChannel()) {
+        await sleep(500);
+        this.consumeScanTransferReceiptMessages(callback);
+        return;
+      }
       const channel = await this.connectionManager.createChannel();
       channel.on('close', () => {
         Logger.error('Channel closed');
@@ -42,15 +46,20 @@ export class ConsumerService {
           }
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       await sleep(500);
       this.consumeScanTransferReceiptMessages(callback);
-      Logger.error(`consumeScanTransferReceiptMessages error `, error);
+      Logger.error(`consumeScanTransferReceiptMessages error ${error.message}`, error);
     }
   }
 
   async consumeScanTransferSaveDBAfterMessages(callback: (data: any) => Promise<any>) {
     try {
+      if (!this.connectionManager.getChannel()) {
+        await sleep(500);
+        this.consumeScanTransferSaveDBAfterMessages(callback);
+        return;
+      }
       const channel = await this.connectionManager.createChannel();
       const queue = 'TransferWaitMatch';
       await channel.assertQueue(queue);
@@ -79,16 +88,21 @@ export class ConsumerService {
           }
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       await sleep(500);
       this.consumeScanTransferSaveDBAfterMessages(callback);
-      Logger.error(`consumeScanTransferSaveDBAfterMessages error `, error);
+      Logger.error(`consumeScanTransferSaveDBAfterMessages error ${error.message}`, error);
     }
 
   }
 
   async consumeMakerWaitTransferMessage(callback: (data: any) => Promise<any>) {
     try {
+      if (!this.connectionManager.getChannel()) {
+        await sleep(500);
+        this.consumeMakerWaitTransferMessage(callback);
+        return;
+      }
       const channel = await this.connectionManager.createChannel();
       const queue = 'makerWaitTransfer';
       await channel.assertQueue(queue);
@@ -112,17 +126,17 @@ export class ConsumerService {
             channel.ack(msg);
           } catch (error: any) {
             console.error(
-              'consumeTransferWaitMessages Error processing message:',
+              `consumeTransferWaitMessages Error processing message: ${error.message}`,
               error,
             );
             channel.reject(msg);
           }
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       await sleep(500);
       this.consumeMakerWaitTransferMessage(callback);
-      Logger.error(`consumeMakerWaitTransferMessage error `, error);
+      Logger.error(`consumeMakerWaitTransferMessage error ${error.message}`, error);
     }
   }
 }

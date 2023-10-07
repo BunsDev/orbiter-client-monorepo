@@ -1,26 +1,25 @@
-import { characterPattern } from '@orbiter-finance/utils';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WinstonModule } from 'nest-winston';
+import { logger,characterPattern } from '@orbiter-finance/utils'
+const sysLogger = logger.createLoggerByName('app');
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  Logger.log(characterPattern);
+  console.debug(characterPattern);
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger({
+      instance: sysLogger
+    })
+  });
   const port = process.env.PORT || 3000;
+  sysLogger.info(`🚀 Application is running on: http://localhost:${port}`);
   await app.listen(port);
-  const globalPrefix = "";
-  Logger.log(
-    `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`
-  );
 }
 process.on('uncaughtException', (err) => {
-  Logger.error('Unhandled Exception at:', err)
+  sysLogger.error('Unhandled Exception at:', err)
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  Logger.error('Unhandled Rejection at:', promise, 'reason:', reason)
-  // process.exit(1);
+  sysLogger.error(`Unhandled Rejection at: ${reason}`)
 });
 bootstrap()
 

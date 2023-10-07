@@ -102,7 +102,6 @@ export default class EVMVUtils {
     } else if (contractInfo.name === 'OrbiterRouterV3') {
       transfers = this.evmObRouterV3(chainInfo, transaction, receipt);
     }
-    console.log(transfers)
     return transfers;
   }
   public static evmOBSource(

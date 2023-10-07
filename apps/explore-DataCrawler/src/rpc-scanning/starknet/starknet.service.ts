@@ -325,6 +325,9 @@ export class StarknetRpcScanningService extends RpcScanningService {
 
       while (currentIndex < inputs.length) {
         const length = +inputs[0];
+        if (length<=0) {
+          break;
+        }
         for (let i = 0; i < length; i++) {
           const calldataValueLength = +inputs[currentIndex + 2];
           const calldataValue = inputs.slice(currentIndex + 3, currentIndex + 2 + calldataValueLength + 1)
