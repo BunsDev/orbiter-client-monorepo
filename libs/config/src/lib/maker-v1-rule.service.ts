@@ -24,7 +24,7 @@ export class MakerV1RuleService {
     async init() {
         if (this.configPath) {
             try {
-                const keys: string[] = await this.consul.consulClient.kv.keys(this.configPath)
+                const keys: string[] = await this.consul.keys(this.configPath)
                 for (let i = 1; i < keys.length; i++) {
                     try {
                         this.consul.watchConsulConfig(keys[i], (data: any) => {
