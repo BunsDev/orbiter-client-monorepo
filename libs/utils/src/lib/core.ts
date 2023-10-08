@@ -303,3 +303,7 @@ export function toHex(num, length) {
   strArr.unshift('0x');
   return strArr.join('');
 }
+
+export function getDecimalBySymbol(symbol: string) {
+  return ['USDC', 'USDT'].includes(symbol.toUpperCase()) ? 6 : 18;
+}
