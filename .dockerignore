@@ -13,5 +13,4 @@ Dockerfile
 .cache
 docker/
 tmp
-dist
 vscode
