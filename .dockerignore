@@ -1,5 +1,5 @@
 node_modules/
-runtime
+runtime/
 logs/
 .env
 .dockerignore
@@ -12,3 +12,6 @@ Dockerfile
 **/runtime
 .cache
 docker/
+tmp
+dist
+vscode
