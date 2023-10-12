@@ -1,6 +1,6 @@
 import os from 'os';
 import crypto from "crypto";
-// 获取操作系统信息
+// sys
 const osInfo = {
     platform: os.platform(),
     type: os.type(),

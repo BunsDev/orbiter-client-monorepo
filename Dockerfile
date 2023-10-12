@@ -8,7 +8,7 @@ RUN apk add --no-cache g++ make python3 \
 RUN yarn config set ignore-engines true \
     && yarn config set registry https://registry.npm.taobao.org/
 
-WORKDIR /app/builder
+WORKDIR /app
 COPY package.json yarn.lock ./
 
 RUN yarn install --network-timeout 600000

@@ -1,20 +1,27 @@
 version: '3.8'
 networks:
-  app-network:
-    driver: bridge
+   orbiter-network:
+    external: true
+    labels:
+      - "com.docker.compose.project=maker-client"
 services:
   maker-client:
+    container_name: "maker-client"
     image: orbiter/maker-client:latest
+    labels:
+      - "com.docker.compose.project=maker-client"
     build:
-      dockerfile: ./apps/maker-client/Dockerfile
-    # container_name: OB-MakerClient
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/maker-client/Dockerfile.clients
     restart: always
     environment:
       CONSUL_URL: '${CONSUL_URL}'
     ports:
       - '8000:8000'
     networks:
-      - app-network
+      - orbiter-network
     volumes:
       - './runtime:/app/runtime'
       - './logs:/app/logs'

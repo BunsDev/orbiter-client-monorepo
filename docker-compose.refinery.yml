@@ -5,24 +5,21 @@ networks:
     labels:
       - "com.docker.compose.project=orbiter-explore"
 services:
-  crawler2:
-    image: orbiter/explore-data-crawler:latest
+  refinery:
+    image: orbiter/explore-data-refinery:latest
     labels:
       - "com.docker.compose.project=orbiter-explore"
     build:
       context: ./
       cache_from:
         - orbiter/clients
-      dockerfile:  ./apps/explore-DataCrawler/Dockerfile.clients
+      dockerfile:  ./apps/explore-DataRefinery/Dockerfile.clients
     restart: always
-    command: ["node", 'main.js']
     environment:
       CONSUL_URL: '${CONSUL_URL}'
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
-    ports:
-      - ':3000'
     networks:
       - orbiter-network
     volumes:
-      - './runtime/crawler:/app/runtime'
-      - './logs/crawler:/app/logs'
+      - './runtime/refinery:/app/runtime'
+      - './logs/refinery:/app/logs'

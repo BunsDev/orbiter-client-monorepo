@@ -4,12 +4,12 @@ FROM orbiter/clients:latest AS builder
 ARG BUILD_FLAG
 WORKDIR /app
 COPY . .
-RUN npx nx build explore-DataCrawler ${BUILD_FLAG}
+RUN npx nx build explore-DataRefinery ${BUILD_FLAG}
 
 FROM orbiter/clients:latest
 
 WORKDIR /app
 COPY --from=builder app/package.json ./
-COPY --from=builder app/dist/apps/explore-DataCrawler ./
+COPY --from=builder app/dist/apps/explore-DataRefinery ./
 # ENV NODE_ENV=$NODE_ENV
 CMD [ "node", "main.js" ]

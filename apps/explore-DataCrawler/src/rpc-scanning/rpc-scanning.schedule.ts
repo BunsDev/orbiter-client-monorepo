@@ -40,7 +40,7 @@ export class RpcScanningSchedule {
     // this.logger.info(`chains: ${JSON.stringify(chains)}`);
     for (const chain of chains) {
       if (!chain.service) {
-        this.logger.error(`${chain.name} service not config`);
+        // this.logger.error(`${chain.name} service not config`);
         this.removeScanServiceById(chain.chainId);
         continue;
       }
@@ -76,9 +76,9 @@ export class RpcScanningSchedule {
   }
   @Interval(1000)
   executeCrawlBlock() {
-    if (Date.now() % 30 === 0) {
+    if (Date.now() % 60 === 0) {
       if (this.scanService.size <= 0) {
-        this.logger.warn('RPC chain scanning service not created');
+        this.logger.warn('RPC chain scanning service not created zero');
       }
     }
 

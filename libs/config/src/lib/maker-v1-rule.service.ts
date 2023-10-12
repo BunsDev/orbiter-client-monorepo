@@ -24,20 +24,25 @@ export class MakerV1RuleService {
     async init() {
         if (this.configPath) {
             try {
+                console.log('请求--')
                 const keys: string[] = await this.consul.keys(this.configPath)
-                for (let i = 1; i < keys.length; i++) {
-                    try {
-                        this.consul.watchConsulConfig(keys[i], (data: any) => {
-                            MakerV1RuleService.configs[data.Key] = JSON.parse(data.Value);
-                        })
-                    } catch (error) {
-                        Logger.error(
-                            `watch config change error ${error.message} ${keys[i]}`,
-                            error,
-                        );
-                    }
-                  
+                console.log(keys, '===keys列表');
+                if (keys.length<2) {
+                    return console.warn('rules/files not config');
                 }
+                // for (let i = 1; i < keys.length; i++) {
+                //     try {
+                //         this.consul.watchConsulConfig(keys[i], (data: any) => {
+                //             MakerV1RuleService.configs[data.Key] = JSON.parse(data.Value);
+                //         })
+                //     } catch (error) {
+                //         Logger.error(
+                //             `watch config change error ${error.message} ${keys[i]}`,
+                //             error,
+                //         );
+                //     }
+                  
+                // }
             } catch (error) {
                 console.error(error);
                 Logger.error(

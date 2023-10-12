@@ -32,7 +32,6 @@ dayjs.extend(utc);
     OrbiterConfigModule.forRoot({
       chainConfigPath: "explore-server/chains.json",
       envConfigPath: "explore-server/config.yaml",
-      makerV1RulePath: "rules",
     }),
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
