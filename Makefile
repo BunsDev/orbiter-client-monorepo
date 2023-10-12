@@ -14,12 +14,13 @@ create-network:
 	docker network create orbiter-network
 build-docker-base:
 	docker build -f ./Dockerfile . -t orbiter/clients:latest
-build-docker-explore:
-	build-docker-crawler && build-docker-refinery:
+
 build-docker-crawler:
 	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t orbiter/explore-data-crawler:latest
 build-docker-refinery:
 	docker build -f apps/explore-DataRefinery/Dockerfile.clients . -t orbiter/explore-data-refinery:latest
+build-docker-explore: build-docker-crawler && build-docker-refinery
+	# build success
 build-docker-maker:
 	docker build -f apps/maker-client/Dockerfile.clients . -t orbiter/maker-client:latest
 explore: # Target to start the Explore application
