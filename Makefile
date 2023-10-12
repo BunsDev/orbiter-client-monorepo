@@ -1,69 +1,111 @@
-# Makefile for managing Docker Compose deployment of Node.js project
-.DEFAULT_GOAL:=help
-COMPOSE_ALL_FILES := -f docker-compose.explore.yml
-# Configuration variables
-# DOCKER_COMPOSE_FILE ?= docker-compose.yml
-NODE_CONTAINER_NAME ?= node-app
-NODE_IMAGE_NAME ?= your-node-app-image
-NODE_APP_PORT ?= 3000
-REDIS_PASSWORD ?= $(shell openssl rand -hex 12)
-SERVICE = explore
-DOCKER_COMPOSE_COMMAND = docker-compose
-NETWORK_NAME = orbiter-network
+# Makefile for managing Docker Compose deployment of a Node.js project
 
-create-network:
+# Default target
+.DEFAULT_GOAL := help
+
+# Docker Compose configuration
+COMPOSE_FILE := docker-compose.explore.yml
+DOCKER_COMPOSE := docker-compose
+NETWORK_NAME := orbiter-network
+
+# Docker build configuration
+BASE_IMAGE := orbiter/clients:latest
+CRAWLER_IMAGE := orbiter/explore-data-crawler:latest
+REFINERY_IMAGE := orbiter/explore-data-refinery:latest
+MAKER_IMAGE := orbiter/maker-client:latest
+
+# Configuration variables
+NODE_CONTAINER_NAME := node-app
+NODE_IMAGE_NAME := your-node-app-image
+NODE_APP_PORT := 3000
+REDIS_PASSWORD := $(shell openssl rand -hex 12)
+
+# Create Docker network
+create-network: ## Create a Docker network if it doesn't exist
 	@if ! docker network inspect $(NETWORK_NAME) > /dev/null 2>&1; then \
 		echo "Creating Docker network: $(NETWORK_NAME)"; \
 		docker network create $(NETWORK_NAME); \
-    else \
-        echo "Docker network $(NETWORK_NAME) already exists"; \
-    fi
-build-docker-base:
-	docker build -f ./Dockerfile . -t orbiter/clients:latest
+	else \
+		echo "Docker network $(NETWORK_NAME) already exists"; \
+	fi
 
-build-docker-crawler:
-	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t orbiter/explore-data-crawler:latest
-build-docker-refinery:
-	docker build -f apps/explore-DataRefinery/Dockerfile.clients . -t orbiter/explore-data-refinery:latest
-build-docker-explore: build-docker-crawler build-docker-refinery
-	# build success
-build-docker-maker:
-	docker build -f apps/maker-client/Dockerfile.clients . -t orbiter/maker-client:latest
-explore:create-network # Target to start the Explore application
-	${DOCKER_COMPOSE_COMMAND} $(COMPOSE_ALL_FILES) up -d
-maker:create-network # Target to start the Explore application
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.maker.yml  up -d
-# Target to stop the Node.js application
-stop:
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.$(SERVICE).yml stop
-ps:				## Show all running containers.
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.$(SERVICE).yml ps
-down:			## Down Explore and all its extra components.
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.$(SERVICE).yml down
-rm:				## Remove ELK and all its extra components containers.
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.$(SERVICE).yml rm
-images:			## Show all Images of Explore and all its extra components.
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.$(SERVICE).yml images
-push:
+# Build Docker images
+build-docker-base: ## Build the Docker base image
+	docker build -f ./Dockerfile . -t $(BASE_IMAGE)
+
+build-docker-crawler: ## Build the Explore Data Crawler Docker image
+	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t $(CRAWLER_IMAGE)
+
+build-docker-refinery: ## Build the Explore Data Refinery Docker image
+	docker build -f apps/explore-DataRefinery/Dockerfile.clients . -t $(REFINERY_IMAGE)
+
+build-docker-explore: build-docker-crawler build-docker-refinery ## Build Explore Docker images
+	# Build success
+
+build-docker-maker: ## Build the Maker Client Docker image
+	docker build -f apps/maker-client/Dockerfile.clients . -t $(MAKER_IMAGE)
+
+# Start Explore application
+explore: create-network ## Start the Explore application
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
+
+# Start Maker application
+maker: create-network ## Start the Maker application
+	$(DOCKER_COMPOSE) -f docker-compose.maker.yml up -d
+
+# Stop the Node.js application
+stop: ## Stop the Node.js application
+	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml stop
+
+# Show all running containers
+ps: ## Show all running containers
+	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml ps
+
+# Stop and remove Explore and its extra components containers
+down: ## Stop Explore and all its extra components
+	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml down
+
+# Remove Explore and its extra components containers
+rm: ## Remove Explore and all its extra components containers
+	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml rm
+
+# Show images of Explore and its extra components
+images: ## Show images of Explore and all its extra components
+	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml images
+
+# Push Docker image to Docker registry
+push: ## Push Docker image to the registry
 	docker push $(NODE_IMAGE_NAME)
+
+# Clean all Docker containers and images
 clean: ## Clear all Images Container
-	${DOCKER_COMPOSE_COMMAND} ${COMPOSE_ALL_FILES} down --rmi all
-prune:			## Remove  Containers and Delete Volume Data
+	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) down --rmi all
+
+# Prune Docker containers and volumes
+prune: ## Remove Containers and Delete Volume Data
 	@make stop && make rm
 	@docker volume prune -f --filter label=com.docker.compose.project=orbiter-explore
+
+# Show logs of Explore and its extra components
 logs: ## Show all Images logs
-	${DOCKER_COMPOSE_COMMAND} -f docker-compose.$(SERVICE).yml logs -f --tail 500
+	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml logs -f --tail 500
+
+docker-makefile:
+	curl -o Makefile.docker -L https://raw.githubusercontent.com/kakui-lau/Makefile/main/makefile.docker
+# Initialize Explore application configuration
 init-explore:
 	@echo "Generating configuration with user input..."
 	@read -p "Enter Consul URL: " CONSUL_URL; \
 		echo "CONSUL_URL=$$CONSUL_URL" > .env
 	@echo "REDIS_PASSWORD=$(REDIS_PASSWORD)" >> .env
+
+# Initialize Maker application configuration
 init-maker:
 	@echo "Generating configuration with user input..."
 	@read -p "Enter Consul URL: " CONSUL_URL; \
 		echo "CONSUL_URL=$$CONSUL_URL" > .env
-help:       	## Show this help.
-	@echo "Make Application Docker Images and Containers using Docker-Compose files in 'docker' Dir."
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m (default: help)\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-.PHONY: install start stop build push clean logs generate-config build-all build-crawler build-refinery build-openapi
+# Help target to display available targets
+help: ## Show this help.
+	@echo "Make Application Docker Images and Containers using Docker-Compose files in 'docker' Dir."
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m (default: help)\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
