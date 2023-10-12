@@ -23,9 +23,9 @@ build-docker-explore: build-docker-crawler build-docker-refinery
 	# build success
 build-docker-maker:
 	docker build -f apps/maker-client/Dockerfile.clients . -t orbiter/maker-client:latest
-explore: # Target to start the Explore application
+explore:create-network # Target to start the Explore application
 	${DOCKER_COMPOSE_COMMAND} $(COMPOSE_ALL_FILES) up -d
-maker: # Target to start the Explore application
+maker:create-network # Target to start the Explore application
 	${DOCKER_COMPOSE_COMMAND} -f docker-compose.maker.yml  up -d
 # Target to stop the Node.js application
 stop:
