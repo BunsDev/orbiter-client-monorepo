@@ -9,9 +9,15 @@ NODE_APP_PORT ?= 3000
 REDIS_PASSWORD ?= $(shell openssl rand -hex 12)
 SERVICE = explore
 DOCKER_COMPOSE_COMMAND = docker-compose
+NETWORK_NAME = orbiter-network
 
-create-network: 
-	docker network create orbiter-network
+create-network:
+	@if ! docker network inspect $(NETWORK_NAME) > /dev/null 2>&1; then \
+		echo "Creating Docker network: $(NETWORK_NAME)"; \
+		docker network create $(NETWORK_NAME); \
+    else \
+        echo "Docker network $(NETWORK_NAME) already exists"; \
+    fi
 build-docker-base:
 	docker build -f ./Dockerfile . -t orbiter/clients:latest
 
