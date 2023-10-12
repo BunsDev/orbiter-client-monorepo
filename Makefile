@@ -19,7 +19,7 @@ build-docker-crawler:
 	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t orbiter/explore-data-crawler:latest
 build-docker-refinery:
 	docker build -f apps/explore-DataRefinery/Dockerfile.clients . -t orbiter/explore-data-refinery:latest
-build-docker-explore: build-docker-crawler && build-docker-refinery
+build-docker-explore: build-docker-crawler build-docker-refinery
 	# build success
 build-docker-maker:
 	docker build -f apps/maker-client/Dockerfile.clients . -t orbiter/maker-client:latest
