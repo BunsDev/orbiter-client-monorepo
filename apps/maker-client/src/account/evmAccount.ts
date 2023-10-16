@@ -148,11 +148,11 @@ export default class EVMAccount extends OrbiterAccount {
       }
       transactionRequest.type = 0;
       transactionRequest.gasPrice = Math.max(
-        chainCustomConfig.MinFeePerGas,
+        chainCustomConfig.MinFeePerGas || 0,
         +maxFeePerGas.toString()
       );
       if (!transactionRequest.gasPrice) {
-        throw new Error('gasPrice Fee fail')
+        throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, customGas: ${chainCustomConfig.MinFeePerGas}, maxFeePerGas:${+maxFeePerGas.toString()}`)
       }
     }
     return transactionRequest;
@@ -320,13 +320,13 @@ export default class EVMAccount extends OrbiterAccount {
       if (tx.value) {
         tx.value = new BigNumber(String(tx.value)).toFixed(0);
       }
-      this.logger.log(
+      this.logger.info(
         `${chainConfig.name} sendTransaction:${JSONStringify(tx)}`
       );
       const signedTx = await this.wallet.signTransaction(tx);
       txHash = keccak256(signedTx);
       const response = await provider.broadcastTransaction(signedTx);
-      this.logger.log(
+      this.logger.info(
         `${chainConfig.name} sendTransaction txHash:${txHash}`
       );
       await this.store.saveSerialRelTxHash(serialIds, txHash);

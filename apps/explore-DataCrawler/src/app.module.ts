@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
 import { RpcScanningModule } from './rpc-scanning/rpc-scanning.module';
 import { ApiModule } from './api/api.module';
-import { WinstonModule } from 'nest-winston';
 import { ApiScanningModule } from './api-scanning/api-scanning.module';
-import * as winston from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
@@ -13,10 +11,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { join } from 'path';
-import DailyRotateFile from 'winston-daily-rotate-file';
 import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
-import { logger } from '@orbiter-finance/utils'
 dayjs.extend(utc);
 
 @Module({
@@ -34,32 +30,8 @@ dayjs.extend(utc);
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-data-refinery/chains.json",
-      envConfigPath: "explore-data-refinery/config.yaml",
-      makerV1RulePath: "explore-data-refinery/rules",
-      cachePath: join(__dirname, 'runtime')
-    }),
-    WinstonModule.forRoot({
-      exitOnError: false,
-      level: 'debug',
-      transports: [
-        new DailyRotateFile({
-          dirname: `logs`,
-          filename: '%DATE%.log',
-          datePattern: 'YYYY-MM-DD',
-          zippedArchive: true,
-          maxSize: '20m',
-          maxFiles: '14d',
-          format: logger.loggerFormat(),
-        }),
-        new winston.transports.Console({
-          format: logger.loggerFormat(),
-          handleExceptions: true,
-        }),
-      ],
-      exceptionHandlers: [
-        new winston.transports.File({ filename: './logs/exception.log' }),
-      ],
+      chainConfigPath: "explore-server/chains.json",
+      envConfigPath: "explore-server/config.yaml",
     }),
     RedisModule.forRootAsync({
       inject: [ENVConfigService],

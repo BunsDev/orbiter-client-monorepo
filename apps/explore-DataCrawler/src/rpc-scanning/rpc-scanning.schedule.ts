@@ -5,11 +5,13 @@ import { ChainConfigService } from '@orbiter-finance/config';
 import { ENVConfigService } from '@orbiter-finance/config';
 import { RpcScanningScheduleService } from './rpc-scanning.interface';
 import { RpcScanningFactory } from './rpc-scanning.factory';
-import { isEmpty,logger } from '@orbiter-finance/utils';
+import { isEmpty } from '@orbiter-finance/utils';
 import { AlertService } from '@orbiter-finance/alert'
+import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
 @Injectable()
 export class RpcScanningSchedule {
-  private readonly logger = logger.createLoggerByName(RpcScanningSchedule.name);
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
   private scanService: Map<string, RpcScanningScheduleService> = new Map();
   constructor(
     private chainConfigService: ChainConfigService,
@@ -19,38 +21,39 @@ export class RpcScanningSchedule {
   ) {
     this.initializeTransactionScanners();
   }
-  @Interval(1000 * 60)
+  private removeScanServiceById(chainId: string) {
+    if (this.scanService.has(chainId)) {
+      this.scanService.delete(chainId);
+      this.logger.info(
+        `change scan chain ${chainId} delete scan rpc service`,
+      );
+    }
+  }
+  @Interval(1000 * 10)
   private async initializeTransactionScanners() {
     const SCAN_CHAINS = (this.envConfigService.get<string>('SCAN_CHAINS') || '').split(',');
     const chains = this.chainConfigService.getAllChains();
     if (isEmpty(chains)) {
+      this.logger.warn(`chains config empty`);
       return;
     }
+    // this.logger.info(`chains: ${JSON.stringify(chains)}`);
     for (const chain of chains) {
+      if (!chain.service) {
+        // this.logger.error(`${chain.name} service not config`);
+        this.removeScanServiceById(chain.chainId);
+        continue;
+      }
       if (SCAN_CHAINS[0] != '*') {
         if (!SCAN_CHAINS.includes(chain.chainId)) {
-          if (this.scanService.has(chain.chainId)) {
-            this.scanService.delete(chain.chainId);
-            this.logger.info(
-              `change scan chain ${chain.chainId}-${chain.name} delete scan rpc service`,
-            );
-          }
+          this.removeScanServiceById(chain.chainId);
           continue;
         }
       }
 
-      if (!chain.service) {
-        this.logger.error(`${chain.name} service not register`);
-        continue;
-      }
       const serviceKeys = Object.keys(chain.service);
       if (!serviceKeys.includes('rpc')) {
-        if (this.scanService.has(chain.chainId)) {
-          this.scanService.delete(chain.chainId);
-          this.logger.info(
-            `change service ${chain.chainId}-${chain.name} delete scan rpc service`,
-          );
-        }
+        this.removeScanServiceById(chain.chainId);
         continue;
       }
 
@@ -63,6 +66,9 @@ export class RpcScanningSchedule {
           reScanMutex: new Mutex(),
           service: scanner,
         });
+        this.logger.info(
+          `CREATE RPC SCAN SERVICE ${chain.name}`,
+        );
         this.alertService.sendMessage(`CREATE RPC SCAN SERVICE ${chain.name}`, 'TG')
       }
     }
@@ -70,6 +76,12 @@ export class RpcScanningSchedule {
   }
   @Interval(1000)
   executeCrawlBlock() {
+    if (Date.now() % 60 === 0) {
+      if (this.scanService.size <= 0) {
+        this.logger.warn('RPC chain scanning service not created zero');
+      }
+    }
+
     for (const scanner of this.scanService.values()) {
       if (scanner.reScanMutex.isLocked()) {
         continue;

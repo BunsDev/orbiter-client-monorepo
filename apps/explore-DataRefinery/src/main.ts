@@ -2,20 +2,29 @@
  * This is not a production server yet!
  * This is only a minimal backend to get started.
  */
-import { characterPattern } from '@orbiter-finance/utils';
-import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 dayjs.extend(utc);
 import { AppModule } from './app/app.module';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { WinstonModule } from 'nest-winston';
+import { logger, characterPattern } from '@orbiter-finance/utils'
+const sysLogger = logger.createLoggerByName('app');
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  Logger.log(characterPattern);
-  Logger.log(`🚀 Application is running on: explore-DataRefinery`);
+  console.debug(characterPattern);
+  await NestFactory.createApplicationContext(AppModule, {
+    logger: WinstonModule.createLogger({
+      instance: sysLogger
+    })
+  });
+  sysLogger.info(`🚀 Application is running on: explore-DataRefinery`);
 }
+process.on('uncaughtException', (err) => {
+  sysLogger.error('Unhandled Exception at:', err)
+});
 
+process.on('unhandledRejection', (reason, promise) => {
+  sysLogger.error(`Unhandled Rejection at: ${reason}`)
+});
 bootstrap();

@@ -5,7 +5,7 @@ import { Op } from 'sequelize';
 import { BridgeTransaction, BridgeTransactionAttributes } from "@orbiter-finance/seq-models";
 import { V2Service } from "../v2/v2.service";
 import Keyv from "keyv";
-import { BigIntToString, fix0xPadStartAddress } from "@orbiter-finance/utils";
+import { BigIntToString, fix0xPadStartAddress, getDecimalBySymbol } from "@orbiter-finance/utils";
 import {BigNumber} from "bignumber.js"
 import {
   ChainConfigService, ENVConfigService,
@@ -161,9 +161,16 @@ export class V3Service {
         where['status'] = { [Op.is]: 99 };
       }
     }
+    if (params.length >= 4) {
+      const address: string = String(params[3]).toLowerCase();
+      if (!new RegExp(/^0x[a-fA-F0-9]{40}$/).test(address) && address.length !== 66) {
+        throw new Error('Invalid address');
+      }
+      where['targetMaker'] = address;
+    }
     const dataList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll({
       attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceSymbol', 'status', 'sourceTime',
-        'targetTime', 'sourceAddress', 'targetAddress', 'sourceMaker', 'targetMaker'],
+        'targetTime', 'sourceAddress', 'targetAddress', 'sourceMaker', 'targetMaker', 'sourceSymbol', 'targetSymbol', 'sourceToken', 'targetToken'],
       raw: true,
       where,
       order: [['sourceTime', 'DESC']],
@@ -186,8 +193,13 @@ export class V3Service {
         fromTimestamp: data.sourceTime,
         toTimestamp: data.targetTime,
         sourceAddress: data.sourceAddress,
+        targetAddress: data.targetAddress,
         sourceMaker: data.sourceMaker,
-        targetMaker: data.targetMaker
+        targetMaker: data.targetMaker,
+        sourceToken: data.sourceToken,
+        targetToken: data.targetToken,
+        sourceDecimal: getDecimalBySymbol(data.sourceSymbol),
+        targetDecimal: getDecimalBySymbol(data.targetSymbol)
       });
     }
 

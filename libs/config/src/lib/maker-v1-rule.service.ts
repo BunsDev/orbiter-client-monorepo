@@ -24,7 +24,10 @@ export class MakerV1RuleService {
     async init() {
         if (this.configPath) {
             try {
-                const keys: string[] = await this.consul.consulClient.kv.keys(this.configPath)
+                const keys: string[] = await this.consul.keys(this.configPath)
+                if (keys.length<2) {
+                    return console.warn('rules/files not config');
+                }
                 for (let i = 1; i < keys.length; i++) {
                     try {
                         this.consul.watchConsulConfig(keys[i], (data: any) => {
@@ -36,7 +39,6 @@ export class MakerV1RuleService {
                             error,
                         );
                     }
-                  
                 }
             } catch (error) {
                 console.error(error);

@@ -188,7 +188,7 @@ export function timeoutPromise<T>(
         clearTimeout(timeoutId);
         reject(new Error(`Promise timed out after ${timeoutMs} ms`));
       }, timeoutMs);
-  
+
       promiseFn()
         .then((result) => {
           clearTimeout(timeoutId);
@@ -217,14 +217,14 @@ export function timeoutPromise<T>(
     if (bigIntValues.length === 0) {
         throw new Error('missing data');
       }
-    
+
       let maxBigInt: bigint = bigIntValues[0];
       for (let i = 1; i < bigIntValues.length; i++) {
         if (bigIntValues[i] > maxBigInt) {
           maxBigInt = bigIntValues[i];
         }
       }
-    
+
       return maxBigInt;
 }
 export function promiseWithTimeout<T>(
@@ -247,7 +247,7 @@ export function promiseWithTimeout<T>(
         });
     });
   }
-  
+
 export function TransactionID(
     fromAddress: string,
     fromChainId: number | string,
@@ -263,7 +263,7 @@ export function TransactionID(
       symbol || 'NULL'
     }${fromTxNonce}${ext}`.toLowerCase();
   }
-  
+
 
 export function TransferId(
   toChainId: string,
@@ -275,4 +275,35 @@ export function TransferId(
   return md5(
     `${toChainId}_${replyAccount}_${userNonce}_${toSymbol}_${toValue}`.toLowerCase(),
   ).toString();
+}
+
+export function toHex(num, length) {
+  const charArray = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const strArr = Array(length * 2).fill('0');
+  let i = length * 2 - 1;
+  while (num > 15) {
+    var yushu = num % 16;
+    if (yushu >= 10) {
+      let index = yushu % 10;
+      strArr[i--] = charArray[index];
+    } else {
+      strArr[i--] = yushu.toString();
+    }
+    num = Math.floor(num / 16);
+  }
+
+  if (num != 0) {
+    if (num >= 10) {
+      let index = num % 10;
+      strArr[i--] = charArray[index];
+    } else {
+      strArr[i--] = num.toString();
+    }
+  }
+  strArr.unshift('0x');
+  return strArr.join('');
+}
+
+export function getDecimalBySymbol(symbol: string) {
+  return ['USDC', 'USDT'].includes(symbol.toUpperCase()) ? 6 : 18;
 }

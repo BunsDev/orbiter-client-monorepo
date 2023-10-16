@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config'
-import { uniq, logger, addressPadStart64, equals } from '@orbiter-finance/utils'
+import { uniq, addressPadStart64, equals } from '@orbiter-finance/utils'
 // import v1MakerRules from '../config/v1MakerConfig';
-import winston from 'winston';
 import { SubgraphClient } from '@orbiter-finance/subgraph-sdk';
 import { Transfers } from '@orbiter-finance/seq-models';
 import dayjs from 'dayjs';
@@ -11,7 +10,6 @@ import Redis from 'ioredis';
 @Injectable()
 export class MakerService {
     #v2Owners: string[] = [];
-    private logger: winston.Logger = logger.createLoggerByName(MakerService.name);
     constructor(
         @InjectRedis() private readonly redis: Redis,
         protected envConfigService: ENVConfigService,

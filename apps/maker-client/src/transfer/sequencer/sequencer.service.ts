@@ -3,7 +3,7 @@ import { ValidatorService } from "../validator/validator.service";
 import type OrbiterAccount from "../../account/orbiterAccount";
 import { type TransferResponse } from "../../account/IAccount";
 import { ChainConfigService } from "@orbiter-finance/config";
-import { equals, isEmpty } from "@orbiter-finance/utils";
+import { LoggerDecorator, OrbiterLogger, equals, isEmpty } from "@orbiter-finance/utils";
 import { type TransferAmountTransaction } from "./sequencer.interface";
 import {
   TransactionSendIgError,
@@ -17,7 +17,8 @@ import { type StoreService } from "../store/store.service";
 import { AlertService } from "@orbiter-finance/alert";
 @Injectable()
 export class SequencerService {
-  private readonly logger = new Logger(SequencerService.name);
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
 
   constructor(
     private readonly chainConfigService: ChainConfigService,
@@ -38,7 +39,7 @@ export class SequencerService {
       transfer.targetChain,
       transfer.targetToken
     );
-    this.logger.log(
+    this.logger.info(
       `execSingleTransfer: ${sourceChainId}-${sourceHash}, owner:${wallet.address}`
     );
     const transaction =
@@ -206,7 +207,7 @@ export class SequencerService {
     store: StoreService,
     hash: string
   ) {
-    this.logger.log(`singleSendTransactionByTransfer: ${hash}`)
+    this.logger.info(`singleSendTransactionByTransfer: ${hash}`)
     try {
       const transfer = store.getTransaction(hash);
       const wallet = await this.validatorService.transactionGetPrivateKey(
@@ -227,11 +228,11 @@ export class SequencerService {
         );
         try {
           const senderAddress = wallet.address.toLocaleLowerCase();
-          this.logger.log(`ready for sending step1  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
+          this.logger.info(`ready for sending step1  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
           const result = await store.accountRunExclusive(
             senderAddress,
             async () => {
-              this.logger.log(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
+              this.logger.info(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
               await this.execSingleTransfer(transfer, wallet.account, store).catch(error=> {
                 this.logger.error(`execSingleTransfer error`, error)
                 if (error instanceof TransactionSendBeforeError) {

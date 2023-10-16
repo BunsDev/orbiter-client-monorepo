@@ -1,0 +1,65 @@
+version: '3.8'
+networks:
+   orbiter-network:
+    external: true
+    labels:
+      - "com.docker.compose.project=orbiter-explore"
+services:
+  redis:
+    image: redis:latest
+    restart: always
+    volumes:
+      - ./runtime/redis_data:/data:rw
+    networks:
+      - orbiter-network
+    ports:
+      - '6389:6379'
+    command: ["redis-server", "--requirepass ${REDIS_PASSWORD}"]
+  crawler:
+    image: orbiter/explore-data-crawler:latest
+    build:
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/explore-DataCrawler/Dockerfile.clients
+    labels:
+      - "com.docker.compose.project=orbiter-explore"
+    restart: always
+    command: ["node", 'main.js']
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    ports:
+      - '3002:3000'
+    depends_on:
+      - redis
+      - refinery
+    links:
+      - "redis:redis"
+    networks:
+      - orbiter-network
+    volumes:
+      - './runtime/crawler:/app/runtime'
+      - './logs/crawler:/app/logs'
+  refinery:
+    image: orbiter/explore-data-refinery:latest
+    labels:
+      - "com.docker.compose.project=orbiter-explore"
+    build:
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/explore-DataRefinery/Dockerfile.clients
+    restart: always
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    depends_on:
+      - redis
+    links:
+      - "redis:redis"
+    networks:
+      - orbiter-network
+    volumes:
+      - './runtime/refinery:/app/runtime'
+      - './logs/refinery:/app/logs'

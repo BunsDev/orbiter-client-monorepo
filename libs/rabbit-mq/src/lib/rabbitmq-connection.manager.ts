@@ -1,8 +1,7 @@
 // rabbitmq-connection.manager.ts
-import { Inject, Injectable, LoggerService, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, LoggerService, OnModuleDestroy, OnModuleInit,Logger } from '@nestjs/common';
 import { connect, Connection, Channel } from 'amqplib';
 import { ENVConfigService } from '@orbiter-finance/config';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {AlertService} from '@orbiter-finance/alert'
 @Injectable()
 export class RabbitmqConnectionManager
@@ -10,8 +9,8 @@ export class RabbitmqConnectionManager
 {
   private connection: Connection;
   private channel: Channel;
+  private readonly logger: Logger = new Logger(RabbitmqConnectionManager.name);
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService,
     private readonly envConfigService: ENVConfigService,
     private alertService: AlertService
     ) {

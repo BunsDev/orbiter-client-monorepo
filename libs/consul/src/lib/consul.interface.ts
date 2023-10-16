@@ -4,6 +4,7 @@ export interface ConsulOptions {
   name?: string;
   host?: string;
   port?: string;
+  nameSpace?:string;
   defaults?: any;
   url?:string;
 }

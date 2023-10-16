@@ -7,15 +7,17 @@ import { ChainConfigService } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
-import { logger, TransactionID } from '@orbiter-finance/utils';
+import { TransactionID } from '@orbiter-finance/utils';
 import { Sequelize } from 'sequelize-typescript';
 import { MemoryMatchingService } from './memory-matching.service';
 import { MakerService } from '../maker/maker.service';
 import { V3RuleInterface, V3TokenInterface } from './transaction.interface'
 import { ethers } from 'ethers6';
+import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
 @Injectable()
 export class TransactionV2Service {
-  private logger = logger.createLoggerByName(`${TransactionV2Service.name}`);
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
   constructor(
     @InjectModel(Transfers) private transfersModel: typeof Transfers,
     @InjectModel(BridgeTransaction)
@@ -239,7 +241,7 @@ export class TransactionV2Service {
       throw error;
     }
   }
-  public async calculateRebateAmount(sourceToken: V3TokenInterface, targetToken: V3TokenInterface, transfer: Transfers, rule: V3RuleInterface): Promise<any> {
+  public async calculateRebateAmount(sourceToken: V3TokenInterface, targetToken: V3TokenInterface, transfer: Transfers, rule: V3RuleInterface){
     const sourceChainId = +sourceToken.chainId;
     const targetChainId = +targetToken.chainId;
     if (equals(sourceChainId, +rule.chain0) && equals(targetChainId, +rule.chain1)) {
@@ -432,7 +434,7 @@ export class TransactionV2Service {
 
   private getSecurityCode(value: string): string {
     // const code = value.substring(value.length - 4, value.length);
-    const code = new BigNumber(value).mod(10000).toString();
+    const code = new BigNumber(value).mod(100000).toString();
     return code;
   }
   private parseSecurityCode(value: string): {
@@ -441,7 +443,7 @@ export class TransactionV2Service {
     targetChainIdIndex: number;
   } {
     const code = this.getSecurityCode(value);
-    const dealerId = Number(code[0]);
+    const dealerId = Number(code.substring(0,2));
     const ebcId = Number(code[1]);
     const targetChainIdIndex = Number(code.substring(2));
     return { dealerId, ebcId, targetChainIdIndex };

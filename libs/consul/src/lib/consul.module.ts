@@ -40,6 +40,9 @@ export class ConsulModule {
           const parsedUrl = new URL(config.url);
           config.host= parsedUrl.hostname;
           config.port = parsedUrl.port || '80';
+          if (parsedUrl.pathname !="/") {
+            config.nameSpace = parsedUrl.pathname.substring(1) + '/';
+          }
           config.defaults = {
             token:parsedUrl.searchParams.get('token')
           };

@@ -1,6 +1,6 @@
 import os from 'os';
 import crypto from "crypto";
-// 获取操作系统信息
+// sys
 const osInfo = {
     platform: os.platform(),
     type: os.type(),
@@ -54,9 +54,9 @@ const encryptedData = encryptPrivateKey(privateKey, passphrase);
 console.log("Encrypted Data:", encryptedData);
 
 const decryptedData = decryptPrivateKey(
-    encryptedData.encryptedPrivateKey, // 注入
-    passphrase, // 服务器信息
-    encryptedData.salt, // 随机信息，存储服务器本地
-    encryptedData.iv // 输入
+    encryptedData.encryptedPrivateKey, // inject
+    passphrase, // server
+    encryptedData.salt, // random save server local
+    encryptedData.iv // input
 );
 console.log("Decrypted Private Key:", decryptedData);
