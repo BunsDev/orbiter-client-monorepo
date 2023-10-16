@@ -54,8 +54,9 @@ export class RpcScanningService implements RpcScanningInterface {
     const blockNumbers = await this.dataProcessor.getProcessNextBatchData(this.batchLimit);
     const nextScanMaxBlockNumber = await this.dataProcessor.getNextScanMaxBlockNumber();
     if (blockNumbers.length <= 0) {
-      this.logger.info('executeCrawlBlock: No block numbers to process.');
-   
+      if (Date.now() % 5) {
+        this.logger.info('executeCrawlBlock: No block numbers to process.');
+      }
       return [];
     }
     if (Date.now() % 1000 * 10===0) {
