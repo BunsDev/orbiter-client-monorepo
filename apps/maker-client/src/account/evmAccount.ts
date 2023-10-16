@@ -143,7 +143,7 @@ export default class EVMAccount extends OrbiterAccount {
       transactionRequest.maxPriorityFeePerGas = maxPriorityFeePerGas.toString();
  
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
-        throw new Error('EIP1559 Fee fail')
+        throw new Error(`EIP1559 Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     } else {
       transactionRequest.type = 0;
@@ -157,7 +157,7 @@ export default class EVMAccount extends OrbiterAccount {
         transactionRequest.gasPrice = gasPrice.toString();
       }
       if (!transactionRequest.gasPrice) {
-        throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, customGas: ${chainCustomConfig.MinFeePerGas}, maxFeePerGas:${+maxFeePerGas.toString()}`)
+        throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     }
     return transactionRequest;
