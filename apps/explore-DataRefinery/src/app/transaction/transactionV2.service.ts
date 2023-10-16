@@ -434,7 +434,7 @@ export class TransactionV2Service {
 
   private getSecurityCode(value: string): string {
     // const code = value.substring(value.length - 4, value.length);
-    const code = new BigNumber(value).mod(10000).toString();
+    const code = new BigNumber(value).mod(100000).toString();
     return code;
   }
   private parseSecurityCode(value: string): {
@@ -443,7 +443,7 @@ export class TransactionV2Service {
     targetChainIdIndex: number;
   } {
     const code = this.getSecurityCode(value);
-    const dealerId = Number(code[0]);
+    const dealerId = Number(code.substring(0,2));
     const ebcId = Number(code[1]);
     const targetChainIdIndex = Number(code.substring(2));
     return { dealerId, ebcId, targetChainIdIndex };
