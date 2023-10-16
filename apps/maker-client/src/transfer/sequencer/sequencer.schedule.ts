@@ -190,7 +190,7 @@ export class SequencerScheduleService {
           });
         } else {
           this.logger.debug(
-            `checkStoreReadySend ${key} -> singleSendTransaction`
+            `rowSize:${row.size} batchTransferCount:${batchTransferCount} checkStoreReadySend ${key} -> singleSendTransaction`
           );
           await this.singleSendTransaction(row.id, store).catch((error) => {
             this.logger.error(

@@ -148,11 +148,11 @@ export default class EVMAccount extends OrbiterAccount {
       }
       transactionRequest.type = 0;
       transactionRequest.gasPrice = Math.max(
-        chainCustomConfig.MinFeePerGas,
+        chainCustomConfig.MinFeePerGas || 0,
         +maxFeePerGas.toString()
       );
       if (!transactionRequest.gasPrice) {
-        throw new Error('gasPrice Fee fail')
+        throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, customGas: ${chainCustomConfig.MinFeePerGas}, maxFeePerGas:${+maxFeePerGas.toString()}`)
       }
     }
     return transactionRequest;
