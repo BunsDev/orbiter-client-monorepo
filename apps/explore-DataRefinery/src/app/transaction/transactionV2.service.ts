@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { equals, padStart } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction, Transfers } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { ChainConfigService } from '@orbiter-finance/config';
+import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
@@ -25,7 +25,8 @@ export class TransactionV2Service {
     protected chainConfigService: ChainConfigService,
     private sequelize: Sequelize,
     protected memoryMatchingService: MemoryMatchingService,
-    protected makerService: MakerService
+    protected makerService: MakerService,
+    protected envConfigService: ENVConfigService,
   ) {
     this.matchScheduleUserSendTask()
       .then((_) => {
@@ -173,6 +174,12 @@ export class TransactionV2Service {
     createdData.ruleId = rule.id;
     createdData.targetAddress = transfer.sender;
     createdData.responseMaker = [transfer.receiver];
+
+    const v3ResponseMaker = this.envConfigService.get("v3ResponseMaker");
+    if (v3ResponseMaker) {
+      const addrList = v3ResponseMaker[transfer.receiver] || [];
+      createdData.responseMaker.push(...addrList);
+    }
     createdData.transactionId = TransactionID(
       transfer.sender,
       `-${transfer.chainId}`,
@@ -433,8 +440,8 @@ export class TransactionV2Service {
   }
 
   private getSecurityCode(value: string): string {
-    // const code = value.substring(value.length - 4, value.length);
-    const code = new BigNumber(value).mod(100000).toString();
+    const code = value.substring(value.length - 5, value.length);
+    // const code = new BigNumber(value).mod(100000).toString();
     return code;
   }
   private parseSecurityCode(value: string): {
@@ -444,8 +451,8 @@ export class TransactionV2Service {
   } {
     const code = this.getSecurityCode(value);
     const dealerId = Number(code.substring(0,2));
-    const ebcId = Number(code[1]);
-    const targetChainIdIndex = Number(code.substring(2));
+    const ebcId = Number(code[2]);
+    const targetChainIdIndex = Number(code.substring(3));
     return { dealerId, ebcId, targetChainIdIndex };
   }
 

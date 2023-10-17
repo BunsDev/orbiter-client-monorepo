@@ -1,0 +1,27 @@
+version: '3.8'
+networks:
+   orbiter-network:
+    external: true
+    labels:
+      - "com.docker.compose.project=openapi"
+services:
+  openapi:
+    container_name: "openapi"
+    image: orbiter/openapi:latest
+    labels:
+      - "com.docker.compose.project=openapi"
+    build:
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/explore-open-api/Dockerfile.clients
+    restart: always
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+    ports:
+      - '9003:3000'
+    networks:
+      - orbiter-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'

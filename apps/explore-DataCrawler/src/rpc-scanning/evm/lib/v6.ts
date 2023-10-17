@@ -10,7 +10,7 @@ export default class EVMVUtils {
     return (
       id('transfer(address,uint256)').substring(0, 10) === data.substring(0, 10)
     );
-    // veift symbol decimal
+    // verify symbol decimal
   }
   public static decodeERC20TransferData(data: string): TransactionDescription {
     if (!EVMVUtils.isERC20Transfer(data)) {

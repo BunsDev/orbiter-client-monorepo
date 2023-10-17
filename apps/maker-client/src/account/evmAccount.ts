@@ -18,7 +18,7 @@ import {
   TransactionFailedError,
   TransactionSendBeforeError,
 } from "./IAccount.interface";
-import { provider, JSONStringify, timeoutPromise,equals } from "@orbiter-finance/utils";
+import { provider, JSONStringify, timeoutPromise, equals } from "@orbiter-finance/utils";
 export default class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
@@ -41,10 +41,10 @@ export default class EVMAccount extends OrbiterAccount {
     }
     return this.#provider;
   }
-  async connect(privateKey: string, _address:string) {
+  async connect(privateKey: string, _address: string) {
     const provider = this.getProvider();
     this.wallet = new ethers.Wallet(privateKey).connect(provider);
-    if (_address && ! equals(_address,this.wallet.address )) {
+    if (_address && !equals(_address, this.wallet.address)) {
       throw new Error('The connected wallet address is inconsistent with the private key address')
     }
     this.address = this.wallet.address;
@@ -122,37 +122,42 @@ export default class EVMAccount extends OrbiterAccount {
         isEIP1559 = true;
       }
     }
+    // calc gas
+    const feePerGasRedouble = Number(chainCustomConfig.FeePerGasRedouble || 1);
     if (isEIP1559) {
-      let maxFeePerGas = chainCustomConfig.MinFeePerGas || 0;
-      let maxPriorityFeePerGas = chainCustomConfig.MinPriorityFeePerGas || 0;
-      if (
-        !transactionRequest.maxFeePerGas ||
-        !transactionRequest.maxPriorityFeePerGas
-      ) {
-        if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
-          maxFeePerGas = Math.max(Number(feeData.maxFeePerGas), maxFeePerGas);
-          maxPriorityFeePerGas = Math.max(Number(feeData.maxPriorityFeePerGas), maxPriorityFeePerGas);
-        }
-        transactionRequest.type = 2;
-        transactionRequest.maxFeePerGas = maxFeePerGas;
-        transactionRequest.maxPriorityFeePerGas = maxPriorityFeePerGas;
+      transactionRequest.type = 2;
+      const priorityFeePerGasRedouble =  Number(chainCustomConfig.PriorityFeePerGasRedouble || 1);
+      // maxFeePerGas
+      let gasPrice = new BigNumber(feeData.maxFeePerGas.toString()).times(feePerGasRedouble);;
+      if (chainCustomConfig.MaxFeePerGas && gasPrice.gte(chainCustomConfig.MaxFeePerGas)) {
+        gasPrice = new BigNumber(chainCustomConfig.MaxFeePerGas);
+      } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
+        gasPrice = new BigNumber(chainCustomConfig.MinFeePerGas);
       }
+      transactionRequest.maxFeePerGas = gasPrice.toString();
+      // maxPriorityFeePerGas
+      let maxPriorityFeePerGas = new BigNumber(feeData.maxPriorityFeePerGas.toString()).times(priorityFeePerGasRedouble);
+      if (chainCustomConfig.MaxPriorityFeePerGas && maxPriorityFeePerGas.gte(chainCustomConfig.MaxPriorityFeePerGas)) {
+        maxPriorityFeePerGas = new BigNumber(chainCustomConfig.MaxPriorityFeePerGas);
+      }
+      transactionRequest.maxPriorityFeePerGas = maxPriorityFeePerGas.toString();
+ 
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
-        throw new Error('EIP1559 Fee fail')
+        throw new Error(`EIP1559 Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
-      // delete transactionRequest.gasPrice;
     } else {
-      let maxFeePerGas = transactionRequest.gasPrice || 0n;
-      if (!maxFeePerGas || +maxFeePerGas.toString() <= 0) {
-        maxFeePerGas = feeData.gasPrice;
-      }
       transactionRequest.type = 0;
-      transactionRequest.gasPrice = Math.max(
-        chainCustomConfig.MinFeePerGas || 0,
-        +maxFeePerGas.toString()
-      );
       if (!transactionRequest.gasPrice) {
-        throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, customGas: ${chainCustomConfig.MinFeePerGas}, maxFeePerGas:${+maxFeePerGas.toString()}`)
+        let gasPrice = new BigNumber(feeData.gasPrice.toString()).times(feePerGasRedouble);;
+        if (chainCustomConfig.MaxFeePerGas && gasPrice.gte(chainCustomConfig.MaxFeePerGas)) {
+          transactionRequest.gasPrice = chainCustomConfig.MaxFeePerGas;
+        } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
+          transactionRequest.gasPrice = chainCustomConfig.MinFeePerGas;
+        }
+        transactionRequest.gasPrice = gasPrice.toString();
+      }
+      if (!transactionRequest.gasPrice) {
+        throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     }
     return transactionRequest;
