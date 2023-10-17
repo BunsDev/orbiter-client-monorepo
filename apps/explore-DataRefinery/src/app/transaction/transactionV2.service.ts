@@ -25,7 +25,8 @@ export class TransactionV2Service {
     protected chainConfigService: ChainConfigService,
     private sequelize: Sequelize,
     protected memoryMatchingService: MemoryMatchingService,
-    protected makerService: MakerService
+    protected makerService: MakerService,
+    protected envConfigService: ENVConfigService,
   ) {
     this.matchScheduleUserSendTask()
       .then((_) => {
@@ -173,6 +174,12 @@ export class TransactionV2Service {
     createdData.ruleId = rule.id;
     createdData.targetAddress = transfer.sender;
     createdData.responseMaker = [transfer.receiver];
+
+    const v3ResponseMaker = this.envConfigService.get("v3ResponseMaker");
+    if (v3ResponseMaker) {
+      const addrList = v3ResponseMaker[transfer.receiver] || [];
+      createdData.responseMaker.push(...addrList);
+    }
     createdData.transactionId = TransactionID(
       transfer.sender,
       `-${transfer.chainId}`,
