@@ -45,6 +45,9 @@ build-docker-explore: build-docker-crawler build-docker-refinery ## Build Explor
 build-docker-maker: ## Build the Maker Client Docker image
 	docker build -f apps/maker-client/Dockerfile.clients . -t $(MAKER_IMAGE)
 
+build-docker-openapi: ## Build the Open Api Docker image
+	docker build -f apps/explore-open-api/Dockerfile.clients . -t $(MAKER_IMAGE)
+
 # Start Explore application
 explore: create-network ## Start the Explore application
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
@@ -52,6 +55,9 @@ explore: create-network ## Start the Explore application
 # Start Maker application
 maker: create-network ## Start the Maker application
 	$(DOCKER_COMPOSE) -f docker-compose.maker.yml up -d
+# Start OpenApi application
+openapi: create-network ## Start the OpenApi application
+	$(DOCKER_COMPOSE) -f docker-compose.openapi.yml up -d
 
 # Stop the Node.js application
 stop: ## Stop the Node.js application

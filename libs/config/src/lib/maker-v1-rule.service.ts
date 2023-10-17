@@ -30,8 +30,9 @@ export class MakerV1RuleService {
                 }
                 for (let i = 1; i < keys.length; i++) {
                     try {
-                        this.consul.watchConsulConfig(keys[i], (data: any) => {
-                            MakerV1RuleService.configs[data.Key] = JSON.parse(data.Value);
+                        this.consul.watchConsulConfig(keys[i], (config: any) => {
+                            const data = config.toJSON();
+                            MakerV1RuleService.configs[data.Key] = data;
                         })
                     } catch (error) {
                         Logger.error(

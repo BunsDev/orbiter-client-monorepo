@@ -66,21 +66,21 @@ export class MakerService {
         if (!ebc) {
             return {
                 errno: 1000,
-                errmsg: 'ebc not found'
+                errmsg: `ebc not found ${ebcIndex}`
             }
         }
         const dealer = securityCodeInfo['dealerMappingSnapshots'][0];
         if (!dealer) {
             return {
                 errno: 1000,
-                errmsg: 'dealer not found'
+                errmsg: `dealer not found ${dealerIndex}`
             }
         }
         const targetChain = securityCodeInfo['chainIdMappingSnapshots'][0];
         if (!targetChain) {
             return {
                 errno: 1000,
-                errmsg: 'targetChain not found'
+                errmsg: `targetChain not found ${targetChainIdIndex}`
             }
         }
         const targetChainData = await this.getV2ChainInfo(targetChain.chainId);
