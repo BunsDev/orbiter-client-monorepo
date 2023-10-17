@@ -51,7 +51,7 @@ export class SequencerService {
         transfer.sourceAmount,
         transfer.targetSymbol,
         transfer.targetAmount
-      ).catch((error)=> {
+      ).catch((error) => {
         throw new TransactionSendBeforeError(`validatingValueMatche error ${error.message}`)
       })
       if (!success) {
@@ -215,10 +215,11 @@ export class SequencerService {
       );
       if (wallet && !wallet.account) {
         this.logger.error(
-          `${hash} transactionGetPrivateKey ${hash} warn ${JSON.stringify(
+          `${hash} validatorService ${hash} warn ${JSON.stringify(
             wallet["errors"] || {}
           )}`
         );
+        this.alertService.sendMessage(`singleTransfer validatorService error ${hash} ${JSON.stringify(wallet["errors"] || {})}`, 'TG');
         return;
       }
       if (wallet?.account) {
@@ -233,7 +234,7 @@ export class SequencerService {
             senderAddress,
             async () => {
               this.logger.info(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
-              await this.execSingleTransfer(transfer, wallet.account, store).catch(error=> {
+              await this.execSingleTransfer(transfer, wallet.account, store).catch(error => {
                 this.logger.error(`execSingleTransfer error`, error)
                 if (error instanceof TransactionSendBeforeError) {
                   rollback();
