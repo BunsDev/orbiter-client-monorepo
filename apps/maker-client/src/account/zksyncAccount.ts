@@ -28,10 +28,10 @@ export default class ZkSyncAccount extends OrbiterAccount  {
   private async getL2Wallet(privateKey) {
     let l1Provider;
     let l2Provider;
-    if (+this.chainId === 3) {
+    if (this.chainId === 'zksync') {
       l1Provider = ethers.providers.getDefaultProvider('mainnet');
       l2Provider = await zksync.getDefaultProvider('mainnet');
-    } else if (+this.chainId === 33) {
+    } else if (this.chainId === 'zksync_test') {
       l1Provider = ethers.providers.getDefaultProvider("goerli");
       l2Provider = await zksync.Provider.newHttpProvider("https://goerli-api.zksync.io/jsrpc");
     }
