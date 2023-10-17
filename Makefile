@@ -56,7 +56,7 @@ explore: create-network ## Start the Explore application
 maker: create-network ## Start the Maker application
 	$(DOCKER_COMPOSE) -f docker-compose.maker.yml up -d
 # Start OpenApi application
-maker: create-network ## Start the OpenApi application
+openapi: create-network ## Start the OpenApi application
 	$(DOCKER_COMPOSE) -f docker-compose.openapi.yml up -d
 
 # Stop the Node.js application
