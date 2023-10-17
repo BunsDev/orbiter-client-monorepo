@@ -16,6 +16,8 @@ import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';
+import { AlertService } from "@orbiter-finance/alert";
+
 @Injectable()
 export class SequencerScheduleService {
   @LoggerDecorator()
