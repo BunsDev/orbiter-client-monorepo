@@ -53,14 +53,21 @@ export class TransactionService {
 
         // valid v1 or v2
         let versionStr = null;
-        if (await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
-          versionStr = '1-1';
+        if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver) && await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
+          versionStr = '0-0';
+        } else if (await this.makerService.isV2WhiteWalletAddress(transfer.receiver) && await this.makerService.isV2WhiteWalletAddress(transfer.sender)) {
+          versionStr = '0-0';
         } else if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver)) {
           versionStr = '1-0';
         } else if (await this.makerService.isV2WhiteWalletAddress(transfer.receiver)) {
           versionStr = '2-0';
-        } else if (await this.makerService.isV2WhiteWalletAddress(transfer.sender)) {
-          versionStr = '2-1';
+        } else {
+          // maker out
+          if (await this.makerService.isV2WhiteWalletAddress(transfer.sender)) {
+            versionStr = '2-1';
+          } else if (await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
+            versionStr = '1-1';
+          }
         }
         if (versionStr) {
           transfer.version = versionStr;
