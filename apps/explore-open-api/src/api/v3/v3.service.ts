@@ -166,7 +166,7 @@ export class V3Service {
       if (!new RegExp(/^0x[a-fA-F0-9]{40}$/).test(address) && address.length !== 66) {
         throw new Error('Invalid address');
       }
-      where['targetMaker'] = address;
+      where['sourceMaker'] = address;
     }
     const dataList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll({
       attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceSymbol', 'status', 'sourceTime',
