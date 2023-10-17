@@ -353,6 +353,13 @@ export class V3Service {
       if(!mdc?.chainIdSnapshot.length) continue;
       if(!mdc?.ebcSnapshot.length) continue;
       if(!mdc?.dealerSnapshot.length) continue;
+      const whiteListConfig = await this.envConfigService.getAsync('WHITE_LIST');
+      if (whiteListConfig) {
+        const whiteList = whiteListConfig.split(',');
+        if (!whiteList.find(address => address.toLowerCase() === mdc.owner.toLowerCase())) {
+          continue;
+        }
+      }
       const chainIdMap = {};
       const ebcIdMap = {};
       const dealerIdMap = {};
@@ -409,14 +416,7 @@ export class V3Service {
         return b.version - a.version;
       });
       const nextUpdateTimeMap = {};
-      const whiteListConfig = await this.envConfigService.getAsync('WHITE_LIST');
       for (const ruleSnapshot of ruleSnapshots) {
-        if (whiteListConfig) {
-          const whiteList = whiteListConfig.split(',');
-          if (!whiteList.find(address => address.toLowerCase() === mdc.owner.toLowerCase())) {
-            continue;
-          }
-        }
         const ebcId = ebcIdMap[ruleSnapshot.ebc.id.toLowerCase()];
         if (!ebcId) {
           continue;
