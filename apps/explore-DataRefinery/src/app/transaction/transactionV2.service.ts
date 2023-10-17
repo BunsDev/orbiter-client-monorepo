@@ -176,9 +176,11 @@ export class TransactionV2Service {
     createdData.responseMaker = [transfer.receiver];
 
     const v3ResponseMaker = this.envConfigService.get("v3ResponseMaker");
+    console.log('v3ResponseMaker:', v3ResponseMaker);
     if (v3ResponseMaker) {
       const addrList = v3ResponseMaker[transfer.receiver] || [];
       createdData.responseMaker.push(...addrList);
+      console.log('createdData.responseMaker:', createdData.responseMaker);
     }
     createdData.transactionId = TransactionID(
       transfer.sender,
