@@ -1,5 +1,5 @@
 import OrbiterAccount from './orbiterAccount';
-import { NonceManager } from "@orbiter-finance/utils";
+import { HTTPGet, NonceManager } from "@orbiter-finance/utils";
 import {
     TransactionRequest,
     TransferResponse,
@@ -64,7 +64,7 @@ export default class ZkSyncAccount extends OrbiterAccount  {
         nonce,
         amount,
       });
-      this.logger.log('transfer response:', response);
+      this.logger.info(`transfer response: ${JSON.stringify(response)}`);
       submit();
     } catch (error: any) {
       this.logger.error(`rollback nonce:${error.message}`);
@@ -73,7 +73,7 @@ export default class ZkSyncAccount extends OrbiterAccount  {
     }
     if (response) {
       response.awaitReceipt().then(tx => {
-        this.logger.log(`${this.chainConfig.name} sendTransaction waitForTransaction:`, tx);
+        this.logger.info(`${this.chainConfig.name} sendTransaction waitForTransaction: ${JSON.stringify(tx)}`);
       }).catch(err => {
         this.logger.error(`${this.chainConfig.name} sendTransaction Error:`, err);
         if (err && err.message.includes('Nonce mismatch')) {
@@ -83,7 +83,7 @@ export default class ZkSyncAccount extends OrbiterAccount  {
     }
     const txData = response.txData.tx;
     return {
-      hash: response.txHash,
+      hash: response.txHash.replace('sync-tx:', '0x'),
       from: this.account.address(),
       to,
       fee: BigInt(txData.fee),
@@ -105,5 +105,17 @@ export default class ZkSyncAccount extends OrbiterAccount  {
       throw new Error(`The specified address query is not supported temporarily ${address} - ${this.address}`);
     }
     return BigInt((await this.account.getBalance(token, 'committed')).toString());
+  }
+
+  public async waitForTransactionConfirmation(transactionHash: string) {
+    const response = await HTTPGet(`${this.chainConfig.api.url}/transactions/${transactionHash}/data`);
+    if (response && response['status'] === 'success') {
+      const res = response['result'];
+      if (res) {
+        return { ...res.tx, ...res.tx.op };
+      }
+    }
+    console.log(`${transactionHash} waitForTransactionConfirmation ...`);
+    return await this.waitForTransactionConfirmation(transactionHash);
   }
 }
