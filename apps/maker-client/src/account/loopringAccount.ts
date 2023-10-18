@@ -12,6 +12,7 @@ import PrivateKeyProvider from 'truffle-privatekey-provider';
 import { LoopringSendTokenRequest } from '../types';
 import { HTTPGet } from "@orbiter-finance/utils";
 import { sleep } from '@orbiter-finance/utils';
+import { TransferAmountTransaction } from "../transfer/sequencer/sequencer.interface";
 
 export default class LoopringAccount extends OrbiterAccount {
   private L1Wallet: ethers.Wallet;
@@ -33,13 +34,13 @@ export default class LoopringAccount extends OrbiterAccount {
 
   public async transfer(
     to: string,
-    value: string,
+    value: bigint,
     transactionRequest?: LoopringSendTokenRequest
   ): Promise<TransferResponse | undefined> {
     return await this.transferToken(String(this.chainConfig.nativeCurrency.address), to, value, transactionRequest);
   }
 
-  public async getBalance(address?: string, token?: string): Promise<ethers.BigNumber> {
+  public async getBalance(address?: string, token?: string): Promise<bigint> {
     if (token && token != this.chainConfig.nativeCurrency.address) {
       return await this.getTokenBalance(token, address);
     } else {
@@ -47,7 +48,7 @@ export default class LoopringAccount extends OrbiterAccount {
     }
   }
 
-  public async getTokenBalance(token: string, address?: string): Promise<ethers.BigNumber> {
+  public async getTokenBalance(token: string, address?: string): Promise<bigint> {
     address = address || this.L1Wallet.address;
     const tokenInfo = [...this.chainConfig.tokens, this.chainConfig.nativeCurrency]
       .find(item => item.address.toLowerCase() === token.toLowerCase());
@@ -55,20 +56,20 @@ export default class LoopringAccount extends OrbiterAccount {
       throw new Error(`${token} token not found`);
     }
     const { accInfo } = await this.client.getAccount({ owner: address });
-    const balances = await HttpGet(`${this.chainConfig.api.url}/api/v3/user/balances`, {
-      accountId: accInfo.accountId,
-      tokens: tokenInfo.id
+    const balances: any[] = await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/balances`, {
+      accountId: String(accInfo.accountId),
+      tokens: String(tokenInfo.id)
     });
     if (balances.length > 0) {
-      return ethers.BigNumber.from(balances[0].total);
+      return BigInt(balances[0].total);
     }
-    return ethers.BigNumber.from(0);
+    return 0n;
   }
 
   public async transferToken(
     token: string,
     to: string,
-    value: string,
+    value: bigint,
     transactionRequest?: LoopringSendTokenRequest
   ): Promise<TransferResponse | undefined> {
     const tokenInfo = [...this.chainConfig.tokens, this.chainConfig.nativeCurrency]
@@ -124,7 +125,7 @@ export default class LoopringAccount extends OrbiterAccount {
       storageId: sendNonce,
       token: {
         tokenId: tokenInfo.id,
-        volume: value,
+        volume: String(value),
       },
       maxFee: {
         tokenId: transactionRequest?.feeTokenId || 0,
@@ -151,13 +152,13 @@ export default class LoopringAccount extends OrbiterAccount {
         nonce: transactionResult['storageId'],
         token: token,
         data: transactionRequest?.memo,
-        value: ethers.BigNumber.from(value),
+        value: value,
       };
     }
   }
 
   public async waitForTransactionConfirmation(transactionHash: string) {
-    const response = await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/transactions?accountId=${this.accountInfo.accountId}&hashes=${transactionHash}`);
+    const response: { totalNum: number, transactions: any[] } = <any>await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/transactions?accountId=${this.accountInfo.accountId}&hashes=${transactionHash}`);
     if (response && response.transactions.length === 1) {
       const res: any = response.transactions[0];
       if (res) {
@@ -167,5 +168,13 @@ export default class LoopringAccount extends OrbiterAccount {
     console.log(`loopring ${transactionHash} waitForTransactionConfirmation ...`);
     await sleep(1000);
     return await this.waitForTransactionConfirmation(transactionHash);
+  }
+
+  public async pregeneratedRequestParameters(
+    orders: TransferAmountTransaction,
+    transactionRequest: any = {}
+  ) {
+    transactionRequest.memo = orders.sourceNonce;
+    return transactionRequest;
   }
 }
