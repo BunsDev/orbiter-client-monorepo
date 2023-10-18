@@ -187,7 +187,7 @@ export class TransactionV1Service {
         },
       );
       this.logger.error(
-        `${transfer.hash} ${targetChain} targetChain not found`,
+        `${transfer.hash} ${targetChainId} ${targetChain} targetChain not found`,
       );
       return {
         code: 1,
@@ -212,7 +212,7 @@ export class TransactionV1Service {
           },
         },
       );
-      this.logger.error(`${transfer.hash}  targetToken not found`);
+      this.logger.error(`${transfer.hash} ${targetChain.chainId} targetToken not found`);
       return {
         code: 1,
         errmsg: 'targetToken not found',
@@ -418,7 +418,7 @@ export class TransactionV1Service {
     }
     const t = await this.sequelize.transaction();
     try {
-      
+
       const createdData: BridgeTransactionAttributes = {
         sourceId: transfer.hash,
         sourceAddress: transfer.sender,

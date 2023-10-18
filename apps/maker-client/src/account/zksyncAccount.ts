@@ -101,9 +101,9 @@ export default class ZkSyncAccount extends OrbiterAccount  {
     }
   }
   public async getTokenBalance(token: string, address?: string): Promise<bigint> {
-    if (address && address != this.address) {
-      throw new Error('The specified address query is not supported temporarily');
+    if (address && address.toLowerCase() != this.address.toLowerCase()) {
+      throw new Error(`The specified address query is not supported temporarily ${address} - ${this.address}`);
     }
-    return BigInt(this.account.getBalance(token, 'committed').toString());
+    return BigInt((await this.account.getBalance(token, 'committed')).toString());
   }
 }

@@ -106,7 +106,7 @@ export class SequencerScheduleService {
         }
         const result = await store.addTransactions(tx as any);
         this.logger.debug(
-          `${tx.sourceId} store addTransactions ${JSON.stringify(result)}`
+          `${tx.sourceId} DB store addTransactions ${JSON.stringify(result)}`
         );
         if (+tx.id > store.lastId) {
           store.lastId = +tx.id;
@@ -135,7 +135,7 @@ export class SequencerScheduleService {
     const store = this.stores.get(key)
     const result = await store.addTransactions(bridgeTransaction as any);
     this.logger.debug(
-      `${bridgeTransaction.sourceId} store addTransactions ${JSON.stringify(result)}`
+      `${bridgeTransaction.sourceId} MQ store addTransactions ${JSON.stringify(result)}`
     );
     // throw new Error()
   }
