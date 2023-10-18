@@ -260,6 +260,7 @@ export class SequencerScheduleService {
     const tokenTxList = await store.getTargetTokenTxIdList(token);
     for (const hash of tokenTxList) {
       this.sequencerService.singleSendTransactionByTransfer(token, store, hash);
+      store.removeSymbolsWithData(token, hash);
     }
   }
 }
