@@ -148,7 +148,7 @@ export class V3Service {
         page = Number(params[2]);
       }
     }
-    const offset = (page - 1) * 10;
+    const offset = (page - 1) * limit;
     if (offset < 0) {
       throw new Error('Invalid params');
     }
