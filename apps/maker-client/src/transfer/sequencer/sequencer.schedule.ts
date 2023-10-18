@@ -16,6 +16,8 @@ import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';
+import { AlertService } from "@orbiter-finance/alert";
+
 @Injectable()
 export class SequencerScheduleService {
   @LoggerDecorator()
@@ -30,13 +32,14 @@ export class SequencerScheduleService {
     private readonly bridgeTransactionModel: typeof BridgeTransactionModel,
     private readonly sequencerService: SequencerService,
     private readonly envConfig: ENVConfigService,
+    private alertService: AlertService,
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
     this.consumerService.consumeMakerWaitTransferMessage(this.consumeMQTransactionRecords.bind(this))
     // this.validatorService.validatingValueMatches("ETH", "1", "ETH", "2")
   }
 
-  @Cron("* */5 * * * *")
+  @Cron("* */2 * * * *")
   private checkDBTransactionRecords() {
     const owners = this.envConfig.get("MAKERS") || [];
     for (const chain of this.chainConfigService.getAllChains()) {
@@ -222,10 +225,11 @@ export class SequencerScheduleService {
       );
     if (isEmpty(result) && errors.length > 0) {
       this.logger.error(
-        `${token} batchSendTransaction transactionGetPrivateKeys warn ${JSON.stringify(
+        `${token} batchSendTransaction validatorService warn ${JSON.stringify(
           errors || {}
         )}`
       );
+      this.alertService.sendMessage(`batchSendTransaction validatorService error: ${JSON.stringify(errors || {})}`, 'TG');
       return;
     }
     const promiseMaps = Object.keys(result).map(async (sender) => {
