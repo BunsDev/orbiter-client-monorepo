@@ -644,6 +644,9 @@ export class TransactionV1Service {
   }
 
   private parseSourceTxSecurityCode(value: string): number {
+    if (value.lastIndexOf('9009') === value.length - 4 || value.lastIndexOf('9099') === value.length - 4) {
+      return +value.substring(value.length - 4) % 1000;
+    }
     const kindex = value.lastIndexOf('9');
     const code = value.substring(kindex, kindex + 4);
     const chainId = +`${padEnd(code, 4, '0')}` % 1000;
