@@ -162,11 +162,10 @@ export class TransactionV1Service {
     // targetChainId
     if ([9, 99].includes(+sourceChain.internalId)) {
       // TODO:
-      if (transfer.calldata && Array.isArray(transfer.calldata)) {
-        if (transfer.calldata.length === 1) {
-          targetChainId = Number(transfer.calldata[0]) % 1000;
-        } else if (transfer.calldata.length === 2) {
-          targetChainId = Number(transfer.calldata[0]) % 1000;
+      if (transfer.calldata && Array.isArray(transfer.calldata) && transfer.calldata.length) {
+        targetChainId = Number(transfer.calldata[0]) % 1000;
+        if (transfer.calldata.length >= 2) {
+          result.targetAddress = transfer.calldata[1].toLocaleLowerCase();
         }
       }
     }

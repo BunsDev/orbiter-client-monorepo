@@ -173,7 +173,7 @@ export class LoopringApiScanningService extends ApiScanningService {
             feeToken: tx.feeTokenSymbol,
             timestamp: tx.timestamp,
             status: TransferAmountTransactionStatus.failed,
-            calldata: [tx.memo],
+            calldata: tx.memo ? tx.memo.split('_') : [],
             nonce: nonce,
             receipt: tx,
           };
