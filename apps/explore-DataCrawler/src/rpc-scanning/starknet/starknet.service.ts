@@ -58,15 +58,14 @@ export class StarknetRpcScanningService extends RpcScanningService {
     });
   }
   async handleBlock(
-    block: RPC.GetBlockWithTxs,
+    block: any,
   ): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions;
     const blockNumber = block['block_number'];
     if (!transactions) {
       throw new Error(`${blockNumber} transactions empty`);
     }
-
-    const txTransfersArray = await Promise.all(transactions.forEach((transaction) => {
+    const txTransfersArray: any[] = await Promise.all(transactions.map((transaction) => {
       transaction.block_number = block.block_number;
       transaction.timestamp = Number(block.timestamp) * 1000;
       return this.handleTransaction(transaction, null);
@@ -109,6 +108,9 @@ export class StarknetRpcScanningService extends RpcScanningService {
     transaction: any,
     transactionReceipt?: RPC.TransactionReceipt,
   ): Promise<TransferAmountTransaction[]> {
+    if (transaction.type != 'INVOKE') {
+      return [];
+    }
     let parseData = this.decodeExecuteCalldataCairo0(transaction.calldata);
     if (!parseData || parseData.length <= 0) {
       parseData = this.decodeExecuteCalldataCairo1(transaction.calldata) as any;
@@ -117,9 +119,6 @@ export class StarknetRpcScanningService extends RpcScanningService {
       return [];
     }
     const transfers: TransferAmountTransaction[] = [];
-    if (transaction.type != 'INVOKE') {
-      return [];
-    }
     const chainConfig = this.chainConfig;
     for (const row of parseData) {
       try {
@@ -139,7 +138,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
           feeToken: chainConfig.nativeCurrency.symbol,
           feeAmount: "0",
           timestamp: transaction.timestamp,
-          status: -1,
+          status: TransferAmountTransactionStatus.none,
           nonce: +transaction.nonce,
           calldata: args,
           selector: row.selector,
@@ -218,11 +217,9 @@ export class StarknetRpcScanningService extends RpcScanningService {
         throw error;
       }
     }
-
     if (!transfers.length) {
       return [];
     }
-
     const provider = this.getProvider();
     const receipt: any = transactionReceipt || <any>await provider.getTransactionReceipt(transaction.transaction_hash);
     if (!equals(transaction?.transaction_hash, receipt?.transaction_hash)) {
@@ -266,7 +263,6 @@ export class StarknetRpcScanningService extends RpcScanningService {
         transfer.status = isEmpty(transferEvent) ? TransferAmountTransactionStatus.failed : transfer.status;
       }
     }
-
     return transfers;
   }
   decodeExecuteCalldataCairo0(inputs: string[]): CalldataArg[] {
@@ -412,7 +408,6 @@ export class StarknetRpcScanningService extends RpcScanningService {
       }
       return calldata;
     } catch (error) {
-      console.log(error);
       this.logger.error(
         `parseContractCallData error ${JSON.stringify(data)}`,
         error,
