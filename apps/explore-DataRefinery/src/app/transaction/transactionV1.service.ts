@@ -643,18 +643,20 @@ export class TransactionV1Service {
     }
   }
 
-  private parseSourceTxSecurityCode(value: string): number {
-    if (value.lastIndexOf('9009') === value.length - 4 || value.lastIndexOf('9099') === value.length - 4) {
-      return +value.substring(value.length - 4) % 1000;
+  private parseSourceTxSecurityCode(value) {
+    let index = 0;
+    for (let i = value.length - 1; i > 0; i--) {
+      if (+value[i] !== 0) {
+        index = i;
+        break;
+      }
     }
-    const kindex = value.lastIndexOf('9');
-    const code = value.substring(kindex, kindex + 4);
-    const chainId = +`${padEnd(code, 4, '0')}` % 1000;
-    return chainId;
-  }
-
-  private parseDestTxSecurityCode(value: string): number {
-    const code = value.substring(value.length - 4, value.length);
-    return +code;
+    let code = String(+value.substr(index - 3, 4));
+    if (code.length !== 4) {
+      for (let i = 0; i < 4 - code.length; i++) {
+        code += '0';
+      }
+    }
+    return Number(code) % 1000;
   }
 }
