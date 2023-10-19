@@ -656,6 +656,10 @@ export class TransactionV1Service {
         code += '0';
       }
     }
-    return Number(code) % 1000;
+    const nCode = Number(code);
+    if (nCode < 9000 || nCode > 10000) {
+      return 0;
+    }
+    return nCode % 1000;
   }
 }
