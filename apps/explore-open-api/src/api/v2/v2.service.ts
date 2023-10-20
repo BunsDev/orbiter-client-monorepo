@@ -216,7 +216,7 @@ export class V2Service {
     list = list.sort(function (a, b) {
       return new Date(b.fromTimestamp).valueOf() - new Date(a.fromTimestamp).valueOf();
     });
-    await keyv.set(`${address}_history`, list, defaultCacheTime);
+    await keyv.set(`${address}_history`, list, 1000 * 10);
     return list;
   }
 
