@@ -19,29 +19,29 @@ export enum ECode {
 }
 
 export interface ITradingPair {
-  id: string;
+  pairId: string;
   recipient: string;
   sender: string;
-  tradingFee: number;
-  gasFee: number;
+  gasFee: string;
+  tradingFee: string;
   fromChain: {
-    id: number;
-    networkId: number;
+    id: string;
+    networkId: string;
+    chainId: string;
     name: string;
-    tokenAddress: string;
-    contractAddress?: string;
     symbol: string;
+    tokenAddress: string;
     decimals: number;
-    minPrice: number;
     maxPrice: number;
-    isMainCoin: number;
+    minPrice: number;
   };
   toChain: {
-    id: number;
-    networkId?: number;
+    id: string;
+    networkId: string;
+    chainId: string;
     name: string;
-    tokenAddress: string;
     symbol: string;
+    tokenAddress: string;
     decimals: number;
   };
 }

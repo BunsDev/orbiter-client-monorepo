@@ -10,6 +10,7 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { isEmpty } from "@orbiter-finance/utils";
 import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
 import { MakerTransaction, NetState, Transaction, UserHistory } from "@orbiter-finance/v1-seq-models";
+import { ScheduleModule } from "@nestjs/schedule";
 
 dayjs.extend(utc);
 
@@ -31,7 +32,8 @@ dayjs.extend(utc);
       chainConfigPath: "explore-open-api/chains.json",
       envConfigPath: "explore-open-api/config.yaml",
       tradingPairsPath: "common/trading-pairs",
-      // cachePath: join(__dirname,'runtime')
+      makerV1RulePath: "rules",
+      cachePath: join(__dirname,'runtime')
     }),
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],
@@ -56,6 +58,7 @@ dayjs.extend(utc);
       },
     }),
     ApiModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [],
   providers: [],
