@@ -9,7 +9,7 @@ import { IChainConfig } from "@orbiter-finance/config";
 import { OrbiterLogger,logger } from "@orbiter-finance/utils";
 
 export default class OrbiterAccount extends IAccount {
-  
+
   public logger!: OrbiterLogger;
   public store: StoreService;
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
@@ -21,7 +21,7 @@ export default class OrbiterAccount extends IAccount {
   get chainConfig(): IChainConfig {
     return this.ctx.chainConfigService.getChainInfo(this.chainId);
   }
-  async connect(_privateKey: string, _address?:string) {
+  async connect(_privateKey: string, _address?: string, _version?: string) {
     return this;
   }
 
