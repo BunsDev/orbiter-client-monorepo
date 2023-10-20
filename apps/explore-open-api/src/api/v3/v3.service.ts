@@ -158,15 +158,35 @@ export class V3Service {
       if (+params[0] === 1) {
         where['status'] = { [Op.not]: 99 };
       } else if (+params[0] === 2) {
-        where['status'] = { [Op.is]: 99 };
+        where['status'] = 99;
       }
     }
-    if (params.length >= 4) {
+    if (params.length >= 4 && params[3]) {
       const address: string = String(params[3]).toLowerCase();
       if (!new RegExp(/^0x[a-fA-F0-9]{40}$/).test(address) && address.length !== 66) {
         throw new Error('Invalid address');
       }
       where['sourceMaker'] = address;
+    }
+    if (params.length >= 5 && params[4].length >= 2) {
+      try {
+        let beginTime;
+        let endTime;
+        if (isNumber(params[4][1]) && isNumber(params[4][2])) {
+          beginTime = Number(params[4][1]);
+          endTime = Number(params[4][2]);
+        } else {
+          beginTime = new Date(params[4][1]).valueOf();
+          endTime = new Date(params[4][2]).valueOf();
+        }
+        where['sourceTime'] = {
+          [Op.gte]: dayjs(beginTime).toISOString(),
+          [Op.lte]: dayjs(endTime).toISOString(),
+        };
+      } catch (e) {
+        console.error(e);
+        throw new Error('Invalid time parameter');
+      }
     }
     const dataList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll({
       attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceSymbol', 'status', 'sourceTime',
@@ -618,3 +638,6 @@ function floor(n, decimals = 6) {
   return Number(new BigNumber(Math.floor(n * 10 ** fix)).dividedBy(10 ** fix));
 }
 
+function isNumber(str) {
+  return !isNaN(parseFloat(str)) && isFinite(str);
+}
