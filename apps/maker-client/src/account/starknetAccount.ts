@@ -13,7 +13,7 @@ export default class StarknetAccount extends OrbiterAccount  {
     private nonceManager: NonceManager;
     async connect(privateKey: string, address:string) {
         const provider = this.getProviderV4();
-        const classInfo = await provider.getClassAt(address);
+        // const classInfo = await provider.getClassAt(address);
         const account = new Account(
             provider,
             address,
