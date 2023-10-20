@@ -220,18 +220,10 @@ export class StarknetRpcScanningService extends RpcScanningService {
     if (!transfers.length) {
       return [];
     }
-    const provider = this.getProvider();
-    const receipt: any = transactionReceipt || <any>await provider.getTransactionReceipt(transaction.transaction_hash);
-    if (!equals(transaction?.transaction_hash, receipt?.transaction_hash)) {
-      this.logger.error(`Hash inconsistency ${transaction?.transaction_hash} ${receipt?.transaction_hash}`);
-      return [];
-    }
+    const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
     const fee = new BigNumber(receipt.actual_fee)
       .dividedBy(transfers.length);
     for (const transfer of transfers) {
-      if (receipt.execution_status != "SUCCEEDED") {
-        continue;
-      }
       transfer.fee = fee.toFixed(0);
       transfer.feeAmount = fee
         .div(Math.pow(10, this.chainConfig.nativeCurrency.decimals))
@@ -360,8 +352,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     } else if (
       selector ===
       '0x68bcbdba7cc8cac2832d23e2c32e9eec39a9f1d03521eff5dff800a62725fa' &&
-      to ===
-      '0x173f81c529191726c6e7287e24626fe24760ac44dae2a1f7e02080230f8458b'
+      this.chainConfig.contracts.find(item => fix0xPadStartAddress(item, 66).toLowerCase() === fix0xPadStartAddress(to, 66).toLowerCase())
     ) {
       return {
         name: 'transferERC20',
