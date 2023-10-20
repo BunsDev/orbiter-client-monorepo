@@ -20,7 +20,7 @@ export default class StarknetAccount extends OrbiterAccount {
       provider,
       address,
       privateKey,
-      version || "0"
+      <any>version || "0"
     );
     if (!equals(account.address, address)) {
       throw new Error('The connected wallet address is inconsistent with the private key address');
