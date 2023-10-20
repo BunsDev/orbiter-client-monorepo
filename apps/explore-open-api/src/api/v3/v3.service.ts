@@ -172,12 +172,12 @@ export class V3Service {
       try {
         let beginTime;
         let endTime;
-        if (isNumber(params[4][1]) && isNumber(params[4][2])) {
-          beginTime = Number(params[4][1]);
-          endTime = Number(params[4][2]);
+        if (isNumber(params[4][0]) && isNumber(params[4][1])) {
+          beginTime = Number(params[4][0]);
+          endTime = Number(params[4][1]);
         } else {
-          beginTime = new Date(params[4][1]).valueOf();
-          endTime = new Date(params[4][2]).valueOf();
+          beginTime = new Date(params[4][0]).valueOf();
+          endTime = new Date(params[4][1]).valueOf();
         }
         where['sourceTime'] = {
           [Op.gte]: dayjs(beginTime).toISOString(),
