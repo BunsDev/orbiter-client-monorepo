@@ -63,7 +63,7 @@ export class V2Schedule {
         continue;
       }
       tradingPairs.push({
-        pairId: `${rule.chain}:${rule.token}`,
+        pairId: `${fromChainInfo.chainId}-${toChainInfo.chainId}:${rule.token}`,
         recipient: String(rule.makerAddress).toLowerCase(),
         sender: String(rule.sender).toLowerCase(),
         gasFee: String(rule.gasFee),
