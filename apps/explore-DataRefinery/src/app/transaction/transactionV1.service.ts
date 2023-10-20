@@ -162,11 +162,10 @@ export class TransactionV1Service {
     // targetChainId
     if ([9, 99].includes(+sourceChain.internalId)) {
       // TODO:
-      if (transfer.calldata && Array.isArray(transfer.calldata)) {
-        if (transfer.calldata.length === 1) {
-          targetChainId = Number(transfer.calldata[0]) % 1000;
-        } else if (transfer.calldata.length === 2) {
-          targetChainId = Number(transfer.calldata[0]) % 1000;
+      if (transfer.calldata && Array.isArray(transfer.calldata) && transfer.calldata.length) {
+        targetChainId = Number(transfer.calldata[0]) % 1000;
+        if (transfer.calldata.length >= 2) {
+          result.targetAddress = transfer.calldata[1].toLocaleLowerCase();
         }
       }
     }
@@ -187,7 +186,7 @@ export class TransactionV1Service {
         },
       );
       this.logger.error(
-        `${transfer.hash} ${targetChain} targetChain not found`,
+        `${transfer.hash} ${targetChainId} ${targetChain} targetChain not found`,
       );
       return {
         code: 1,
@@ -212,7 +211,7 @@ export class TransactionV1Service {
           },
         },
       );
-      this.logger.error(`${transfer.hash}  targetToken not found`);
+      this.logger.error(`${transfer.hash} ${targetChain.chainId} targetToken not found`);
       return {
         code: 1,
         errmsg: 'targetToken not found',
@@ -418,7 +417,7 @@ export class TransactionV1Service {
     }
     const t = await this.sequelize.transaction();
     try {
-      
+
       const createdData: BridgeTransactionAttributes = {
         sourceId: transfer.hash,
         sourceAddress: transfer.sender,
@@ -643,15 +642,24 @@ export class TransactionV1Service {
     }
   }
 
-  private parseSourceTxSecurityCode(value: string): number {
-    const kindex = value.lastIndexOf('9');
-    const code = value.substring(kindex, kindex + 4);
-    const chainId = +`${padEnd(code, 4, '0')}` % 1000;
-    return chainId;
-  }
-
-  private parseDestTxSecurityCode(value: string): number {
-    const code = value.substring(value.length - 4, value.length);
-    return +code;
+  private parseSourceTxSecurityCode(value) {
+    let index = 0;
+    for (let i = value.length - 1; i > 0; i--) {
+      if (+value[i] !== 0) {
+        index = i;
+        break;
+      }
+    }
+    let code = String(+value.substr(index - 3, 4));
+    if (code.length !== 4) {
+      for (let i = 0; i < 4 - code.length; i++) {
+        code += '0';
+      }
+    }
+    const nCode = Number(code);
+    if (nCode < 9000 || nCode > 10000) {
+      return 0;
+    }
+    return nCode % 1000;
   }
 }

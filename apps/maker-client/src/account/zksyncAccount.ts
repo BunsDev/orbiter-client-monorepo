@@ -1,5 +1,5 @@
 import OrbiterAccount from './orbiterAccount';
-import { NonceManager } from "@orbiter-finance/utils";
+import { HTTPGet, NonceManager } from "@orbiter-finance/utils";
 import {
     TransactionRequest,
     TransferResponse,
@@ -28,10 +28,10 @@ export default class ZkSyncAccount extends OrbiterAccount  {
   private async getL2Wallet(privateKey) {
     let l1Provider;
     let l2Provider;
-    if (+this.chainId === 3) {
+    if (this.chainId === 'zksync') {
       l1Provider = ethers.providers.getDefaultProvider('mainnet');
       l2Provider = await zksync.getDefaultProvider('mainnet');
-    } else if (+this.chainId === 33) {
+    } else if (this.chainId === 'zksync_test') {
       l1Provider = ethers.providers.getDefaultProvider("goerli");
       l2Provider = await zksync.Provider.newHttpProvider("https://goerli-api.zksync.io/jsrpc");
     }
@@ -64,7 +64,7 @@ export default class ZkSyncAccount extends OrbiterAccount  {
         nonce,
         amount,
       });
-      this.logger.log('transfer response:', response);
+      this.logger.info(`transfer response: ${JSON.stringify(response)}`);
       submit();
     } catch (error: any) {
       this.logger.error(`rollback nonce:${error.message}`);
@@ -73,7 +73,7 @@ export default class ZkSyncAccount extends OrbiterAccount  {
     }
     if (response) {
       response.awaitReceipt().then(tx => {
-        this.logger.log(`${this.chainConfig.name} sendTransaction waitForTransaction:`, tx);
+        this.logger.info(`${this.chainConfig.name} sendTransaction waitForTransaction: ${JSON.stringify(tx)}`);
       }).catch(err => {
         this.logger.error(`${this.chainConfig.name} sendTransaction Error:`, err);
         if (err && err.message.includes('Nonce mismatch')) {
@@ -83,7 +83,7 @@ export default class ZkSyncAccount extends OrbiterAccount  {
     }
     const txData = response.txData.tx;
     return {
-      hash: response.txHash,
+      hash: response.txHash.replace('sync-tx:', '0x'),
       from: this.account.address(),
       to,
       fee: BigInt(txData.fee),
@@ -101,9 +101,21 @@ export default class ZkSyncAccount extends OrbiterAccount  {
     }
   }
   public async getTokenBalance(token: string, address?: string): Promise<bigint> {
-    if (address && address != this.address) {
-      throw new Error('The specified address query is not supported temporarily');
+    if (address && address.toLowerCase() != this.address.toLowerCase()) {
+      throw new Error(`The specified address query is not supported temporarily ${address} - ${this.address}`);
     }
-    return BigInt(this.account.getBalance(token, 'committed').toString());
+    return BigInt((await this.account.getBalance(token, 'committed')).toString());
+  }
+
+  public async waitForTransactionConfirmation(transactionHash: string) {
+    const response = await HTTPGet(`${this.chainConfig.api.url}/transactions/${transactionHash}/data`);
+    if (response && response['status'] === 'success') {
+      const res = response['result'];
+      if (res) {
+        return { ...res.tx, ...res.tx.op };
+      }
+    }
+    console.log(`${transactionHash} waitForTransactionConfirmation ...`);
+    return await this.waitForTransactionConfirmation(transactionHash);
   }
 }

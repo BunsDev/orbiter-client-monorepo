@@ -189,4 +189,8 @@ export class StoreService {
       })
       .filter((row) => row.size > 0);
   }
+
+  public removeSymbolsWithData(token: string, hash: string) {
+    this.symbolRelHash.get(token.toLocaleLowerCase()).delete(hash);
+  }
 }

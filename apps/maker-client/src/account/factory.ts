@@ -10,6 +10,7 @@ import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import type OrbiterAccount from "./orbiterAccount";
 import ZkSyncAccount from "./zksyncAccount";
 import ZkSpaceAccount from "./zkspaceAccount";
+// import LoopringAccount from "./loopringAccount";
 
 @Injectable()
 export class AccountFactoryService {
@@ -57,7 +58,7 @@ export class AccountFactoryService {
         break;
       case 9:
       case 99:
-        // wallet = new LoopringAccount(chainConfig);
+        // wallet = new LoopringAccount(toChainId, ctx);
         break;
       case 1:
       case 2:
