@@ -6,6 +6,10 @@ import dayjs from 'dayjs';
 export function JSONStringify(data: any) {
     return JSONbig.stringify(data);
 }
+
+export function getObjectKeyByValue(object:any, value:any) {
+  return Object.keys(object).find(key => object[key] === value);
+}
 export function BigIntToString(newValue: any) {
     if (!newValue) {
         return newValue;
