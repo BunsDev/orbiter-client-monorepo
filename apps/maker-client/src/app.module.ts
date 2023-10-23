@@ -1,3 +1,4 @@
+import { ArbitrationModule } from '@orbiter-finance/arbitration-module';
 import { TransferModule } from "./transfer/transfer.module";
 import { Module } from '@nestjs/common';
 import { ConsulModule } from '@orbiter-finance/consul';
@@ -54,6 +55,7 @@ import { TcpModule } from "@orbiter-finance/tcp";
     RabbitMqModule,
     TcpModule,
     ScheduleModule.forRoot(),
+    ArbitrationModule,
   ],
   providers: [
   ],

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { BridgeTransactionAttributes, TransfersAttributes} from '@orbiter-finance/seq-models';
+import { BridgeTransactionAttributes, TransfersAttributes } from '@orbiter-finance/seq-models';
 import dayjs from 'dayjs';
 import { equals } from '@orbiter-finance/utils';
 
@@ -23,16 +23,16 @@ export class MemoryMatchingService {
           this.transfersID[transfer.version].delete(transfer.hash);
         }
       } else {
-      //   if (transfer.version === '1-1') {
-      //     const matchTx = this.matchV1GetBridgeTransactions(transfer);
-      //     if (matchTx) {
-      //       this.logger.info(
-      //         `for match tx: source hash:${matchTx.sourceId}，dest hash:${
-      //           transfer.hash
-      //         }, ${JSON.stringify(matchTx)}`,
-      //       );
-      //     }
-      //   }
+        //   if (transfer.version === '1-1') {
+        //     const matchTx = this.matchV1GetBridgeTransactions(transfer);
+        //     if (matchTx) {
+        //       this.logger.info(
+        //         `for match tx: source hash:${matchTx.sourceId}，dest hash:${
+        //           transfer.hash
+        //         }, ${JSON.stringify(matchTx)}`,
+        //       );
+        //     }
+        //   }
       }
     }
     for (let i = this.bridgeTransactions.length - 1; i >= 0; i--) {
@@ -51,6 +51,10 @@ export class MemoryMatchingService {
   }
 
   matchV1GetBridgeTransactions(transfer: TransfersAttributes) {
+    // const toHashTx = this.bridgeTransactions.find(bt => bt.targetId == transfer.hash && bt.targetChain == transfer.chainId);
+    // if (toHashTx) {
+    //   return toHashTx;
+    // }
     const matchTx = this.bridgeTransactions.find((bt) => {
       const responseMaker: string[] = bt.responseMaker || [];
       return (
@@ -58,7 +62,9 @@ export class MemoryMatchingService {
         equals(bt.targetAddress, transfer.receiver) &&
         equals(bt.targetChain, transfer.chainId) &&
         equals(bt.targetAmount, transfer.amount) &&
+        dayjs(transfer.timestamp).valueOf() > dayjs(bt.sourceTime).valueOf() &&
         responseMaker.includes(transfer.sender) &&
+
         bt.version === `${transfer.version.split('-')[0]}-0`
       );
     });

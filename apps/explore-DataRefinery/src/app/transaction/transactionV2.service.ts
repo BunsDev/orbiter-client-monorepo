@@ -324,6 +324,10 @@ export class TransactionV2Service {
             where: {
               id: memoryBT.id,
               status: [0, 97, 98],
+              sourceTime: {
+                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute'),
+                [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute'),
+              }
             },
             transaction: t1,
           },
@@ -397,7 +401,7 @@ export class TransactionV2Service {
       }
       if (btTx && btTx.id) {
         btTx.targetId = transfer.hash;
-        btTx.status = 99;
+        btTx.status = transfer.status == 3 ? 97 : 99;
         btTx.targetTime = transfer.timestamp;
         btTx.targetFee = transfer.feeAmount;
         btTx.targetFeeSymbol = transfer.feeToken;

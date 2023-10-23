@@ -9,15 +9,24 @@ dayjs.extend(utc);
 import { AppModule } from './app.module';
 import { WinstonModule } from 'nest-winston';
 import { logger, characterPattern } from '@orbiter-finance/utils'
+import { ArbitrationService } from '@orbiter-finance/arbitration-module';
+import { ENVConfigService } from '@orbiter-finance/config';
 const sysLogger = logger.createLoggerByName('app');
 
 async function bootstrap() {
-    console.debug(characterPattern);
-    await NestFactory.createApplicationContext(AppModule, {
+  console.debug(characterPattern);
+  const app = await NestFactory.createApplicationContext(AppModule, {
     logger: WinstonModule.createLogger({
       instance: sysLogger
     })
   });
+  const envConfigService = app.get(ENVConfigService);
+
+  if (+envConfigService.get("EnableArbitration") == 1) {
+    const arbitrationService = app.get(ArbitrationService);
+    arbitrationService.start()
+  }
+
   sysLogger.info(`🚀 Application is running on: maker-client`);
 }
 process.on('uncaughtException', (err) => {

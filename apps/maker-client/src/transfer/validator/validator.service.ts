@@ -6,7 +6,7 @@ import { ConfigService } from "@nestjs/config";
 import { LoggerDecorator, OrbiterLogger, groupBy, isEmpty, uniq } from "@orbiter-finance/utils";
 import { ChainLinkService } from "../../service/chainlink.service";
 import { type TransferAmountTransaction } from "../sequencer/sequencer.interface";
-import { AccountFactoryService } from "../../account/factory";
+import { AccountFactoryService } from "../../factory";
 import { take } from "lodash";
 import { PrivateKeyService } from "../../service/privatekey.service";
 import {OrbiterAccount} from "@orbiter-finance/blockchain-account";
