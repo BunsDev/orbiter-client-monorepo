@@ -1,17 +1,15 @@
 import { Account, Contract, cairo, RpcProvider } from 'starknet';
-import OrbiterAccount from './orbiterAccount';
+import { OrbiterAccount } from './orbiterAccount';
 import { equals } from '@orbiter-finance/utils'
-import { abis, NonceManager,MaxBigInt } from "@orbiter-finance/utils";
-import {
-    TransactionRequest,
-    TransferResponse,
-} from "./IAccount";
+import { abis, NonceManager, MaxBigInt } from "@orbiter-finance/utils";
+import { TransactionRequest, TransferResponse } from './IAccount.interface';
 
 
-export default class StarknetAccount extends OrbiterAccount  {
+
+export class StarknetAccount extends OrbiterAccount {
     public account: Account;
     private nonceManager: NonceManager;
-    async connect(privateKey: string, address:string) {
+    async connect(privateKey: string, address: string) {
         const provider = this.getProviderV4();
         // const classInfo = await provider.getClassAt(address);
         const account = new Account(
@@ -179,12 +177,12 @@ export default class StarknetAccount extends OrbiterAccount  {
         }
         try {
             const suggestedMaxFee = await this.account.getSuggestedMaxFee(
-                { 
-                    type: "INVOKE_FUNCTION", 
+                {
+                    type: "INVOKE_FUNCTION",
                     payload: invocation
                 } as any,
                 transactionsDetail
-              );
+            );
             maxFee = MaxBigInt([suggestedMaxFee, maxFee]);
         } catch (error) {
             console.error('starknet estimateFee error:', error);

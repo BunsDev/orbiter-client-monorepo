@@ -8,8 +8,8 @@ import { ChainLinkService } from "../../service/chainlink.service";
 import { type TransferAmountTransaction } from "../sequencer/sequencer.interface";
 import { AccountFactoryService } from "../../account/factory";
 import { take } from "lodash";
-import type OrbiterAccount from "../../account/orbiterAccount"
 import { PrivateKeyService } from "../../service/privatekey.service";
+import {OrbiterAccount} from "@orbiter-finance/blockchain-account";
 @Injectable()
 export class ValidatorService {
   constructor(

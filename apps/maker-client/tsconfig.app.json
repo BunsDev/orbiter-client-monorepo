@@ -16,5 +16,5 @@
   ],
   "include": [
     "src/**/*.ts"
-  ]
+, "../../libs/blockchain-account/src/lib/store.service.ts"  ]
 }

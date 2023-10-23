@@ -1,14 +1,13 @@
 import IAccount, {
   Context,
-  TransactionRequest,
-  TransferResponse,
 } from "./IAccount";
-import { type TransferAmountTransaction } from "../transfer/sequencer/sequencer.interface";
-import { StoreService } from "../transfer/store/store.service";
+import { TransferResponse,TransactionRequest, TransferAmountTransaction } from "./IAccount.interface";
+// import { type TransferAmountTransaction } from "../transfer/sequencer/sequencer.interface";
+import { StoreService } from "./store.service";
 import { IChainConfig } from "@orbiter-finance/config";
 import { OrbiterLogger,logger } from "@orbiter-finance/utils";
 
-export default class OrbiterAccount extends IAccount {
+export class OrbiterAccount extends IAccount {
 
   public logger!: OrbiterLogger;
   public store: StoreService;

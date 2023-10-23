@@ -11,7 +11,7 @@ import {
   type TransferAmountTransaction,
 } from "./sequencer.interface";
 import { LoggerDecorator, arePropertyValuesConsistent, isEmpty,OrbiterLogger } from "@orbiter-finance/utils";
-import { StoreService } from "../store/store.service";
+import { StoreService } from "../../../../../libs/blockchain-account/src/lib/store.service";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';

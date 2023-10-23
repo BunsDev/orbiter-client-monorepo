@@ -1,14 +1,11 @@
-import OrbiterAccount from './orbiterAccount';
+import {OrbiterAccount} from './orbiterAccount';
 import { HTTPGet, NonceManager } from "@orbiter-finance/utils";
-import {
-    TransactionRequest,
-    TransferResponse,
-} from "./IAccount";
 import { ethers } from 'ethers';
 import * as zksync from 'zksync';
 import { AbstractWallet } from "zksync/build/abstract-wallet";
+import { TransactionRequest,TransferResponse } from './IAccount.interface';
 
-export default class ZkSyncAccount extends OrbiterAccount  {
+export class ZkSyncAccount extends OrbiterAccount  {
     public account: AbstractWallet;
     private nonceManager: NonceManager;
     async connect(privateKey: string, address:string) {

@@ -1,6 +1,5 @@
 import { ethers } from 'ethers';
-import OrbiterAccount from './orbiterAccount';
-import { TransferResponse } from './IAccount';
+import {OrbiterAccount} from './orbiterAccount';
 import {
   ConnectorNames,
   ExchangeAPI,
@@ -9,12 +8,11 @@ import {
 } from '@loopring-web/loopring-sdk';
 import Web3 from 'web3';
 import PrivateKeyProvider from 'truffle-privatekey-provider';
-import { LoopringSendTokenRequest } from '../types';
 import { HTTPGet } from "@orbiter-finance/utils";
 import { sleep } from '@orbiter-finance/utils';
-import { TransferAmountTransaction } from "../transfer/sequencer/sequencer.interface";
+import { LoopringSendTokenRequest, TransferAmountTransaction, TransferResponse } from './IAccount.interface';
 
-export default class LoopringAccount extends OrbiterAccount {
+export class LoopringAccount extends OrbiterAccount {
   private L1Wallet: ethers.Wallet;
   private client: ExchangeAPI;
   private accountInfo;

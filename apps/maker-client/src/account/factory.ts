@@ -1,16 +1,6 @@
-// import BaseAccount from './IAccount';
-import EVMAccount from "./evmAccount";
 import { Injectable } from "@nestjs/common";
-// import StarknetAccount from './starknetAccount';
-// import ZKSyncAccount from './zkSyncAccount';
-// import ZKSpaceAccount from './zksAccount';
-import IMXAccount from "./imxAccount";
-// import LoopringAccount from "./loopringAccount";
+import { OrbiterAccount, ZkSyncAccount, IMXAccount, EVMAccount, ZkSpaceAccount } from "@orbiter-finance/blockchain-account";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
-import type OrbiterAccount from "./orbiterAccount";
-import ZkSyncAccount from "./zksyncAccount";
-import ZkSpaceAccount from "./zkspaceAccount";
-// import LoopringAccount from "./loopringAccount";
 
 @Injectable()
 export class AccountFactoryService {

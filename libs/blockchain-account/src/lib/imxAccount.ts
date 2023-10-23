@@ -5,10 +5,11 @@ import {
   createStarkSigner,
   generateLegacyStarkPrivateKey,
 } from "@imtbl/core-sdk";
-import OrbiterAccount from "./orbiterAccount";
-import { TransactionRequest, TransferResponse, Context } from "./IAccount";
+import {OrbiterAccount} from "./orbiterAccount";
 import { equals } from "@orbiter-finance/utils";
-export default class IMXAccount extends OrbiterAccount {
+import { TransactionRequest, TransferResponse } from "./IAccount.interface";
+import { Context } from "./IAccount";
+export class IMXAccount extends OrbiterAccount {
   private L1Wallet: ethers.Wallet;
   private readonly client: ImmutableX;
   constructor(protected chainId: string, protected readonly ctx: Context) {

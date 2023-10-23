@@ -1,34 +1,7 @@
 import { ChainConfigService,ENVConfigService } from "@orbiter-finance/config";
-import {
-  type TransactionRequest as ETransactionRequest,
-  type TransactionResponse as ETransactionResponse,
-} from "ethers6";
-export interface TransferResponse {
-  hash: string;
-  to: string | undefined;
-  from: string;
-  nonce: number;
-  gasLimit?: bigint;
-  gasPrice?: bigint;
-  fee?: bigint;
-  feeSymbol?: string;
-  symbol?: string;
-  token?: string;
-  data?: string;
-  value: bigint;
-  _response?: any;
-}
-export type TransactionResponse = ETransactionResponse
+import { TransactionRequest, TransferResponse } from "./IAccount.interface";
 
-export interface TransactionRequest extends ETransactionRequest {
-  serialId?: string | string[];
-}
 
-export interface ZKSpaceSendTokenRequest extends Partial<TransactionRequest> {
-  tokenId: number;
-  feeTokenId: number;
-  fee: bigint;
-}
 export interface Context {
   chainConfigService:ChainConfigService,
   envConfigService: ENVConfigService

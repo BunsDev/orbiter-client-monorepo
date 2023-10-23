@@ -7,19 +7,19 @@ import {
 } from "ethers6";
 import { abis, NonceManager } from "@orbiter-finance/utils";
 import {
-  TransactionRequest,
-  TransactionResponse,
-  TransferResponse,
   Context,
 } from "./IAccount";
-import OrbiterAccount from "./orbiterAccount";
+import {OrbiterAccount} from "./orbiterAccount";
 import BigNumber from "bignumber.js";
 import {
   TransactionFailedError,
+  TransactionRequest,
+  TransactionResponse,
   TransactionSendBeforeError,
+  TransferResponse,
 } from "./IAccount.interface";
 import { provider, JSONStringify, timeoutPromise, equals } from "@orbiter-finance/utils";
-export default class EVMAccount extends OrbiterAccount {
+export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
   #provider: provider.Orbiter6Provider;

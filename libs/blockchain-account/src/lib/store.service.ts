@@ -1,5 +1,5 @@
 import { Level } from 'level';
-import { type TransferAmountTransaction } from "../sequencer/sequencer.interface";
+import { type TransferAmountTransaction } from "../../../../apps/maker-client/src/transfer/sequencer/sequencer.interface";
 import { Mutex } from "async-mutex";
 import { cloneDeep } from "lodash";
 import { JSONStringify } from '@orbiter-finance/utils';
