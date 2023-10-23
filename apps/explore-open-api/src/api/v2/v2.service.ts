@@ -17,7 +17,6 @@ import {
   INetState,
   NetState
 } from "@orbiter-finance/v1-seq-models";
-import { IMakerConfig, IMakerDataConfig } from "./v2.interface";
 
 const keyv = new Keyv();
 
@@ -25,19 +24,11 @@ const defaultCacheTime = 1000 * 60 * 60;
 
 @Injectable()
 export class V2Service {
-  static tradingPairs:ITradingPair[] = [];
+  static tradingPairs: ITradingPair[] = [];
+  static updateTime: number = new Date().valueOf();
   static idMap = {};
 
-  constructor(private chainConfigService: ChainConfigService, private makerV1RuleService: MakerV1RuleService) {
-    const _this = this;
-    // TODO: reomve
-    // v1MakerConfigService.init(async function (makerConfig) {
-    //   V2Service.tradingPairs = _this.convertMakerConfig(chainList, makerConfig);
-    // });
-    const chainList = chainConfigService.getAllChains();
-    chainList.forEach(item => {
-      V2Service.idMap[+item.internalId] = item.chainId;
-    });
+  constructor(private chainConfigService: ChainConfigService) {
   }
 
   @InjectModel(Transaction) private TransactionModel: typeof Transaction;
@@ -46,15 +37,7 @@ export class V2Service {
   @InjectModel(NetState) private NetStateModel: typeof NetState;
 
   async getTradingPairs() {
-    const netStateList = await this.getOffline();
-    if (netStateList && netStateList.length) {
-      return V2Service.tradingPairs.filter(item => {
-          return !netStateList.find(net => (net.source === item.fromChain.id || !net.source) &&
-            (net.dest === item.toChain.id || !net.dest));
-        },
-      );
-    }
-    return V2Service.tradingPairs;
+    return { ruleList: V2Service.tradingPairs };
   }
 
   async getTransactionByHash(params: string[]) {
@@ -218,66 +201,6 @@ export class V2Service {
     });
     await keyv.set(`${address}_history`, list, 1000 * 10);
     return list;
-  }
-
-  convertMakerConfig(chainList: IChainConfig[], makerConfig: IMakerConfig): ITradingPair[] {
-    const configs: ITradingPair[] = [];
-    for (const makerAddress in makerConfig) {
-      const makerMap = makerConfig[makerAddress];
-      for (const chainIdPair in makerMap) {
-        if (!makerMap.hasOwnProperty(chainIdPair)) continue;
-        const symbolPairMap = makerMap[chainIdPair];
-        const [fromChainId, toChainId] = chainIdPair.split("-");
-        const c1Chain = chainList.find(item => +item.internalId === +fromChainId);
-        const c2Chain = chainList.find(item => +item.internalId === +toChainId);
-        if (!c1Chain || !c2Chain) continue;
-        for (const symbolPair in symbolPairMap) {
-          if (!symbolPairMap.hasOwnProperty(symbolPair)) continue;
-          const makerData: IMakerDataConfig = symbolPairMap[symbolPair];
-          const [fromChainSymbol, toChainSymbol] = symbolPair.split("-");
-          const fromToken = this.chainConfigService.getTokenBySymbol(+fromChainId, fromChainSymbol);
-          const toToken = this.chainConfigService.getTokenBySymbol(+toChainId, toChainSymbol);
-          if (!fromToken || !toToken) continue;
-          // verify xvm
-          if (fromToken.symbol !== toToken.symbol && (!c1Chain.xvmList || !c1Chain.xvmList.length)) {
-            console.log(
-              `${c1Chain.internalId}-${fromToken.symbol}:${c2Chain.internalId}-${toToken.symbol} not support xvm`,
-            );
-          }
-          const isMainCoin = fromToken.symbol === c1Chain.nativeCurrency.symbol ? 1 : 0;
-          // handle makerConfigs
-          configs.push({
-            id: `${fromChainId}-${toChainId}:${fromChainSymbol}-${toChainSymbol}`,
-            recipient: String(makerAddress).toLowerCase(),
-            sender: (makerData.sender || makerData.makerAddress).toLowerCase(),
-            tradingFee: makerData.tradingFee,
-            gasFee: makerData.gasFee,
-            fromChain: {
-              id: +fromChainId,
-              networkId: Number(c1Chain.networkId) || undefined,
-              name: c1Chain.name,
-              tokenAddress: fromToken.address,
-              contractAddress:
-                c1Chain.contracts && c1Chain.contracts.length ? c1Chain.contracts[0] : undefined,
-              symbol: fromChainSymbol,
-              decimals: fromToken.decimals,
-              minPrice: makerData.minPrice,
-              maxPrice: makerData.maxPrice,
-              isMainCoin,
-            },
-            toChain: {
-              id: +toChainId,
-              networkId: Number(c2Chain.networkId) || undefined,
-              name: c2Chain.name,
-              tokenAddress: toToken.address,
-              symbol: toChainSymbol,
-              decimals: toToken.decimals,
-            }
-          });
-        }
-      }
-    }
-    return configs;
   }
 }
 
