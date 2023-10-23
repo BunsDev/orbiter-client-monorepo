@@ -11,6 +11,7 @@ import {
   ChainConfigService, ENVConfigService,
 } from "@orbiter-finance/config";
 import axios from "axios";
+import { ITradingPair } from "../api.interface";
 const keyv = new Keyv();
 const defaultCacheTime = 1000 * 60 * 60;
 
@@ -486,7 +487,6 @@ export class V3Service {
                 tradingFee: new BigNumber(rule.chain0WithholdingFee).dividedBy(10 ** token0.decimals).toFixed(),
                 spentTime: rule.chain0ResponseTime,
                 // status: rule.chain0Status,
-                // compensationRatio: rule.chain0CompensationRatio,
                 fromChain: {
                   id: chainIdMap[rule.chain0],
                   networkId: rule.chain0,
@@ -497,8 +497,8 @@ export class V3Service {
                   decimals: token0.decimals,
                   maxPrice,
                   minPrice,
-                  originMaxPrice: rule.chain0maxPrice,
-                  originMinPrice: rule.chain0minPrice,
+                  _maxPrice: rule.chain0maxPrice,
+                  _minPrice: rule.chain0minPrice,
                 },
                 toChain: {
                   id: chainIdMap[rule.chain1],
@@ -509,8 +509,9 @@ export class V3Service {
                   tokenAddress: token1.address,
                   decimals: token1.decimals,
                 },
-                // originTradeFee: rule.chain0TradeFee,
-                // originWithholdingFee: rule.chain0WithholdingFee,
+                _compensationRatio: rule.chain0CompensationRatio,
+                _tradeFee: rule.chain0TradeFee,
+                _withholdingFee: rule.chain0WithholdingFee,
                 nextUpdateTime: nextUpdateTimeMap[fromId] || 0,
               });
             }
@@ -537,7 +538,6 @@ export class V3Service {
                 tradingFee: new BigNumber(rule.chain1WithholdingFee).dividedBy(10 ** token1.decimals).toFixed(),
                 spentTime: rule.chain1ResponseTime,
                 // status: rule.chain1Status,
-                // compensationRatio: rule.chain1CompensationRatio,
                 fromChain: {
                   id: Number(chainIdMap[rule.chain1]),
                   networkId: rule.chain1,
@@ -548,8 +548,8 @@ export class V3Service {
                   decimals: token1.decimals,
                   maxPrice,
                   minPrice,
-                  // originMaxPrice: rule.chain1maxPrice,
-                  // originMinPrice: rule.chain1minPrice,
+                  _maxPrice: rule.chain1maxPrice,
+                  _minPrice: rule.chain1minPrice,
                 },
                 toChain: {
                   id: Number(chainIdMap[rule.chain0]),
@@ -560,8 +560,9 @@ export class V3Service {
                   tokenAddress: token0.address,
                   decimals: token0.decimals,
                 },
-                // originTradeFee: rule.chain1TradeFee,
-                // originWithholdingFee: rule.chain1WithholdingFee,
+                _compensationRatio: rule.chain1CompensationRatio,
+                _tradeFee: rule.chain1TradeFee,
+                _withholdingFee: rule.chain1WithholdingFee,
                 nextUpdateTime: nextUpdateTimeMap[toId] || 0,
               });
             }
@@ -573,6 +574,33 @@ export class V3Service {
       await keyv.set(`${dealerAddress}_rule`, responseCache, 50 * 1000);
     }
     return { ruleList: marketList, updateTime, version: V2Service.updateTime };
+  }
+
+  async calculatedAmount(params: any[]) {
+    if (params.length < 2) {
+      throw new Error('Invalid params');
+    }
+    let v3Rules = [];
+    const pairId: string = params[0];
+    const amount: string = params[1];
+    if (params.length >= 3) {
+      const res: any = await this.getDealerRuleLatest([params[2]]);
+      v3Rules = res?.ruleList || [];
+    }
+    if (!isNumber(amount)) {
+      throw new Error(`Invalid amount`);
+    }
+    const tradingPair: ITradingPair = [...v3Rules, ...V2Service.tradingPairs].find(item => item.pairId === pairId);
+    if (!tradingPair) {
+      throw new Error(`Invalid pairId`);
+    }
+    if (new BigNumber(tradingPair.fromChain.maxPrice).lt(amount)) {
+      throw new Error(`Maximum amount limited to ${tradingPair.fromChain.maxPrice}`);
+    }
+    if (new BigNumber(tradingPair.fromChain.minPrice).gt(amount)) {
+      throw new Error(`Minimum amount limited to ${tradingPair.fromChain.minPrice}`);
+    }
+    return calculateAmountByLarge(tradingPair, amount);
   }
 
   convertV3ChainList(chainRels) {
@@ -637,4 +665,84 @@ function floor(n, decimals = 6) {
 
 function isNumber(str) {
   return !isNaN(parseFloat(str)) && isFinite(str);
+}
+
+function calculateAmountByLarge(tradingPair: ITradingPair, sendAmount: string) {
+  const decimals = tradingPair.fromChain.decimals;
+  const sendAmountWithoutTradingFee = new BigNumber(sendAmount);
+  const gasFee = sendAmountWithoutTradingFee
+    .multipliedBy(new BigNumber(tradingPair.gasFee))
+    .dividedBy(new BigNumber(1000));
+  const digit = decimals === 18 ? 5 : 2;
+  const gasFee_fix = gasFee.decimalPlaces(digit, BigNumber.ROUND_UP);
+  const toAmount_fee = sendAmountWithoutTradingFee.minus(gasFee_fix);
+
+  if (!toAmount_fee || !isNumber(toAmount_fee)) {
+    throw new Error("Amount parsing error");
+  }
+  const _receiveValue: string = toAmount_fee.multipliedBy(new BigNumber(10 ** decimals)).toFixed();
+  const p_text = safeCode(tradingPair);
+  sendAmount = getTAmountFromRAmount(+tradingPair.fromChain.id, new BigNumber(sendAmount).multipliedBy(10 ** decimals).toFixed(), p_text);
+  const _sendValue = new BigNumber(sendAmount).plus(new BigNumber(tradingPair.tradingFee).multipliedBy(10 ** decimals));
+  return {
+    _receiveValue,
+    _sendValue,
+    receiveValue: new BigNumber(_receiveValue).dividedBy(10 ** decimals).toString(),
+    actualSend: new BigNumber(_sendValue).dividedBy(10 ** decimals).toString()
+  };
+}
+
+function safeCode(tradingPair: ITradingPair) {
+  const internalId = String(tradingPair.toChain.id).length < 2 ? ("0" + tradingPair.toChain.id) : tradingPair.toChain.id;
+  const dealerId = String(tradingPair.dealerId || 0).length < 2 ? ("0" + tradingPair.dealerId) : tradingPair.dealerId;
+  return tradingPair.ebcId ?
+    dealerId + tradingPair.ebcId + internalId : (9000 + Number(tradingPair.toChain.id) + '');
+}
+
+function getTAmountFromRAmount(chainId: number, amount: string, pText: string) {
+  if (BigNumber(amount).lt(1)) {
+    throw new Error("the token doesn't support that many decimal digits");
+  }
+
+  const validDigit = AmountValidDigits(chainId, amount);
+  const amountLength = amount.length;
+  if (isLimitNumber(chainId) && amountLength > validDigit) {
+    return amount.toString().slice(0, validDigit - pText.length) + pText + amount.toString().slice(validDigit);
+  } else if (chainId === 9 || chainId === 99) {
+    return amount;
+  } else {
+    return amount.toString().slice(0, amountLength - pText.length) + pText;
+  }
+}
+
+const MAX_BITS: any = {
+  3: 35,
+  33: 35,
+  8: 28,
+  88: 28,
+  11: 28,
+  511: 28,
+  13: 35,
+  513: 35,
+};
+
+function AmountValidDigits(chainId: number, amount: string) {
+  const maxDigit = BigNumber(2 ** (MAX_BITS[chainId] || 256) - 1).toFixed();
+  const amountMaxDigits = maxDigit.length;
+
+  const ramount = amount.replace(/^0+(\d)|(\d)0+$/gm, "$1$2");
+
+  if (ramount.length > amountMaxDigits) {
+    throw new Error("amount is inValid");
+  }
+  if (ramount > maxDigit) {
+    return amountMaxDigits - 1;
+  } else {
+    return amountMaxDigits;
+  }
+}
+
+function isLimitNumber(chainId: number) {
+  return chainId === 3 || chainId === 33 || chainId === 8 || chainId === 88 ||
+    chainId === 11 || chainId === 511 || chainId === 12 || chainId === 512;
 }

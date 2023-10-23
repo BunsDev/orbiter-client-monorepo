@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import BigNumber from 'bignumber.js';
 import {
-  ChainConfigService,
-  IChainConfig,
-  MakerV1RuleService
+  ChainConfigService
 } from "@orbiter-finance/config";
 import { ECode, ITradingPair } from "../api.interface";
 import Keyv from 'keyv';

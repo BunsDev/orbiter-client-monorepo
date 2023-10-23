@@ -1,228 +1,168 @@
 import { Account, Contract, cairo, RpcProvider } from 'starknet';
-import { OrbiterAccount } from './orbiterAccount';
-import { equals } from '@orbiter-finance/utils'
-import { abis, NonceManager, MaxBigInt } from "@orbiter-finance/utils";
-import { TransactionRequest, TransferResponse } from './IAccount.interface';
+import { equals, sleep } from '@orbiter-finance/utils';
+import { NonceManager } from "@orbiter-finance/utils";
+import { TransactionRequest, TransferResponse } from "./IAccount.interface";
+import { OrbiterAccount } from "./orbiterAccount";
+import { ERC20Abi, StarknetERC20 } from "../../../utils/src/lib/abi";
 
+export default class StarknetAccount extends OrbiterAccount {
+  public account: Account;
+  public provider: RpcProvider;
+  private nonceManager: NonceManager;
 
-
-export class StarknetAccount extends OrbiterAccount {
-    public account: Account;
-    private nonceManager: NonceManager;
-    async connect(privateKey: string, address: string) {
-        const provider = this.getProviderV4();
-        // const classInfo = await provider.getClassAt(address);
-        const account = new Account(
-            provider,
-            address,
-            privateKey,
-            "1"
-        )
-        if (!equals(account.address, address)) {
-            throw new Error('The connected wallet address is inconsistent with the private key address')
-        }
-        this.account = account;
-        if (!this.nonceManager) {
-            this.nonceManager = new NonceManager(address, async () => {
-                const nonce = await this.account.getNonce();
-                return Number(nonce);
-            });
-            await this.nonceManager.forceRefreshNonce();
-        }
-        return this;
+  async connect(privateKey: string, address: string, version: string) {
+    const provider = this.getProviderV4();
+    const account = new Account(
+      provider,
+      address,
+      privateKey,
+      <any>version || "0"
+    );
+    if (!equals(account.address, address)) {
+      throw new Error('The connected wallet address is inconsistent with the private key address');
     }
-    // constructor(
-    //     protected internalId: number,
-    //     protected privateKey: string,
-    //     address: string
-    // ) {
-    //     super(internalId, privateKey);
-    //     // get address
-    //     this.account = new Account(
-    //         this.getProviderV4(),
-    //         address,
-    //         ec.getKeyPair(this.privateKey)
-    //     )
-    //     this.nonceManager = new NonceManager(address, async () => {
-    //         const nonce = await this.account.getNonce();
-    //         return Number(nonce);
-    //     }, {
-    //         store: getNonceCacheStore(`${internalId}-${address}`)
-    //     });
-    // }
-    // public async transfer(
-    //     to: string,
-    //     value: string,
-    //     transactionRequest?: TransactionRequest
-    // ): Promise<TransferResponse | undefined> {
-    //     const mainToken = await this.chainConfig.nativeCurrency.address;
-    //     return await this.transferToken(mainToken, to, value, transactionRequest);
-    // }
-    public getProviderV4() {
-        // const rpcFirst = this.chainConfig.rpc[0];
-        const rpcFirst = "https://starknet-testnet.public.blastapi.io";
-        const provider = new RpcProvider({ nodeUrl: rpcFirst }); // for a pathfinder node located in a PC in the local network
-        return provider;
+    this.account = account;
+    if (!this.nonceManager) {
+      this.nonceManager = new NonceManager(address, async () => {
+        const nonce = await this.account.getNonce();
+        return Number(nonce);
+      });
+      await this.nonceManager.forceRefreshNonce();
     }
+    return this;
+  }
 
-    async loadContract(contract_address: string) {
-        const provider = this.getProviderV4();
-        const { abi } = await provider.getClassAt(contract_address);
-        if (!abi) {
-            throw new Error("Error while getting ABI");
-        }
-        // TODO WARNING THIS IS A TEMPORARY FIX WHILE WE WAIT FOR SNJS TO BE UPDATED
-        // Allows to pull back the function from one level down
-        const parsedAbi = abi.flatMap((e) => (e.type == "interface" ? e.items : e));
-        return new Contract(parsedAbi, contract_address, provider);
+  public getProviderV4() {
+    this.provider = this.provider || new RpcProvider({ nodeUrl: this.chainConfig.rpc[0] });
+    return this.provider;
+  }
+
+  public async transfer(
+    to: string,
+    value: bigint,
+    transactionRequest?: TransactionRequest
+  ): Promise<TransferResponse | undefined> {
+    return await this.transferToken(this.chainConfig.nativeCurrency.address, to, value, transactionRequest);
+  }
+
+  public async transfers(
+    tos: string[],
+    values: bigint[],
+    transactionRequest?: TransactionRequest | any
+  ): Promise<TransferResponse | undefined> {
+    return await this.transferTokens(this.chainConfig.nativeCurrency.address, tos, values, transactionRequest);
+  }
+
+  public async transferToken(
+    token: string,
+    to: string,
+    value: bigint,
+    transactionRequest: TransactionRequest = {}
+  ): Promise<TransferResponse | undefined> {
+    return await this.transferTokens(token, [to], [value], transactionRequest);
+  }
+
+  public async transferTokens(
+    token: string,
+    tos: string[],
+    values: bigint[],
+    transactionRequest: TransactionRequest = {}
+  ): Promise<any> {
+    const provider = this.getProviderV4();
+    const invocationList: any[] = [];
+    for (let i = 0; i < tos.length; i++) {
+      const recipient = tos[i];
+      const amount = values[i];
+      const ethContract = new Contract(ERC20Abi, token, provider);
+      invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
     }
-
-    // public async getBalance(address?: string, token?: string): Promise<ethers.BigNumber> {
-    //     if (token && token != this.chainConfig.nativeCurrency.address) {
-    //         return await this.getTokenBalance(token, address);
-    //     } else {
-    //         return await this.getTokenBalance(this.chainConfig.nativeCurrency.address, address);
-    //     }
-    // }
-    // public async getTokenBalance(token: string, address?: string): Promise<ethers.BigNumber> {
-    //     if (!token) {
-    //         return ethers.BigNumber.from(0);
-    //     }
-    //     const provider = this.getProviderV4()
-    //     const erc20 = new Contract(StarknetErc20ABI, token, provider)
-    //     // erc20.connect(this.account);
-    //     const balanceBeforeTransfer = await erc20.balanceOf(address || this.account.address);
-    //     return ethers.BigNumber.from(number.toBN(balanceBeforeTransfer.balance.low).toString());
-    // }
-    public async transferToken(
-        token: string,
-        to: string,
-        value: bigint,
-        transactionRequest: TransactionRequest = {}
-    ): Promise<TransferResponse | undefined> {
-        const provider = this.getProviderV4();
-        const maxFee = cairo.uint256(0.009 * 10 ** 18);
-        const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
-        const invocation = {
-            contractAddress: token,
-            entrypoint: 'transfer',
-            nonce,
-            calldata: {
-                recipient: to,
-                amount: cairo.uint256(1_000_000_000_000_000),
-                // amount: value
-            }
-        }
-        console.log('send params:', invocation);
-        try {
-            const { suggestedMaxFee } = await this.account.estimateFee(invocation);
-            console.log(suggestedMaxFee, '==suggestedMaxFee')
-            // if (suggestedMaxFee.gt(maxFee))
-            //     maxFee = suggestedMaxFee;
-        } catch (error) {
-            console.error('starknet estimateFee error:', error);
-        }
-        try {
-            const executeHash = await this.account.execute(
-                invocation, undefined, {
-                nonce,
-                // maxFee
-            }
-            );
-            return {} as any;
-            // this.logger.info('transfer response:', executeHash);
-            // // console.log(`Waiting for Tx to be Accepted on Starknet - Transfer...`, executeHash.transaction_hash);
-            // provider.waitForTransaction(executeHash.transaction_hash).then(async (tx) => {
-            //     this.logger.info(`waitForTransaction SUCCESS:`, tx);
-            // }, ({ response }) => {
-            //     const { tx_status, tx_failure_reason } = response;
-            //     if (tx_status === 'REJECTED' && tx_failure_reason.error_message.includes('Invalid transaction nonce. Expected: ')) {
-            //         const nonce = tx_failure_reason.error_message.split('Expected: ')[1].split(',')[0];
-            //         this.nonceManager.setNonce(Number(nonce));
-            //         this.logger.info(`Starknet reset nonce:${nonce}`);
-            //     }
-            //     this.logger.error(`waitForTransaction reject:`, { hash: executeHash.transaction_hash, response });
-            // }).catch(err => {
-            //     this.logger.error(`waitForTransaction error:`, err);
-            // // })
-            // submit()
-            // return {
-            //     hash: executeHash.transaction_hash,
-            //     from: this.account.address,
-            //     to,
-            //     value: ethers.BigNumber.from(value),
-            //     nonce: nonce,
-            // };
-        } catch (error: any) {
-            console.error(`rollback nonce:${error.message}`);
-            rollback();
-            throw error;
-        }
+    const { nonce, submit } = await this.nonceManager.getNextNonce();
+    if (!nonce && nonce != 0) {
+      throw new Error('Not Find Nonce Params');
     }
-    public async transferTokenV2(
-        token: string,
-        to: string,
-        value: bigint,
-        transactionRequest: TransactionRequest = {}
-    ): Promise<TransferResponse | undefined> {
-        const provider = this.getProviderV4();
-        let maxFee = BigInt(0.009 * 10 ** 18);
-        const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
-        const ethContract = new Contract(abis.StarknetERC20['abi'], token, provider)
-        const invocation = [
-            ethContract.populateTransaction.transfer(to, cairo.uint256(value)),
-        ]
-        const transactionsDetail = {
-            nonce: 51
-        }
-        try {
-            const suggestedMaxFee = await this.account.getSuggestedMaxFee(
-                {
-                    type: "INVOKE_FUNCTION",
-                    payload: invocation
-                } as any,
-                transactionsDetail
-            );
-            maxFee = MaxBigInt([suggestedMaxFee, maxFee]);
-        } catch (error) {
-            console.error('starknet estimateFee error:', error);
-            throw new Error(`starknet estimateFee error ${error.message}`);
-        }
-        try {
-            const executeHash = await this.account.execute(invocation, null, transactionsDetail);
-            submit()
-            console.log(executeHash, '====executeHash')
-            this.account.waitForTransaction(executeHash.transaction_hash).then(res => {
-                console.log('success', res);
-            }).catch(error => {
-                console.log('fail', error);
-            })
-            console.log(executeHash, '==executeHash')
-            return {} as any;
-
-        } catch (error: any) {
-            console.error(`rollback nonce:${error.message}`);
-            throw error;
-        }
+    const transactionDetail = {
+      nonce: nonce,
+      maxFee: BigInt(0.009 * 10 ** 18)
+    };
+    try {
+      const suggestedMaxFee = await this.account.getSuggestedMaxFee(
+        {
+          type: "INVOKE_FUNCTION",
+          payload: invocationList
+        } as any,
+        transactionDetail
+      );
+      if (suggestedMaxFee > transactionDetail.maxFee) {
+        transactionDetail.maxFee = suggestedMaxFee;
+      }
+    } catch (error: any) {
+      if (error.message.indexOf('Invalid transaction nonce. Expected:') !== -1
+        && error.message.indexOf('got:') !== -1) {
+        const arr: string[] = error.message.split(', got: ');
+        const nonce1 = arr[0].replace(/[^0-9]/g, "");
+        const nonce2 = arr[1].replace(/[^0-9]/g, "");
+        this.logger.error(`starknet signTransfer error: ${nonce} != ${nonce1}, ${nonce} != ${nonce2}`);
+      } else if (error.message.indexOf('ContractAddress(PatriciaKey(StarkFelt') !== -1 &&
+        error.message.indexOf('Expected: Nonce(StarkFelt') !== -1) {
+        this.logger.error(`starknet signTransfer error: ${error.message}`);
+      } else {
+        throw new Error(error.message);
+      }
     }
 
-    // public static async calculateContractAddressFromHash(privateKey: string) {
+    // accessLogger.info(`transactionDetail: ${JSON.stringify(transactionDetail)}`);
+    const trx = await this.account.execute(invocationList, <any>null, transactionDetail);
+    submit();
+    if (!trx || !trx.transaction_hash) {
+      throw new Error(`Starknet Failed to send transaction hash does not exist`);
+    }
+    await sleep(1000);
+    const hash = trx.transaction_hash;
+    return {
+      hash: hash,
+      from: this.account.address,
+      // to: tos.join(','),
+      // value: BigInt(value),
+      fee: BigInt(transactionDetail.maxFee),
+      nonce: nonce,
+      token
+    };
+  }
 
-    //     const starkKeyPair = ec.getKeyPair(privateKey);
-    //     const starkKeyPub = ec.getStarkKey(starkKeyPair);
-    //     // class hash of ./Account.json. 
-    //     // Starknet.js currently doesn't have the functionality to calculate the class hash
-    //     const precalculatedAddress = hash.calculateContractAddressFromHash(
-    //         starkKeyPub, // salt
-    //         "0x25ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
-    //         stark.compileCalldata({
-    //             implementation: "0x1a7820094feaf82d53f53f214b81292d717e7bb9a92bb2488092cd306f3993f",
-    //             selector: hash.getSelectorFromName("initialize"),
-    //             calldata: stark.compileCalldata({ signer: starkKeyPub, guardian: "0" }),
-    //         }),
-    //         0
-    //     );
-    //     // console.log("pre-calculated address: ", precalculatedAddress);
-    //     return precalculatedAddress;
-    // }
+  public async getBalance(address?: string, token?: string): Promise<bigint> {
+    if (token && token != this.chainConfig.nativeCurrency.address) {
+      return this.getTokenBalance(token, address);
+    } else {
+      return this.getTokenBalance(this.chainConfig.nativeCurrency.address, address);
+    }
+  }
+
+  public async getTokenBalance(token: string, address?: string): Promise<bigint> {
+    if (address && address != this.address) {
+      throw new Error('The specified address query is not supported temporarily');
+    }
+    const provider = this.getProviderV4();
+    const contractInstance = new Contract(
+      <any>StarknetERC20,
+      token,
+      provider,
+    );
+    const balanceResult = (await contractInstance.balanceOf(address)).balance;
+    return BigInt(balanceResult.low.toString());
+  }
+
+  public async waitForTransactionConfirmation(transactionHash: string) {
+    const provider = this.getProviderV4();
+    try {
+      const receipt = await provider.getTransactionReceipt(transactionHash);
+      if (receipt) {
+        return receipt;
+      }
+    } catch (e) {
+      this.logger.error(`waitForTransactionConfirmation error ${e.message}`);
+    }
+    await sleep(3000);
+    console.log(`starknet ${transactionHash} waitForTransactionConfirmation ...`);
+    return await this.waitForTransactionConfirmation(transactionHash);
+  }
 }
