@@ -42,6 +42,10 @@ export class V2Schedule {
     for (const rule of rules) {
       const [fromChainId, toChainId] = rule.chain.split('-');
       const [fromSymbol, toSymbol] = rule.token.split('-');
+      const offline = [12, 13];
+      if (offline.includes(+fromChainId) || offline.includes(+toChainId)) {
+        continue;
+      }
       const fromChainInfo = chainList.find(item => +item.internalId === +fromChainId);
       const toChainInfo = chainList.find(item => +item.internalId === +toChainId);
       if (!fromChainInfo) {

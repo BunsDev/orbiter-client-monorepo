@@ -36,10 +36,7 @@ export class V3Service {
       where: { sourceId: hash },
     });
     if (!bridgeTransaction) {
-      return {
-        status: -1,
-        txList: [],
-      };
+      return await this.v2Service.getTransactionByHash(params);
     }
     if (!bridgeTransaction.targetId) {
       const res = {
@@ -485,9 +482,11 @@ export class V3Service {
                 ebcAddress: ruleSnapshot.ebc.id,
                 recipient: makerAddress,
                 sender: makerAddress,
+                gasFee: new BigNumber(rule.chain0TradeFee).dividedBy(1000).toFixed(6),
+                tradingFee: new BigNumber(rule.chain0WithholdingFee).dividedBy(10 ** token0.decimals).toFixed(),
                 spentTime: rule.chain0ResponseTime,
-                status: rule.chain0Status,
-                compensationRatio: rule.chain0CompensationRatio,
+                // status: rule.chain0Status,
+                // compensationRatio: rule.chain0CompensationRatio,
                 fromChain: {
                   id: chainIdMap[rule.chain0],
                   networkId: rule.chain0,
@@ -510,10 +509,8 @@ export class V3Service {
                   tokenAddress: token1.address,
                   decimals: token1.decimals,
                 },
-                gasFee: new BigNumber(rule.chain0TradeFee).dividedBy(1000).toFixed(6),
-                tradingFee: new BigNumber(rule.chain0WithholdingFee).dividedBy(10 ** token0.decimals).toFixed(),
-                originTradeFee: rule.chain0TradeFee,
-                originWithholdingFee: rule.chain0WithholdingFee,
+                // originTradeFee: rule.chain0TradeFee,
+                // originWithholdingFee: rule.chain0WithholdingFee,
                 nextUpdateTime: nextUpdateTimeMap[fromId] || 0,
               });
             }
@@ -536,9 +533,11 @@ export class V3Service {
                 ebcAddress: ruleSnapshot.ebc.id,
                 recipient: makerAddress,
                 sender: makerAddress,
+                gasFee: new BigNumber(rule.chain1TradeFee).dividedBy(1000).toFixed(6),
+                tradingFee: new BigNumber(rule.chain1WithholdingFee).dividedBy(10 ** token1.decimals).toFixed(),
                 spentTime: rule.chain1ResponseTime,
-                status: rule.chain1Status,
-                compensationRatio: rule.chain1CompensationRatio,
+                // status: rule.chain1Status,
+                // compensationRatio: rule.chain1CompensationRatio,
                 fromChain: {
                   id: Number(chainIdMap[rule.chain1]),
                   networkId: rule.chain1,
@@ -549,8 +548,8 @@ export class V3Service {
                   decimals: token1.decimals,
                   maxPrice,
                   minPrice,
-                  originMaxPrice: rule.chain1maxPrice,
-                  originMinPrice: rule.chain1minPrice,
+                  // originMaxPrice: rule.chain1maxPrice,
+                  // originMinPrice: rule.chain1minPrice,
                 },
                 toChain: {
                   id: Number(chainIdMap[rule.chain0]),
@@ -561,10 +560,8 @@ export class V3Service {
                   tokenAddress: token0.address,
                   decimals: token0.decimals,
                 },
-                gasFee: new BigNumber(rule.chain1TradeFee).dividedBy(1000).toFixed(6),
-                tradingFee: new BigNumber(rule.chain1WithholdingFee).dividedBy(10 ** token1.decimals).toFixed(),
-                originTradeFee: rule.chain1TradeFee,
-                originWithholdingFee: rule.chain1WithholdingFee,
+                // originTradeFee: rule.chain1TradeFee,
+                // originWithholdingFee: rule.chain1WithholdingFee,
                 nextUpdateTime: nextUpdateTimeMap[toId] || 0,
               });
             }
