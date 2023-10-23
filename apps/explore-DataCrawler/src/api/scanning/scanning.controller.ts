@@ -107,7 +107,7 @@ export class ScanningController {
     const block = params['block'];
     const factory = this.rpcScanningFactory.createService(chainId);
     const result = await factory.manualScanBlocks([+block]);
-    return BigIntToString(result);
+    return result;
   }
   // @Get('/api-scan/:chainId/:address')
   // async apiScan(@Param() params, @Query() query: any) {
