@@ -11,12 +11,12 @@ import {
   type TransferAmountTransaction,
 } from "./sequencer.interface";
 import { LoggerDecorator, arePropertyValuesConsistent, isEmpty,OrbiterLogger } from "@orbiter-finance/utils";
-import { StoreService } from "../../../../../libs/blockchain-account/src/lib/store.service";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { AlertService } from "@orbiter-finance/alert";
+import { StoreService } from "@orbiter-finance/blockchain-account";
 
 @Injectable()
 export class SequencerScheduleService {

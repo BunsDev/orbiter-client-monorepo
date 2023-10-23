@@ -7,9 +7,8 @@ import { type TransferAmountTransaction } from "./sequencer.interface";
 import { InjectModel } from "@nestjs/sequelize";
 import { BridgeTransaction } from "@orbiter-finance/seq-models";
 import BigNumber from "bignumber.js";
-import { type StoreService } from "../../../../../libs/blockchain-account/src/lib/store.service";
 import { AlertService } from "@orbiter-finance/alert";
-import { OrbiterAccount, TransactionSendAfterError, TransactionSendBeforeError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
+import { OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendBeforeError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
 @Injectable()
 export class SequencerService {
   @LoggerDecorator()
