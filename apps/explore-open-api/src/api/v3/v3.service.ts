@@ -683,11 +683,12 @@ function calculateAmountByLarge(tradingPair: ITradingPair, sendAmount: string) {
   const receiveValue: string = toAmount_fee.multipliedBy(new BigNumber(10 ** decimals)).toFixed();
   const p_text = safeCode(tradingPair);
   sendAmount = getTAmountFromRAmount(+tradingPair.fromChain.id, new BigNumber(sendAmount).multipliedBy(10 ** decimals).toFixed(), p_text);
+  const actualSend = new BigNumber(sendAmount).plus(tradingPair.tradingFee);
   return {
     receiveValue,
-    actualSend: sendAmount,
+    actualSend,
     accuracyReceiveValue: new BigNumber(receiveValue).dividedBy(10 ** decimals),
-    accuracyActualSend: new BigNumber(sendAmount).dividedBy(10 ** decimals)
+    accuracyActualSend: new BigNumber(actualSend).dividedBy(10 ** decimals)
   };
 }
 
