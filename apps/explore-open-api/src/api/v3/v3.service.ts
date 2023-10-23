@@ -680,15 +680,15 @@ function calculateAmountByLarge(tradingPair: ITradingPair, sendAmount: string) {
   if (!toAmount_fee || !isNumber(toAmount_fee)) {
     throw new Error("Amount parsing error");
   }
-  const receiveValue: string = toAmount_fee.multipliedBy(new BigNumber(10 ** decimals)).toFixed();
+  const _receiveValue: string = toAmount_fee.multipliedBy(new BigNumber(10 ** decimals)).toFixed();
   const p_text = safeCode(tradingPair);
   sendAmount = getTAmountFromRAmount(+tradingPair.fromChain.id, new BigNumber(sendAmount).multipliedBy(10 ** decimals).toFixed(), p_text);
-  const actualSend = new BigNumber(sendAmount).plus(new BigNumber(tradingPair.tradingFee).multipliedBy(10 ** decimals));
+  const _actualSend = new BigNumber(sendAmount).plus(new BigNumber(tradingPair.tradingFee).multipliedBy(10 ** decimals));
   return {
-    receiveValue,
-    actualSend,
-    accuracyReceiveValue: new BigNumber(receiveValue).dividedBy(10 ** decimals),
-    accuracyActualSend: new BigNumber(actualSend).dividedBy(10 ** decimals)
+    _receiveValue,
+    _actualSend,
+    receiveValue: new BigNumber(_receiveValue).dividedBy(10 ** decimals).toString(),
+    actualSend: new BigNumber(_actualSend).dividedBy(10 ** decimals).toString()
   };
 }
 
