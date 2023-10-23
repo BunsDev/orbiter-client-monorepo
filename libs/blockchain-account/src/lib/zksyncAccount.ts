@@ -1,5 +1,5 @@
 import {OrbiterAccount} from './orbiterAccount';
-import { HTTPGet, NonceManager } from "@orbiter-finance/utils";
+import { HTTPGet, NonceManager, sleep } from "@orbiter-finance/utils";
 import { ethers } from 'ethers';
 import * as zksync from 'zksync';
 import { AbstractWallet } from "zksync/build/abstract-wallet";
@@ -113,6 +113,7 @@ export class ZkSyncAccount extends OrbiterAccount  {
       }
     }
     console.log(`${transactionHash} waitForTransactionConfirmation ...`);
+    await sleep(1000);
     return await this.waitForTransactionConfirmation(transactionHash);
   }
 }

@@ -486,7 +486,6 @@ export class V3Service {
                 tradingFee: new BigNumber(rule.chain0WithholdingFee).dividedBy(10 ** token0.decimals).toFixed(),
                 spentTime: rule.chain0ResponseTime,
                 // status: rule.chain0Status,
-                // compensationRatio: rule.chain0CompensationRatio,
                 fromChain: {
                   id: chainIdMap[rule.chain0],
                   networkId: rule.chain0,
@@ -497,8 +496,8 @@ export class V3Service {
                   decimals: token0.decimals,
                   maxPrice,
                   minPrice,
-                  originMaxPrice: rule.chain0maxPrice,
-                  originMinPrice: rule.chain0minPrice,
+                  _maxPrice: rule.chain0maxPrice,
+                  _minPrice: rule.chain0minPrice,
                 },
                 toChain: {
                   id: chainIdMap[rule.chain1],
@@ -509,8 +508,9 @@ export class V3Service {
                   tokenAddress: token1.address,
                   decimals: token1.decimals,
                 },
-                // originTradeFee: rule.chain0TradeFee,
-                // originWithholdingFee: rule.chain0WithholdingFee,
+                _compensationRatio: rule.chain0CompensationRatio,
+                _tradeFee: rule.chain0TradeFee,
+                _withholdingFee: rule.chain0WithholdingFee,
                 nextUpdateTime: nextUpdateTimeMap[fromId] || 0,
               });
             }
@@ -537,7 +537,6 @@ export class V3Service {
                 tradingFee: new BigNumber(rule.chain1WithholdingFee).dividedBy(10 ** token1.decimals).toFixed(),
                 spentTime: rule.chain1ResponseTime,
                 // status: rule.chain1Status,
-                // compensationRatio: rule.chain1CompensationRatio,
                 fromChain: {
                   id: Number(chainIdMap[rule.chain1]),
                   networkId: rule.chain1,
@@ -548,8 +547,8 @@ export class V3Service {
                   decimals: token1.decimals,
                   maxPrice,
                   minPrice,
-                  // originMaxPrice: rule.chain1maxPrice,
-                  // originMinPrice: rule.chain1minPrice,
+                  _maxPrice: rule.chain1maxPrice,
+                  _minPrice: rule.chain1minPrice,
                 },
                 toChain: {
                   id: Number(chainIdMap[rule.chain0]),
@@ -560,8 +559,9 @@ export class V3Service {
                   tokenAddress: token0.address,
                   decimals: token0.decimals,
                 },
-                // originTradeFee: rule.chain1TradeFee,
-                // originWithholdingFee: rule.chain1WithholdingFee,
+                _compensationRatio: rule.chain1CompensationRatio,
+                _tradeFee: rule.chain1TradeFee,
+                _withholdingFee: rule.chain1WithholdingFee,
                 nextUpdateTime: nextUpdateTimeMap[toId] || 0,
               });
             }
