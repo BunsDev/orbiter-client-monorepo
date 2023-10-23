@@ -504,10 +504,6 @@ export class TransactionV1Service {
     if (transfer.version != '1-1') {
       throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
     }
-    if (transfer.status == 3) {
-      // change bt status = fail
-
-    }
     let t1;
     try {
       const memoryBT =
@@ -518,7 +514,7 @@ export class TransactionV1Service {
         const [rowCount] = await this.bridgeTransactionModel.update(
           {
             targetId: transfer.hash,
-            status: 99,
+            status: transfer.status == 3 ? 97 : 99,
             targetTime: transfer.timestamp,
             targetFee: transfer.feeAmount,
             targetFeeSymbol: transfer.feeToken,

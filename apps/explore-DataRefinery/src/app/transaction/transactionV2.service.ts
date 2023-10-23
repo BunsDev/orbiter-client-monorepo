@@ -339,7 +339,7 @@ export class TransactionV2Service {
         }
         const [updateTransferRows] = await this.transfersModel.update(
           {
-            opStatus: 99,
+            opStatus: transfer.status == 3 ? 97 : 99,
           },
           {
             where: {
