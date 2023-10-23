@@ -575,7 +575,7 @@ export class V3Service {
     if ((!updateTime || updateTime > new Date().valueOf() + 60 * 1000) && !cache) {
       await keyv.set(`${dealerAddress}_rule`, responseCache, 50 * 1000);
     }
-    return { ruleList: marketList, updateTime };
+    return { ruleList: marketList, updateTime, version: V2Service.updateTime };
   }
 
   convertV3ChainList(chainRels) {
