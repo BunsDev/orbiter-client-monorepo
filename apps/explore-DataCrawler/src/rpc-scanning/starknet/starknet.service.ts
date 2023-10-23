@@ -352,8 +352,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     } else if (
       selector ===
       '0x68bcbdba7cc8cac2832d23e2c32e9eec39a9f1d03521eff5dff800a62725fa' &&
-      this.chainConfig.contract[to.toLowerCase()]
-      // this.chainConfig.contracts.find(item => fix0xPadStartAddress(item, 66).toLowerCase() === fix0xPadStartAddress(to, 66).toLowerCase())
+      this.chainConfig.contract[fix0xPadStartAddress(to,66).toLowerCase()]
     ) {
       return {
         name: 'transferERC20',
