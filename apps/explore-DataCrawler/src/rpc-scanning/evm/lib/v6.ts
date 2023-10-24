@@ -1,8 +1,40 @@
-import { Interface, id, TransactionDescription, LogDescription } from 'ethers6';
+import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish } from 'ethers6';
 import { IChainConfig } from '@orbiter-finance/config';
 import { abis, clone, equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
+
+class Interface2 extends Interface {
+  constructor(fragments: InterfaceAbi) {
+    super(fragments)
+  }
+  checkArgs(args) {
+    const length = args.length
+    const newArgs = []
+    for (let i = 0; i < length; i++) {
+      try {
+        const arg = args[i]
+        newArgs.push(arg)
+      } catch (error) {
+        const e = error.error
+        if (e.code === 'NUMERIC_FAULT' && e.fault === 'overflow' && e.baseType === 'address') {
+          const valueString = new BigNumber(e.value).toString(16)
+          const address = '0x' + valueString.slice(-40)
+          newArgs.push(getAddress(address))
+        } else {
+          throw error
+        }
+      }
+    }
+    return newArgs
+  }
+  parseTransaction(tx: { data: string, value?: BigNumberish }): null | TransactionDescription {
+    const parsedData = super.parseTransaction(tx)
+    const { args, ...residualParsedData } = parsedData
+    const newArgs: unknown = this.checkArgs(args)
+    return { ...residualParsedData, args: newArgs } as TransactionDescription;
+  }
+}
 
 export default class EVMVUtils {
   public static isERC20Transfer(data: string) {
@@ -16,7 +48,7 @@ export default class EVMVUtils {
     if (!EVMVUtils.isERC20Transfer(data)) {
       throw new Error(`signature not 0xa9059cbb`);
     }
-    const contractInterface = new Interface(abis.ERC20Abi);
+    const contractInterface = new Interface2(abis.ERC20Abi);
     const parsedData = contractInterface.parseTransaction({ data: data });
     return parsedData;
   }
@@ -25,7 +57,7 @@ export default class EVMVUtils {
     transaction: any,
     receipt: any,
   ): TransferAmountTransaction[] {
-    const contractInterface = new Interface(abis['ERC20Abi']);
+    const contractInterface = new Interface2(abis['ERC20Abi']);
     const transfers: TransferAmountTransaction[] = [];
     const parsedData = contractInterface.parseTransaction({
       data: transaction.data,
@@ -88,7 +120,7 @@ export default class EVMVUtils {
     if (!abi) {
       throw new Error(`${transaction.hash} ${contractInfo.name} abi not found`);
     }
-    const contractInterface = new Interface(abi);
+    const contractInterface = new Interface2(abi);
     const parsedData = contractInterface.parseTransaction({
       data: transaction.data,
     });
@@ -183,7 +215,7 @@ export default class EVMVUtils {
   ): TransferAmountTransaction[] {
     const transfers: TransferAmountTransaction[] = [];
     const { nonce } = transaction;
-    const contractInterface = new Interface(abis['OrbiterRouterV3']);
+    const contractInterface = new Interface2(abis['OrbiterRouterV3']);
     const parsedData = contractInterface.parseTransaction({
       data: transaction.data,
     });
@@ -284,7 +316,7 @@ export default class EVMVUtils {
   ): TransferAmountTransaction[] {
     const transfers: TransferAmountTransaction[] = [];
     const { nonce } = transaction;
-    const contractInterface = new Interface(abis['OrbiterRouterV1']);
+    const contractInterface = new Interface2(abis['OrbiterRouterV1']);
     const parsedData = contractInterface.parseTransaction({
       data: transaction.data,
     });
