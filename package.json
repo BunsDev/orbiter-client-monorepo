@@ -1,6 +1,6 @@
 {
   "name": "@orbiter-finance/source",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "license": "MIT",
   "scripts": {
     "dev:explore-open-api": "npx nx run explore-open-api:serve",
@@ -32,8 +32,9 @@
     "@nestjs/common": "^10.2.7",
     "@nestjs/config": "^3.1.1",
     "@nestjs/core": "^10.2.7",
+    "@nestjs/event-emitter": "^2.0.2",
     "@nestjs/platform-express": "^10.2.7",
-    "@nestjs/schedule": "^3.0.4",
+    "@nestjs/schedule": "^4.0.0",
     "@nestjs/sequelize": "^10.0.0",
     "amqplib": "^0.10.3",
     "async-mutex": "^0.4.0",

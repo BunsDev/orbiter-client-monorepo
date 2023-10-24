@@ -3,28 +3,24 @@ import { Cron, Interval } from '@nestjs/schedule';
 import { ENVConfigService } from '@orbiter-finance/config';
 import { ChainRel, SubgraphClient } from '@orbiter-finance/subgraph-sdk';
 import { Mutex, MutexInterface, Semaphore, SemaphoreInterface, withTimeout } from 'async-mutex';
-import { ArbitrationService } from './arbitration.service';
+import { ArbitrationModuleService } from './arbitration-module.service';
+import { ArbitrationTransaction } from './arbitration.interface';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 const mutex = new Mutex();
 
 @Injectable()
 export class ArbitrationJobService {
   private readonly logger = new Logger(ArbitrationJobService.name);
-  private prevScanTime: number = Date.now() - 1000 * 60 * 30;
   constructor(protected envConfigService: ENVConfigService,
-    private arbitrationService: ArbitrationService
+    private arbitrationService: ArbitrationModuleService,
+    private eventEmitter: EventEmitter2
   ) {
     this.syncChainInfo()
   }
-  async getSubClient(): Promise<SubgraphClient> {
-    const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
-    if (!SubgraphEndpoint) {
-      throw new Error('SubgraphEndpoint not found');
-    }
-    return new SubgraphClient(SubgraphEndpoint);
-  }
+
   @Interval(1000 * 5)
   async syncChainInfo() {
-    const client = await this.getSubClient();
+    const client = await this.arbitrationService.getSubClient()
     this.arbitrationService.chainRels = await client.manager.getChainRels();
   }
 
@@ -38,7 +34,6 @@ export class ArbitrationJobService {
     }
     mutex
       .runExclusive(() => {
-
         const { result } = {
           "result": {
             "list": [
@@ -245,9 +240,9 @@ export class ArbitrationJobService {
           }
         }
         for (const item of result.list) {
-          const result = this.arbitrationService.verifyArbitrationConditions(item);
+          const result = this.arbitrationService.verifyArbitrationConditions(item as ArbitrationTransaction);
           if (result) {
-            this.arbitrationService.initiateArbitration(item);
+            this.eventEmitter.emit("arbitration.create", item);
           }
         }
       })

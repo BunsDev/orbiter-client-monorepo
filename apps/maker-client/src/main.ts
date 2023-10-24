@@ -9,7 +9,7 @@ dayjs.extend(utc);
 import { AppModule } from './app.module';
 import { WinstonModule } from 'nest-winston';
 import { logger, characterPattern } from '@orbiter-finance/utils'
-import { ArbitrationService } from '@orbiter-finance/arbitration-module';
+import { ArbitrationModuleService } from '@orbiter-finance/arbitration-module';
 import { ENVConfigService } from '@orbiter-finance/config';
 const sysLogger = logger.createLoggerByName('app');
 
@@ -23,7 +23,7 @@ async function bootstrap() {
   const envConfigService = app.get(ENVConfigService);
 
   if (+envConfigService.get("EnableArbitration") == 1) {
-    const arbitrationService = app.get(ArbitrationService);
+    const arbitrationService = app.get(ArbitrationModuleService);
     arbitrationService.start()
   }
 
