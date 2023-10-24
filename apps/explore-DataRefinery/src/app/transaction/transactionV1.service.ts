@@ -514,7 +514,7 @@ export class TransactionV1Service {
         const [rowCount] = await this.bridgeTransactionModel.update(
           {
             targetId: transfer.hash,
-            status: 99,
+            status: transfer.status == 3 ? 97 : 99,
             targetTime: transfer.timestamp,
             targetFee: transfer.feeAmount,
             targetFeeSymbol: transfer.feeToken,
@@ -525,6 +525,10 @@ export class TransactionV1Service {
             where: {
               id: memoryBT.id,
               status: [0, 97, 98],
+              sourceTime: {
+                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
+                [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
+              }
             },
             transaction: t1,
           },
@@ -598,7 +602,7 @@ export class TransactionV1Service {
       }
       if (btTx && btTx.id) {
         btTx.targetId = transfer.hash;
-        btTx.status = 99;
+        btTx.status = transfer.status == 3 ? 97 : 99;
         btTx.targetTime = transfer.timestamp;
         btTx.targetFee = transfer.feeAmount;
         btTx.targetFeeSymbol = transfer.feeToken;

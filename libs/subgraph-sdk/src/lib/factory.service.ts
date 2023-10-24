@@ -1,5 +1,5 @@
 import { Context } from './subgraph-sdk'
-export class Factory {
+export class FactoryService {
   constructor(private readonly ctx: Context) {
   }
   async getChainTokens() {
