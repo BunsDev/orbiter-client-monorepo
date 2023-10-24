@@ -133,6 +133,9 @@ export class V3Service {
       if (list.find(item => item.fromHash.toLowerCase() === tx.fromHash.toLowerCase())) continue;
       list.push(tx);
     }
+    list = list.sort(function (a, b) {
+      return new Date(b.fromTimestamp).valueOf() - new Date(a.fromTimestamp).valueOf();
+    });
     const count = list.length;
     return { list: list.splice(offset, limit), count };
   }
@@ -195,7 +198,7 @@ export class V3Service {
       offset,
       limit,
     });
-    const list: any[] = [];
+    let list: any[] = [];
     for (const data of dataList) {
       list.push({
         fromHash: data.sourceId,
@@ -221,6 +224,9 @@ export class V3Service {
       });
     }
 
+    list = list.sort(function (a, b) {
+      return new Date(b.fromTimestamp).valueOf() - new Date(a.fromTimestamp).valueOf();
+    });
     const count: number = <any>await this.BridgeTransactionModel.count(<any>{ where });
     return { list, count };
   }

@@ -526,8 +526,8 @@ export class TransactionV1Service {
               id: memoryBT.id,
               status: [0, 97, 98],
               sourceTime: {
-                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute'),
-                [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute'),
+                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
+                [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
               }
             },
             transaction: t1,
