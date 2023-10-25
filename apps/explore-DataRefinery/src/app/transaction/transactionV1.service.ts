@@ -352,6 +352,7 @@ export class TransactionV1Service {
       +sourceChain.internalId,
       sourceToken.decimals,
       +targetChain.internalId,
+      targetToken.decimals,
       transfer.value,
       rule.tradingFee,
       rule.gasFee,
