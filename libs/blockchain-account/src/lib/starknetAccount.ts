@@ -1,11 +1,10 @@
 import { Account, Contract, cairo, RpcProvider } from 'starknet';
-import { equals, sleep } from '@orbiter-finance/utils';
-import { NonceManager } from "@orbiter-finance/utils";
+import { equals, fix0xPadStartAddress, sleep } from '@orbiter-finance/utils';
+import { NonceManager, abis } from "@orbiter-finance/utils";
 import { TransactionRequest, TransferResponse } from "./IAccount.interface";
 import { OrbiterAccount } from "./orbiterAccount";
-import { ERC20Abi, StarknetERC20 } from "../../../utils/src/lib/abi";
 
-export default class StarknetAccount extends OrbiterAccount {
+export class StarknetAccount extends OrbiterAccount {
   public account: Account;
   public provider: RpcProvider;
   private nonceManager: NonceManager;
@@ -18,10 +17,11 @@ export default class StarknetAccount extends OrbiterAccount {
       privateKey,
       <any>version || "0"
     );
-    if (!equals(account.address, address)) {
+    if (!equals(fix0xPadStartAddress(account.address, 66), fix0xPadStartAddress(address, 66))) {
       throw new Error('The connected wallet address is inconsistent with the private key address');
     }
     this.account = account;
+    this.address = account.address;
     if (!this.nonceManager) {
       this.nonceManager = new NonceManager(address, async () => {
         const nonce = await this.account.getNonce();
@@ -72,11 +72,11 @@ export default class StarknetAccount extends OrbiterAccount {
     const invocationList: any[] = [];
     for (let i = 0; i < tos.length; i++) {
       const recipient = tos[i];
-      const amount = values[i];
-      const ethContract = new Contract(ERC20Abi, token, provider);
+      const amount = String(values[i]);
+      const ethContract = new Contract(abis.StarknetERC20, token, provider);
       invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
     }
-    const { nonce, submit } = await this.nonceManager.getNextNonce();
+    const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
     if (!nonce && nonce != 0) {
       throw new Error('Not Find Nonce Params');
     }
@@ -96,6 +96,7 @@ export default class StarknetAccount extends OrbiterAccount {
         transactionDetail.maxFee = suggestedMaxFee;
       }
     } catch (error: any) {
+      rollback();
       if (error.message.indexOf('Invalid transaction nonce. Expected:') !== -1
         && error.message.indexOf('got:') !== -1) {
         const arr: string[] = error.message.split(', got: ');
@@ -118,9 +119,10 @@ export default class StarknetAccount extends OrbiterAccount {
     }
     await sleep(1000);
     const hash = trx.transaction_hash;
+    this.logger.info(`${this.chainConfig.name} sendTransaction txHash:${hash}`);
     return {
       hash: hash,
-      from: this.account.address,
+      from: this.address,
       // to: tos.join(','),
       // value: BigInt(value),
       fee: BigInt(transactionDetail.maxFee),
@@ -138,12 +140,9 @@ export default class StarknetAccount extends OrbiterAccount {
   }
 
   public async getTokenBalance(token: string, address?: string): Promise<bigint> {
-    if (address && address != this.address) {
-      throw new Error('The specified address query is not supported temporarily');
-    }
     const provider = this.getProviderV4();
     const contractInstance = new Contract(
-      <any>StarknetERC20,
+      <any>abis.StarknetERC20,
       token,
       provider,
     );
@@ -159,7 +158,11 @@ export default class StarknetAccount extends OrbiterAccount {
         return receipt;
       }
     } catch (e) {
-      this.logger.error(`waitForTransactionConfirmation error ${e.message}`);
+      if (e.message.indexOf('25: Transaction hash not found') === -1) {
+        this.logger.error(`waitForTransactionConfirmation error ${e.message}`);
+      } else {
+        this.logger.debug(`waitForTransactionConfirmation ${e.message}`);
+      }
     }
     await sleep(3000);
     console.log(`starknet ${transactionHash} waitForTransactionConfirmation ...`);

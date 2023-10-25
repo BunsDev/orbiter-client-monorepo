@@ -68,7 +68,12 @@ export class ValidatorService {
           address,
           transfer.targetChain
         );
-        await account.connect(privateKey, address, String(this.envConfig.get(`${address.toLowerCase()}.version`)) || "0");
+        const cairo1Address:string[] = await this.envConfig.getAsync('cairo1') || [];
+        console.log('cairo version ====', cairo1Address.find(item => item.toLowerCase() === address.toLowerCase()) ? "1" : "0");
+        await account.connect(
+          privateKey,
+          address,
+          cairo1Address.find(item => item.toLowerCase() === address.toLowerCase()) ? "1" : "0");
         const balance = await account.getBalance(address, transfer.targetToken);
         if (balance && balance > transferAmount) {
           return {
