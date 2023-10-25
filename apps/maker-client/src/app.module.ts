@@ -10,6 +10,7 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { isEmpty } from '@orbiter-finance/utils';
 import { AlertModule } from '@orbiter-finance/alert'
 import { TcpModule } from "@orbiter-finance/tcp";
+import { ArbitrationService } from './service/arbitration.service';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { TcpModule } from "@orbiter-finance/tcp";
     ArbitrationModule,
   ],
   providers: [
+    ArbitrationService,
   ],
   controllers: [],
 })

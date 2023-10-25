@@ -41,11 +41,13 @@ export class EVMAccount extends OrbiterAccount {
     }
     return this.#provider;
   }
-  async connect(privateKey: string, _address: string) {
+  async connect(privateKey: string, _address?: string) {
     const provider = this.getProvider();
     this.wallet = new ethers.Wallet(privateKey).connect(provider);
-    if (_address && !equals(_address, this.wallet.address)) {
-      throw new Error('The connected wallet address is inconsistent with the private key address')
+    if (_address) {
+      if(!equals(_address, this.wallet.address)) {
+        throw new Error('The connected wallet address is inconsistent with the private key address')
+      }
     }
     this.address = this.wallet.address;
     if (!this.nonceManager) {

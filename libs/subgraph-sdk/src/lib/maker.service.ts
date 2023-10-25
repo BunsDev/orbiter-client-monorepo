@@ -110,4 +110,16 @@ export class MakerService {
     }
     return null;
   }
+  async getMDCAddress(owner: string) {
+    const queryStr = `
+    {
+      mdcs(where: {owner: "${owner}"}) {
+        id
+        owner
+      }
+    }
+          `
+    const result = await this.ctx.query(queryStr);
+    return result['mdcs'][0];
+  }
 }
