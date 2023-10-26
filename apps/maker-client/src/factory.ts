@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { OrbiterAccount, ZkSyncAccount, IMXAccount, EVMAccount, ZkSpaceAccount } from "@orbiter-finance/blockchain-account";
+import {
+  OrbiterAccount, ZkSyncAccount, IMXAccount, EVMAccount,
+  ZkSpaceAccount,
+  StarknetAccount
+} from "@orbiter-finance/blockchain-account";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 
 @Injectable()
@@ -36,11 +40,9 @@ export class AccountFactoryService {
         break;
       case 4:
       case 44:
-        // wallet = new StarknetAccount(
-        //   toChainId,
-        //   privateKey,
-        //   makerAddress.toLocaleLowerCase()
-        // );
+        wallet = new StarknetAccount(
+          toChainId, ctx
+        );
         break;
       case 8:
       case 88:

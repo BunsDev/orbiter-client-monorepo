@@ -392,6 +392,7 @@ export function getAmountToSend(
   fromChainID: number,
   fromTokenDecimals: number,
   toChainID: number,
+  toTokenDecimals: number,
   amountStr: string,
   tradingFee: number,
   gasFeeRatio: number,
@@ -428,7 +429,7 @@ export function getAmountToSend(
   if (!calcResult) {
     return;
   }
-  const readyAmount = new BigNumber(calcResult.sendAmount).multipliedBy(10 ** fromTokenDecimals).toFixed(0);
+  const readyAmount = new BigNumber(calcResult.sendAmount).multipliedBy(10 ** toTokenDecimals).toFixed(0);
   const result:any = getTAmountFromRAmount(toChainID, readyAmount, nonceStr);
   if (toChainID === 3 || toChainID === 3) {
     if (result.state) {

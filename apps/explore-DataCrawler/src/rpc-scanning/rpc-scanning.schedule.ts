@@ -87,7 +87,6 @@ export class RpcScanningSchedule {
         continue;
       }
       scanner.reScanMutex.runExclusive(async () => {
-        scanner.service.logger.info(`rpc scan executeCrawlBlock start`)
         await scanner.service.executeCrawlBlock().catch(error => {
           this.logger.error(
             `executeCrawlBlock error `,

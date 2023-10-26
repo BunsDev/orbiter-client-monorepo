@@ -2,7 +2,7 @@ import { ChainConfigService } from '@orbiter-finance/config';
 import { ApiScanningFactory } from '../../api-scanning/api-scanning.factory';
 import { Controller, Get, Param } from '@nestjs/common';
 import { RpcScanningFactory } from '../../rpc-scanning/rpc-scanning.factory';
-import { BigIntToString } from '@orbiter-finance/utils';
+import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
 @Controller('scanning')
 export class ScanningController {
   constructor(
@@ -107,7 +107,7 @@ export class ScanningController {
     const block = params['block'];
     const factory = this.rpcScanningFactory.createService(chainId);
     const result = await factory.manualScanBlocks([+block]);
-    return result;
+    return JSON.parse(JSONStringify(result));
   }
   // @Get('/api-scan/:chainId/:address')
   // async apiScan(@Param() params, @Query() query: any) {

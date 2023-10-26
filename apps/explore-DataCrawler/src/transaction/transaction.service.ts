@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { TransferAmountTransaction } from './transaction.interface';
+import { fix0xPadStartAddress } from "@orbiter-finance/utils";
 @Injectable()
 export class TransactionService {
     #v2Owners: string[] = [];
@@ -24,8 +25,12 @@ export class TransactionService {
         if (this.#v2Owners.includes(address)) {
             return true;
         }
-        const v1Exists = await this.redis.sismember('v1FakeMaker', address);
-        if (+v1Exists == 1) {
+        // const v1Exists = await this.redis.sismember('v1FakeMaker', address);
+        // if (+v1Exists == 1) {
+        //     return true;
+        // }
+        const v1MakerList = await this.getWatchAddress();
+        if (v1MakerList.find(item => fix0xPadStartAddress(item, 66).toLowerCase() === fix0xPadStartAddress(address, 66).toLowerCase())) {
             return true;
         }
         const v2OwnerExists = await this.redis.sismember('v2Owners', address);

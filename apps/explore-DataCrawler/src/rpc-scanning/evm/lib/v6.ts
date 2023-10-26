@@ -2,6 +2,7 @@ import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, ge
 import { IChainConfig } from '@orbiter-finance/config';
 import { abis, clone, equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
+import _ from 'lodash'
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 
 class Interface2 extends Interface {
@@ -11,6 +12,13 @@ class Interface2 extends Interface {
   checkArgs(args) {
     const length = args.length
     const newArgs = []
+    _.set(newArgs, 'toArray', function(){
+      const result = [];
+      this.forEach((item) => {
+        result.push(item);
+      });
+      return result;
+    })
     for (let i = 0; i < length; i++) {
       try {
         const arg = args[i]
