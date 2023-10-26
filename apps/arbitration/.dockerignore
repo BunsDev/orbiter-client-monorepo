@@ -1,0 +1,17 @@
+node_modules/
+apps/**/node_modules/
+runtime/
+logs/
+.env
+.dockerignore
+npm-debug.log
+Dockerfile
+.git
+.gitignore
+.npmrc
+**/logs
+**/runtime
+.cache
+docker/
+tmp
+vscode

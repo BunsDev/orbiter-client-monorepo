@@ -33,6 +33,10 @@ create-network: ## Create a Docker network if it doesn't exist
 build-docker-base: ## Build the Docker base image
 	docker build -f ./Dockerfile . -t $(BASE_IMAGE)
 
+build-arbitration-api: ## Build the Docker base image
+	cd ./apps/arbitration
+	docker build -f apps/arbitration/Dockerfile . -t orbiter/arbitration-api
+
 build-docker-crawler: ## Build the Explore Data Crawler Docker image
 	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t $(CRAWLER_IMAGE)
 

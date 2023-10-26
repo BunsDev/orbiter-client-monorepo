@@ -1,0 +1,21 @@
+version: '3.8'
+networks:
+   orbiter-network:
+    external: true
+    labels:
+      - "com.docker.compose.project=arbitration-api"
+services:
+  arbitration-api:
+    container_name: "arbitration-api"
+    image: orbiter/arbitration-api:latest
+    labels:
+      - "com.docker.compose.project=arbitration-api"
+    build: .
+    restart: always
+    ports:
+      - '3000:3000'
+    networks:
+      - orbiter-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'
