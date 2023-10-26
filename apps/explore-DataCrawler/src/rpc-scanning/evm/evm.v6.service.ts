@@ -65,6 +65,10 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
             this.chainId,
             toAddrLower,
           );
+          const calldata = row['data'].slice(10);
+          if (isEmpty(calldata)) {
+            continue;
+          }
           if (tokenInfo && EVMV6Utils.isERC20Transfer(row['data'])) {
             // valid from || to
             const result = EVMV6Utils.decodeERC20TransferData(row['data']);
