@@ -122,7 +122,7 @@ const performUserAmountLegality = (userAmount: BigNumber, chain: any) => {
 };
 function getToAmountFromUserAmount(
   userAmount: any,
-  fromTokenDecimal: number,
+  toTokenDecimals: number,
   tradingFee: number,
   gasFeeRatio: number
 ) {
@@ -132,7 +132,7 @@ function getToAmountFromUserAmount(
   let gasFee = toAmount_tradingFee
     .multipliedBy(new BigNumber(gasFeeRatio))
     .dividedBy(new BigNumber(1000));
-  let digit = fromTokenDecimal === 18 ? 5 : 2;
+  let digit = toTokenDecimals === 18 ? 5 : 2;
   // accessLogger.info('digit =', digit)
   let gasFee_fix = gasFee.decimalPlaces(digit, BigNumber.ROUND_UP);
   // accessLogger.info('gasFee_fix =', gasFee_fix.toString())
@@ -424,7 +424,7 @@ export function getAmountToSend(
   )
   const calcResult = getToAmountFromUserAmount(
     value,
-    fromTokenDecimals, tradingFee, gasFeeRatio,
+    toTokenDecimals, tradingFee, gasFeeRatio,
   );
   if (!calcResult) {
     return;
