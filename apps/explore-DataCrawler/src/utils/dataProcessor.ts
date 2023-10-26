@@ -1,7 +1,7 @@
 import { generateSequenceNumbers } from "@orbiter-finance/utils";
 import { Level } from "level";
-import { readFileSync, outputFile } from 'fs-extra';
 import winston from "winston";
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 
 export default class DataProcessor {
     private dataSet: Set<number> = new Set();
@@ -66,8 +66,12 @@ export default class DataProcessor {
     async changeMaxScanBlockNumber(
         blockNumber: number,
     ): Promise<void> {
-        const result = await outputFile(
-            `runtime/scan/${this.chainId}`,
+        const directory = `runtime/scan`;
+        if (!existsSync(directory)) {
+            mkdirSync(directory);
+        }
+        const result = await writeFileSync(
+            `${directory}/${this.chainId}`,
             blockNumber.toString(),
         );
         this.nextMaxScanBlockNumber = blockNumber;
@@ -86,11 +90,11 @@ export default class DataProcessor {
     public async initMaxScanBlockNumber(): Promise<number> {
         let blockNumber;
         try {
-            blockNumber = +readFileSync(`runtime/scan/${this.chainId}`);
+            blockNumber = readFileSync(`runtime/scan/${this.chainId}`);
         } catch (error) {
             blockNumber = 0;
         }
-        this.nextMaxScanBlockNumber = blockNumber;
+        this.nextMaxScanBlockNumber = +blockNumber;
         return this.nextMaxScanBlockNumber;
     }
 

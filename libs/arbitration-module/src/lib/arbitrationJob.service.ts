@@ -6,10 +6,12 @@ import { Mutex, MutexInterface, Semaphore, SemaphoreInterface, withTimeout } fro
 import { ArbitrationModuleService } from './arbitration-module.service';
 import { ArbitrationTransaction } from './arbitration.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { HTTPGet, HTTPPost } from '@orbiter-finance/utils';
 const mutex = new Mutex();
-
+// arbitration-client
 @Injectable()
 export class ArbitrationJobService {
+  private arbitrationHashs:string[] = [];
   private readonly logger = new Logger(ArbitrationJobService.name);
   constructor(protected envConfigService: ENVConfigService,
     private arbitrationService: ArbitrationModuleService,
@@ -22,6 +24,12 @@ export class ArbitrationJobService {
   async syncChainInfo() {
     const client = await this.arbitrationService.getSubClient()
     this.arbitrationService.chainRels = await client.manager.getChainRels();
+  }
+  @Interval(1000 * 60 * 1)
+  async syncProof() {
+    for (const hash of this.arbitrationHashs) {
+      const result = await HTTPGet(`http://localhost:3000/proof/${hash}`);
+    }
   }
 
   @Cron('*/5 * * * * *', {
@@ -247,5 +255,7 @@ export class ArbitrationJobService {
         }
       })
   }
+
+
 
 }

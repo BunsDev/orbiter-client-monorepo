@@ -1,6 +1,5 @@
 import { get, set, clone, isEmpty, isEqual ,groupBy} from 'lodash';
 import { Inject, Injectable } from '@nestjs/common';
-import { outputFile } from 'fs-extra';
 import * as yaml from 'js-yaml';
 import { join } from 'path';
 import { ConsulService } from 'libs/consul/src/lib/consul.service'
@@ -101,7 +100,7 @@ export class MakerV1RuleService {
             delete cloneConfig['privateKey'];
             const data = yaml.dump(cloneConfig);
             const filePath = join(this.options.cachePath, chainConfigPath);
-            await outputFile(filePath, data);
+            // await outputFile(filePath, data);
         }
     }
 }
