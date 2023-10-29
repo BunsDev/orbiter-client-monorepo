@@ -117,10 +117,10 @@ export class SequencerScheduleService {
 
   private async consumeMQTransactionRecords(bridgeTransaction: BridgeTransactionAttributes) {
     this.logger.info(`consumeMQTransactionRecords ${JSON.stringify(bridgeTransaction)}`)
-    const owners = this.envConfig.get("MAKERS") || [];
+    // const owners = this.envConfig.get("MAKERS") || [];
     const chains = this.chainConfigService.getAllChains()
     const targetChainInfo = chains.find(chain => String(chain.chainId) === bridgeTransaction.targetChain)
-    if (!owners.includes(bridgeTransaction.sourceMaker) || !targetChainInfo) {
+    if (!targetChainInfo) {
       this.logger.warn(`sourceId:${bridgeTransaction.sourceId}, bridgeTransaction does not match the maker or chain, sourceMaker:${bridgeTransaction.sourceMaker}, chainId:${bridgeTransaction.targetChain}`)
     }
     const key = `${bridgeTransaction.targetChain}-${bridgeTransaction.sourceMaker}`.toLocaleLowerCase();
