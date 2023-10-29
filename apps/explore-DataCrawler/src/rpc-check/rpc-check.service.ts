@@ -12,9 +12,7 @@ export class RpcCheckService {
         private rpcScanningFactory: RpcScanningFactory,
         private chainConfig: ChainConfigService
     ) {
-        // labelNames: ["network", "latestBlockNumber", "lastScannedBlockNumber", "processingCount", "waitBlockCount"]
-        setInterval(this.task.bind(this), 1000 * 10);
-        this.task();
+        setInterval(this.task.bind(this), 1000 * 30);
     }
     async task() {
         const results = await this.getRpcStatus();
