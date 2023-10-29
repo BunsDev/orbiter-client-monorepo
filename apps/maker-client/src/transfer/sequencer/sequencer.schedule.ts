@@ -119,7 +119,7 @@ export class SequencerScheduleService {
     this.logger.info(`consumeMQTransactionRecords ${JSON.stringify(bridgeTransaction)}`)
     // const owners = this.envConfig.get("MAKERS") || [];
     const chains = this.chainConfigService.getAllChains()
-    const targetChainInfo = chains.find(chain => String(chain.chainId) === bridgeTransaction.targetChain)
+    const targetChainInfo = chains.find(chain => String(chain.chainId) === String(bridgeTransaction.targetChain))
     if (!targetChainInfo) {
       this.logger.warn(`sourceId:${bridgeTransaction.sourceId}, bridgeTransaction does not match the maker or chain, sourceMaker:${bridgeTransaction.sourceMaker}, chainId:${bridgeTransaction.targetChain}`)
     }

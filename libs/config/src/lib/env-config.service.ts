@@ -30,7 +30,7 @@ export class ENVConfigService {
                     (config: KeyValueResult) => {
                         const data = config.yamlToJSON();
                         this.#init = true;
-                        if (!isEqual(data, ENVConfigService.configs)) {
+                        if (data) {
                             ENVConfigService.configs = data;
                             // this.write();
                         }
