@@ -1,57 +1,22 @@
 import { ChainConfigService } from '@orbiter-finance/config';
-import { ApiScanningFactory } from '../../api-scanning/api-scanning.factory';
+import { ApiScanningFactory } from '../api-scanning/api-scanning.factory';
 import { Controller, Get, Param } from '@nestjs/common';
-import { RpcScanningFactory } from '../../rpc-scanning/rpc-scanning.factory';
+import { RpcScanningFactory } from '../rpc-scanning/rpc-scanning.factory';
 import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
+import { RpcCheckService } from './rpc-check.service';
 @Controller('scanning')
 export class ScanningController {
   constructor(
     private rpcScanningFactory: RpcScanningFactory,
     private apiScanningFactory: ApiScanningFactory,
     protected chainConfigService: ChainConfigService,
+    private rpcCheckService: RpcCheckService
   ) { }
   @Get('/status')
   async rpcStatus() {
-    const startTime = Date.now();
-    try {
-      const result = {};
-      for (const chain of this.chainConfigService.getAllChains()) {
-        if (!chain.service) {
-          continue;
-        }
-        const serviceKeys = Object.keys(chain.service);
-        try {
-          if (serviceKeys.includes('rpc')) {
-            const factory = this.rpcScanningFactory.createService(
-              chain.chainId,
-            );
-            const result = await Promise.all([factory.rpcLastBlockNumber, factory.dataProcessor.getNextScanMaxBlockNumber(), factory.dataProcessor.getDataCount()]);
-            const latestBlockNumber = +result[0]
-            const lastScannedBlockNumber = +result[1];
-            const waitBlockCount = result[2];
-            result[chain.chainId] = {
-              chainId: factory.chainId,
-              latestBlockNumber,
-              lastScannedBlockNumber,
-              backward: latestBlockNumber - lastScannedBlockNumber,
-              waitBlockCount: waitBlockCount,
-            };
-          }
-        } catch (error) {
-          console.log(error);
-        }
-      }
-      return {
-        errno: 0,
-        data: result,
-        timestamp: Date.now(),
-        response: (Date.now() - startTime) / 1000
-      };
-    } catch (error) {
-      return {
-        errno: 1000,
-        errmsg: error.message,
-      };
+    return {
+      errno: 0,
+      data: await this.rpcCheckService.getRpcStatus()
     }
   }
   // @Get('/owners')

@@ -15,7 +15,7 @@ import { TransactionService } from '../transaction/transaction.service';
 
 @Injectable()
 export class RpcScanningFactory {
-  private services: { [key: string]: RpcScanningService } = {}
+  public services: { [key: string]: RpcScanningService } = {}
   constructor(
     private chainConfigService: ChainConfigService,
     private transactionService: TransactionService

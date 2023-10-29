@@ -5,7 +5,7 @@
   "scripts": {
     "dev:explore-open-api": "npx nx run explore-open-api:serve",
     "dev:arbitration": "npx nx run arbitration:serve",
-    "dev:explore-DataCrawler": "npm nx run explore-DataCrawler:serve",
+    "dev:explore-DataCrawler": "npx nx run explore-DataCrawler:serve",
     "dev:explore-DataRefinery": "npx nx run explore-DataRefinery:serve",
     "dev:maker-client": "npx nx run maker-client:serve"
   },
@@ -30,6 +30,7 @@
     "@nx/node": "17.0.1",
     "@nx/webpack": "17.0.1",
     "@nx/workspace": "17.0.1",
+    "@willsoto/nestjs-prometheus": "^6.0.0",
     "amqplib": "^0.10.3",
     "async-mutex": "^0.4.0",
     "axios": "^1.5.1",
@@ -53,6 +54,7 @@
     "nest-winston": "^1.9.4",
     "nx": "17.0.1",
     "pg": "^8.11.3",
+    "prom-client": "^15.0.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "sequelize": "^6.33.0",

@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { RpcScanningModule } from './rpc-scanning/rpc-scanning.module';
-import { ApiModule } from './api/api.module';
 import { ApiScanningModule } from './api-scanning/api-scanning.module';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -13,10 +12,14 @@ import { ConsulModule } from '@orbiter-finance/consul';
 import { join } from 'path';
 import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
+
+import { RpcCheckModule } from './rpc-check/rpc-check.module';
+
 dayjs.extend(utc);
 
 @Module({
   imports: [
+    RpcCheckModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -58,7 +61,6 @@ dayjs.extend(utc);
     RabbitMqModule,
     RpcScanningModule,
     ApiScanningModule,
-    ApiModule,
     ScheduleModule.forRoot(),
     TransactionModule,
   ],
