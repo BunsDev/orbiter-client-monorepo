@@ -20,18 +20,20 @@ export class RpcCheckService {
         const results = await this.getRpcStatus();
         for (const chainId in results) {
             const data = results[chainId];
-            const chain = await this.chainConfig.getChainInfo(chainId);
-            // last block
-            this.rpcLastBlock.labels({
-                "network": chain.name,
-            }).set(data.latestBlockNumber);
-            // 
-            this.rpcScanBlock.labels({
-                "network": chain.name,
-            }).set(data.lastScannedBlockNumber);
-            this.rpcScanBlockWait.labels({
-                "network": chain.name,
-            }).set(data.waitBlockCount + data.behind);
+            if (data) {
+                const chain = await this.chainConfig.getChainInfo(chainId);
+                // last block
+                this.rpcLastBlock.labels({
+                    "network": chain.name,
+                }).set(data.latestBlockNumber);
+                // 
+                this.rpcScanBlock.labels({
+                    "network": chain.name,
+                }).set(data.lastScannedBlockNumber);
+                this.rpcScanBlockWait.labels({
+                    "network": chain.name,
+                }).set(data.waitBlockCount + data.behind);
+            }
         }
     }
     async getStatusByService(chainId: string) {
@@ -56,7 +58,11 @@ export class RpcCheckService {
         const result = {
         }
         for (const chainId in services) {
-            result[chainId] = await this.getStatusByService(chainId);
+            try {
+                result[chainId] = await this.getStatusByService(chainId);
+            } catch (error) {
+                console.error(`${chainId} getRpcStatus error`, error);
+            }
         }
         return result;
     }
