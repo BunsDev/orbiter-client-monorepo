@@ -27,7 +27,7 @@ export class V3Service {
     if (!params || !(params instanceof Array) || params.length < 1 || !params[0]) {
       throw new Error('Invalid params');
     }
-    const hash = params[0];
+    const hash = String(params[0]);
     const txRes = await keyv.get(`${hash}_tx`);
     if (txRes) return txRes;
     const bridgeTransaction: BridgeTransactionAttributes = <any>await this.BridgeTransactionModel.findOne(<any>{

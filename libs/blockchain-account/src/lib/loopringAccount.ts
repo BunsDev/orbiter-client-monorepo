@@ -163,7 +163,7 @@ export class LoopringAccount extends OrbiterAccount {
         return { from: res.receiverAddress, to: res.senderAddress, ...res };
       }
     }
-    console.log(`loopring ${transactionHash} waitForTransactionConfirmation ...`);
+    console.log(`${this.chainConfig.name} ${transactionHash} waitForTransactionConfirmation ...`);
     await sleep(1000);
     return await this.waitForTransactionConfirmation(transactionHash);
   }

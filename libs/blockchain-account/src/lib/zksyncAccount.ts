@@ -112,7 +112,7 @@ export class ZkSyncAccount extends OrbiterAccount  {
         return { ...res.tx, ...res.tx.op };
       }
     }
-    console.log(`${transactionHash} waitForTransactionConfirmation ...`);
+    console.log(`${this.chainConfig.name} ${transactionHash} waitForTransactionConfirmation ...`);
     await sleep(1000);
     return await this.waitForTransactionConfirmation(transactionHash);
   }

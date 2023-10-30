@@ -165,7 +165,7 @@ export class StarknetAccount extends OrbiterAccount {
       }
     }
     await sleep(3000);
-    console.log(`starknet ${transactionHash} waitForTransactionConfirmation ...`);
+    console.log(`${this.chainConfig.name} ${transactionHash} waitForTransactionConfirmation ...`);
     return await this.waitForTransactionConfirmation(transactionHash);
   }
 }
