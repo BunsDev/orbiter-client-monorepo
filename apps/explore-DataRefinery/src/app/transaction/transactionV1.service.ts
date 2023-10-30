@@ -112,7 +112,6 @@ export class TransactionV1Service {
       if (!sourceToken) {
         throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `${transfer.token} sourceToken not found`)
       }
-      console.log('---sourceToken', sourceToken)
       result.sourceToken = sourceToken;
 
       let targetChainId: number
@@ -125,7 +124,7 @@ export class TransactionV1Service {
       };
       let isXvm = false
       const contract = sourceChain.contract;
-      if (transfer.contract && (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1')) {
+      if (transfer.contract && !['SN_MAIN', 'SN_TEST'].includes(transfer.chainId) && (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1')) {
         if (transfer.signature === 'swap(address,address,uint256,bytes)') {
           const targetInfo = decodeV1SwapData(transfer.calldata[3])
           isXvm = true
