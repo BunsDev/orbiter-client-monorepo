@@ -160,7 +160,7 @@ export class TransactionV1Service {
       };
     }
     result.sourceToken = sourceToken;
-    
+
     let targetChainId = this.parseSourceTxSecurityCode(transfer.amount);
     let xvmTargetInfo = {} as {
       toChainId: number;
@@ -183,7 +183,7 @@ export class TransactionV1Service {
     if (targetChainId === 0 && transfer.contract) {
       const contract = sourceChain.contract;
       if (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1') {
-        if(transfer.signature === 'swap(address,address,uint256,bytes)'){
+        if (transfer.signature === 'swap(address,address,uint256,bytes)') {
           const targetInfo = decodeV1SwapData(transfer.calldata[3])
           targetChainId = targetInfo.toChainId
           isXvm = true
@@ -364,19 +364,15 @@ export class TransactionV1Service {
     if (data.ebc) {
       createdData.ebcAddress = data.ebc.address;
     }
-    if (data.targetChain) {
-      if (data.sourceChain) {
-        createdData.sourceChain = data.sourceChain.chainId;
-        const sourceToken = data.sourceToken;
-        if (sourceToken) {
-          createdData.targetToken = sourceToken.address.toLowerCase();
-          createdData.targetSymbol = sourceToken.symbol;
-        }
+    if (!sourceChain) {
+      createdData.sourceChain = sourceChain.chainId;
+      if (sourceToken && !createdData.sourceToken) {
+        createdData.sourceToken = sourceToken.address.toLowerCase();
+        createdData.sourceSymbol = sourceToken.symbol;
       }
     }
-    if (data.targetChain) {
+    if (targetChain) {
       createdData.targetChain = data.targetChain.chainId;
-      const targetToken = data.targetToken;
       if (targetToken) {
         createdData.targetToken = targetToken.address.toLowerCase();
         createdData.targetSymbol = targetToken.symbol;
@@ -402,8 +398,8 @@ export class TransactionV1Service {
       }
     } else {
       createdData.targetAmount = new BigNumber(targetAmount)
-      .div(10 ** targetToken.decimals)
-      .toString();
+        .div(10 ** targetToken.decimals)
+        .toString();
     }
     createdData.transactionId = TransactionID(
       transfer.sender,
