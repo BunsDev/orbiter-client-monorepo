@@ -15,7 +15,7 @@ export class MetricService {
         setInterval(this.task.bind(this), 1000 * 30);
     }
     async task() {
-        const results = await this.getRpcStatus();
+        const results = await this.rpcScanningFactory.getRpcStatus();
         for (const chainId in results) {
             const data = results[chainId];
             if (data) {
@@ -34,34 +34,5 @@ export class MetricService {
             }
         }
     }
-    async getStatusByService(chainId: string) {
-        const factory = await this.rpcScanningFactory.services[chainId];
-        if (!factory) {
-            throw new Error(`${chainId} factory not found`)
-        }
-        const latestBlockNumber = factory.rpcLastBlockNumber;
-        const lastScannedBlockNumber = await factory.dataProcessor.getNextScanMaxBlockNumber()
-        return {
-            chainId: factory.chainId,
-            latestBlockNumber,
-            lastScannedBlockNumber,
-            behind: latestBlockNumber - lastScannedBlockNumber,
-            processingCount: factory.dataProcessor.getProcessingCount(),
-            waitBlockCount: factory.dataProcessor.getDataCount(),
-            rate: factory.getRate(),
-        };
-    }
-    async getRpcStatus() {
-        const services = await this.rpcScanningFactory.services;
-        const result = {
-        }
-        for (const chainId in services) {
-            try {
-                result[chainId] = await this.getStatusByService(chainId);
-            } catch (error) {
-                console.error(`${chainId} getRpcStatus error`, error);
-            }
-        }
-        return result;
-    }
+
 }

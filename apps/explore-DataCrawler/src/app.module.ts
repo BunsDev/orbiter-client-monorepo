@@ -9,11 +9,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
-import { join } from 'path';
 import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 
 import { MetricModule } from './metric/metric.module';
+import {AppController} from './app.controller'
 
 dayjs.extend(utc);
 
@@ -64,7 +64,7 @@ dayjs.extend(utc);
     TransactionModule,
     MetricModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule { }

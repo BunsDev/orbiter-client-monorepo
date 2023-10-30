@@ -86,4 +86,35 @@ export class RpcScanningFactory {
     service.init()
     return this.services[chainId];
   }
+
+  async getRpcStatusByChain(chainId: string) {
+    const factory = await this.services[chainId];
+    if (!factory) {
+      throw new Error(`${chainId} factory not found`)
+    }
+    const latestBlockNumber = factory.rpcLastBlockNumber;
+    const lastScannedBlockNumber = await factory.dataProcessor.getNextScanMaxBlockNumber()
+    return {
+      chainId: factory.chainId,
+      latestBlockNumber,
+      lastScannedBlockNumber,
+      behind: latestBlockNumber - lastScannedBlockNumber,
+      processingCount: factory.dataProcessor.getProcessingCount(),
+      waitBlockCount: factory.dataProcessor.getDataCount(),
+      rate: factory.getRate(),
+    };
+  }
+  async getRpcStatus() {
+    const services = await this.services;
+    const result = {
+    }
+    for (const chainId in services) {
+      try {
+        result[chainId] = await this.getRpcStatusByChain(chainId);
+      } catch (error) {
+        console.error(`${chainId} getRpcStatus error`, error);
+      }
+    }
+    return result;
+  }
 }
