@@ -230,7 +230,7 @@ export class TransactionV1Service {
         sourceToken.symbol,
       );
     }
-    if (!targetChain) {
+    if (!targetToken) {
       await this.transfersModel.update(
         {
           opStatus: 3,
