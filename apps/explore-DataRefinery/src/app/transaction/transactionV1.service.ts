@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { padEnd } from 'lodash';
 import dayjs from 'dayjs';
 import { equals, fix0xPadStartAddress, TransactionID } from '@orbiter-finance/utils';
-import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel } from '@orbiter-finance/seq-models';
+import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService, Token } from '@orbiter-finance/config';
 import { getAmountToSend } from '../utils/oldUtils';
@@ -12,7 +12,7 @@ import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
 import { Sequelize } from 'sequelize-typescript';
 import { OrbiterLogger } from '@orbiter-finance/utils';
-import { LoggerDecorator, decodeV1SwapData } from '@orbiter-finance/utils';
+import { LoggerDecorator, decodeV1SwapData, ValidSourceTxError } from '@orbiter-finance/utils';
 import { utils } from 'ethers'
 import { validateAndParseAddress } from 'starknet'
 @Injectable()
@@ -96,183 +96,168 @@ export class TransactionV1Service {
 
   public async validSourceTxInfo(transfer: TransfersModel) {
     const result: any = {};
-    if (+transfer.nonce >= 9000) {
-      await this.transfersModel.update(
-        {
-          opStatus: 5,
-        },
-        {
-          where: {
-            id: transfer.id,
-          },
-        },
-      );
-      return {
-        code: 1,
-        errmsg: `Exceeded the maximum nonce value ${transfer.nonce} / 9000`,
-        data: result,
-      };
-    }
-    const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);
-    if (!sourceChain) {
-      await this.transfersModel.update(
-        {
-          opStatus: 2,
-        },
-        {
-          where: {
-            id: transfer.id,
-          },
-        },
-      );
-      this.logger.error(
-        `${transfer.hash} ${transfer.chainId} sourceChain not found`,
-      );
-      return {
-        code: 1,
-        errmsg: 'sourceChain not found',
-        data: result,
-      };
-    }
-    result.sourceChain = sourceChain;
-    const sourceToken = this.chainConfigService.getTokenByAddress(
-      sourceChain.chainId,
-      transfer.token,
-    );
-    if (!sourceToken) {
-      await this.transfersModel.update(
-        {
-          opStatus: 2,
-        },
-        {
-          where: {
-            id: transfer.id,
-          },
-        },
-      );
-      this.logger.error(
-        `${transfer.hash} ${transfer.token} sourceToken not found`,
-      );
-      return {
-        code: 1,
-        errmsg: 'sourceToken not found',
-        data: result,
-      };
-    }
-    result.sourceToken = sourceToken;
-
-    let targetChainId = this.parseSourceTxSecurityCode(transfer.amount);
-    let xvmTargetInfo = {} as {
-      toChainId: number;
-      toTokenAddress: string;
-      toWalletAddress: string;
-      expectValue: string;
-      slippage: number;
-    };
-    let isXvm = false
-    // targetChainId
-    if ([9, 99].includes(+sourceChain.internalId)) {
-      // TODO:
-      if (transfer.calldata && Array.isArray(transfer.calldata) && transfer.calldata.length) {
-        targetChainId = Number(transfer.calldata[0]) % 1000;
-        if (transfer.calldata.length >= 2) {
-          result.targetAddress = transfer.calldata[1].toLocaleLowerCase();
-        }
+    try {
+      if (+transfer.nonce >= 9000) {
+        throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 9000`)
       }
-    }
-    if (targetChainId === 0 && transfer.contract) {
+      const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);
+      if (!sourceChain) {
+        throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `sourceChain not found`)
+      }
+      result.sourceChain = sourceChain;
+      const sourceToken = this.chainConfigService.getTokenByAddress(
+        sourceChain.chainId,
+        transfer.token,
+      );
+      if (!sourceToken) {
+        throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `${transfer.token} sourceToken not found`)
+      }
+      console.log('---sourceToken', sourceToken)
+      result.sourceToken = sourceToken;
+
+      let targetChainId: number
+      let xvmTargetInfo = {} as {
+        toChainId: number;
+        toTokenAddress: string;
+        toWalletAddress: string;
+        expectValue: string;
+        slippage: number;
+      };
+      let isXvm = false
       const contract = sourceChain.contract;
-      if (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1') {
+      if (transfer.contract && (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1')) {
         if (transfer.signature === 'swap(address,address,uint256,bytes)') {
           const targetInfo = decodeV1SwapData(transfer.calldata[3])
-          targetChainId = targetInfo.toChainId
           isXvm = true
           xvmTargetInfo = targetInfo
+          result.targetAmount = xvmTargetInfo.expectValue
         }
       }
-    }
-    const targetChain = this.chainConfigService.getChainByKeyValue(
-      'internalId',
-      targetChainId,
-    );
-    if (!targetChain) {
-      // change data
-      await this.transfersModel.update(
-        {
-          opStatus: 3,
-        },
-        {
-          where: {
-            id: transfer.id,
-          },
-        },
-      );
-      this.logger.error(
-        `${transfer.hash} ${targetChainId} ${targetChain} targetChain not found`,
-      );
-      return {
-        code: 1,
-        errmsg: 'targetChain not found',
-        data: result,
-      };
-    }
-    result.targetChain = targetChain;
-    //
-    let targetToken: Token
-    if (isXvm) {
-      targetToken = this.chainConfigService.getTokenByAddress(
-        targetChain.chainId,
-        xvmTargetInfo.toTokenAddress,
-      );
-    } else {
-      targetToken = this.chainConfigService.getTokenBySymbol(
-        targetChain.chainId,
-        sourceToken.symbol,
-      );
-    }
-    if (!targetToken) {
-      await this.transfersModel.update(
-        {
-          opStatus: 3,
-        },
-        {
-          where: {
-            id: transfer.id,
-          },
-        },
-      );
-      this.logger.error(`${transfer.hash} ${targetChain.chainId} targetToken not found`);
-      return {
-        code: 1,
-        errmsg: 'targetToken not found',
-        data: result,
-      };
-    }
-    result.targetToken = targetToken;
-    let rule;
-    if (targetToken) {
-      rule = this.makerV1RuleService.getAll().find((rule) => {
-        const {
-          sourceChainId,
-          targetChainId,
-          sourceSymbol,
-          targetSymbol,
-          makerAddress,
-        } = rule;
-        return (
-          equals(sourceChainId, sourceChain.internalId) &&
-          equals(targetChainId, targetChain.internalId) &&
-          equals(sourceSymbol, sourceToken.symbol) &&
-          equals(targetSymbol, targetToken.symbol) &&
-          equals(makerAddress, transfer.receiver)
-        );
-      });
-    }
+      targetChainId = this.parseSourceTxSecurityCode(transfer.amount);
+      if (isXvm) {
+        targetChainId = xvmTargetInfo.toChainId
+      } else if ([9, 99].includes(+sourceChain.internalId)) {
+        if (transfer.calldata && Array.isArray(transfer.calldata) && transfer.calldata.length) {
+          targetChainId = Number(transfer.calldata[0]) % 1000;
+        }
+      }
 
-    if (!rule) {
+      // targetChainId
+      const targetChain = this.chainConfigService.getChainByKeyValue(
+        'internalId',
+        targetChainId,
+      );
+      if (!targetChain) {
+        throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetChain.chainId:${targetChain.chainId} targetChain not found`)
+      }
+      result.targetChain = targetChain;
+      //
+      let targetToken: Token
+      if (isXvm) {
+        targetToken = this.chainConfigService.getTokenByAddress(
+          targetChain.chainId,
+          xvmTargetInfo.toTokenAddress,
+        );
+      } else {
+        targetToken = this.chainConfigService.getTokenBySymbol(
+          targetChain.chainId,
+          sourceToken.symbol,
+        );
+      }
+      if (!targetToken) {
+        throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetChain.chainId:${targetChain.chainId}, targetToken not found`)
+      }
+      result.targetToken = targetToken;
+      let rule;
+      if (targetToken) {
+        rule = this.makerV1RuleService.getAll().find((rule) => {
+          const {
+            sourceChainId,
+            targetChainId,
+            sourceSymbol,
+            targetSymbol,
+            makerAddress,
+          } = rule;
+          return (
+            equals(sourceChainId, sourceChain.internalId) &&
+            equals(targetChainId, targetChain.internalId) &&
+            equals(sourceSymbol, sourceToken.symbol) &&
+            equals(targetSymbol, targetToken.symbol) &&
+            equals(makerAddress, transfer.receiver)
+          );
+        });
+      }
+
+      if (!rule) {
+        const errMsg = `sourceChain.internalId: ${sourceChain.internalId}, targetChain.internalId:${targetChain.internalId}, sourceToken.symbol:${sourceToken.symbol}, targetToken.symbol:${targetToken.symbol}, transfer.receiver:${transfer.receiver}`
+        throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, errMsg)
+      }
+      result.targetMaker = rule.sender;
+      result.rule = rule;
+      if (targetChain) {
+        const sourceChainID = +sourceChain.internalId;
+        const targetChainID = +targetChain.internalId;
+        if ([4, 44].includes(targetChainID)) {
+          const calldata = transfer.calldata as string[];
+          if (calldata.length > 0) {
+            if (transfer.signature === 'transfer(address,bytes)') {
+              const address = fix0xPadStartAddress(
+                transfer.calldata[1].replace('0x03', ''),
+                66,
+              );
+              result.targetAddress = address.toLocaleLowerCase();
+            } else if (
+              transfer.signature ===
+              'transferERC20(address,address,uint256,bytes)'
+            ) {
+              const address = fix0xPadStartAddress(
+                transfer.calldata[3].replace('0x03', ''),
+                66,
+              );
+              result.targetAddress = address.toLocaleLowerCase();
+            } else if (isXvm && xvmTargetInfo.toWalletAddress) {
+              result.targetAddress = validateAndParseAddress(xvmTargetInfo.toWalletAddress)
+            }
+          }
+        } else if ([4, 44].includes(sourceChainID)) {
+          if (
+            Array.isArray(transfer.calldata) &&
+            transfer.calldata.length === 5 &&
+            transfer.signature === 'transferERC20(felt,felt,Uint256,felt)'
+          ) {
+            result.targetAddress = fix0xPadStartAddress(
+              transfer.calldata[4].toLocaleLowerCase(),
+              42,
+            );
+          }
+        } else if ([9, 99].includes(sourceChainID)) {
+          if (transfer.calldata && Array.isArray(transfer.calldata)) {
+            if (transfer.calldata.length === 1) {
+              result.targetAddress = transfer.sender;
+            } else if (transfer.calldata.length === 2) {
+              result.targetAddress = transfer.calldata[1];
+            }
+          }
+        } else {
+          result.targetAddress = transfer.sender;
+        }
+      }
+      if (!result.targetAddress) {
+        throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, `targetAddress not found`)
+      }
+      return {
+        code: 0,
+        errmsg: '',
+        data: result,
+      };
+    } catch (error) {
+      if (!(error instanceof ValidSourceTxError)) {
+        throw error
+      }
+      const validSourceTxError = error as ValidSourceTxError
       await this.transfersModel.update(
         {
-          opStatus: 4,
+          opStatus: validSourceTxError.opStatus,
         },
         {
           where: {
@@ -280,77 +265,13 @@ export class TransactionV1Service {
           },
         },
       );
+      this.logger.error(`hash: ${transfer.hash}, chainId:${transfer.chainId} => ${validSourceTxError.message}`);
       return {
         code: 1,
-        errmsg: 'Rule not found',
+        errmsg: validSourceTxError.message,
         data: result,
       };
     }
-    result.targetMaker = rule.sender;
-    result.rule = rule;
-    if (targetChain) {
-      const sourceChainID = +sourceChain.internalId;
-      const targetChainID = +targetChain.internalId;
-      if ([4, 44].includes(targetChainID)) {
-        const calldata = transfer.calldata as string[];
-        if (calldata.length > 0) {
-          if (transfer.signature === 'transfer(address,bytes)') {
-            const address = fix0xPadStartAddress(
-              transfer.calldata[1].replace('0x03', ''),
-              66,
-            );
-            result.targetAddress = address.toLocaleLowerCase();
-          } else if (
-            transfer.signature ===
-            'transferERC20(address,address,uint256,bytes)'
-          ) {
-            const address = fix0xPadStartAddress(
-              transfer.calldata[3].replace('0x03', ''),
-              66,
-            );
-            result.targetAddress = address.toLocaleLowerCase();
-          } else if (isXvm && xvmTargetInfo.toWalletAddress) {
-            result.targetAddress = validateAndParseAddress(xvmTargetInfo.toWalletAddress)
-          }
-        }
-      } else if ([4, 44].includes(sourceChainID)) {
-        if (
-          Array.isArray(transfer.calldata) &&
-          transfer.calldata.length === 5 &&
-          transfer.signature === 'transferERC20(felt,felt,Uint256,felt)'
-        ) {
-          result.targetAddress = fix0xPadStartAddress(
-            transfer.calldata[4].toLocaleLowerCase(),
-            42,
-          );
-        }
-      } else if ([9, 99].includes(sourceChainID)) {
-        if (transfer.calldata && Array.isArray(transfer.calldata)) {
-          if (transfer.calldata.length === 1) {
-            result.targetAddress = transfer.sender;
-          } else if (transfer.calldata.length === 2) {
-            result.targetAddress = transfer.calldata[1];
-          }
-        }
-      } else {
-        result.targetAddress = transfer.sender;
-      }
-    }
-    if (!result.targetAddress) {
-      return {
-        code: 1,
-        errmsg: 'targetAddress not found',
-        data: result,
-      };
-    }
-    if (isXvm && xvmTargetInfo.expectValue) {
-      result.targetAmount = xvmTargetInfo.expectValue
-    }
-    return {
-      code: 0,
-      errmsg: '',
-      data: result,
-    };
   }
   private buildSourceTxData(
     transfer: TransfersModel,

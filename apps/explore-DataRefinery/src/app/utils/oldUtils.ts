@@ -129,15 +129,16 @@ function getToAmountFromUserAmount(
   let toAmount_tradingFee = new BigNumber(userAmount).minus(
     new BigNumber(tradingFee),
   );
+  // console.log('tradingFee', tradingFee, toAmount_tradingFee.toString())
   let gasFee = toAmount_tradingFee
     .multipliedBy(new BigNumber(gasFeeRatio))
     .dividedBy(new BigNumber(1000));
   let digit = toTokenDecimals === 18 ? 5 : 2;
-  // accessLogger.info('digit =', digit)
+  // console.info('digit =', digit, gasFee.toString())
   let gasFee_fix = gasFee.decimalPlaces(digit, BigNumber.ROUND_UP);
-  // accessLogger.info('gasFee_fix =', gasFee_fix.toString())
+  // console.info('gasFee_fix =', gasFee_fix.toString())
   let toAmount_fee = toAmount_tradingFee.minus(gasFee_fix);
-  // accessLogger.info('toAmount_fee =', toAmount_fee.toString())
+  // console.info('toAmount_fee =', toAmount_fee.toString())
   if (!toAmount_fee || isNaN(Number(toAmount_fee))) {
     return null;
   }

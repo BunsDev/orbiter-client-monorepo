@@ -311,3 +311,13 @@ export function toHex(num, length) {
 export function getDecimalBySymbol(symbol: string) {
   return ['USDC', 'USDT'].includes(symbol.toUpperCase()) ? 6 : 18;
 }
+
+export class ValidSourceTxError extends Error {
+  public opStatus: number
+  public msg: string
+  constructor(opStatus: number, msg: string) {
+    super(msg)
+    this.opStatus = opStatus;
+    this.msg = msg;
+  }
+}

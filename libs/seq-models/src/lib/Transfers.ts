@@ -34,6 +34,16 @@ export interface TransfersAttributes {
   feeToken?: string;
 }
 
+
+export enum TransferOpStatus {
+  SOURCE_CHAIN_OR_TOKEN_NOT_FOUND = 2,
+  TARGET_CHAIN_OR_TOKEN_NOT_FOUND = 3,
+  RULE_NOT_FOUND = 4,
+  NONCE_EXCEED_MAXIMUM = 5,
+  MATCHED = 99,
+}
+
+
 @Table({ tableName: 'transfers', timestamps: true })
 export class Transfers
   extends Model<TransfersAttributes, TransfersAttributes>
