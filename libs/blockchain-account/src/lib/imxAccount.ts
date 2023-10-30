@@ -10,7 +10,7 @@ import { equals, HTTPGet, sleep } from "@orbiter-finance/utils";
 import { TransactionRequest, TransferResponse } from "./IAccount.interface";
 export class IMXAccount extends OrbiterAccount {
   private L1Wallet: ethers.Wallet;
-  private readonly client: ImmutableX;
+  private client: ImmutableX;
 
   async connect(privateKey: string) {
     const chainConfig = this.chainConfig;
@@ -90,7 +90,7 @@ export class IMXAccount extends OrbiterAccount {
     address?: string
   ): Promise<bigint> {
     if (token.toLowerCase() === this.chainConfig.nativeCurrency.address.toLowerCase()) {
-      const res = await HTTPGet(`${this.chainConfig.api}/v1/balances/${address || this.L1Wallet.address}`);
+      const res: any = await HTTPGet(`${this.chainConfig.api}/v1/balances/${address || this.L1Wallet.address}`);
       return BigInt(res?.imx || 0);
     }
     let res: any = await HTTPGet(`${this.chainConfig.api}/v2/balances/${address || this.L1Wallet.address}`);
@@ -100,7 +100,7 @@ export class IMXAccount extends OrbiterAccount {
   }
 
   public async waitForTransactionConfirmation(transactionHash: string) {
-    const response = await HTTPGet(`${this.chainConfig.api.url}/v1/transfers/${transactionHash}`);
+    const response: any = await HTTPGet(`${this.chainConfig.api.url}/v1/transfers/${transactionHash}`);
     if (response?.transaction_id) {
       return { from: response.user, to: response.receiver };
     }

@@ -24,7 +24,7 @@ export class V3Service {
 
   @InjectModel(BridgeTransaction) private BridgeTransactionModel: typeof BridgeTransaction;
   async getTransactionByHash(params: string[]) {
-    if (!params || !(params instanceof Array) || params.length < 1 || !params[0] || params[0].substr(0, 2) !== '0x') {
+    if (!params || !(params instanceof Array) || params.length < 1 || !params[0]) {
       throw new Error('Invalid params');
     }
     const hash = params[0];
