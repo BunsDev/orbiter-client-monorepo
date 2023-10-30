@@ -6,26 +6,21 @@ import {
   generateLegacyStarkPrivateKey,
 } from "@imtbl/core-sdk";
 import {OrbiterAccount} from "./orbiterAccount";
-import { equals } from "@orbiter-finance/utils";
+import { equals, HTTPGet, sleep } from "@orbiter-finance/utils";
 import { TransactionRequest, TransferResponse } from "./IAccount.interface";
-import { Context } from "./IAccount";
 export class IMXAccount extends OrbiterAccount {
   private L1Wallet: ethers.Wallet;
   private readonly client: ImmutableX;
-  constructor(protected chainId: string, protected readonly ctx: Context) {
-    super(chainId, ctx);
-    const chainConfig = this.ctx.chainConfigService.getChainInfo(chainId);
-    const id = +chainConfig.internalId;
-    this.client = new ImmutableX(id === 8 ? Config.PRODUCTION : Config.SANDBOX);
-  }
 
   async connect(privateKey: string) {
     const chainConfig = this.chainConfig;
     const id = +chainConfig.internalId;
+    this.client = new ImmutableX(id === 8 ? Config.PRODUCTION : Config.SANDBOX);
     const L1Provider = ethers.getDefaultProvider(
       id === 8 ? "mainnet" : "goerli"
     );
     this.L1Wallet = new ethers.Wallet(privateKey).connect(L1Provider);
+    this.address = this.L1Wallet.address;
     return this;
   }
 
@@ -34,36 +29,12 @@ export class IMXAccount extends OrbiterAccount {
     value: bigint,
     transactionRequest?: TransactionRequest
   ): Promise<TransferResponse | undefined> {
-    const chainConfig = this.chainConfig;
     return await this.transferToken(
-      String(chainConfig.nativeCurrency.address),
+      String(this.chainConfig.nativeCurrency.address),
       to,
       value,
       transactionRequest
     );
-  }
-
-  public async getBalance(address?: string, token?: string): Promise<bigint> {
-    const chainConfig = this.chainConfig
-    if (token && token != chainConfig.nativeCurrency.address) {
-      return await this.getTokenBalance(token, address);
-    } else {
-      return await this.getTokenBalance(
-        chainConfig.nativeCurrency.symbol,
-        address
-      );
-    }
-  }
-
-  public async getTokenBalance(
-    token: string,
-    address?: string
-  ): Promise<bigint> {
-    const result = await this.client.getBalance({
-      owner: address || this.L1Wallet.address,
-      address: token,
-    });
-    return BigInt(result.balance);
   }
 
   public async transferToken(
@@ -100,5 +71,41 @@ export class IMXAccount extends OrbiterAccount {
       nonce: 0,
       token,
     };
+  }
+
+  public async getBalance(address?: string, token?: string): Promise<bigint> {
+    const chainConfig = this.chainConfig;
+    if (token && token.toLowerCase() !== chainConfig.nativeCurrency.address.toLowerCase()) {
+      return await this.getTokenBalance(token, address);
+    } else {
+      return await this.getTokenBalance(
+        chainConfig.nativeCurrency.address,
+        address
+      );
+    }
+  }
+
+  public async getTokenBalance(
+    token: string,
+    address?: string
+  ): Promise<bigint> {
+    if (token.toLowerCase() === this.chainConfig.nativeCurrency.address.toLowerCase()) {
+      const res = await HTTPGet(`${this.chainConfig.api}/v1/balances/${address || this.L1Wallet.address}`);
+      return BigInt(res?.imx || 0);
+    }
+    let res: any = await HTTPGet(`${this.chainConfig.api}/v2/balances/${address || this.L1Wallet.address}`);
+    const balanceList = res?.result || [];
+    const balanceInfo = balanceList.find(item => item.token_address.toLowerCase() === token.toLowerCase());
+    return BigInt(balanceInfo?.balance || 0);
+  }
+
+  public async waitForTransactionConfirmation(transactionHash: string) {
+    const response = await HTTPGet(`${this.chainConfig.api.url}/v1/transfers/${transactionHash}`);
+    if (response?.transaction_id) {
+      return { from: response.user, to: response.receiver };
+    }
+    console.log(`${transactionHash} waitForTransactionConfirmation ...`);
+    await sleep(1000);
+    return await this.waitForTransactionConfirmation(transactionHash);
   }
 }

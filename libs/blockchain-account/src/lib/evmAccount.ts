@@ -143,7 +143,7 @@ export class EVMAccount extends OrbiterAccount {
         maxPriorityFeePerGas = new BigNumber(chainCustomConfig.MaxPriorityFeePerGas);
       }
       transactionRequest.maxPriorityFeePerGas = maxPriorityFeePerGas.toString();
- 
+
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
         throw new Error(`EIP1559 Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
@@ -340,6 +340,7 @@ export class EVMAccount extends OrbiterAccount {
       submit();
       return response;
     } catch (error) {
+      rollback();
       this.logger.error(
         `broadcastTransaction tx error:${txHash} - ${error.message}`,
         error
