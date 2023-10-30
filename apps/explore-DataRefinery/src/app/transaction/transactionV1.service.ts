@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { equals, fix0xPadStartAddress, TransactionID } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { ChainConfigService, ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
+import { ChainConfigService, ENVConfigService, MakerV1RuleService, Token } from '@orbiter-finance/config';
 import { getAmountToSend } from '../utils/oldUtils';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
@@ -12,7 +12,9 @@ import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
 import { Sequelize } from 'sequelize-typescript';
 import { OrbiterLogger } from '@orbiter-finance/utils';
-import { LoggerDecorator } from '@orbiter-finance/utils';
+import { LoggerDecorator, decodeV1SwapData } from '@orbiter-finance/utils';
+import { utils } from 'ethers'
+import { validateAndParseAddress } from 'starknet'
 @Injectable()
 export class TransactionV1Service {
   @LoggerDecorator()
@@ -160,6 +162,14 @@ export class TransactionV1Service {
     result.sourceToken = sourceToken;
     
     let targetChainId = this.parseSourceTxSecurityCode(transfer.amount);
+    let xvmTargetInfo = {} as {
+      toChainId: number;
+      toTokenAddress: string;
+      toWalletAddress: string;
+      expectValue: string;
+      slippage: number;
+    };
+    let isXvm = false
     // targetChainId
     if ([9, 99].includes(+sourceChain.internalId)) {
       // TODO:
@@ -170,7 +180,17 @@ export class TransactionV1Service {
         }
       }
     }
-  
+    if (targetChainId === 0 && transfer.contract) {
+      const contract = sourceChain.contract;
+      if (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1') {
+        if(transfer.signature === 'swap(address,address,uint256,bytes)'){
+          const targetInfo = decodeV1SwapData(transfer.calldata[3])
+          targetChainId = targetInfo.toChainId
+          isXvm = true
+          xvmTargetInfo = targetInfo
+        }
+      }
+    }
     const targetChain = this.chainConfigService.getChainByKeyValue(
       'internalId',
       targetChainId,
@@ -198,10 +218,18 @@ export class TransactionV1Service {
     }
     result.targetChain = targetChain;
     //
-    const targetToken = await this.chainConfigService.getTokenBySymbol(
-      targetChain.chainId,
-      sourceToken.symbol,
-    );
+    let targetToken: Token
+    if (isXvm) {
+      targetToken = this.chainConfigService.getTokenByAddress(
+        targetChain.chainId,
+        xvmTargetInfo.toTokenAddress,
+      );
+    } else {
+      targetToken = this.chainConfigService.getTokenBySymbol(
+        targetChain.chainId,
+        sourceToken.symbol,
+      );
+    }
     if (!targetChain) {
       await this.transfersModel.update(
         {
@@ -281,6 +309,8 @@ export class TransactionV1Service {
               66,
             );
             result.targetAddress = address.toLocaleLowerCase();
+          } else if (isXvm && xvmTargetInfo.toWalletAddress) {
+            result.targetAddress = validateAndParseAddress(xvmTargetInfo.toWalletAddress)
           }
         }
       } else if ([4, 44].includes(sourceChainID)) {
@@ -313,6 +343,9 @@ export class TransactionV1Service {
         data: result,
       };
     }
+    if (isXvm && xvmTargetInfo.expectValue) {
+      result.targetAmount = xvmTargetInfo.expectValue
+    }
     return {
       code: 0,
       errmsg: '',
@@ -324,7 +357,7 @@ export class TransactionV1Service {
     createdData: BridgeTransactionAttributes,
     data: any,
   ) {
-    const { rule, sourceChain, targetChain, sourceToken, targetToken } = data;
+    const { rule, sourceChain, targetChain, sourceToken, targetToken, targetAmount } = data;
     if (data.dealer) {
       createdData.dealerAddress = data.dealer.address;
     }
@@ -350,21 +383,27 @@ export class TransactionV1Service {
       }
     }
     createdData.targetMaker = data.targetMaker;
-    const amountToSend = getAmountToSend(
-      +sourceChain.internalId,
-      sourceToken.decimals,
-      +targetChain.internalId,
-      targetToken.decimals,
-      transfer.value,
-      rule.tradingFee,
-      rule.gasFee,
-      createdData.sourceNonce,
-    );
-    if (amountToSend && amountToSend.state) {
-      createdData.targetAmount = new BigNumber(amountToSend.tAmount)
-        .div(10 ** targetToken.decimals)
-        .toString();
-      createdData.tradeFee = amountToSend.tradeFee;
+    if (!targetAmount) {
+      const amountToSend = getAmountToSend(
+        +sourceChain.internalId,
+        sourceToken.decimals,
+        +targetChain.internalId,
+        targetToken.decimals,
+        transfer.value,
+        rule.tradingFee,
+        rule.gasFee,
+        createdData.sourceNonce,
+      );
+      if (amountToSend && amountToSend.state) {
+        createdData.targetAmount = new BigNumber(amountToSend.tAmount)
+          .div(10 ** targetToken.decimals)
+          .toString();
+        createdData.tradeFee = amountToSend.tradeFee;
+      }
+    } else {
+      createdData.targetAmount = new BigNumber(targetAmount)
+      .div(10 ** targetToken.decimals)
+      .toString();
     }
     createdData.transactionId = TransactionID(
       transfer.sender,
