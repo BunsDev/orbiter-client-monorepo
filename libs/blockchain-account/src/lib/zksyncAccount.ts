@@ -64,8 +64,8 @@ export class ZkSyncAccount extends OrbiterAccount  {
       this.logger.info(`transfer response: ${JSON.stringify(response)}`);
       submit();
     } catch (error: any) {
-      this.logger.error(`rollback nonce:${error.message}`);
       rollback();
+      this.logger.error(`rollback nonce:${error.message}`);
       throw error;
     }
     if (response) {
