@@ -17,10 +17,10 @@ export class ArbitrationJobService {
     private arbitrationService: ArbitrationModuleService,
     private eventEmitter: EventEmitter2
   ) {
-    this.syncChainInfo()
+    // this.syncChainInfo()
   }
 
-  @Interval(1000 * 5)
+  // @Interval(1000 * 5)
   async syncChainInfo() {
     const client = await this.arbitrationService.getSubClient()
     this.arbitrationService.chainRels = await client.manager.getChainRels();

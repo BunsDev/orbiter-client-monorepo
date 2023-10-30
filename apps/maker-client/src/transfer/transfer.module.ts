@@ -19,5 +19,10 @@ import { PrivateKeyService } from "../service/privatekey.service";
     ValidatorService,
     AccountFactoryService,
   ],
+  exports: [
+    ValidatorService,
+    SequencerService,
+    SequencerScheduleService
+  ]
 })
 export class TransferModule { }

@@ -1,17 +1,17 @@
 import { Module } from '@nestjs/common';
-import { RpcCheckService } from './rpc-check.service';
+import { MetricService } from './metric.service';
 import { makeGaugeProvider } from "@willsoto/nestjs-prometheus";
 import { PrometheusModule } from "@willsoto/nestjs-prometheus";
 import { PrometheusController } from './prometheus.controller';
 import { RpcScanningModule } from '../rpc-scanning/rpc-scanning.module';
 import { ApiScanningModule } from '../api-scanning/api-scanning.module';
-import { ScanningController } from './scanning.controller';
+import { MetricController } from './metric.controller';
 @Module({
-  imports:[
+  imports: [
     RpcScanningModule, ApiScanningModule,
     PrometheusModule.register({
       controller: PrometheusController,
-      customMetricPrefix: "explore_crawler",
+      customMetricPrefix: "crawler_",
       defaultMetrics: {
         enabled: false,
         config: {
@@ -20,8 +20,8 @@ import { ScanningController } from './scanning.controller';
       },
     }),
   ],
-  controllers:[ScanningController],
-  providers: [RpcCheckService,
+  controllers: [MetricController],
+  providers: [MetricController,
     makeGaugeProvider({
       name: "rpc_lastBlock",
       help: "The current rpc has obtained the latest block on the chain",
@@ -39,4 +39,4 @@ import { ScanningController } from './scanning.controller';
     }),
   ]
 })
-export class RpcCheckModule {}
+export class MetricModule { }

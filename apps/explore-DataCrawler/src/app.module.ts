@@ -13,13 +13,12 @@ import { join } from 'path';
 import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 
-import { RpcCheckModule } from './rpc-check/rpc-check.module';
+import { MetricModule } from './metric/metric.module';
 
 dayjs.extend(utc);
 
 @Module({
   imports: [
-    RpcCheckModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -63,6 +62,7 @@ dayjs.extend(utc);
     ApiScanningModule,
     ScheduleModule.forRoot(),
     TransactionModule,
+    MetricModule,
   ],
   controllers: [],
   providers: [],

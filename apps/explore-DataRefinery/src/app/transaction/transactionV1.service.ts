@@ -158,6 +158,7 @@ export class TransactionV1Service {
       };
     }
     result.sourceToken = sourceToken;
+    
     let targetChainId = this.parseSourceTxSecurityCode(transfer.amount);
     // targetChainId
     if ([9, 99].includes(+sourceChain.internalId)) {
@@ -169,6 +170,7 @@ export class TransactionV1Service {
         }
       }
     }
+  
     const targetChain = this.chainConfigService.getChainByKeyValue(
       'internalId',
       targetChainId,

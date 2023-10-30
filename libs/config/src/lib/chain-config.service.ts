@@ -21,7 +21,7 @@ export class ChainConfigService {
                     this.options.chainConfigPath,
                     (config: KeyValueResult) => {
                         const data = config.toJSON();
-                        if (!isEqual(data, ChainConfigService.configs)) {
+                        if (data) {
                             ChainConfigService.configs = data;
                             // this.write();
                         }

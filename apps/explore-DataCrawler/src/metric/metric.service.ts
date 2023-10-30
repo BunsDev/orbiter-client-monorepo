@@ -4,7 +4,7 @@ import { Gauge } from "prom-client";
 import { RpcScanningFactory } from '../rpc-scanning/rpc-scanning.factory';
 import { ChainConfigService } from '@orbiter-finance/config';
 @Injectable()
-export class RpcCheckService {
+export class MetricService {
     constructor(
         @InjectMetric("rpc_lastBlock") public rpcLastBlock: Gauge<string>,
         @InjectMetric("rpc_scanBlock") public rpcScanBlock: Gauge<string>,

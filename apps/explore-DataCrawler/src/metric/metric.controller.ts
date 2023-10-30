@@ -3,14 +3,13 @@ import { ApiScanningFactory } from '../api-scanning/api-scanning.factory';
 import { Controller, Get, Param } from '@nestjs/common';
 import { RpcScanningFactory } from '../rpc-scanning/rpc-scanning.factory';
 import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
-import { RpcCheckService } from './rpc-check.service';
-@Controller('scanning')
-export class ScanningController {
+import { MetricService } from './metric.service';
+export class MetricController {
   constructor(
     private rpcScanningFactory: RpcScanningFactory,
     private apiScanningFactory: ApiScanningFactory,
     protected chainConfigService: ChainConfigService,
-    private rpcCheckService: RpcCheckService
+    private rpcCheckService: MetricService
   ) { }
   @Get('/status')
   async rpcStatus() {
@@ -19,18 +18,6 @@ export class ScanningController {
       data: await this.rpcCheckService.getRpcStatus()
     }
   }
-  // @Get('/owners')
-  // async owners() {
-  //   let startTime = Date.now();
-  //   return {
-  //     errno: 0,
-  //     data: {
-  //       owners: await this.makerService.getV1MakerOwners(),
-  //       responses: await this.makerService.getV1MakerOwnerResponse()
-  //     },
-  //     response: (Date.now() - startTime) / 1000
-  //   }
-  // }
   @Get('/status/:chainId')
   async status(@Param() params) {
     const { chainId } = params;
@@ -74,16 +61,5 @@ export class ScanningController {
     const result = await factory.manualScanBlocks([+block]);
     return JSON.parse(JSONStringify(result));
   }
-  // @Get('/api-scan/:chainId/:address')
-  // async apiScan(@Param() params, @Query() query: any) {
-  //   const { chainId, address } = params;
-  //   const factory = this.apiScanningFactory.createService(chainId);
-  //   const { error, transfers } = await factory.getTransactions(address, query);
-  //   if (!error && transfers.length > 0) {
-  //     const result =
-  //       await this.transactionService.execCreateTransactionReceipt(transfers);
-  //     return BigIntToString(result);
-  //   }
-  //   return BigIntToString(transfers);
-  // }
+
 }

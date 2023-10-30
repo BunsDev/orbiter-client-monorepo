@@ -1,4 +1,3 @@
-import { ArbitrationModule } from '@orbiter-finance/arbitration-module';
 import { TransferModule } from "./transfer/transfer.module";
 import { Module } from '@nestjs/common';
 import { ConsulModule } from '@orbiter-finance/consul';
@@ -10,8 +9,7 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { isEmpty } from '@orbiter-finance/utils';
 import { AlertModule } from '@orbiter-finance/alert'
 import { TcpModule } from "@orbiter-finance/tcp";
-import { ArbitrationService } from './service/arbitration.service';
-
+import {MetricModule} from './metric/metric.module'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -56,10 +54,9 @@ import { ArbitrationService } from './service/arbitration.service';
     RabbitMqModule,
     TcpModule,
     ScheduleModule.forRoot(),
-    ArbitrationModule,
+    MetricModule,
   ],
   providers: [
-    ArbitrationService,
   ],
   controllers: [],
 })
