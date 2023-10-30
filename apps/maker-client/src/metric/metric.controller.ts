@@ -1,8 +1,8 @@
 import { Controller, Get, Res } from "@nestjs/common";
-import { PrometheusController as PrometheusBaseController } from "@willsoto/nestjs-prometheus";
+import { PrometheusController } from "@willsoto/nestjs-prometheus";
 
 @Controller()
-export class MetricController extends PrometheusBaseController {
+export class MetricController extends PrometheusController {
 
     @Get()
     async index(@Res({ passthrough: true }) response: any) {
