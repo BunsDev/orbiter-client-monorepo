@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { MetricService } from './metric.service';
 import { makeGaugeProvider } from "@willsoto/nestjs-prometheus";
 import { PrometheusModule } from "@willsoto/nestjs-prometheus";
-import { PrometheusController } from './prometheus.controller';
 import { RpcScanningModule } from '../rpc-scanning/rpc-scanning.module';
 import { ApiScanningModule } from '../api-scanning/api-scanning.module';
 import { MetricController } from './metric.controller';
@@ -10,7 +9,7 @@ import { MetricController } from './metric.controller';
   imports: [
     RpcScanningModule, ApiScanningModule,
     PrometheusModule.register({
-      controller: PrometheusController,
+      controller: MetricController,
       customMetricPrefix: "crawler_",
       defaultMetrics: {
         enabled: false,

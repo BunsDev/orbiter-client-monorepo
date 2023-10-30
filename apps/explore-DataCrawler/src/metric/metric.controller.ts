@@ -1,16 +1,23 @@
 import { ChainConfigService } from '@orbiter-finance/config';
 import { ApiScanningFactory } from '../api-scanning/api-scanning.factory';
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Res,Param } from "@nestjs/common";
 import { RpcScanningFactory } from '../rpc-scanning/rpc-scanning.factory';
 import { BigIntToString, JSONStringify } from '@orbiter-finance/utils';
 import { MetricService } from './metric.service';
-export class MetricController {
+import { PrometheusController } from "@willsoto/nestjs-prometheus";
+export class MetricController  extends PrometheusController {
   constructor(
     private rpcScanningFactory: RpcScanningFactory,
     private apiScanningFactory: ApiScanningFactory,
     protected chainConfigService: ChainConfigService,
     private rpcCheckService: MetricService
-  ) { }
+  ) { 
+    super();
+  }
+  @Get()
+  async index(@Res({ passthrough: true }) response: any) {
+    return super.index(response);
+  }
   @Get('/status')
   async rpcStatus() {
     return {

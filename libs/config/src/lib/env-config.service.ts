@@ -51,7 +51,7 @@ export class ENVConfigService {
     async initAsync(key:string): Promise<void> {
         if (!this.#init) {
             await sleep(1000);
-            console.warn(`Configuration does not exist ${key}`)
+            console.warn(`Configuration does not exist ${key} ${this.#init}`)
             return await this.initAsync(key);
         }
     }

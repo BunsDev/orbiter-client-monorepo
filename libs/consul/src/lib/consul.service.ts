@@ -41,13 +41,12 @@ export class ConsulService implements OnModuleInit {
 
   watchConsulConfig(keyPrefix: string, callback: any) {
     const client = this.consulClient;
-    const opts:any = {
+    const opts: any = {
       key: `${this.options.nameSpace || ""}${keyPrefix}`,
     };
     if (this.options.defaults && this.options.defaults.token) {
       opts['token'] = this.options.defaults.token;
     }
-
     const watcher = client.watch({
       method: client.kv.get,
       options: opts
@@ -61,6 +60,7 @@ export class ConsulService implements OnModuleInit {
 
     watcher.on('error', (err) => {
       console.error(`Consul Watcher Error: ${keyPrefix}`, err);
+      return callback(null, err);
     });
 
     return function stopWatching() {
