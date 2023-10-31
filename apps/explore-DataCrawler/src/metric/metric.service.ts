@@ -12,7 +12,7 @@ export class MetricService {
         private rpcScanningFactory: RpcScanningFactory,
         private chainConfig: ChainConfigService
     ) {
-        setInterval(this.task.bind(this), 1000 * 30);
+        setInterval(this.task.bind(this), 1000 * 5);
     }
     async task() {
         const results = await this.rpcScanningFactory.getRpcStatus();
