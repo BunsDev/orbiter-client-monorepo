@@ -4,6 +4,7 @@ import { PrometheusModule } from "@willsoto/nestjs-prometheus";
 import { RpcScanningModule } from '../rpc-scanning/rpc-scanning.module';
 import { ApiScanningModule } from '../api-scanning/api-scanning.module';
 import { MetricController } from './metric.controller';
+import { MetricService } from './metric.service';
 @Module({
   imports: [
     RpcScanningModule,
@@ -18,6 +19,7 @@ import { MetricController } from './metric.controller';
   ],
   controllers: [],
   providers: [
+    MetricService,
     makeGaugeProvider({
       name: "rpc_lastBlock",
       help: "The current rpc has obtained the latest block on the chain",
