@@ -2,14 +2,10 @@ import { BigNumber } from 'bignumber.js';
 import { Injectable } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { ChainRel, SubgraphClient } from '@orbiter-finance/subgraph-sdk';
-import { CronJob } from 'cron';
 import { isEmpty } from 'lodash';
 import {
     ethers,
     Interface,
-    isError,
-    keccak256,
-    type Wallet,
 } from "ethers6";
 import { LoggerDecorator, OrbiterLogger, abis } from '@orbiter-finance/utils';
 import { ArbitrationTransaction } from './arbitration.interface';
@@ -27,16 +23,6 @@ export class ArbitrationService {
             throw new Error('SubgraphEndpoint not found');
         }
         return new SubgraphClient(SubgraphEndpoint);
-    }
-    start() {
-        const arbitrationJob = this.schedulerRegistry.getCronJob('arbitrationJob');
-        arbitrationJob.start();
-        console.log('start ArbitrationService')
-    }
-    close() {
-        const arbitrationJob = this.schedulerRegistry.getCronJob('arbitrationJob');
-        arbitrationJob.stop();
-        console.log('close ArbitrationService')
     }
     verifyArbitrationConditions(sourceTx: ArbitrationTransaction): boolean {
         return true;// TODO: test
@@ -96,10 +82,11 @@ export class ArbitrationService {
             value: 0n,
             from: account.address,
         }
-        const response = await account.sendTransaction(transactionRequest)
-        return response;
+        const response = await account.populateTransaction(transactionRequest);
+        console.log(response, '===tx', transactionRequest)
+        // const response = await account.sendTransaction(transactionRequest)
+        return response as any;
     }
-
 
     @OnEvent('arbitration.create')
     async handleArbitrationCreatedEvent(payload: ArbitrationTransaction) {
@@ -110,7 +97,7 @@ export class ArbitrationService {
             return;
         }
         const chainId = process.env['NODE_ENV'] === 'production' ? '1' : '5';
-        const arbitrationRPC = process.env["arbitrationRPC"];
+        const arbitrationRPC = process.env["ArbitrationRPC"];
         if (!arbitrationRPC) {
             this.logger.error(`${chainId} arbitrationRPC not config`);
             return;
@@ -122,7 +109,7 @@ export class ArbitrationService {
             this.logger.info(`initiateArbitration wait initiateArbitration ${payload.fromHash}`);
             const result = await this.initiateArbitration(wallet, payload);
             this.logger.info(`initiateArbitration success ${result.hash}`);
-            await result.wait()
+            // await result.wait()
             this.logger.info(`initiateArbitration wait success ${result.hash}`);
         } catch (error) {
             this.logger.error('Arbitration encountered an exception', error);

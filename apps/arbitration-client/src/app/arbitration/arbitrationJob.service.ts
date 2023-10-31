@@ -28,8 +28,10 @@ export class ArbitrationJobService {
   }
   @Interval(1000 * 60 * 1)
   async syncProof() {
+    const arbitrationHost = process.env['ArbitrationHost'];
     for (const hash of this.arbitrationHashs) {
-      const result = await HTTPGet(`http://localhost:3000/proof/${hash}`);
+      const result = await HTTPGet(`${arbitrationHost}/proof/${hash}`);
+      console.log(result, '==result');
     }
   }
 
@@ -256,7 +258,6 @@ export class ArbitrationJobService {
         }
       })
   }
-
 
 
 }
