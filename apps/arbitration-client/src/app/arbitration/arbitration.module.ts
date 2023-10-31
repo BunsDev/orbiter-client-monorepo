@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ArbitrationModuleService } from './arbitration-module.service';
+import { ArbitrationModuleService } from './arbitration.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ArbitrationJobService } from './arbitrationJob.service';
 import { EventEmitterModule } from '@nestjs/event-emitter';

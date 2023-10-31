@@ -14,7 +14,9 @@ const sysLogger = logger.createLoggerByName('app');
 async function bootstrap() {
   console.debug(characterPattern);
   const app = await NestFactory.create(AppModule, {
-
+    logger: WinstonModule.createLogger({
+      instance: sysLogger
+    })
   });
   const port = process.env.PORT || 3000;
   sysLogger.info(`🚀 Application is running on: maker-client http://localhost:${port}`);

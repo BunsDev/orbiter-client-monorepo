@@ -18,10 +18,10 @@ import { ENVConfigService } from '@orbiter-finance/config';
 @Injectable()
 export class ArbitrationModuleService {
     public chainRels: Array<ChainRel> = [];
-    constructor(private schedulerRegistry: SchedulerRegistry, protected envConfigService: ENVConfigService,) {
+    constructor(private schedulerRegistry: SchedulerRegistry) {
     }
     async getSubClient(): Promise<SubgraphClient> {
-        const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
+        const SubgraphEndpoint = process.env['SubgraphEndpoint']
         if (!SubgraphEndpoint) {
             throw new Error('SubgraphEndpoint not found');
         }
