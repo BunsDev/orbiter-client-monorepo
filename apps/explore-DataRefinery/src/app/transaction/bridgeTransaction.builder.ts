@@ -275,7 +275,6 @@ export default class BridgeTransactionBuilder {
     ) {}
     async build(transfer: TransfersModel): Promise<{ code: number, errMsg?: string, createdData: BridgeTransactionAttributes }> {
         // build other common
-
         try {
           const createdData: BridgeTransactionAttributes = {
             sourceId: transfer.hash,
@@ -412,7 +411,7 @@ export default class BridgeTransactionBuilder {
         } catch (error) {
           if (error instanceof ValidSourceTxError) {
             this.logger.error(`ValidSourceTxError hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`);
-            await this.transfersModel.update(
+            let r = await this.transfersModel.update(
               {
                 opStatus: error.opStatus,
               },
@@ -422,6 +421,7 @@ export default class BridgeTransactionBuilder {
                 },
               },
             );
+            this.logger.info(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
             return { code: 1, errMsg: error.message, createdData: null }
           } else {
             this.logger.error(`ValidSourceTxError throw`, error)
