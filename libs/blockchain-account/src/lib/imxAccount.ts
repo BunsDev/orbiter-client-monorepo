@@ -1,4 +1,4 @@
-import { EtherscanProvider } from '@ethersproject/providers';
+import { ethers } from 'ethers';
 import {
   ImmutableX,
   Config,
@@ -6,12 +6,11 @@ import {
   generateLegacyStarkPrivateKey,
 } from "@imtbl/core-sdk";
 import { OrbiterAccount } from "./orbiterAccount";
-import { Wallet } from '@ethersproject/wallet';
 import { equals, HTTPGet, sleep } from "@orbiter-finance/utils";
 import { TransactionRequest, TransferResponse } from "./IAccount.interface";
 import BigNumber from "bignumber.js";
 export class IMXAccount extends OrbiterAccount {
-  private L1Wallet: Wallet;
+  private L1Wallet: ethers.Wallet;
   private client: ImmutableX;
 
   async connect(privateKey: string, address: string) {
@@ -19,8 +18,8 @@ export class IMXAccount extends OrbiterAccount {
     const id = +chainConfig.internalId;
     this.client = new ImmutableX(id === 8 ? Config.PRODUCTION : Config.SANDBOX);
     const network = id === 8 ? "mainnet" : "sepolia";
-    const L1Provider = chainConfig.api.key ? new EtherscanProvider(network, chainConfig.api.key) : new EtherscanProvider(network);
-    this.L1Wallet = new Wallet(privateKey).connect(L1Provider);
+    const L1Provider = chainConfig.api.key ? new ethers.providers.EtherscanProvider(network, chainConfig.api.key) : new ethers.providers.EtherscanProvider(network);
+    this.L1Wallet = new ethers.Wallet(privateKey).connect(L1Provider);
     this.address = address;
     return this;
   }
