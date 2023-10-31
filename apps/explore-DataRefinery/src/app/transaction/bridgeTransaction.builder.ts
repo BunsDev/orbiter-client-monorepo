@@ -411,6 +411,7 @@ export default class BridgeTransactionBuilder {
           return { code: 0, createdData }
         } catch (error) {
           if (error instanceof ValidSourceTxError) {
+            this.logger.error(`ValidSourceTxError hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`);
             await this.transfersModel.update(
               {
                 opStatus: error.opStatus,
@@ -421,9 +422,9 @@ export default class BridgeTransactionBuilder {
                 },
               },
             );
-            this.logger.error(`hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`);
             return { code: 1, errMsg: error.message, createdData: null }
           } else {
+            this.logger.error(`ValidSourceTxError throw`, error)
             throw error
           }
         }
