@@ -15,6 +15,7 @@ import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator, decodeV1SwapData, ValidSourceTxError } from '@orbiter-finance/utils';
 import { utils } from 'ethers'
 import { validateAndParseAddress } from 'starknet'
+import BridgeTransactionBuilder from './bridgeTransaction.builder'
 @Injectable()
 export class TransactionV1Service {
   @LoggerDecorator()
@@ -29,6 +30,7 @@ export class TransactionV1Service {
     private sequelize: Sequelize,
     protected envConfigService: ENVConfigService,
     protected makerV1RuleService: MakerV1RuleService,
+    protected bridgeTransactionBuilder: BridgeTransactionBuilder
   ) {
     this.matchScheduleTask()
       .then((_res) => {
@@ -353,15 +355,15 @@ export class TransactionV1Service {
       }
     }
 
-    const { code, errmsg, data } = await this.validSourceTxInfo(transfer);
-    if (code !== 0) {
-      this.logger.error(
-        `validSourceTxInfo fail ${transfer.hash} ${errmsg}`,
-      );
-      return {
-        errmsg: `validSourceTxInfo fail ${transfer.hash} ${errmsg}`
-      }
-    }
+    // const { code, errmsg, data } = await this.validSourceTxInfo(transfer);
+    // if (code !== 0) {
+    //   this.logger.error(
+    //     `validSourceTxInfo fail ${transfer.hash} ${errmsg}`,
+    //   );
+    //   return {
+    //     errmsg: `validSourceTxInfo fail ${transfer.hash} ${errmsg}`
+    //   }
+    // }
     const sourceBT = await this.bridgeTransactionModel.findOne({
       attributes: ['id', 'status', 'targetChain'],
       where: {
@@ -377,28 +379,33 @@ export class TransactionV1Service {
     const t = await this.sequelize.transaction();
     try {
 
-      const createdData: BridgeTransactionAttributes = {
-        sourceId: transfer.hash,
-        sourceAddress: transfer.sender,
-        sourceMaker: transfer.receiver,
-        sourceAmount: transfer.amount.toString(),
-        sourceChain: transfer.chainId,
-        sourceNonce: transfer.nonce,
-        sourceSymbol: transfer.symbol,
-        sourceToken: transfer.token,
-        targetToken: null,
-        sourceTime: transfer.timestamp,
-        dealerAddress: null,
-        ebcAddress: null,
-        targetChain: null,
-        ruleId: null,
-        targetAmount: null,
-        targetAddress: null,
-        targetSymbol: null,
-        createdAt: new Date(),
-        version: transfer.version,
-      };
-      this.buildSourceTxData(transfer, createdData, data);
+      // const createdData: BridgeTransactionAttributes = {
+      //   sourceId: transfer.hash,
+      //   sourceAddress: transfer.sender,
+      //   sourceMaker: transfer.receiver,
+      //   sourceAmount: transfer.amount.toString(),
+      //   sourceChain: transfer.chainId,
+      //   sourceNonce: transfer.nonce,
+      //   sourceSymbol: transfer.symbol,
+      //   sourceToken: transfer.token,
+      //   targetToken: null,
+      //   sourceTime: transfer.timestamp,
+      //   dealerAddress: null,
+      //   ebcAddress: null,
+      //   targetChain: null,
+      //   ruleId: null,
+      //   targetAmount: null,
+      //   targetAddress: null,
+      //   targetSymbol: null,
+      //   createdAt: new Date(),
+      //   version: transfer.version,
+      // };
+      // this.buildSourceTxData(transfer, createdData, data);
+      const { code, createdData, errMsg } = await this.bridgeTransactionBuilder.build(transfer)
+      // console.log('createdData', createdData)
+      if (code !== 0) {
+        return { errMsg }
+      }
       if (createdData.targetAddress.length >= 100) {
         return {
           errmsg: `${transfer.hash} There is an issue with the transaction format`
