@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   OrbiterAccount, ZkSyncAccount, IMXAccount, EVMAccount,
   ZkSpaceAccount,
-  StarknetAccount
+  StarknetAccount, LoopringAccount
 } from "@orbiter-finance/blockchain-account";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 
@@ -50,7 +50,7 @@ export class AccountFactoryService {
         break;
       case 9:
       case 99:
-        // wallet = new LoopringAccount(toChainId, ctx);
+        wallet = new LoopringAccount(toChainId, ctx);
         break;
       case 1:
       case 2:

@@ -1,11 +1,18 @@
 import { ethers } from 'ethers';
-import {OrbiterAccount} from './orbiterAccount';
+import { OrbiterAccount } from './orbiterAccount';
+// import {
+//   ExchangeAPI,
+//   ConnectorNames,
+//   generateKeyPair,
+//   UserAPI
+// } from './node_modules/@loopring-web/loopring-sdk'
 import {
-  ConnectorNames,
   ExchangeAPI,
+  ConnectorNames,
   generateKeyPair,
-  UserAPI,
-} from '@loopring-web/loopring-sdk';
+  UserAPI
+} from '../../../../node_modules/@loopring-web/loopring-sdk'
+
 import Web3 from 'web3';
 import PrivateKeyProvider from 'truffle-privatekey-provider';
 import { HTTPGet } from "@orbiter-finance/utils";

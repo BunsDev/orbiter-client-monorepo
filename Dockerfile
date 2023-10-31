@@ -9,3 +9,4 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 
 RUN pnpm install --production
+RUN pnpm run postinstall
