@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
-import { ArbitrationModuleService } from './arbitration.service';
+import { ArbitrationService } from './arbitration.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ArbitrationJobService } from './arbitrationJob.service';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   controllers: [],
-  providers: [ArbitrationJobService, ArbitrationModuleService],
-  exports: [ArbitrationModuleService],
+  providers: [ArbitrationJobService, ArbitrationService],
+  exports: [],
   imports: [
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot()
   ],
 })
-export class ArbitrationModule {}
+export class ArbitrationModule { }

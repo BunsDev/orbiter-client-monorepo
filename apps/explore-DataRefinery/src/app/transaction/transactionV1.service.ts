@@ -140,6 +140,7 @@ export class TransactionV1Service {
         }
       }
 
+
       // targetChainId
       const targetChain = this.chainConfigService.getChainByKeyValue(
         'internalId',
@@ -341,6 +342,7 @@ export class TransactionV1Service {
       }
     }
   }
+
   public async handleTransferBySourceTx(transfer: TransfersModel) {
     if (transfer.status != 2) {
       this.logger.error(

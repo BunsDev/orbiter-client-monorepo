@@ -11,13 +11,14 @@ import {
     keccak256,
     type Wallet,
 } from "ethers6";
-import { abis } from '@orbiter-finance/utils';
+import { LoggerDecorator, OrbiterLogger, abis } from '@orbiter-finance/utils';
 import { ArbitrationTransaction } from './arbitration.interface';
-import { EVMAccount, OrbiterAccount } from '@orbiter-finance/blockchain-account';
-import { ENVConfigService } from '@orbiter-finance/config';
+import { OnEvent } from '@nestjs/event-emitter';
 @Injectable()
-export class ArbitrationModuleService {
+export class ArbitrationService {
     public chainRels: Array<ChainRel> = [];
+    @LoggerDecorator()
+    private readonly logger: OrbiterLogger;
     constructor(private schedulerRegistry: SchedulerRegistry) {
     }
     async getSubClient(): Promise<SubgraphClient> {
@@ -57,7 +58,8 @@ export class ArbitrationModuleService {
         }
         return false;
     }
-    async initiateArbitration(account: EVMAccount, tx: ArbitrationTransaction) {
+
+    async initiateArbitration(account: ethers.Wallet, tx: ArbitrationTransaction) {
         const ifa = new Interface(abis.OrbiterRouterV3);
         if (!tx.fromChainId) {
             throw new Error('fromChainId not found');
@@ -84,7 +86,7 @@ export class ArbitrationModuleService {
             tx.fromHash,
             tx.fromTimestamp,
             tx.sourceToken,
-            new BigNumber(tx.fromAmount).times(10 ** tx.sourceDecimal)
+            new BigNumber(tx.fromAmount).times(10 ** tx.sourceDecimal).times(1)
         ]);
         const client = await this.getSubClient();
         const mdcAddress = await client.maker.getMDCAddress(tx.sourceMaker);
@@ -94,9 +96,38 @@ export class ArbitrationModuleService {
             value: 0n,
             from: account.address,
         }
-        const response = await account.sendTransaction(mdcAddress, transactionRequest);
+        const response = await account.sendTransaction(transactionRequest)
         return response;
     }
 
+
+    @OnEvent('arbitration.create')
+    async handleArbitrationCreatedEvent(payload: ArbitrationTransaction) {
+        const arbitrationPrivateKey = process.env["ArbitrationPrivateKey"];
+        console.log(arbitrationPrivateKey, '=arbitrationPrivateKey')
+        if (!arbitrationPrivateKey) {
+            this.logger.error('arbitrationPrivateKey not config');
+            return;
+        }
+        const chainId = process.env['NODE_ENV'] === 'production' ? '1' : '5';
+        const arbitrationRPC = process.env["arbitrationRPC"];
+        if (!arbitrationRPC) {
+            this.logger.error(`${chainId} arbitrationRPC not config`);
+            return;
+        }
+        try {
+            const provider = new ethers.JsonRpcProvider(arbitrationRPC);
+            const wallet = new ethers.Wallet(arbitrationPrivateKey).connect(provider);
+            //
+            this.logger.info(`initiateArbitration wait initiateArbitration ${payload.fromHash}`);
+            const result = await this.initiateArbitration(wallet, payload);
+            this.logger.info(`initiateArbitration success ${result.hash}`);
+            await result.wait()
+            this.logger.info(`initiateArbitration wait success ${result.hash}`);
+        } catch (error) {
+            this.logger.error('Arbitration encountered an exception', error);
+        }
+
+    }
 
 }

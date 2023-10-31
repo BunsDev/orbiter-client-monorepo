@@ -3,18 +3,19 @@ import { Cron, Interval } from '@nestjs/schedule';
 import { ENVConfigService } from '@orbiter-finance/config';
 import { ChainRel, SubgraphClient } from '@orbiter-finance/subgraph-sdk';
 import { Mutex, MutexInterface, Semaphore, SemaphoreInterface, withTimeout } from 'async-mutex';
-import { ArbitrationModuleService } from './arbitration.service';
+import { ArbitrationService } from './arbitration.service';
 import { ArbitrationTransaction } from './arbitration.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { HTTPGet, HTTPPost } from '@orbiter-finance/utils';
+import { HTTPGet, HTTPPost, LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 const mutex = new Mutex();
 // arbitration-client
 @Injectable()
 export class ArbitrationJobService {
   private arbitrationHashs: string[] = [];
-  private readonly logger = new Logger(ArbitrationJobService.name);
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
   constructor(
-    private arbitrationService: ArbitrationModuleService,
+    private arbitrationService: ArbitrationService,
     private eventEmitter: EventEmitter2
   ) {
     // this.syncChainInfo()

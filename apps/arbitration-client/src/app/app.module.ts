@@ -6,7 +6,7 @@ import { ArbitrationModule } from './arbitration/arbitration.module';
 
 @Module({
   imports: [
-    ArbitrationModule
+    ArbitrationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
