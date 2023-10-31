@@ -9,12 +9,9 @@ import {TransferModule} from '../transfer/transfer.module'
     TransferModule,
     PrometheusModule.register({
       controller: MetricController,
-      customMetricPrefix: "maker_client_",
+      customMetricPrefix: "maker_client",
       defaultMetrics: {
         enabled: false,
-        config: {
-          prefix: 'maker_client_'
-        }
       },
     }),
   ],

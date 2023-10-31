@@ -11,7 +11,7 @@ import { MetricService } from './metric.service';
     ApiScanningModule,
     PrometheusModule.register({
       controller: MetricController,
-      customMetricPrefix: "crawler_",
+      customMetricPrefix: "crawler",
       defaultMetrics: {
         enabled: false,
       },
