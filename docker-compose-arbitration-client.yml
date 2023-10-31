@@ -17,7 +17,7 @@ services:
       dockerfile:  ./apps/arbitration-client/Dockerfile.clients
     restart: always
     environment:
-      CONSUL_URL: '${CONSUL_URL}'
+      ArbitrationPrivateKey: '${ArbitrationPrivateKey}'
     ports:
       - '8000:8000'
     networks:
