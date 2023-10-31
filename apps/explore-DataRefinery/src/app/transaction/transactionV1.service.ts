@@ -113,7 +113,6 @@ export class TransactionV1Service {
         throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `${transfer.token} sourceToken not found`)
       }
       result.sourceToken = sourceToken;
-
       let targetChainId: number
       let xvmTargetInfo = {} as {
         toChainId: number;
