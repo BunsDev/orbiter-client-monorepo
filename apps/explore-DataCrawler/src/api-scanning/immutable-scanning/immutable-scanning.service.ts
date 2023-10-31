@@ -194,7 +194,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
           feeToken: '',
           timestamp: dayjs(item.timestamp).valueOf(),
           status: TransferAmountTransactionStatus.failed,
-          nonce: this.timestampToNonce(dayjs(item.timestamp).unix()),
+          nonce: this.timestampToNonce(dayjs(item.timestamp).valueOf()),
           receipt: item,
         };
         if (['success', 'confirmed', 'accepted'].includes(item.status)) {
