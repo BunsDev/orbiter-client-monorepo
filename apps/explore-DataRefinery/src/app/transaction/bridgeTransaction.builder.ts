@@ -3,10 +3,11 @@ import { BridgeTransaction, Transfers as TransfersModel } from '@orbiter-finance
 @Injectable()
 export default class BridgeTransactionBuilder {
     async build(transfer: TransfersModel): Promise<typeof BridgeTransaction> {
-        // if new BridgeTransactionStandardBuilder().build()
-        // if new BridgeTransactionOBSourceBuilder().build()
-        // if new BridgeTransactionRouterV3Builder().build()
-        // if new BridgeTransactionRouterV1Builder().build()
+        // if Standard  new BridgeTransactionStandardBuilder().build()
+        // if OBSource new BridgeTransactionOBSourceBuilder().build()
+        // if RouterV3 new BridgeTransactionRouterV3Builder().build()
+        // if RouterV1 new BridgeTransactionRouterV1Builder().build()
+        // build other commom
         throw new Error('unrealized')
     }
 }
