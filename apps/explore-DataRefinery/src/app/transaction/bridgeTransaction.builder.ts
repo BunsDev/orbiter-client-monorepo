@@ -70,6 +70,7 @@ export class StandardBuilder {
       if (!targetChain) {
         return result
       }
+      result.targetChain = targetChain
       //
       const targetToken = this.chainConfigService.getTokenBySymbol(
         targetChain.chainId,
@@ -78,7 +79,6 @@ export class StandardBuilder {
       if (!targetToken) {
         return result
       }
-      result.targetChain = targetChain
       result.targetToken = targetToken
       const sourceChainID = +sourceChain.internalId;
       const targetChainID = +targetChain.internalId;
@@ -145,6 +145,7 @@ export class LoopringBuilder {
       if (!targetChain) {
         return result
       }
+      result.targetChain = targetChain
       const targetToken = this.chainConfigService.getTokenBySymbol(
         targetChain.chainId,
         transfer.symbol,
@@ -152,6 +153,7 @@ export class LoopringBuilder {
       if (!targetToken) {
         return result
       }
+      result.targetToken = targetToken
       if (transfer.calldata && Array.isArray(transfer.calldata)) {
         if (transfer.calldata.length === 1) {
           result.targetAddress = transfer.sender;
@@ -159,8 +161,6 @@ export class LoopringBuilder {
           result.targetAddress = transfer.calldata[1];
         }
       }
-      result.targetChain = targetChain
-      result.targetToken = targetToken
       return result
     }
 }
@@ -238,11 +238,11 @@ export class EVMRouterV1ContractBuilder {
       if (!targetChain) {
         return result
       }
+      result.targetChain = targetChain
       const targetToken = this.chainConfigService.getTokenByAddress(
         targetChain.chainId,
         decodeData.toTokenAddress,
       );
-      result.targetChain = targetChain
       result.targetToken = targetToken
       if (['SN_MAIN', 'SN_GOERLI'].includes(targetChain.chainId)) {
         result.targetAddress = validateAndParseAddress(decodeData.toWalletAddress)

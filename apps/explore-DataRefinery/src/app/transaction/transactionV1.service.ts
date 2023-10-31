@@ -404,7 +404,7 @@ export class TransactionV1Service {
       const { code, createdData, errMsg } = await this.bridgeTransactionBuilder.build(transfer)
       // console.log('createdData', createdData)
       if (code !== 0) {
-        return { errMsg }
+        return { errmsg: errMsg }
       }
       if (createdData.targetAddress.length >= 100) {
         return {
