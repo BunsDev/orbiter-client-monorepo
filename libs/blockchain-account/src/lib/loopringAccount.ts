@@ -1,11 +1,5 @@
 import { ethers } from 'ethers';
 import { OrbiterAccount } from './orbiterAccount';
-// import {
-//   ExchangeAPI,
-//   ConnectorNames,
-//   generateKeyPair,
-//   UserAPI
-// } from './node_modules/@loopring-web/loopring-sdk'
 import {
   ExchangeAPI,
   ConnectorNames,
@@ -28,6 +22,7 @@ export class LoopringAccount extends OrbiterAccount {
   async connect(privateKey: string, address: string) {
     this.privateKey = privateKey;
     this.L1Wallet = new ethers.Wallet(privateKey);
+    this.address = this.L1Wallet.address;
     this.client = new ExchangeAPI({ chainId: Number(this.chainConfig.networkId) });
     const { accInfo } = await this.client.getAccount({ owner: address });
     if (!accInfo) {
@@ -61,10 +56,7 @@ export class LoopringAccount extends OrbiterAccount {
       throw new Error(`${token} token not found`);
     }
     const { accInfo } = await this.client.getAccount({ owner: address });
-    const balances: any[] = await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/balances`, {
-      accountId: String(accInfo.accountId),
-      tokens: String(tokenInfo.id)
-    });
+    const balances: any[] = await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/balances?accountId=${String(accInfo.accountId)}&tokens=${String(tokenInfo.id)}`);
     if (balances.length > 0) {
       return BigInt(balances[0].total);
     }

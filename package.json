@@ -70,7 +70,8 @@
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
     "zksync": "^0.13.1",
-    "zksync-crypto": "^0.6.2"
+    "zksync-crypto": "^0.6.2",
+    "patch-package": "^8.0.0"
   },
   "devDependencies": {
     "@nestjs/schematics": "^10.0.2",
