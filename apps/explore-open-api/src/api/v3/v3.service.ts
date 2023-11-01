@@ -5,7 +5,7 @@ import { Op } from 'sequelize';
 import { BridgeTransaction, BridgeTransactionAttributes } from "@orbiter-finance/seq-models";
 import { V2Service } from "../v2/v2.service";
 import Keyv from "keyv";
-import { BigIntToString, fix0xPadStartAddress, getDecimalBySymbol } from "@orbiter-finance/utils";
+import { BigIntToString, getDecimalBySymbol } from "@orbiter-finance/utils";
 import {BigNumber} from "bignumber.js"
 import {
   ChainConfigService, ENVConfigService,
@@ -618,7 +618,7 @@ export class V3Service {
       const v3ChainInfo = chainList.find(item=>item.chainId === chain.id);
       if (!v3ChainInfo) continue;
       const newV3ChainInfo = JSON.parse(JSON.stringify(v3ChainInfo));
-      if (chain.nativeToken.toLowerCase() !== fix0xPadStartAddress(newV3ChainInfo.nativeCurrency.address, 66)) {
+      if (chain.nativeToken.toLowerCase() !== addressPadStart(newV3ChainInfo.nativeCurrency.address, 66)) {
         newV3ChainInfo.nativeCurrency = {};
       }
       for (const token of v3Tokens) {
@@ -643,7 +643,7 @@ export class V3Service {
     const chainInfo = v3ChainList.find(item => item.chainId === String(chainId));
     if (!chainInfo) return null;
     const tokenList = this.getChainTokenList(chainInfo);
-    return tokenList.find(item => fix0xPadStartAddress(item.address, 66).toLowerCase() === tokenAddress.toLowerCase());
+    return tokenList.find(item => addressPadStart(item.address, 66).toLowerCase() === tokenAddress.toLowerCase());
   }
 
   getChainTokenList(chain) {

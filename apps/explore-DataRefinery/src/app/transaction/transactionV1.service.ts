@@ -1,12 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { padEnd } from 'lodash';
 import dayjs from 'dayjs';
-import { equals, fix0xPadStartAddress, TransactionID } from '@orbiter-finance/utils';
+import { equals } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService, Token } from '@orbiter-finance/config';
-import { getAmountToSend } from '../utils/oldUtils';
-import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
@@ -16,6 +13,7 @@ import { LoggerDecorator, decodeV1SwapData, ValidSourceTxError } from '@orbiter-
 import { utils } from 'ethers'
 import { validateAndParseAddress } from 'starknet'
 import BridgeTransactionBuilder from './bridgeTransaction.builder'
+import { addressPadStart } from '../../utils';
 @Injectable()
 export class TransactionV1Service {
   @LoggerDecorator()
@@ -202,7 +200,7 @@ export class TransactionV1Service {
           const calldata = transfer.calldata as string[];
           if (calldata.length > 0) {
             if (transfer.signature === 'transfer(address,bytes)') {
-              const address = fix0xPadStartAddress(
+              const address = addressPadStart(
                 transfer.calldata[1].replace('0x03', ''),
                 66,
               );
@@ -211,7 +209,7 @@ export class TransactionV1Service {
               transfer.signature ===
               'transferERC20(address,address,uint256,bytes)'
             ) {
-              const address = fix0xPadStartAddress(
+              const address = addressPadStart(
                 transfer.calldata[3].replace('0x03', ''),
                 66,
               );
@@ -226,7 +224,7 @@ export class TransactionV1Service {
             transfer.calldata.length === 5 &&
             transfer.signature === 'transferERC20(felt,felt,Uint256,felt)'
           ) {
-            result.targetAddress = fix0xPadStartAddress(
+            result.targetAddress = addressPadStart(
               transfer.calldata[4].toLocaleLowerCase(),
               42,
             );
@@ -272,76 +270,6 @@ export class TransactionV1Service {
         errmsg: validSourceTxError.message,
         data: result,
       };
-    }
-  }
-  private buildSourceTxData(
-    transfer: TransfersModel,
-    createdData: BridgeTransactionAttributes,
-    data: any,
-  ) {
-    const { rule, sourceChain, targetChain, sourceToken, targetToken, targetAmount } = data;
-    if (data.dealer) {
-      createdData.dealerAddress = data.dealer.address;
-    }
-    if (data.ebc) {
-      createdData.ebcAddress = data.ebc.address;
-    }
-    if (!sourceChain) {
-      createdData.sourceChain = sourceChain.chainId;
-      if (sourceToken && !createdData.sourceToken) {
-        createdData.sourceToken = sourceToken.address.toLowerCase();
-        createdData.sourceSymbol = sourceToken.symbol;
-      }
-    }
-    if (targetChain) {
-      createdData.targetChain = data.targetChain.chainId;
-      if (targetToken) {
-        createdData.targetToken = targetToken.address.toLowerCase();
-        createdData.targetSymbol = targetToken.symbol;
-      }
-    }
-    createdData.targetMaker = data.targetMaker;
-    if (!targetAmount) {
-      const amountToSend = getAmountToSend(
-        +sourceChain.internalId,
-        sourceToken.decimals,
-        +targetChain.internalId,
-        targetToken.decimals,
-        transfer.value,
-        rule.tradingFee,
-        rule.gasFee,
-        createdData.sourceNonce,
-      );
-      if (amountToSend && amountToSend.state) {
-        createdData.targetAmount = new BigNumber(amountToSend.tAmount)
-          .div(10 ** targetToken.decimals)
-          .toString();
-        createdData.tradeFee = amountToSend.tradeFee;
-      }
-    } else {
-      createdData.targetAmount = new BigNumber(targetAmount)
-        .div(10 ** targetToken.decimals)
-        .toString();
-    }
-    createdData.transactionId = TransactionID(
-      transfer.sender,
-      sourceChain.internalId,
-      transfer.nonce,
-      transfer.symbol,
-      dayjs(transfer.timestamp).valueOf(),
-    );
-    createdData.withholdingFee = rule.tradingFee;
-    // if (data.targetAddress) {
-    createdData.targetAddress = data.targetAddress.toLowerCase();
-    // }
-    createdData.responseMaker = [rule.sender.toLocaleLowerCase()];
-    const v1ResponseMaker = this.envConfigService.get("v1ResponseMaker");
-    if (v1ResponseMaker) {
-      for (const fakeMaker in v1ResponseMaker) {
-        if (v1ResponseMaker[fakeMaker].includes(rule.sender.toLocaleLowerCase())) {
-          createdData.responseMaker.push(fakeMaker);
-        }
-      }
     }
   }
 

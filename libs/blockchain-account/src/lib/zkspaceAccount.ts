@@ -3,7 +3,7 @@ import { ethers, Wallet } from 'ethers';
 import * as zksync from 'zksync';
 import { equals, HTTPPost, NonceManager } from "@orbiter-finance/utils";
 import {OrbiterAccount} from './orbiterAccount';
-import { HTTPGet, toHex } from "@orbiter-finance/utils";
+import { HTTPGet } from "@orbiter-finance/utils";
 import { sign_musig, private_key_to_pubkey_hash } from 'zksync-crypto';
 import { TransactionRequest, TransferResponse, ZKSpaceSendTokenRequest } from './IAccount.interface';
 
@@ -275,4 +275,31 @@ Only sign this message for a trusted client!`;
       chainConfig.nativeCurrency :
       chainConfig.tokens.find((t) => equals(t.address, String(tokenOrId)));
   }
+}
+
+export function toHex(num: number, length: number) {
+  const charArray = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const strArr = Array(length * 2).fill('0');
+  let i = length * 2 - 1;
+  while (num > 15) {
+    var yushu = num % 16;
+    if (yushu >= 10) {
+      let index = yushu % 10;
+      strArr[i--] = charArray[index];
+    } else {
+      strArr[i--] = yushu.toString();
+    }
+    num = Math.floor(num / 16);
+  }
+
+  if (num != 0) {
+    if (num >= 10) {
+      let index = num % 10;
+      strArr[i--] = charArray[index];
+    } else {
+      strArr[i--] = num.toString();
+    }
+  }
+  strArr.unshift('0x');
+  return strArr.join('');
 }

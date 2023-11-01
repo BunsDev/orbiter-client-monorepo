@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Param, Post, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { HTTPResponse } from './utils/Response';
 import { ProofSubmissionRequest } from './common/interfaces/Proof.interface';
@@ -6,13 +6,14 @@ import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 @Controller()
 export class AppController {
   @LoggerDecorator()
-  private readonly logger: OrbiterLogger;
+  private readonly logger2: OrbiterLogger;
+  private readonly logger: Logger = new Logger(AppController.name);
   constructor(private readonly appService: AppService) { }
 
   @Post("/proofSubmission")
   async proofSubmission(@Body() data:ProofSubmissionRequest): Promise<HTTPResponse> {
     try {
-      this.logger.info(`proofSubmission`, data);
+      this.logger.log(`proofSubmission`, data);
       await this.appService.proofSubmission(data)
       return HTTPResponse.success(null)
     } catch (error) {

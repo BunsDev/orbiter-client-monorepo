@@ -1,4 +1,4 @@
-import { Controller, Get, Res, Param } from "@nestjs/common";
+import { Controller, Get, Param } from "@nestjs/common";
 import { JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningFactory } from './rpc-scanning/rpc-scanning.factory';
 @Controller()

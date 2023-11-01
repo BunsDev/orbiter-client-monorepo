@@ -15,16 +15,3 @@ export * from './lib/nonceManager';
 export * as logger from './lib/logger';
 export * from './lib/loggerDecorator';
 export * from './lib/coder'
-export {
-  groupBy,
-  orderBy,
-  maxBy,
-  uniqBy,
-  padStart,
-  flatten,
-  uniq,
-  clone,
-  cloneDeep,
-  take,
-  takeRight
-} from 'lodash';

@@ -1,19 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { equals, padStart } from '@orbiter-finance/utils';
+import { equals } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, BridgeTransaction, Transfers } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
-import { TransactionID } from '@orbiter-finance/utils';
 import { Sequelize } from 'sequelize-typescript';
 import { MemoryMatchingService } from './memory-matching.service';
 import { MakerService } from '../maker/maker.service';
 import { V3RuleInterface, V3TokenInterface } from './transaction.interface'
 import { ethers } from 'ethers6';
 import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
+import { padStart } from 'lodash';
+import { TransactionID } from '../../utils';
 @Injectable()
 export class TransactionV2Service {
   @LoggerDecorator()

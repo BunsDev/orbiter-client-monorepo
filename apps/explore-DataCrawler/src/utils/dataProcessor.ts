@@ -1,7 +1,7 @@
-import { generateSequenceNumbers } from "@orbiter-finance/utils";
 import { Level } from "level";
 import winston from "winston";
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
+import { generateSequenceNumbers } from ".";
 
 export default class DataProcessor {
     private dataSet: Set<number> = new Set();

@@ -1,5 +1,5 @@
 import { Account, Contract, cairo, RpcProvider } from 'starknet';
-import { equals, fix0xPadStartAddress, sleep } from '@orbiter-finance/utils';
+import { equals, sleep } from '@orbiter-finance/utils';
 import { NonceManager, abis } from "@orbiter-finance/utils";
 import { TransactionRequest, TransferResponse } from "./IAccount.interface";
 import { OrbiterAccount } from "./orbiterAccount";
@@ -17,7 +17,7 @@ export class StarknetAccount extends OrbiterAccount {
       privateKey,
       <any>version || "0"
     );
-    if (!equals(fix0xPadStartAddress(account.address, 66), fix0xPadStartAddress(address, 66))) {
+    if (!equals(account.address, address)) {
       throw new Error('The connected wallet address is inconsistent with the private key address');
     }
     this.account = account;

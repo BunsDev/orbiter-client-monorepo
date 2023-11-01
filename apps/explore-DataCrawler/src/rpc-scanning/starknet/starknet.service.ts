@@ -3,9 +3,7 @@ import {
   isEmpty,
   equals,
   splitArrayBySize,
-  fix0xPadStartAddress,
-  sleep,
-  JSONStringify
+  sleep
 } from '@orbiter-finance/utils';
 import {
   ExecuteCalldata,
@@ -15,6 +13,7 @@ import {
 import BigNumber from 'bignumber.js';
 import { RpcProvider, RPC } from 'starknet';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
+import { addressPadStart } from '../../utils';
 export class StarknetRpcScanningService extends RpcScanningService {
   #provider: RpcProvider;
   getProvider() {
@@ -122,13 +121,13 @@ export class StarknetRpcScanningService extends RpcScanningService {
     const chainConfig = this.chainConfig;
     for (const row of parseData) {
       try {
-        const to = fix0xPadStartAddress(row.to, 66);
+        const to = addressPadStart(row.to, 66);
         const args = row.args;
         const transfer: TransferAmountTransaction = {
           chainId: String(this.chainId),
-          hash: fix0xPadStartAddress(transaction.transaction_hash, 66),
+          hash: addressPadStart(transaction.transaction_hash, 66),
           blockNumber: transaction.block_number,
-          sender: fix0xPadStartAddress(transaction.sender_address, 66),
+          sender: addressPadStart(transaction.sender_address, 66),
           receiver: null,
           value: null,
           amount: null,
@@ -150,12 +149,12 @@ export class StarknetRpcScanningService extends RpcScanningService {
         }
         if (row.name) {
           if (row.name === 'transfer') {
-            const receiver = fix0xPadStartAddress(args[0], 66);
+            const receiver = addressPadStart(args[0], 66);
             if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
               continue;
             }
             transfer.receiver = receiver;
-            transfer.token = fix0xPadStartAddress(to, 66);
+            transfer.token = addressPadStart(to, 66);
             const value = new BigNumber(args[1]);
             transfer.value = value.toFixed(0);
             // transfer.contract = transfer.token;
@@ -170,11 +169,11 @@ export class StarknetRpcScanningService extends RpcScanningService {
           } else if (row.name === 'sign_pending_multisig_transaction') {
             // find
             const transferData = args[1].slice(-5) as any;
-            const receiver = fix0xPadStartAddress(transferData[1], 66);
+            const receiver = addressPadStart(transferData[1], 66);
             if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
               continue;
             }
-            const tokenAddrss = fix0xPadStartAddress(transferData[0], 66);
+            const tokenAddrss = addressPadStart(transferData[0], 66);
             transfer.receiver = receiver;
             transfer.token = tokenAddrss;
             const value = new BigNumber(transferData[2]);
@@ -189,11 +188,11 @@ export class StarknetRpcScanningService extends RpcScanningService {
             }
             transfers.push(transfer);
           } else if (row.name === 'transferERC20') {
-            const receiver = fix0xPadStartAddress(args[1], 66);
+            const receiver = addressPadStart(args[1], 66);
             if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
               continue;
             }
-            const tokenAddress = fix0xPadStartAddress(args[0], 66);
+            const tokenAddress = addressPadStart(args[0], 66);
             transfer.token = tokenAddress;
             transfer.receiver = receiver;
             const value = new BigNumber(args[2]);
@@ -238,13 +237,13 @@ export class StarknetRpcScanningService extends RpcScanningService {
             e.keys[0] ===
             "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9" &&
             equals(
-              fix0xPadStartAddress(e.from_address, 66),
+              addressPadStart(e.from_address, 66),
               transfer.token,
             ),
         );
         const transferEvent = events.find((ev: any) => {
-          const fromAddress = fix0xPadStartAddress(ev.data[0], 66);
-          const toAddress = fix0xPadStartAddress(ev.data[1], 66);
+          const fromAddress = addressPadStart(ev.data[0], 66);
+          const toAddress = addressPadStart(ev.data[1], 66);
           const value = new BigNumber(ev.data[2]).toFixed(0);
           return (
             equals(fromAddress, transfer.sender) &&
@@ -352,7 +351,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     } else if (
       selector ===
       '0x68bcbdba7cc8cac2832d23e2c32e9eec39a9f1d03521eff5dff800a62725fa' &&
-      this.chainConfig.contract[fix0xPadStartAddress(to,66).toLowerCase()] === 'OBSource'
+      this.chainConfig.contract[addressPadStart(to,66).toLowerCase()] === 'OBSource'
     ) {
       return {
         name: 'transferERC20',

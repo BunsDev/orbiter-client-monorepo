@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config'
-import { uniq, addressPadStart64, equals } from '@orbiter-finance/utils'
+import { equals } from '@orbiter-finance/utils'
 // import v1MakerRules from '../config/v1MakerConfig';
 import { SubgraphClient } from '@orbiter-finance/subgraph-sdk';
 import { Transfers } from '@orbiter-finance/seq-models';
 import dayjs from 'dayjs';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
+import { uniq } from 'lodash';
+import { addressPadStart } from '../../utils';
 @Injectable()
 export class MakerService {
     #v2Owners: string[] = [];
@@ -44,7 +46,7 @@ export class MakerService {
                 errmsg: 'sourceChainData not found'
             }
         }
-        const sourceToken = sourceChainData.tokens.find(token => equals(token.tokenAddress, addressPadStart64(transfer.token)));
+        const sourceToken = sourceChainData.tokens.find(token => equals(token.tokenAddress, addressPadStart(transfer.token, 64)));
         if (!sourceChainData) {
             return {
                 errno: 1000,

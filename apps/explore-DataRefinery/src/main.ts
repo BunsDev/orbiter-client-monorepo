@@ -24,7 +24,7 @@ process.on('uncaughtException', (err) => {
   sysLogger.error('Unhandled Exception at:', err)
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   sysLogger.error(`Unhandled Rejection at: ${reason}`)
 });
 bootstrap();

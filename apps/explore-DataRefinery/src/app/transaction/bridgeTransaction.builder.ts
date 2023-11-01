@@ -5,10 +5,8 @@ import {
   decodeV1SwapData,
   ValidSourceTxError,
   equals,
-  fix0xPadStartAddress,
-  TransactionID
 } from '@orbiter-finance/utils';
-import { BridgeTransactionAttributes, BridgeTransaction, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
+import { BridgeTransactionAttributes, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
 import { validateAndParseAddress } from 'starknet'
 import { ChainConfigService, ENVConfigService, IChainConfig, MakerV1RuleService, Token } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
@@ -16,6 +14,7 @@ import { getAmountToSend } from '../utils/oldUtils'
 import dayjs from 'dayjs';
 import { utils } from 'ethers'
 import { InjectModel } from '@nestjs/sequelize';
+import { TransactionID, addressPadStart } from '../../utils';
 
 function parseSourceTxSecurityCode(value) {
   let index = 0;
@@ -181,7 +180,7 @@ export class EVMOBSourceContractBuilder {
       const calldata = transfer.calldata as string[];
       if (calldata.length > 0) {
         if (transfer.signature === 'transfer(address,bytes)') {
-          const address = fix0xPadStartAddress(
+          const address = addressPadStart(
             transfer.calldata[1].replace('0x03', ''),
             66,
           );
@@ -190,7 +189,7 @@ export class EVMOBSourceContractBuilder {
           transfer.signature ===
           'transferERC20(address,address,uint256,bytes)'
         ) {
-          const address = fix0xPadStartAddress(
+          const address = addressPadStart(
             transfer.calldata[3].replace('0x03', ''),
             66,
           );
@@ -252,7 +251,7 @@ export class StarknetOBSourceContractBuilder {
         transfer.calldata.length === 5 &&
         transfer.signature === 'transferERC20(felt,felt,Uint256,felt)'
       ) {
-        result.targetAddress = fix0xPadStartAddress(
+        result.targetAddress = addressPadStart(
           transfer.calldata[4].toLocaleLowerCase(),
           42,
         );

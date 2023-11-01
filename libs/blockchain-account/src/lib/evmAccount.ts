@@ -18,7 +18,7 @@ import {
   TransactionSendBeforeError,
   TransferResponse,
 } from "./IAccount.interface";
-import { provider, JSONStringify, timeoutPromise, equals } from "@orbiter-finance/utils";
+import { provider, JSONStringify, promiseWithTimeout, equals } from "@orbiter-finance/utils";
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
@@ -80,7 +80,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.value = 0n;
       transactionRequest.from = this.wallet.address;
       // get erc20 getLimit
-      await timeoutPromise(() => this.getGasPrice(transactionRequest), 1000 * 30);
+      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendBeforeError(error.message);
     }
@@ -181,7 +181,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.value = value as any;
       transactionRequest.from = this.wallet.address;
       // get getLimit
-      await timeoutPromise(() => this.getGasPrice(transactionRequest), 1000 * 30);
+      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendBeforeError(error.message);
     }
@@ -231,7 +231,7 @@ export class EVMAccount extends OrbiterAccount {
         tos,
         values,
       ]);
-      await timeoutPromise(() => this.getGasPrice(transactionRequest), 1000 * 30);
+      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendBeforeError(error.message);
     }
@@ -285,7 +285,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.to = router;
       transactionRequest.value = "0x0";
       transactionRequest.chainId = Number(this.chainConfig.networkId);
-      await timeoutPromise(() => this.getGasPrice(transactionRequest), 1000 * 30);
+      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendBeforeError(error.message);
     }
