@@ -1,6 +1,6 @@
 
 export const characterPattern = `
-#   ██████╗ ██████╗ ██████╗ ██╗████████╗███████╗██████╗
+#   ██████╗ ██████╗ ██████╗ ██╗████████╗███████╗██████╗ 
 #  ██╔═══██╗██╔══██╗██╔══██╗██║╚══██╔══╝██╔════╝██╔══██╗
 #  ██║   ██║██████╔╝██████╔╝██║   ██║   █████╗  ██████╔╝
 #  ██║   ██║██╔══██╗██╔══██╗██║   ██║   ██╔══╝  ██╔══██╗
@@ -14,7 +14,7 @@ export * as provider from './lib/provider';
 export * from './lib/nonceManager';
 export * as logger from './lib/logger';
 export * from './lib/loggerDecorator';
-export * from './lib/coder'
+
 export {
   groupBy,
   orderBy,

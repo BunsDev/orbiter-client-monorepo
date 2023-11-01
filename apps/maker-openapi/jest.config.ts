@@ -1,11 +1,11 @@
 /* eslint-disable */
 export default {
-  displayName: 'util',
+  displayName: 'maker-openapi',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../coverage/libs/utils',
+  coverageDirectory: '../../coverage/apps/maker-openapi',
 };

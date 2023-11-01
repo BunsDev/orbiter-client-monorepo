@@ -4,7 +4,7 @@ import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
 import { ConsulService } from 'libs/consul/src/lib/consul.service'
 import { Logger } from '@nestjs/common';
 import { IChainConfig, Token } from './config.interface'
-import { equals } from 'libs/utils/src'
+import { equals } from '@orbiter-finance/utils'
 import { ORBITER_CONFIG_MODULE_OPTS } from '../lib/config.constants'
 import { ConfigModuleOptions } from '../lib/config.interface'
 @Injectable()
