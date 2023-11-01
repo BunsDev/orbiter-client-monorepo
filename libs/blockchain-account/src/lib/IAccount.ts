@@ -7,7 +7,6 @@ export interface Context {
   envConfigService: ENVConfigService
 }
 export default abstract class IAccount {
-  public address: string;
   constructor(protected chainId: string, ctx:Context) {}
   public abstract transfer(
     to: string,

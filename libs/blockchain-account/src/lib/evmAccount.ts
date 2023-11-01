@@ -25,7 +25,6 @@ export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
   #provider: Orbiter6Provider;
-  public address: string;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }

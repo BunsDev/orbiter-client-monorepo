@@ -8,7 +8,7 @@ import { IChainConfig } from "@orbiter-finance/config";
 import { OrbiterLogger,logger } from "@orbiter-finance/utils";
 
 export class OrbiterAccount extends IAccount {
-
+  public address: string;
   public logger!: OrbiterLogger;
   public store: StoreService;
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
