@@ -9,7 +9,7 @@ import {
 
 import Web3 from 'web3';
 import PrivateKeyProvider from 'truffle-privatekey-provider';
-import { HTTPGet } from "@orbiter-finance/utils";
+import { HTTPGet } from "@orbiter-finance/request";
 import { sleep } from '@orbiter-finance/utils';
 import { LoopringSendTokenRequest, TransferAmountTransaction, TransferResponse } from './IAccount.interface';
 

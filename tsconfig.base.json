@@ -27,6 +27,7 @@
       "@orbiter-finance/config": ["libs/config/src/index.ts"],
       "@orbiter-finance/consul": ["libs/consul/src/index.ts"],
       "@orbiter-finance/rabbit-mq": ["libs/rabbit-mq/src/index.ts"],
+      "@orbiter-finance/request": ["libs/request/src/index.ts"],
       "@orbiter-finance/seq-models": ["libs/seq-models/src/index.ts"],
       "@orbiter-finance/subgraph-sdk": ["libs/subgraph-sdk/src/index.ts"],
       "@orbiter-finance/tcp": ["libs/tcp/src/index.ts"],

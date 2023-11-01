@@ -6,9 +6,10 @@ import {
   generateLegacyStarkPrivateKey,
 } from "@imtbl/core-sdk";
 import { OrbiterAccount } from "./orbiterAccount";
-import { equals, HTTPGet, sleep } from "@orbiter-finance/utils";
+import { equals, sleep } from "@orbiter-finance/utils";
 import { TransactionRequest, TransferResponse } from "./IAccount.interface";
 import BigNumber from "bignumber.js";
+import { HTTPGet } from '@orbiter-finance/request';
 export class IMXAccount extends OrbiterAccount {
   private L1Wallet: ethers.Wallet;
   private client: ImmutableX;

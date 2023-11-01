@@ -8,6 +8,5 @@ export const characterPattern = `
 #   ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
 `;
 export * from './lib/core';
-export * from './lib/request';
 export * as logger from './lib/logger';
 export * from './lib/loggerDecorator';
