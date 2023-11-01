@@ -1,21 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, Interval } from '@nestjs/schedule';
-import { ENVConfigService } from '@orbiter-finance/config';
-import { ChainRel, SubgraphClient } from '@orbiter-finance/subgraph-sdk';
 import { Mutex, MutexInterface, Semaphore, SemaphoreInterface, withTimeout } from 'async-mutex';
 import { ArbitrationService } from './arbitration.service';
 import { ArbitrationTransaction } from './arbitration.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
-import {HTTPGet,HTTPPost} from '@orbiter-finance/request'
-
+import {HTTPGet} from '../utils'
 const mutex = new Mutex();
 // arbitration-client
 @Injectable()
 export class ArbitrationJobService {
   private arbitrationHashs: string[] = [];
-  @LoggerDecorator()
-  private readonly logger: OrbiterLogger;
+  private readonly logger: Logger = new Logger(ArbitrationJobService.name);
   constructor(
     private arbitrationService: ArbitrationService,
     private eventEmitter: EventEmitter2
