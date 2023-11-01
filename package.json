@@ -7,7 +7,8 @@
     "dev:arbitration": "npx nx run arbitration:serve",
     "dev:explore-DataCrawler": "npx nx run explore-DataCrawler:serve",
     "dev:explore-DataRefinery": "npx nx run explore-DataRefinery:serve",
-    "dev:maker-client": "npx nx run maker-client:serve"
+    "dev:maker-client": "npx nx run maker-client:serve",
+    "postinstall": "patch-package"
   },
   "resolutions": {
     "ethereumjs-abi": "https://registry.npmjs.org/ethereumjs-abi/-/ethereumjs-abi-0.6.8.tgz"
@@ -69,7 +70,8 @@
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
     "zksync": "^0.13.1",
-    "zksync-crypto": "^0.6.2"
+    "zksync-crypto": "^0.6.2",
+    "patch-package": "^8.0.0"
   },
   "devDependencies": {
     "@nestjs/schematics": "^10.0.2",

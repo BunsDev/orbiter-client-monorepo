@@ -6,7 +6,17 @@ import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
 import { TransactionV2Service } from './transactionV2.service';
 import { MemoryMatchingService } from './memory-matching.service';
 import {MakerModule} from '../maker/maker.module'
-import BridgeTransactionBuilder from './bridgeTransaction.builder';
+import
+BridgeTransactionBuilder,
+{
+  StandardBuilder,
+  EVMOBSourceContractBuilder,
+  EVMRouterV1ContractBuilder,
+  EVMRouterV3ContractBuilder,
+  StarknetOBSourceContractBuilder,
+  LoopringBuilder,
+}
+from './bridgeTransaction.builder';
 @Module({
   imports: [SequelizeModule.forFeature([Transfers, BridgeTransaction]), MakerModule],
   providers: [
@@ -15,6 +25,12 @@ import BridgeTransactionBuilder from './bridgeTransaction.builder';
     TransactionV1Service,
     TransactionService,
     MemoryMatchingService,
+    StandardBuilder,
+    EVMOBSourceContractBuilder,
+    EVMRouterV1ContractBuilder,
+    EVMRouterV3ContractBuilder,
+    StarknetOBSourceContractBuilder,
+    LoopringBuilder,
   ],
   exports: [TransactionService, TransactionV1Service, TransactionV2Service],
 })

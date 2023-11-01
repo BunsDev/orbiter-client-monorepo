@@ -150,7 +150,7 @@ Only sign this message for a trusted client!`;
     if (!account) {
       throw new Error('account not found');
     }
-    const zksNetworkID = Number(this.chainConfig.chainId);
+    const zksNetworkID = Number(this.chainConfig.internalId) === 12 ? 13 : 129;
     const feeToken = this.getTokenByChain(transactionRequest.feeTokenId);
     if (!feeToken) {
       throw new Error('feeToken not found');
