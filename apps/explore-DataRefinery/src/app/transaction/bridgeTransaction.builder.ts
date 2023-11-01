@@ -273,160 +273,139 @@ export default class BridgeTransactionBuilder {
       private evmRouterV3ContractBuilder: EVMRouterV3ContractBuilder,
       private evmRouterV1ContractBuilder: EVMRouterV1ContractBuilder,
     ) {}
-    async build(transfer: TransfersModel): Promise<{ code: number, errMsg?: string, createdData: BridgeTransactionAttributes }> {
+    async build(transfer: TransfersModel): Promise<BridgeTransactionAttributes> {
         // build other common
-        try {
-          const createdData: BridgeTransactionAttributes = {
-            sourceId: transfer.hash,
-            sourceAddress: transfer.sender,
-            sourceMaker: transfer.receiver,
-            sourceAmount: transfer.amount.toString(),
-            sourceChain: transfer.chainId,
-            sourceNonce: transfer.nonce,
-            sourceSymbol: transfer.symbol,
-            sourceToken: transfer.token,
-            targetToken: null,
-            sourceTime: transfer.timestamp,
-            dealerAddress: null,
-            ebcAddress: null,
-            targetChain: null,
-            ruleId: null,
-            targetAmount: null,
-            targetAddress: null,
-            targetSymbol: null,
-            createdAt: new Date(),
-            version: transfer.version,
-          };
-          if (+transfer.nonce >= 9000) {
-            throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 9000`)
-          }
+        const createdData: BridgeTransactionAttributes = {
+          sourceId: transfer.hash,
+          sourceAddress: transfer.sender,
+          sourceMaker: transfer.receiver,
+          sourceAmount: transfer.amount.toString(),
+          sourceChain: transfer.chainId,
+          sourceNonce: transfer.nonce,
+          sourceSymbol: transfer.symbol,
+          sourceToken: transfer.token,
+          targetToken: null,
+          sourceTime: transfer.timestamp,
+          dealerAddress: null,
+          ebcAddress: null,
+          targetChain: null,
+          ruleId: null,
+          targetAmount: null,
+          targetAddress: null,
+          targetSymbol: null,
+          createdAt: new Date(),
+          version: transfer.version,
+        };
+        if (+transfer.nonce >= 9000) {
+          throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 9000`)
+        }
 
-          const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);
-          if (!sourceChain) {
-            throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `${transfer.token} sourceChain not found`)
-          }
-          const sourceToken = this.chainConfigService.getTokenByAddress(
-            sourceChain.chainId,
-            transfer.token,
-          );
-          const contract = sourceChain.contract
-          let builderData: BuilderData
-          if (
-            transfer.contract
-            && !['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
-            && (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1')
-            && transfer.signature === 'swap(address,address,uint256,bytes)'
-          ) {
-            builderData = await this.evmRouterV1ContractBuilder.build(transfer)
-          } else if (['loopring', 'loopring_test'].includes(transfer.chainId)) {
-            builderData = await this.loopringBuilder.build(transfer)
-          } else {
-            builderData = await this.standardBuilder.build(transfer);
-          }
+        const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);
+        if (!sourceChain) {
+          throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `${transfer.token} sourceChain not found`)
+        }
+        const sourceToken = this.chainConfigService.getTokenByAddress(
+          sourceChain.chainId,
+          transfer.token,
+        );
+        const contract = sourceChain.contract
+        let builderData: BuilderData
+        if (
+          transfer.contract
+          && !['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
+          && (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1')
+          && transfer.signature === 'swap(address,address,uint256,bytes)'
+        ) {
+          builderData = await this.evmRouterV1ContractBuilder.build(transfer)
+        } else if (['loopring', 'loopring_test'].includes(transfer.chainId)) {
+          builderData = await this.loopringBuilder.build(transfer)
+        } else {
+          builderData = await this.standardBuilder.build(transfer);
+        }
 
-          const { targetAddress: builderDataTargetAddress , targetChain, targetToken, targetAmount } = builderData
+        const { targetAddress: builderDataTargetAddress , targetChain, targetToken, targetAmount } = builderData
 
-          if (!targetChain) {
-            throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetChain not found`)
-          }
-          if (!targetToken) {
-            throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetToken not found`)
-          }
+        if (!targetChain) {
+          throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetChain not found`)
+        }
+        if (!targetToken) {
+          throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetToken not found`)
+        }
 
-          let rule;
-          if (targetToken) {
-            rule = this.makerV1RuleService.getAll().find((rule) => {
-              const {
-                sourceChainId,
-                targetChainId,
-                sourceSymbol,
-                targetSymbol,
-                makerAddress,
-              } = rule;
-              return (
-                equals(sourceChainId, sourceChain.internalId) &&
-                equals(targetChainId, targetChain.internalId) &&
-                equals(sourceSymbol, sourceToken.symbol) &&
-                equals(targetSymbol, targetToken.symbol) &&
-                equals(makerAddress, transfer.receiver)
-              );
-            });
-          }
-          if (!rule) {
-            const errMsg = `sourceChain.internalId: ${sourceChain.internalId}, targetChain.internalId:${targetChain.internalId}, sourceToken.symbol:${sourceToken.symbol}, targetToken.symbol:${targetToken.symbol}, transfer.receiver:${transfer.receiver}`
-            throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, errMsg)
-          }
-
-          if (builderDataTargetAddress) {
-            createdData.targetAddress = builderDataTargetAddress.toLowerCase()
-          } else {
-            throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, 'no targetAddress')
-          }
-          createdData.targetChain = targetChain.chainId
-          createdData.targetToken = targetToken.address.toLowerCase()
-          createdData.targetSymbol = targetToken.symbol
-
-          if (targetAmount) {
-            createdData.targetAmount = new BigNumber(targetAmount)
-            .div(10 ** targetToken.decimals)
-            .toString();
-          } else {
-            const amountToSend = getAmountToSend(
-              +sourceChain.internalId,
-              sourceToken.decimals,
-              +targetChain.internalId,
-              targetToken.decimals,
-              transfer.value,
-              rule.tradingFee,
-              rule.gasFee,
-              createdData.sourceNonce,
+        let rule;
+        if (targetToken) {
+          rule = this.makerV1RuleService.getAll().find((rule) => {
+            const {
+              sourceChainId,
+              targetChainId,
+              sourceSymbol,
+              targetSymbol,
+              makerAddress,
+            } = rule;
+            return (
+              equals(sourceChainId, sourceChain.internalId) &&
+              equals(targetChainId, targetChain.internalId) &&
+              equals(sourceSymbol, sourceToken.symbol) &&
+              equals(targetSymbol, targetToken.symbol) &&
+              equals(makerAddress, transfer.receiver)
             );
-            if (amountToSend && amountToSend.state) {
-              createdData.targetAmount = new BigNumber(amountToSend.tAmount)
-                .div(10 ** targetToken.decimals)
-                .toString();
-              createdData.tradeFee = amountToSend.tradeFee;
-            }
-          }
+          });
+        }
+        if (!rule) {
+          const errMsg = `sourceChain.internalId: ${sourceChain.internalId}, targetChain.internalId:${targetChain.internalId}, sourceToken.symbol:${sourceToken.symbol}, targetToken.symbol:${targetToken.symbol}, transfer.receiver:${transfer.receiver}`
+          throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, errMsg)
+        }
 
-          createdData.targetMaker = rule.sender
-          createdData.transactionId = TransactionID(
-            transfer.sender,
-            sourceChain.internalId,
-            transfer.nonce,
-            transfer.symbol,
-            dayjs(transfer.timestamp).valueOf(),
+        if (builderDataTargetAddress) {
+          createdData.targetAddress = builderDataTargetAddress.toLowerCase()
+        } else {
+          throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, 'no targetAddress')
+        }
+        createdData.targetChain = targetChain.chainId
+        createdData.targetToken = targetToken.address.toLowerCase()
+        createdData.targetSymbol = targetToken.symbol
+
+        if (targetAmount) {
+          createdData.targetAmount = new BigNumber(targetAmount)
+          .div(10 ** targetToken.decimals)
+          .toString();
+        } else {
+          const amountToSend = getAmountToSend(
+            +sourceChain.internalId,
+            sourceToken.decimals,
+            +targetChain.internalId,
+            targetToken.decimals,
+            transfer.value,
+            rule.tradingFee,
+            rule.gasFee,
+            createdData.sourceNonce,
           );
-          createdData.withholdingFee = rule.tradingFee;
-          createdData.responseMaker = [rule.sender.toLocaleLowerCase()];
-          const v1ResponseMaker = this.envConfigService.get("v1ResponseMaker");
-          if (v1ResponseMaker) {
-            for (const fakeMaker in v1ResponseMaker) {
-              if (v1ResponseMaker[fakeMaker].includes(rule.sender.toLocaleLowerCase())) {
-                createdData.responseMaker.push(fakeMaker);
-              }
-            }
-          }
-          return { code: 0, createdData }
-        } catch (error) {
-          if (error instanceof ValidSourceTxError) {
-            this.logger.error(`ValidSourceTxError hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`);
-            let r = await this.transfersModel.update(
-              {
-                opStatus: error.opStatus,
-              },
-              {
-                where: {
-                  id: transfer.id,
-                },
-              },
-            );
-            this.logger.info(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
-            return { code: 1, errMsg: error.message, createdData: null }
-          } else {
-            this.logger.error(`ValidSourceTxError throw`, error)
-            throw error
+          if (amountToSend && amountToSend.state) {
+            createdData.targetAmount = new BigNumber(amountToSend.tAmount)
+              .div(10 ** targetToken.decimals)
+              .toString();
+            createdData.tradeFee = amountToSend.tradeFee;
           }
         }
+
+        createdData.targetMaker = rule.sender
+        createdData.transactionId = TransactionID(
+          transfer.sender,
+          sourceChain.internalId,
+          transfer.nonce,
+          transfer.symbol,
+          dayjs(transfer.timestamp).valueOf(),
+        );
+        createdData.withholdingFee = rule.tradingFee;
+        createdData.responseMaker = [rule.sender.toLocaleLowerCase()];
+        const v1ResponseMaker = this.envConfigService.get("v1ResponseMaker");
+        if (v1ResponseMaker) {
+          for (const fakeMaker in v1ResponseMaker) {
+            if (v1ResponseMaker[fakeMaker].includes(rule.sender.toLocaleLowerCase())) {
+              createdData.responseMaker.push(fakeMaker);
+            }
+          }
+        }
+        return createdData
     }
 }

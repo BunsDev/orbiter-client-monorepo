@@ -376,7 +376,32 @@ export class TransactionV1Service {
         errmsg: `${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`
       }
     }
+    let createdData: BridgeTransactionAttributes
+    try {
+      createdData = await this.bridgeTransactionBuilder.build(transfer)
+    } catch (error) {
+      if (error instanceof ValidSourceTxError) {
+        this.logger.error(`ValidSourceTxError hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`);
+        const r = await this.transfersModel.update(
+          {
+            opStatus: error.opStatus,
+          },
+          {
+            where: {
+              id: transfer.id,
+            },
+          },
+        );
+        this.logger.info(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
+        return { errmsg: error.message }
+      } else {
+        this.logger.error(`ValidSourceTxError throw`, error)
+        throw error
+      }
+    }
+
     const t = await this.sequelize.transaction();
+
     try {
 
       // const createdData: BridgeTransactionAttributes = {
@@ -401,11 +426,6 @@ export class TransactionV1Service {
       //   version: transfer.version,
       // };
       // this.buildSourceTxData(transfer, createdData, data);
-      const { code, createdData, errMsg } = await this.bridgeTransactionBuilder.build(transfer)
-      // console.log('createdData', createdData)
-      if (code !== 0) {
-        return { errmsg: errMsg }
-      }
       if (createdData.targetAddress.length >= 100) {
         return {
           errmsg: `${transfer.hash} There is an issue with the transaction format`
