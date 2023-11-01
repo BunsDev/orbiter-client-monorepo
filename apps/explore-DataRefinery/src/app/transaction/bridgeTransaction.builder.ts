@@ -177,7 +177,7 @@ export class EVMOBSourceContractBuilder {
       if (!targetToken || !['SN_MAIN', 'SN_GOERLI'].includes(targetChain.chainId)) {
         return result
       }
-      result.targetChain = targetChain
+      result.targetToken = targetToken
       const calldata = transfer.calldata as string[];
       if (calldata.length > 0) {
         if (transfer.signature === 'transfer(address,bytes)') {
