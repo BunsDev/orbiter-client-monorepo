@@ -16,6 +16,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@orbiter-finance/abi": ["libs/abi/src/index.ts"],
       "@orbiter-finance/alert": ["libs/alert/src/index.ts"],
       "@orbiter-finance/arbitration-module": [
         "libs/arbitration-module/src/index.ts"

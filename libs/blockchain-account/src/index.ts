@@ -8,3 +8,5 @@ export * from './lib/starknetAccount';
 export * from './lib/zkspaceAccount';
 export * from './lib/zksyncAccount';
 export * from './lib/store.service';
+
+export * from './lib/provider'

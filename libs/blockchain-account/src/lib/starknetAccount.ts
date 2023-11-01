@@ -1,9 +1,9 @@
 import { Account, Contract, cairo, RpcProvider } from 'starknet';
 import { equals, sleep } from '@orbiter-finance/utils';
-import { NonceManager, abis } from "@orbiter-finance/utils";
 import { TransactionRequest, TransferResponse } from "./IAccount.interface";
 import { OrbiterAccount } from "./orbiterAccount";
-
+import {NonceManager} from './nonceManager';
+import {StarknetERC20} from '@orbiter-finance/abi'
 export class StarknetAccount extends OrbiterAccount {
   public account: Account;
   public provider: RpcProvider;
@@ -73,7 +73,7 @@ export class StarknetAccount extends OrbiterAccount {
     for (let i = 0; i < tos.length; i++) {
       const recipient = tos[i];
       const amount = String(values[i]);
-      const ethContract = new Contract(abis.StarknetERC20, token, provider);
+      const ethContract = new Contract(StarknetERC20, token, provider);
       invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
     }
     const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
@@ -142,7 +142,7 @@ export class StarknetAccount extends OrbiterAccount {
   public async getTokenBalance(token: string, address?: string): Promise<bigint> {
     const provider = this.getProviderV4();
     const contractInstance = new Contract(
-      <any>abis.StarknetERC20,
+      <any>StarknetERC20,
       token,
       provider,
     );

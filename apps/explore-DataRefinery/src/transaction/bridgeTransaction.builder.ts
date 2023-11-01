@@ -2,8 +2,6 @@ import { Injectable } from '@nestjs/common';
 import {
   OrbiterLogger,
   LoggerDecorator,
-  decodeV1SwapData,
-  ValidSourceTxError,
   equals,
 } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
@@ -14,7 +12,7 @@ import { getAmountToSend } from '../utils/oldUtils'
 import dayjs from 'dayjs';
 import { utils } from 'ethers'
 import { InjectModel } from '@nestjs/sequelize';
-import { TransactionID, addressPadStart } from '../../utils';
+import { TransactionID, ValidSourceTxError, addressPadStart, decodeV1SwapData } from '../utils';
 
 function parseSourceTxSecurityCode(value) {
   let index = 0;

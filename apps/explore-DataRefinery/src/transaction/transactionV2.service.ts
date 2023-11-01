@@ -14,7 +14,7 @@ import { V3RuleInterface, V3TokenInterface } from './transaction.interface'
 import { ethers } from 'ethers6';
 import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
 import { padStart } from 'lodash';
-import { TransactionID } from '../../utils';
+import { TransactionID } from '../utils';
 @Injectable()
 export class TransactionV2Service {
   @LoggerDecorator()

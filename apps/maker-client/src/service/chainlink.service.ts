@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { BigNumber } from "bignumber.js";
 import { JsonRpcProvider, ethers } from "ethers6";
-import {abis} from "@orbiter-finance/utils";
+import {ChainLinkAggregatorV3} from "@orbiter-finance/abi";
 import { ChainConfigService } from "@orbiter-finance/config";
 
 @Injectable()
@@ -38,7 +38,7 @@ export class ChainLinkService {
     const provider = new JsonRpcProvider(mainnetChain.rpc[0]);
     const priceFeed = new ethers.Contract(
       addr,
-      abis.ChainLinkAggregatorV3,
+      ChainLinkAggregatorV3,
       provider
     );
     // We get the data from the last round of the contract

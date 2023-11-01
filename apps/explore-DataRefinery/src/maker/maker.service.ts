@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { uniq } from 'lodash';
-import { addressPadStart } from '../../utils';
+import { addressPadStart } from '../utils';
 @Injectable()
 export class MakerService {
     #v2Owners: string[] = [];

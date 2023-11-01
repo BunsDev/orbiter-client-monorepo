@@ -9,11 +9,11 @@ import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
 import { Sequelize } from 'sequelize-typescript';
 import { OrbiterLogger } from '@orbiter-finance/utils';
-import { LoggerDecorator, decodeV1SwapData, ValidSourceTxError } from '@orbiter-finance/utils';
+import { LoggerDecorator } from '@orbiter-finance/utils';
 import { utils } from 'ethers'
 import { validateAndParseAddress } from 'starknet'
 import BridgeTransactionBuilder from './bridgeTransaction.builder'
-import { addressPadStart } from '../../utils';
+import { ValidSourceTxError, decodeV1SwapData, addressPadStart } from '../utils';
 @Injectable()
 export class TransactionV1Service {
   @LoggerDecorator()

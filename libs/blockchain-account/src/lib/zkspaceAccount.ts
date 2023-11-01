@@ -1,11 +1,12 @@
 import { BigNumber } from 'bignumber.js';
 import { ethers, Wallet } from 'ethers';
 import * as zksync from 'zksync';
-import { equals, HTTPPost, NonceManager } from "@orbiter-finance/utils";
+import { equals, HTTPPost } from "@orbiter-finance/utils";
 import {OrbiterAccount} from './orbiterAccount';
 import { HTTPGet } from "@orbiter-finance/utils";
 import { sign_musig, private_key_to_pubkey_hash } from 'zksync-crypto';
 import { TransactionRequest, TransferResponse, ZKSpaceSendTokenRequest } from './IAccount.interface';
+import {NonceManager} from './nonceManager';
 
 export class ZkSpaceAccount extends OrbiterAccount {
   private nonceManager: NonceManager;

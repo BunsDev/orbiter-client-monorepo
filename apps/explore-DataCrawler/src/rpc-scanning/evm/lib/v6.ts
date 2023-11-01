@@ -1,7 +1,9 @@
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish } from 'ethers6';
 import { IChainConfig } from '@orbiter-finance/config';
-import { abis, equals } from '@orbiter-finance/utils';
+import { equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
+import * as abis from '@orbiter-finance/abi'
+
 import _, { clone } from 'lodash'
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 

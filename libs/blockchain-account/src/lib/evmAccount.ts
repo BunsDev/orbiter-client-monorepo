@@ -5,11 +5,12 @@ import {
   keccak256,
   type Wallet,
 } from "ethers6";
-import { abis, NonceManager } from "@orbiter-finance/utils";
+import { NonceManager } from './nonceManager';
+import { ERC20Abi, OrbiterRouterV3 } from '@orbiter-finance/abi'
 import {
   Context,
 } from "./IAccount";
-import {OrbiterAccount} from "./orbiterAccount";
+import { OrbiterAccount } from "./orbiterAccount";
 import BigNumber from "bignumber.js";
 import {
   TransactionFailedError,
@@ -18,11 +19,12 @@ import {
   TransactionSendBeforeError,
   TransferResponse,
 } from "./IAccount.interface";
-import { provider, JSONStringify, promiseWithTimeout, equals } from "@orbiter-finance/utils";
+import { JSONStringify, promiseWithTimeout, equals } from "@orbiter-finance/utils";
+import { Orbiter6Provider } from './provider'
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
-  #provider: provider.Orbiter6Provider;
+  #provider: Orbiter6Provider;
   public address: string;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
@@ -31,13 +33,13 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
     if (!this.#provider) {
-      this.#provider = new provider.Orbiter6Provider(rpc);
+      this.#provider = new Orbiter6Provider(rpc);
     }
     if (this.#provider && this.#provider.getUrl() != rpc) {
       this.logger.debug(
         `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
       );
-      this.#provider = new provider.Orbiter6Provider(rpc);
+      this.#provider = new Orbiter6Provider(rpc);
     }
     return this.#provider;
   }
@@ -45,7 +47,7 @@ export class EVMAccount extends OrbiterAccount {
     const provider = this.getProvider();
     this.wallet = new ethers.Wallet(privateKey).connect(provider);
     if (_address) {
-      if(!equals(_address, this.wallet.address)) {
+      if (!equals(_address, this.wallet.address)) {
         throw new Error('The connected wallet address is inconsistent with the private key address')
       }
     }
@@ -73,7 +75,7 @@ export class EVMAccount extends OrbiterAccount {
           `The sender ${token} has insufficient balance`
         );
       }
-      const ifa = new Interface(abis.ERC20Abi);
+      const ifa = new Interface(ERC20Abi);
       const data = ifa.encodeFunctionData("transfer", [to, value]);
       transactionRequest.data = data;
       transactionRequest.to = token;
@@ -128,7 +130,7 @@ export class EVMAccount extends OrbiterAccount {
     const feePerGasRedouble = Number(chainCustomConfig.FeePerGasRedouble || 1);
     if (isEIP1559) {
       transactionRequest.type = 2;
-      const priorityFeePerGasRedouble =  Number(chainCustomConfig.PriorityFeePerGasRedouble || 1);
+      const priorityFeePerGasRedouble = Number(chainCustomConfig.PriorityFeePerGasRedouble || 1);
       // maxFeePerGas
       let gasPrice = new BigNumber(feeData.maxFeePerGas.toString()).times(feePerGasRedouble);;
       if (chainCustomConfig.MaxFeePerGas && gasPrice.gte(chainCustomConfig.MaxFeePerGas)) {
@@ -221,10 +223,10 @@ export class EVMAccount extends OrbiterAccount {
           "The sender has insufficient balance"
         );
       }
-      if (!abis.OrbiterRouterV3) {
+      if (!OrbiterRouterV3) {
         throw new TransactionSendBeforeError("OrbiterXRouter ABI Not Found");
       }
-      const ifa = new Interface(abis.OrbiterRouterV3);
+      const ifa = new Interface(OrbiterRouterV3);
       transactionRequest.value = totalValue;
       transactionRequest.to = router;
       transactionRequest.data = ifa.encodeFunctionData("transfers", [
@@ -271,10 +273,10 @@ export class EVMAccount extends OrbiterAccount {
           `The sender ${token} has insufficient balance`
         );
       }
-      if (!abis.OrbiterRouterV3) {
+      if (!OrbiterRouterV3) {
         throw new TransactionSendBeforeError("OrbiterXRouter ABI Not Found");
       }
-      const ifa = new Interface(abis.OrbiterRouterV3);
+      const ifa = new Interface(OrbiterRouterV3);
       const data = ifa.encodeFunctionData("transferTokens", [
         token,
         tos,
@@ -359,7 +361,7 @@ export class EVMAccount extends OrbiterAccount {
     value: string | BigNumber
   ) {
     const provider = this.getProvider();
-    const erc20 = new ethers.Contract(token, abis.ERC20Abi, provider).connect(
+    const erc20 = new ethers.Contract(token, ERC20Abi, provider).connect(
       this.wallet
     );
     return await erc20["approve"](spender, value);
@@ -367,7 +369,7 @@ export class EVMAccount extends OrbiterAccount {
 
   public async allowance(token: string, spender: string) {
     const provider = this.getProvider();
-    const erc20 = new ethers.Contract(token, abis.ERC20Abi, provider).connect(
+    const erc20 = new ethers.Contract(token, ERC20Abi, provider).connect(
       this.wallet
     );
     return await erc20["allowance"](this.wallet.address, spender);
@@ -391,7 +393,7 @@ export class EVMAccount extends OrbiterAccount {
     address?: string
   ): Promise<bigint> {
     const provider = this.getProvider();
-    const erc20 = new ethers.Contract(token, abis.ERC20Abi, provider);
+    const erc20 = new ethers.Contract(token, ERC20Abi, provider);
     return await erc20.balanceOf(address || this.wallet.address);
   }
 
