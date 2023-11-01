@@ -12,6 +12,7 @@ import {
 } from "@orbiter-finance/config";
 import axios from "axios";
 import { ITradingPair } from "../api.interface";
+import { addressPadStart } from '../../utils';
 const keyv = new Keyv();
 const defaultCacheTime = 1000 * 60 * 60;
 

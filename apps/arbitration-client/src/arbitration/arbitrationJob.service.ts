@@ -6,7 +6,9 @@ import { Mutex, MutexInterface, Semaphore, SemaphoreInterface, withTimeout } fro
 import { ArbitrationService } from './arbitration.service';
 import { ArbitrationTransaction } from './arbitration.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { HTTPGet, HTTPPost, LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
+import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
+import {HTTPGet,HTTPPost} from '@orbiter-finance/request'
+
 const mutex = new Mutex();
 // arbitration-client
 @Injectable()

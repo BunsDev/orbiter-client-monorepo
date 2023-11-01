@@ -5,7 +5,7 @@ import { Level } from 'level';
 export class AppService {
   private db: Level;
   constructor() {
-    this.db = new Level('runtime/db', { valueEncoding: 'json' })
+    this.db = new Level('runtime/maker-openapi', { valueEncoding: 'json' })
   }
   proofSubmission(data: ProofSubmissionRequest) {
     if (+data.status == 1) {

@@ -2,7 +2,8 @@ import { ApiScanningService } from '../api-scanning.service';
 import BigNumber from 'bignumber.js';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 
-import { HTTPGet } from '@orbiter-finance/utils';
+import {HTTPGet} from '@orbiter-finance/request'
+
 import dayjs from 'dayjs';
 import { Context } from '../api-scanning.interface';
 import { maxBy } from 'lodash';
