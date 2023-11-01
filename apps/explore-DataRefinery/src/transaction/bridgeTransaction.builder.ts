@@ -149,7 +149,7 @@ export class EVMOBSourceContractBuilder {
       if (
         !['SN_MAIN', 'SN_GOERLI', 'loopring', 'loopring_test'].includes(transfer.chainId)
         && transfer.contract
-        && (contract[transfer.contract] === 'OBSource' || contract[validateAndParseAddress(transfer.contract)] === 'OBSource')
+        && (contract[transfer.contract] === 'OBSource' || contract[utils.getAddress(transfer.contract)] === 'OBSource')
       ) {
         return true
       }
@@ -212,11 +212,8 @@ export class StarknetOBSourceContractBuilder {
     }
 
     check(transfer: TransfersModel, sourceChain: IChainConfig): boolean{
-      const contract = sourceChain.contract
       if (
         ['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
-        && transfer.contract
-        // && (contract[transfer.contract] === 'OBSource' || contract[utils.getAddress(transfer.contract)] === 'OBSource')
       ) {
         return true
       }
