@@ -281,7 +281,7 @@ export function TransferId(
   ).toString();
 }
 
-export function toHex(num, length) {
+export function toHex(num: number, length: number) {
   const charArray = ['a', 'b', 'c', 'd', 'e', 'f'];
   const strArr = Array(length * 2).fill('0');
   let i = length * 2 - 1;

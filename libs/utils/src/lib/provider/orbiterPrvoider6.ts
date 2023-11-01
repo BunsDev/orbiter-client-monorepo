@@ -7,6 +7,7 @@ import {
   TransactionReceipt,
   TransactionReceiptParams,
 } from 'ethers6';
+import _ from 'lodash'
 export default class OrbiterProvider extends JsonRpcProvider {
   #url!: string;
   constructor(
@@ -31,10 +32,10 @@ export default class OrbiterProvider extends JsonRpcProvider {
     const extra:any = {};
     for (const k in value) {
       if (!keys.includes(k) && k != 'logs') {
-        extra[k] = value[k];
+        extra[k] = value[k as keyof TransactionReceiptParams];
       }
     }
-    result['extra'] = extra;
+    _.set(result, 'extra', extra)
     return result;
   }
 }
