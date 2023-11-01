@@ -61,7 +61,6 @@ export class StandardBuilder {
     }
     async build(transfer: TransfersModel): Promise<BuilderData> {
       const result = {} as BuilderData
-      const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);
       const targetChainId = parseSourceTxSecurityCode(transfer.amount);
       const targetChain = this.chainConfigService.getChainByKeyValue(
         'internalId',
@@ -80,42 +79,7 @@ export class StandardBuilder {
         return result
       }
       result.targetToken = targetToken
-      const sourceChainID = +sourceChain.internalId;
-      const targetChainID = +targetChain.internalId;
-      if ([4, 44].includes(targetChainID)) {
-        const calldata = transfer.calldata as string[];
-        if (calldata.length > 0) {
-          if (transfer.signature === 'transfer(address,bytes)') {
-            const address = fix0xPadStartAddress(
-              transfer.calldata[1].replace('0x03', ''),
-              66,
-            );
-            result.targetAddress = address.toLocaleLowerCase();
-          } else if (
-            transfer.signature ===
-            'transferERC20(address,address,uint256,bytes)'
-          ) {
-            const address = fix0xPadStartAddress(
-              transfer.calldata[3].replace('0x03', ''),
-              66,
-            );
-            result.targetAddress = address.toLocaleLowerCase();
-          }
-        }
-      } else if ([4, 44].includes(sourceChainID)) {
-        if (
-          Array.isArray(transfer.calldata) &&
-          transfer.calldata.length === 5 &&
-          transfer.signature === 'transferERC20(felt,felt,Uint256,felt)'
-        ) {
-          result.targetAddress = fix0xPadStartAddress(
-            transfer.calldata[4].toLocaleLowerCase(),
-            42,
-          );
-        }
-      } else {
-        result.targetAddress = transfer.sender;
-      }
+      result.targetAddress = transfer.sender;
       return result
     }
 }
@@ -132,6 +96,11 @@ export class LoopringBuilder {
     ) {
 
     }
+
+    check(transfer: TransfersModel): boolean{
+      return ['loopring', 'loopring_test'].includes(transfer.chainId)
+    }
+
     async build(transfer: TransfersModel): Promise<BuilderData> {
       const result = {} as BuilderData
       let targetChainId: number
@@ -177,8 +146,58 @@ export class EVMOBSourceContractBuilder {
     ) {
 
     }
+
+    check(transfer: TransfersModel, sourceChain: IChainConfig): boolean{
+      // const contract = sourceChain.contract
+      if (
+        !['SN_MAIN', 'SN_GOERLI', 'loopring', 'loopring_test'].includes(transfer.chainId)
+        && transfer.contract
+        // && (contract[transfer.contract] === 'OBSource' || contract[validateAndParseAddress(transfer.contract)] === 'OBSource')
+      ) {
+        return true
+      }
+      return false
+    }
+
     async build(transfer: TransfersModel): Promise<BuilderData> {
-      throw new Error('unrealized')
+      const result = {} as BuilderData
+      const targetChainId = parseSourceTxSecurityCode(transfer.amount);
+      const targetChain = this.chainConfigService.getChainByKeyValue(
+        'internalId',
+        targetChainId,
+      );
+      if (!targetChain) {
+        return result
+      }
+      result.targetChain = targetChain
+      const targetToken = this.chainConfigService.getTokenBySymbol(
+        targetChain.chainId,
+        transfer.symbol,
+      );
+      if (!targetToken || !['SN_MAIN', 'SN_GOERLI'].includes(targetChain.chainId)) {
+        return result
+      }
+      result.targetChain = targetChain
+      const calldata = transfer.calldata as string[];
+      if (calldata.length > 0) {
+        if (transfer.signature === 'transfer(address,bytes)') {
+          const address = fix0xPadStartAddress(
+            transfer.calldata[1].replace('0x03', ''),
+            66,
+          );
+          result.targetAddress = address.toLocaleLowerCase();
+        } else if (
+          transfer.signature ===
+          'transferERC20(address,address,uint256,bytes)'
+        ) {
+          const address = fix0xPadStartAddress(
+            transfer.calldata[3].replace('0x03', ''),
+            66,
+          );
+          result.targetAddress = address.toLocaleLowerCase();
+        }
+      }
+      return result
     }
 }
 
@@ -194,8 +213,51 @@ export class StarknetOBSourceContractBuilder {
     ) {
 
     }
-    build(transfer: TransfersModel): Promise<BuilderData> {
-        throw new Error('unrealized')
+
+    check(transfer: TransfersModel, sourceChain: IChainConfig): boolean{
+      const contract = sourceChain.contract
+      if (
+        ['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
+        && transfer.contract
+        && (contract[transfer.contract] === 'OBSource' || contract[utils.getAddress(transfer.contract)] === 'OBSource')
+      ) {
+        return true
+      }
+      return false
+    }
+
+    async build(transfer: TransfersModel): Promise<BuilderData> {
+      const result = {} as BuilderData
+      const targetChainId = parseSourceTxSecurityCode(transfer.amount);
+      const targetChain = this.chainConfigService.getChainByKeyValue(
+        'internalId',
+        targetChainId,
+      );
+      if (!targetChain) {
+        return result
+      }
+      result.targetChain = targetChain
+
+      const targetToken = this.chainConfigService.getTokenBySymbol(
+        targetChain.chainId,
+        transfer.symbol,
+      );
+      if (!targetToken) {
+        return result
+      }
+      result.targetToken = targetToken
+
+      if (
+        Array.isArray(transfer.calldata) &&
+        transfer.calldata.length === 5 &&
+        transfer.signature === 'transferERC20(felt,felt,Uint256,felt)'
+      ) {
+        result.targetAddress = fix0xPadStartAddress(
+          transfer.calldata[4].toLocaleLowerCase(),
+          42,
+        );
+      }
+      return result
     }
 }
 
@@ -229,6 +291,22 @@ export class EVMRouterV1ContractBuilder {
     ) {
 
     }
+
+    check(transfer: TransfersModel, sourceChain: IChainConfig): boolean{
+      const contract = sourceChain.contract
+      if (
+        contract
+        && transfer.contract
+        && !['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
+        && (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1')
+        && transfer.signature === 'swap(address,address,uint256,bytes)'
+      )
+      {
+        return true
+      }
+      return false
+    }
+
     async build(transfer: TransfersModel): Promise<BuilderData> {
       const result = {} as BuilderData
       const decodeData = decodeV1SwapData(transfer.calldata[3])
@@ -308,21 +386,18 @@ export default class BridgeTransactionBuilder {
           sourceChain.chainId,
           transfer.token,
         );
-        const contract = sourceChain.contract
         let builderData: BuilderData
-        if (
-          transfer.contract
-          && !['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
-          && (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1')
-          && transfer.signature === 'swap(address,address,uint256,bytes)'
-        ) {
+        if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
           builderData = await this.evmRouterV1ContractBuilder.build(transfer)
-        } else if (['loopring', 'loopring_test'].includes(transfer.chainId)) {
+        } else if (this.loopringBuilder.check(transfer)) {
           builderData = await this.loopringBuilder.build(transfer)
+        } else if (this.evmOBSourceContractBuilder.check(transfer, sourceChain)) {
+          builderData = await this.evmOBSourceContractBuilder.build(transfer)
+        } else if (this.starknetOBSourceContractBuilder.check(transfer, sourceChain)) {
+          builderData = await this.starknetOBSourceContractBuilder.build(transfer)
         } else {
           builderData = await this.standardBuilder.build(transfer);
         }
-
         const { targetAddress: builderDataTargetAddress , targetChain, targetToken, targetAmount } = builderData
 
         if (!targetChain) {
