@@ -1,6 +1,6 @@
 # Decentralized Cross-Chain Bridge
 
-![Project Logo](link-to-your-project-logo.png)
+<img src="logo.png" alt="Image" width="400" >
 
 > A decentralized cross-chain bridge for transferring assets and data between different blockchain networks.
 

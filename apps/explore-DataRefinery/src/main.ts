@@ -6,7 +6,7 @@ import { NestFactory } from '@nestjs/core';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 dayjs.extend(utc);
-import { AppModule } from './app/app.module';
+import { AppModule } from './app.module';
 import { WinstonModule } from 'nest-winston';
 import { logger, characterPattern } from '@orbiter-finance/utils'
 const sysLogger = logger.createLoggerByName('app');
@@ -24,7 +24,7 @@ process.on('uncaughtException', (err) => {
   sysLogger.error('Unhandled Exception at:', err)
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   sysLogger.error(`Unhandled Rejection at: ${reason}`)
 });
 bootstrap();

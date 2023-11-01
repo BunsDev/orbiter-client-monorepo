@@ -4,7 +4,7 @@ import {
   ZeroAddress,
   Block
 } from 'ethers6';
-import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
+import { isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 
@@ -12,19 +12,20 @@ import BigNumber from 'bignumber.js';
 import EVMV6Utils from './lib/v6';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 import EVMVUtils from './lib/v6';
+import { Orbiter6Provider } from '@orbiter-finance/blockchain-account';
 
 export class EVMRpcScanningV6Service extends RpcScanningService {
-  #provider: provider.Orbiter6Provider;
+  #provider: Orbiter6Provider;
   getProvider() {
     const rpc = this.chainConfig.rpc[0];
     if (!this.#provider) {
-      this.#provider = new provider.Orbiter6Provider(rpc);
+      this.#provider = new Orbiter6Provider(rpc);
     }
     if (this.#provider && this.#provider.getUrl() != rpc) {
       this.logger.info(
         `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
       );
-      this.#provider = new provider.Orbiter6Provider(rpc);
+      this.#provider = new Orbiter6Provider(rpc);
     }
     return this.#provider;
   }
@@ -69,6 +70,10 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
             this.chainId,
             toAddrLower,
           );
+          const calldata = row['data'].slice(10);
+          if (isEmpty(calldata)) {
+            continue;
+          }
           if (tokenInfo && EVMV6Utils.isERC20Transfer(row['data'])) {
             // valid from || to
             const result = EVMV6Utils.decodeERC20TransferData(row['data']);

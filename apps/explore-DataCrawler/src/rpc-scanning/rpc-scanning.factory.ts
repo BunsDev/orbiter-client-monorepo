@@ -15,7 +15,7 @@ import { TransactionService } from '../transaction/transaction.service';
 
 @Injectable()
 export class RpcScanningFactory {
-  private services: { [key: string]: RpcScanningService } = {}
+  public services: { [key: string]: RpcScanningService } = {}
   constructor(
     private chainConfigService: ChainConfigService,
     private transactionService: TransactionService
@@ -85,5 +85,36 @@ export class RpcScanningFactory {
     this.services[chainId] = service;
     service.init()
     return this.services[chainId];
+  }
+
+  async getRpcStatusByChain(chainId: string) {
+    const factory = await this.services[chainId];
+    if (!factory) {
+      throw new Error(`${chainId} factory not found`)
+    }
+    const latestBlockNumber = factory.rpcLastBlockNumber;
+    const lastScannedBlockNumber = await factory.dataProcessor.getNextScanMaxBlockNumber()
+    return {
+      chainId: factory.chainId,
+      latestBlockNumber,
+      lastScannedBlockNumber,
+      behind: latestBlockNumber - lastScannedBlockNumber,
+      processingCount: factory.dataProcessor.getProcessingCount(),
+      waitBlockCount: factory.dataProcessor.getDataCount(),
+      rate: factory.getRate(),
+    };
+  }
+  async getRpcStatus() {
+    const services = await this.services;
+    const result = {
+    }
+    for (const chainId in services) {
+      try {
+        result[chainId] = await this.getRpcStatusByChain(chainId);
+      } catch (error) {
+        console.error(`${chainId} getRpcStatus error`, error);
+      }
+    }
+    return result;
   }
 }

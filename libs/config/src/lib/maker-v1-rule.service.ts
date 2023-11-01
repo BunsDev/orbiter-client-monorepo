@@ -1,6 +1,5 @@
 import { get, set, clone, isEmpty, isEqual ,groupBy} from 'lodash';
 import { Inject, Injectable } from '@nestjs/common';
-import { outputFile } from 'fs-extra';
 import * as yaml from 'js-yaml';
 import { join } from 'path';
 import { ConsulService } from 'libs/consul/src/lib/consul.service'
@@ -30,9 +29,10 @@ export class MakerV1RuleService {
                 }
                 for (let i = 1; i < keys.length; i++) {
                     try {
-                        this.consul.watchConsulConfig(keys[i], (config: any) => {
+                        const fileKey = keys[i];
+                        this.consul.watchConsulConfig(fileKey, (config: any) => {
                             const data = config.toJSON();
-                            MakerV1RuleService.configs[data.Key] = data;
+                            MakerV1RuleService.configs[fileKey] = data;
                         })
                     } catch (error) {
                         Logger.error(
@@ -100,7 +100,7 @@ export class MakerV1RuleService {
             delete cloneConfig['privateKey'];
             const data = yaml.dump(cloneConfig);
             const filePath = join(this.options.cachePath, chainConfigPath);
-            await outputFile(filePath, data);
+            // await outputFile(filePath, data);
         }
     }
 }

@@ -13,7 +13,7 @@ export function loggerFormat() {
 }
 
 export function createLoggerByName(context: string, meta: any = {}): OrbiterLogger {
-  const dirName = __dirname.substring(__dirname.lastIndexOf('/') + 1);
+  const dirName = process.env['APP_NAME'] ||  __dirname.substring(__dirname.lastIndexOf('/') + 1);
   const transports = [
     new winston.transports.Console({
       format: loggerFormat()

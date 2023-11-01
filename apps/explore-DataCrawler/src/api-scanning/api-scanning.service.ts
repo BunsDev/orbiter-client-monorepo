@@ -1,4 +1,4 @@
-import { readFileSync, outputFile } from 'fs-extra';
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
 import { Mutex } from 'async-mutex';
 import winston from 'winston';
 import { ethers } from 'ethers6';
@@ -107,19 +107,18 @@ export class ApiScanningService {
   // Set the last scanned position
   protected async setLastScannedPosition(prefix: string, position: string): Promise<void> {
     return await this.lock.runExclusive(async () => {
-      return await outputFile(
-        `runtime/api-scan/${prefix}-${this.chainId}`,
-        position,
-      );
+      const directory = `runtime/api-scan`;
+      if (!existsSync(directory)) {
+        mkdirSync(directory);
+      }
+      return await writeFileSync(`${directory}/${prefix}-${this.chainId}`, position)
     });
   }
 
   // Get the last scanned position
   protected async getLastScannedPosition(prefix: string): Promise<string> {
     try {
-      const position = readFileSync(
-        `runtime/api-scan/${prefix}-${this.chainId}`,
-      );
+      const position = await readFileSync(`runtime/api-scan/${prefix}-${this.chainId}`);
       return position && position.toString();
     } catch (error) {
       this.logger.error('getLastScannedPosition error', error);
@@ -130,7 +129,7 @@ export class ApiScanningService {
 
   // Generate data for the last scanned position
   protected generateLastScannedPositionData(
-  _transfers: TransferAmountTransaction[],
+    _transfers: TransferAmountTransaction[],
   ): string {
     throw new Error(
       `${this.chainId} - generateLastScannedPositionData not implemented`,

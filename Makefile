@@ -33,6 +33,10 @@ create-network: ## Create a Docker network if it doesn't exist
 build-docker-base: ## Build the Docker base image
 	docker build -f ./Dockerfile . -t $(BASE_IMAGE)
 
+build-maker-openapi: ## Build the Docker base image
+	cd ./apps/maker-openapi
+	docker build -f apps/maker-openapi/Dockerfile . -t orbiter/maker-openapi
+
 build-docker-crawler: ## Build the Explore Data Crawler Docker image
 	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t $(CRAWLER_IMAGE)
 
@@ -44,6 +48,9 @@ build-docker-explore: build-docker-crawler build-docker-refinery ## Build Explor
 
 build-docker-maker: ## Build the Maker Client Docker image
 	docker build -f apps/maker-client/Dockerfile.clients . -t $(MAKER_IMAGE)
+
+build-docker-arbitration-client: ## Build the Maker Client Docker image
+	docker build -f apps/arbitration-client/Dockerfile.clients . -t $(MAKER_IMAGE)
 
 build-docker-openapi: ## Build the Open Api Docker image
 	docker build -f apps/explore-open-api/Dockerfile.clients . -t $(MAKER_IMAGE)

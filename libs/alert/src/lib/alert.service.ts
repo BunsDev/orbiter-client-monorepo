@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { HTTPGet, HTTPPost } from '@orbiter-finance/utils'
+import { HTTPGet, HTTPPost } from '@orbiter-finance/request'
 import { AlertModuleOpts } from './alert.module';
 export enum AlertMessageChannel {
     TG = 'TG',

@@ -3,13 +3,13 @@ import dayjs from "dayjs";
 import BigNumber from "bignumber.js";
 import { ChainConfigService ,ENVConfigService} from "@orbiter-finance/config";
 import { ConfigService } from "@nestjs/config";
-import { LoggerDecorator, OrbiterLogger, groupBy, isEmpty, uniq } from "@orbiter-finance/utils";
+import { isEmpty } from "@orbiter-finance/utils";
 import { ChainLinkService } from "../../service/chainlink.service";
 import { type TransferAmountTransaction } from "../sequencer/sequencer.interface";
-import { AccountFactoryService } from "../../account/factory";
-import { take } from "lodash";
-import type OrbiterAccount from "../../account/orbiterAccount"
+import { AccountFactoryService } from "../../factory";
+import { groupBy, take, uniq } from "lodash";
 import { PrivateKeyService } from "../../service/privatekey.service";
+import {OrbiterAccount} from "@orbiter-finance/blockchain-account";
 @Injectable()
 export class ValidatorService {
   constructor(
@@ -68,7 +68,11 @@ export class ValidatorService {
           address,
           transfer.targetChain
         );
-        await account.connect(privateKey, address);
+        const cairo1Address: string[] = await this.envConfig.getAsync('cairo1') || [];
+        await account.connect(
+          privateKey,
+          address,
+          cairo1Address.find(item => item.toLowerCase() === address.toLowerCase()) ? "1" : "0");
         const balance = await account.getBalance(address, transfer.targetToken);
         if (balance && balance > transferAmount) {
           return {
@@ -122,6 +126,7 @@ export class ValidatorService {
       const totalSendWei = new BigNumber(totalSend).times(
         10 ** transferToken.decimals
       );
+      const cairo1Address: string[] = await this.envConfig.getAsync('cairo1') || [];
       for (const address of makers) {
         const senderAddress = address.toLocaleLowerCase();
         const privateKey = this.getSenderPrivateKey(senderAddress);
@@ -131,7 +136,7 @@ export class ValidatorService {
         }
         const account = await this.accountFactoryService
           .createMakerAccount(senderAddress, chainId)
-          .connect(privateKey);
+          .connect(privateKey, senderAddress, cairo1Address.find(item => item.toLowerCase() === address.toLowerCase()) ? "1" : "0");
         if (account) {
           if (transferWalletRelAmount[senderAddress] === undefined) {
             const balance = await account.getBalance(senderAddress, token);

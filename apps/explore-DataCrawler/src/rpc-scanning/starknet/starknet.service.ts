@@ -3,9 +3,7 @@ import {
   isEmpty,
   equals,
   splitArrayBySize,
-  fix0xPadStartAddress,
-  sleep,
-  JSONStringify
+  sleep
 } from '@orbiter-finance/utils';
 import {
   ExecuteCalldata,
@@ -15,6 +13,7 @@ import {
 import BigNumber from 'bignumber.js';
 import { RpcProvider, RPC } from 'starknet';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
+import { addressPadStart } from '../../utils';
 export class StarknetRpcScanningService extends RpcScanningService {
   #provider: RpcProvider;
   getProvider() {
@@ -43,7 +42,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     return transactions.filter((tx) => {
       if (tx['type'] === 'INVOKE') {
-        // TODO: 
+        // TODO:
         const executeCalldata = this.decodeExecuteCalldataCairo0(tx['calldata']);
         if (executeCalldata && executeCalldata.length > 0) {
           return true;
@@ -58,56 +57,23 @@ export class StarknetRpcScanningService extends RpcScanningService {
     });
   }
   async handleBlock(
-    block: RPC.GetBlockWithTxs,
+    block: any,
   ): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions;
     const blockNumber = block['block_number'];
     if (!transactions) {
-      throw new Error(`${blockNumber} transactions empty `);
+      throw new Error(`${blockNumber} transactions empty`);
     }
-    const filterBeforeTransactions = await this.filterBeforeTransactions<any>(transactions);
-    if (filterBeforeTransactions.length <= 0) {
-      return [];
-    }
-    const receipts = await Promise.all(
-      filterBeforeTransactions.map((tx) =>
-        this.retryRequestGetTransactionReceipt(tx.transaction_hash),
-      ),
-    );
-
-    const isErrorTx = receipts.find((row) => !isEmpty(row.error));
-    if (isErrorTx) {
-      this.logger.error(
-        `handleBlock ${blockNumber} retryRequestGetTransactionReceipt error:${JSON.stringify(
-          isErrorTx,
-        )}`,
-      );
-      throw new Error(`handleBlock block receipt ${blockNumber} ${JSONStringify(isErrorTx)}`);
-    }
-
-
-    const txTransfersArray = await Promise.all(
-      filterBeforeTransactions.map(async (transaction) => {
-        const receipt = receipts.find(
-          (tx) => tx.hash === transaction.transaction_hash,
-        );
-        if (isEmpty(receipt) || isEmpty(receipt.data)) {
-          throw new Error(`${transaction.transaction_hash} receipt not found`);
-        }
-        if (receipt.data['finality_status'] === 'REVERTED') {
-          return [];
-        }
-        return this.handleTransaction(transaction, receipt.data);
-      }),
-    );
+    const txTransfersArray: any[] = await Promise.all(transactions.map((transaction) => {
+      transaction.block_number = block.block_number;
+      transaction.timestamp = Number(block.timestamp) * 1000;
+      return this.handleTransaction(transaction, null);
+    }));
     const transfers: TransferAmountTransaction[] = [];
     for (const txTransfers of txTransfersArray) {
       if (txTransfers && txTransfers.length > 0) {
         transfers.push(
-          ...txTransfers.map((row) => {
-            row.timestamp = block.timestamp * 1000;
-            return row;
-          }),
+          ...txTransfers,
         );
       }
     }
@@ -139,8 +105,11 @@ export class StarknetRpcScanningService extends RpcScanningService {
   }
   async handleTransaction(
     transaction: any,
-    receipt?: RPC.TransactionReceipt,
+    transactionReceipt?: RPC.TransactionReceipt,
   ): Promise<TransferAmountTransaction[]> {
+    if (transaction.type != 'INVOKE') {
+      return [];
+    }
     let parseData = this.decodeExecuteCalldataCairo0(transaction.calldata);
     if (!parseData || parseData.length <= 0) {
       parseData = this.decodeExecuteCalldataCairo1(transaction.calldata) as any;
@@ -149,53 +118,43 @@ export class StarknetRpcScanningService extends RpcScanningService {
       return [];
     }
     const transfers: TransferAmountTransaction[] = [];
-    if (transaction.type != 'INVOKE') {
-      return [];
-    }
-    if (!receipt || !receipt['block_number']) {
-      this.logger.error(
-        `${transaction.transaction_hash} The block number in the transaction receipt does not exist`,
-      );
-      throw new Error(
-        `${transaction.transaction_hash} The block number in the transaction receipt does not exist`,
-      );
-    }
     const chainConfig = this.chainConfig;
-    const fee = new BigNumber(receipt['actual_fee']);
     for (const row of parseData) {
       try {
-        const to = fix0xPadStartAddress(row.to, 66);
+        const to = addressPadStart(row.to, 66);
         const args = row.args;
         const transfer: TransferAmountTransaction = {
           chainId: String(this.chainId),
-          hash: fix0xPadStartAddress(receipt.transaction_hash, 66),
-          blockNumber: receipt['block_number'],
-          sender: fix0xPadStartAddress(transaction.sender_address, 66),
+          hash: addressPadStart(transaction.transaction_hash, 66),
+          blockNumber: transaction.block_number,
+          sender: addressPadStart(transaction.sender_address, 66),
           receiver: null,
           value: null,
           amount: null,
           token: null,
           symbol: null,
-          fee: fee.toFixed(0),
+          fee: "0",
           feeToken: chainConfig.nativeCurrency.symbol,
-          feeAmount: fee
-            .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-            .toString(),
-          timestamp: 0,
-          status: this.getStatus(receipt),
+          feeAmount: "0",
+          timestamp: transaction.timestamp,
+          status: TransferAmountTransactionStatus.none,
           nonce: +transaction.nonce,
           calldata: args,
           selector: row.selector,
           signature: row.signature,
-          receipt: receipt,
+          receipt: {},
         };
         if (parseData.length > 1) {
           transfer.hash = `${transfer.hash}#${row.index}`;
         }
         if (row.name) {
           if (row.name === 'transfer') {
-            transfer.receiver = fix0xPadStartAddress(args[0], 66);
-            transfer.token = fix0xPadStartAddress(to, 66);
+            const receiver = addressPadStart(args[0], 66);
+            if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
+              continue;
+            }
+            transfer.receiver = receiver;
+            transfer.token = addressPadStart(to, 66);
             const value = new BigNumber(args[1]);
             transfer.value = value.toFixed(0);
             // transfer.contract = transfer.token;
@@ -210,8 +169,12 @@ export class StarknetRpcScanningService extends RpcScanningService {
           } else if (row.name === 'sign_pending_multisig_transaction') {
             // find
             const transferData = args[1].slice(-5) as any;
-            const tokenAddrss = fix0xPadStartAddress(transferData[0], 66);
-            transfer.receiver = fix0xPadStartAddress(transferData[1], 66);
+            const receiver = addressPadStart(transferData[1], 66);
+            if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
+              continue;
+            }
+            const tokenAddrss = addressPadStart(transferData[0], 66);
+            transfer.receiver = receiver;
             transfer.token = tokenAddrss;
             const value = new BigNumber(transferData[2]);
             transfer.value = value.toFixed(0);
@@ -225,9 +188,13 @@ export class StarknetRpcScanningService extends RpcScanningService {
             }
             transfers.push(transfer);
           } else if (row.name === 'transferERC20') {
-            const tokenAddress = fix0xPadStartAddress(args[0], 66);
+            const receiver = addressPadStart(args[1], 66);
+            if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
+              continue;
+            }
+            const tokenAddress = addressPadStart(args[0], 66);
             transfer.token = tokenAddress;
-            transfer.receiver = fix0xPadStartAddress(args[1], 66);
+            transfer.receiver = receiver;
             const value = new BigNumber(args[2]);
             transfer.value = value.toFixed(0);
             transfer.contract = to;
@@ -249,22 +216,34 @@ export class StarknetRpcScanningService extends RpcScanningService {
         throw error;
       }
     }
-    // valid event
+    if (!transfers.length) {
+      return [];
+    }
+    const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
+    const fee = new BigNumber(receipt.actual_fee)
+      .dividedBy(transfers.length);
     for (const transfer of transfers) {
+      transfer.fee = fee.toFixed(0);
+      transfer.feeAmount = fee
+        .div(Math.pow(10, this.chainConfig.nativeCurrency.decimals))
+        .toString();
+      transfer.status = this.getStatus(receipt);
+      transfer.receipt = receipt;
+
       if (transfer.status === TransferAmountTransactionStatus.confirmed) {
         // 0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9 = transfer event topic
-        const events = receipt['events'].filter(
-          (e) =>
+        const events = receipt.events.filter(
+          (e: any) =>
             e.keys[0] ===
-            '0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9' &&
+            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9" &&
             equals(
-              fix0xPadStartAddress(e.from_address, 66),
+              addressPadStart(e.from_address, 66),
               transfer.token,
             ),
         );
-        const transferEvent = events.find((ev) => {
-          const fromAddress = fix0xPadStartAddress(ev.data[0], 66);
-          const toAddress = fix0xPadStartAddress(ev.data[1], 66);
+        const transferEvent = events.find((ev: any) => {
+          const fromAddress = addressPadStart(ev.data[0], 66);
+          const toAddress = addressPadStart(ev.data[1], 66);
           const value = new BigNumber(ev.data[2]).toFixed(0);
           return (
             equals(fromAddress, transfer.sender) &&
@@ -275,15 +254,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
         transfer.status = isEmpty(transferEvent) ? TransferAmountTransactionStatus.failed : transfer.status;
       }
     }
-    return transfers.map((tx) => {
-      tx.fee = new BigNumber(fee.toString())
-        .dividedBy(transfers.length)
-        .toString();
-      tx.feeAmount = new BigNumber(tx.fee)
-        .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-        .toString();
-      return tx;
-    });
+    return transfers;
   }
   decodeExecuteCalldataCairo0(inputs: string[]): CalldataArg[] {
     if (!inputs) {
@@ -380,8 +351,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     } else if (
       selector ===
       '0x68bcbdba7cc8cac2832d23e2c32e9eec39a9f1d03521eff5dff800a62725fa' &&
-      to ===
-      '0x173f81c529191726c6e7287e24626fe24760ac44dae2a1f7e02080230f8458b'
+      this.chainConfig.contract[addressPadStart(to,66).toLowerCase()] === 'OBSource'
     ) {
       return {
         name: 'transferERC20',
@@ -428,7 +398,6 @@ export class StarknetRpcScanningService extends RpcScanningService {
       }
       return calldata;
     } catch (error) {
-      console.log(error);
       this.logger.error(
         `parseContractCallData error ${JSON.stringify(data)}`,
         error,

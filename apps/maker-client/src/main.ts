@@ -12,13 +12,15 @@ import { logger, characterPattern } from '@orbiter-finance/utils'
 const sysLogger = logger.createLoggerByName('app');
 
 async function bootstrap() {
-    console.debug(characterPattern);
-    await NestFactory.createApplicationContext(AppModule, {
+  console.debug(characterPattern);
+  const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger({
       instance: sysLogger
     })
   });
-  sysLogger.info(`🚀 Application is running on: maker-client`);
+  const port = process.env.PORT || 3000;
+  sysLogger.info(`🚀 Application is running on: maker-client http://localhost:${port}`);
+  await app.listen(port);
 }
 process.on('uncaughtException', (err) => {
   sysLogger.error('Unhandled Exception at:', err)

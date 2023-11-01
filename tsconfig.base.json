@@ -11,45 +11,29 @@
     "target": "es2015",
     "resolveJsonModule": true,
     "module": "esnext",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@orbiter-finance/alert": [
-        "libs/alert/src/index.ts"
+      "@orbiter-finance/abi": ["libs/abi/src/index.ts"],
+      "@orbiter-finance/alert": ["libs/alert/src/index.ts"],
+      "@orbiter-finance/arbitration-module": [
+        "libs/arbitration-module/src/index.ts"
       ],
-      "@orbiter-finance/config": [
-        "libs/config/src/index.ts"
+      "@orbiter-finance/blockchain-account": [
+        "libs/blockchain-account/src/index.ts"
       ],
-      "@orbiter-finance/consul": [
-        "libs/consul/src/index.ts"
-      ],
-      "@orbiter-finance/rabbit-mq": [
-        "libs/rabbit-mq/src/index.ts"
-      ],
-      "@orbiter-finance/seq-models": [
-        "libs/seq-models/src/index.ts"
-      ],
-      "@orbiter-finance/subgraph-sdk": [
-        "libs/subgraph-sdk/src/index.ts"
-      ],
-      "@orbiter-finance/utils": [
-        "libs/utils/src/index.ts"
-      ],
-      "@orbiter-finance/v1-seq-models": [
-        "libs/v1-seq-models/src/index.ts"
-      ],
-      "@orbiter-finance/tcp": [
-        "libs/tcp/src/index.ts"
-      ]
+      "@orbiter-finance/config": ["libs/config/src/index.ts"],
+      "@orbiter-finance/consul": ["libs/consul/src/index.ts"],
+      "@orbiter-finance/rabbit-mq": ["libs/rabbit-mq/src/index.ts"],
+      "@orbiter-finance/request": ["libs/request/src/index.ts"],
+      "@orbiter-finance/seq-models": ["libs/seq-models/src/index.ts"],
+      "@orbiter-finance/subgraph-sdk": ["libs/subgraph-sdk/src/index.ts"],
+      "@orbiter-finance/tcp": ["libs/tcp/src/index.ts"],
+      "@orbiter-finance/utils": ["libs/utils/src/index.ts"],
+      "@orbiter-finance/v1-seq-models": ["libs/v1-seq-models/src/index.ts"]
     }
   },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+  "exclude": ["node_modules", "tmp"]
 }

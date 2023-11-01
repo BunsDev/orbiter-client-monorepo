@@ -19,7 +19,7 @@ export class RpcScanningSchedule {
     private rpcScanningFactory: RpcScanningFactory,
     private alertService: AlertService
   ) {
-    this.initializeTransactionScanners();
+    this.checkExecuteCrawlBlockTaskService();
   }
   private removeScanServiceById(chainId: string) {
     if (this.scanService.has(chainId)) {
@@ -29,8 +29,9 @@ export class RpcScanningSchedule {
       );
     }
   }
+
   @Interval(1000 * 10)
-  private async initializeTransactionScanners() {
+  private async checkExecuteCrawlBlockTaskService() {
     const SCAN_CHAINS = (this.envConfigService.get<string>('SCAN_CHAINS') || '').split(',');
     const chains = this.chainConfigService.getAllChains();
     if (isEmpty(chains)) {
@@ -72,10 +73,9 @@ export class RpcScanningSchedule {
         this.alertService.sendMessage(`CREATE RPC SCAN SERVICE ${chain.name}`, 'TG')
       }
     }
-    this.checkLatestHeight();
   }
   @Interval(1000)
-  executeCrawlBlock() {
+  executeCrawlBlockJob() {
     if (Date.now() % 60 === 0) {
       if (this.scanService.size <= 0) {
         this.logger.warn('RPC chain scanning service not created zero');
@@ -87,7 +87,6 @@ export class RpcScanningSchedule {
         continue;
       }
       scanner.reScanMutex.runExclusive(async () => {
-        scanner.service.logger.info(`rpc scan executeCrawlBlock start`)
         await scanner.service.executeCrawlBlock().catch(error => {
           this.logger.error(
             `executeCrawlBlock error `,
@@ -99,7 +98,7 @@ export class RpcScanningSchedule {
     }
   }
   @Interval(1000)
-  private async checkLatestHeight() {
+  checkLatestHeightJob() {
     for (const scanner of this.scanService.values()) {
       try {
         if (scanner.mutex.isLocked()) {

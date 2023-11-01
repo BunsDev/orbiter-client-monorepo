@@ -1,0 +1,64 @@
+{
+  "name": "maker-openapi",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/maker-openapi/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/apps/maker-openapi",
+        "main": "apps/maker-openapi/src/main.ts",
+        "tsConfig": "apps/maker-openapi/tsconfig.app.json",
+        "assets": ["apps/maker-openapi/src/assets"],
+        "isolatedConfig": true,
+        "webpackConfig": "apps/maker-openapi/webpack.config.js"
+      },
+      "configurations": {
+        "development": {},
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "maker-openapi:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "maker-openapi:build:development"
+        },
+        "production": {
+          "buildTarget": "maker-openapi:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["apps/maker-openapi/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "apps/maker-openapi/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    }
+  },
+  "tags": []
+}

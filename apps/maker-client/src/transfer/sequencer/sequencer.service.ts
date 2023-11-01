@@ -1,20 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ValidatorService } from "../validator/validator.service";
-import type OrbiterAccount from "../../account/orbiterAccount";
-import { type TransferResponse } from "../../account/IAccount";
 import { ChainConfigService } from "@orbiter-finance/config";
 import { LoggerDecorator, OrbiterLogger, equals, isEmpty } from "@orbiter-finance/utils";
 import { type TransferAmountTransaction } from "./sequencer.interface";
-import {
-  TransactionSendIgError,
-  TransactionSendBeforeError,
-  TransactionSendAfterError,
-} from "../../account/IAccount.interface";
+
 import { InjectModel } from "@nestjs/sequelize";
 import { BridgeTransaction } from "@orbiter-finance/seq-models";
 import BigNumber from "bignumber.js";
-import { type StoreService } from "../store/store.service";
 import { AlertService } from "@orbiter-finance/alert";
+import { OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendBeforeError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
 @Injectable()
 export class SequencerService {
   @LoggerDecorator()

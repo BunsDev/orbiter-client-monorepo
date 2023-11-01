@@ -9,7 +9,7 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { isEmpty } from '@orbiter-finance/utils';
 import { AlertModule } from '@orbiter-finance/alert'
 import { TcpModule } from "@orbiter-finance/tcp";
-
+import {MetricModule} from './metric/metric.module'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -54,6 +54,7 @@ import { TcpModule } from "@orbiter-finance/tcp";
     RabbitMqModule,
     TcpModule,
     ScheduleModule.forRoot(),
+    MetricModule,
   ],
   providers: [
   ],

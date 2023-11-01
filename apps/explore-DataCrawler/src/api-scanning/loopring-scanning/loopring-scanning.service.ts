@@ -2,9 +2,11 @@ import { ApiScanningService } from '../api-scanning.service';
 import BigNumber from 'bignumber.js';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 
-import { HTTPGet, maxBy } from '@orbiter-finance/utils';
+import {HTTPGet} from '@orbiter-finance/request'
+
 import dayjs from 'dayjs';
 import { Context } from '../api-scanning.interface';
+import { maxBy } from 'lodash';
 
 export class LoopringApiScanningService extends ApiScanningService {
   private addressMapAccountId: Map<string, number> = new Map();
@@ -173,7 +175,7 @@ export class LoopringApiScanningService extends ApiScanningService {
             feeToken: tx.feeTokenSymbol,
             timestamp: tx.timestamp,
             status: TransferAmountTransactionStatus.failed,
-            calldata: [tx.memo],
+            calldata: tx.memo ? tx.memo.split('_') : [],
             nonce: nonce,
             receipt: tx,
           };

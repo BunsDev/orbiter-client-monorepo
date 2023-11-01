@@ -1,6 +1,6 @@
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
-import { provider, isEmpty, JSONStringify } from '@orbiter-finance/utils';
+import { isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { ZeroAddress } from 'ethers6';
 import {
   Block,
@@ -10,19 +10,20 @@ import {
 import EVMV5Utils from './lib/v6';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 import EVMVUtils from './lib/v6';
+import { Orbiter5Provider } from '@orbiter-finance/blockchain-account';
 export class EVMRpcScanningV5Service extends RpcScanningService {
-  #provider: provider.Orbiter5Provider;
+  #provider: Orbiter5Provider;
   getProvider() {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
     if (!this.#provider) {
-      this.#provider = new provider.Orbiter5Provider(rpc);
+      this.#provider = new Orbiter5Provider(rpc);
     }
     if (this.#provider && this.#provider.connection.url != rpc) {
       this.logger.info(
         `rpc url changes new ${rpc} old ${this.#provider.connection.url}`,
       );
-      this.#provider = new provider.Orbiter5Provider(rpc);
+      this.#provider = new Orbiter5Provider(rpc);
     }
     return this.#provider;
   }
@@ -277,6 +278,10 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         }
 
         if (row['data'] && row['data'] != '0x') {
+          const calldata = row['data'].slice(10);
+          if (isEmpty(calldata)) {
+            continue;
+          }
           const tokenInfo = this.ctx.chainConfigService.getTokenByAddress(
             this.chainId,
             toAddrLower,

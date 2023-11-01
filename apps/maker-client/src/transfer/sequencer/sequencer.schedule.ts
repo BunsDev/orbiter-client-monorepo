@@ -11,18 +11,18 @@ import {
   type TransferAmountTransaction,
 } from "./sequencer.interface";
 import { LoggerDecorator, arePropertyValuesConsistent, isEmpty,OrbiterLogger } from "@orbiter-finance/utils";
-import { StoreService } from "../store/store.service";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { AlertService } from "@orbiter-finance/alert";
+import { StoreService } from "@orbiter-finance/blockchain-account";
 
 @Injectable()
 export class SequencerScheduleService {
   @LoggerDecorator()
   private readonly logger: OrbiterLogger;
-  private readonly stores = new Map<string, StoreService>(); // chainId + owner
+  public readonly stores = new Map<string, StoreService>(); // chainId + owner
   private storesState: Record<string, MonitorState> = {};
 
   constructor(
@@ -106,7 +106,7 @@ export class SequencerScheduleService {
         }
         const result = await store.addTransactions(tx as any);
         this.logger.debug(
-          `${tx.sourceId} store addTransactions ${JSON.stringify(result)}`
+          `${tx.sourceId} DB store addTransactions ${JSON.stringify(result)}`
         );
         if (+tx.id > store.lastId) {
           store.lastId = +tx.id;
@@ -123,6 +123,7 @@ export class SequencerScheduleService {
     if (!targetChainInfo) {
       this.logger.warn(`sourceId:${bridgeTransaction.sourceId}, bridgeTransaction does not match the maker or chain, sourceMaker:${bridgeTransaction.sourceMaker}, chainId:${bridgeTransaction.targetChain}`)
     }
+
     const key = `${bridgeTransaction.targetChain}-${bridgeTransaction.sourceMaker}`.toLocaleLowerCase();
     if (!this.stores.has(key)) {
       this.stores.set(key, new StoreService(bridgeTransaction.targetChain));
@@ -135,7 +136,7 @@ export class SequencerScheduleService {
     const store = this.stores.get(key)
     const result = await store.addTransactions(bridgeTransaction as any);
     this.logger.debug(
-      `${bridgeTransaction.sourceId} store addTransactions ${JSON.stringify(result)}`
+      `${bridgeTransaction.sourceId} MQ store addTransactions ${JSON.stringify(result)}`
     );
     // throw new Error()
   }
@@ -260,6 +261,7 @@ export class SequencerScheduleService {
     const tokenTxList = await store.getTargetTokenTxIdList(token);
     for (const hash of tokenTxList) {
       this.sequencerService.singleSendTransactionByTransfer(token, store, hash);
+      store.removeSymbolsWithData(token, hash);
     }
   }
 }

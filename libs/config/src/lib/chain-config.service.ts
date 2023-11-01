@@ -1,13 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { isEmpty } from 'lodash';
-import { join } from 'path';
-import { outputFile } from 'fs-extra';
 import { isEqual } from 'lodash';
 import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
 import { ConsulService } from 'libs/consul/src/lib/consul.service'
 import { Logger } from '@nestjs/common';
 import { IChainConfig, Token } from './config.interface'
-import { equals } from 'libs/utils/src'
+import { equals } from '@orbiter-finance/utils'
 import { ORBITER_CONFIG_MODULE_OPTS } from '../lib/config.constants'
 import { ConfigModuleOptions } from '../lib/config.interface'
 @Injectable()
@@ -26,7 +23,7 @@ export class ChainConfigService {
                         const data = config.toJSON();
                         if (data) {
                             ChainConfigService.configs = data;
-                            this.write();
+                            // this.write();
                         }
                     },
                 );
@@ -178,21 +175,20 @@ export class ChainConfigService {
         }
     }
 
-    async write() {
-        if (isEmpty(ChainConfigService.configs)) {
-            throw new Error('no configuration to write');
-        }
-        const chainConfigPath = this.options.chainConfigPath;
-        if (!chainConfigPath) {
-            throw new Error('Missing configuration path');
-        }
-        if(!this.options.cachePath) {
-            return console.warn('Missing cache path');
-        }
-        if (ChainConfigService.configs) {
-            const data = JSON.stringify(ChainConfigService.configs);
-            const filePath = join(this.options.cachePath, chainConfigPath);
-            await outputFile(filePath, data);
-        }
-    }
+    // async write() {
+    //     if (isEmpty(ChainConfigService.configs)) {
+    //         throw new Error('no configuration to write');
+    //     }
+    //     const chainConfigPath = this.options.chainConfigPath;
+    //     if (!chainConfigPath) {
+    //         throw new Error('Missing configuration path');
+    //     }
+    //     if(!this.options.cachePath) {
+    //         return console.warn('Missing cache path');
+    //     }
+    //     if (ChainConfigService.configs) {
+    //         const data = JSON.stringify(ChainConfigService.configs);
+    //         const filePath = join(this.options.cachePath, chainConfigPath);
+    //     }
+    // }
 }

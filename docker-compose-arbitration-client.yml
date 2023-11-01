@@ -1,0 +1,27 @@
+version: '3.8'
+networks:
+   orbiter-network:
+    external: true
+    labels:
+      - "com.docker.compose.project=arbitration-client"
+services:
+  arbitration-client:
+    container_name: "arbitration-client"
+    image: orbiter/arbitration-client:latest
+    labels:
+      - "com.docker.compose.project=arbitration-client"
+    build:
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/arbitration-client/Dockerfile.clients
+    restart: always
+    environment:
+      ArbitrationPrivateKey: '${ArbitrationPrivateKey}'
+    ports:
+      - '8000:8000'
+    networks:
+      - orbiter-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'

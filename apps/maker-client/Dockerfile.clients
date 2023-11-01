@@ -4,6 +4,7 @@ FROM orbiter/clients:latest AS builder
 ARG BUILD_FLAG
 WORKDIR /app
 COPY . .
+RUN pnpm run postinstall
 RUN npx nx build maker-client ${BUILD_FLAG}
 
 FROM orbiter/clients:latest

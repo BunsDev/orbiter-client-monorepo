@@ -1,9 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { get, set, clone, isEmpty, isEqual } from 'lodash';
 import { Inject, Injectable } from '@nestjs/common';
-import { outputFile } from 'fs-extra';
-import * as yaml from 'js-yaml';
-import { join } from 'path';
 import { sleep } from './utils'
 import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
 import { ConsulService } from 'libs/consul/src/lib/consul.service'
@@ -51,17 +48,18 @@ export class ENVConfigService {
         }
         return getConfig(name);
     }
-    async initAsync(): Promise<void> {
+    async initAsync(key:string): Promise<void> {
         if (!this.#init) {
-            await sleep(100);
-            return await this.initAsync();
+            await sleep(1000);
+            console.warn(`Configuration does not exist ${key} ${this.#init}`)
+            return await this.initAsync(key);
         }
     }
     async getAsync<T = any>(name: string): Promise<T> {
         if (!isEmpty(this.configService.get(name))) {
             return this.configService.get(name) as T;
         }
-        await this.initAsync();
+        await this.initAsync(name);
         return getConfig(name);
     }
     getCloudConfig() {
