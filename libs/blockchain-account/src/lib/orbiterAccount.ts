@@ -1,8 +1,7 @@
 import IAccount, {
   Context,
 } from "./IAccount";
-import { TransferResponse,TransactionRequest, TransferAmountTransaction } from "./IAccount.interface";
-// import { type TransferAmountTransaction } from "../transfer/sequencer/sequencer.interface";
+import { TransferResponse,TransactionRequest } from "./IAccount.interface";
 import { StoreService } from "./store.service";
 import { IChainConfig } from "@orbiter-finance/config";
 import { OrbiterLogger,logger } from "@orbiter-finance/utils";
@@ -76,7 +75,7 @@ export class OrbiterAccount extends IAccount {
   }
 
   public async pregeneratedRequestParameters(
-    orders: TransferAmountTransaction | TransferAmountTransaction[],
+    orders: any[] | any,
     transactionRequest: TransactionRequest = {}
   ) {
     if (Array.isArray(orders)) {
@@ -85,7 +84,7 @@ export class OrbiterAccount extends IAccount {
         transactionRequest.serialId.push(order.sourceId);
       }
     } else {
-      transactionRequest.serialId = orders.sourceId;
+      transactionRequest.serialId = orders['sourceId'];
     }
     return transactionRequest;
   }

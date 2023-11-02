@@ -8,5 +8,8 @@ export type JsonArray = Array<
 >;
 
 export type Json = JsonMap | JsonArray | string | number | boolean | null;
+import { BridgeTransaction } from "@orbiter-finance/seq-models";
 
 
+
+export type TransferAmountTransaction = typeof BridgeTransaction;

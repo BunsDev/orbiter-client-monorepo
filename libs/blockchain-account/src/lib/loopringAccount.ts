@@ -11,7 +11,7 @@ import Web3 from 'web3';
 import PrivateKeyProvider from 'truffle-privatekey-provider';
 import { HTTPGet } from "@orbiter-finance/request";
 import { sleep } from '@orbiter-finance/utils';
-import { LoopringSendTokenRequest, TransferAmountTransaction, TransferResponse } from './IAccount.interface';
+import { LoopringSendTokenRequest, TransferResponse } from './IAccount.interface';
 
 export class LoopringAccount extends OrbiterAccount {
   private L1Wallet: ethers.Wallet;
@@ -168,10 +168,10 @@ export class LoopringAccount extends OrbiterAccount {
   }
 
   public async pregeneratedRequestParameters(
-    orders: TransferAmountTransaction,
+    orders: any,
     transactionRequest: any = {}
   ) {
-    transactionRequest.memo = orders.sourceNonce;
+    transactionRequest.memo = orders['sourceNonce'];
     return transactionRequest;
   }
 }

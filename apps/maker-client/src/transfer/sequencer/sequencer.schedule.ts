@@ -99,14 +99,26 @@ export class SequencerScheduleService {
     });
     if (records.length > 0) {
       for (const tx of records) {
+        if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
+          this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
+          continue
+        }
+        if (store.isStoreExist(tx.sourceId, tx.targetToken)) {
+          this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Already exists in the store`)
+          continue
+        }
+        if (store.isTransfersExist(tx.sourceId)) {
+          this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} There is a collection record`)
+          continue
+        }
         const checkResult = await this.validatorService.optimisticCheckTxStatus(tx.sourceId, tx.sourceChain)
         if (!checkResult) {
-          this.logger.warn(`${tx.sourceId} optimisticCheckTxStatus failed`)
+          this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} optimisticCheckTxStatus failed`)
           continue
         }
         const result = await store.addTransactions(tx as any);
         this.logger.debug(
-          `${tx.sourceId} DB store addTransactions ${JSON.stringify(result)}`
+          `[readDBTransactionRecords] ${tx.sourceId} DB store addTransactions ${JSON.stringify(result)}`
         );
         if (+tx.id > store.lastId) {
           store.lastId = +tx.id;
@@ -210,6 +222,23 @@ export class SequencerScheduleService {
 
   async batchSendTransaction(token: string, store: StoreService) {
     const transfers = await store.getTransactionsByToken(token);
+    for (let i = transfers.length - 1; i >= 0; i--) {
+      const tx = transfers[i];
+      const hash = tx.sourceId;
+      if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
+        transfers.splice(i,1);
+        store.removeSymbolsWithData(token, hash);
+        this.logger.warn(`[batchSendTransaction] ${hash} Exceeding the effective payment collection time failed`)
+        continue
+      }
+      if (store.isTransfersExist(tx.sourceId)) {
+        transfers.splice(i,1);
+        store.removeSymbolsWithData(token, hash);
+        this.logger.warn(`[batchSendTransaction] ${hash} There is a collection record`)
+        continue
+      }
+    }
+
     if (
       !arePropertyValuesConsistent<TransferAmountTransaction>(
         transfers,
@@ -260,6 +289,22 @@ export class SequencerScheduleService {
   async singleSendTransaction(token: string, store: StoreService) {
     const tokenTxList = await store.getTargetTokenTxIdList(token);
     for (const hash of tokenTxList) {
+      const tx = store.getTransaction(hash);
+      if (!tx) {
+        store.removeSymbolsWithData(token, hash);
+        this.logger.warn(`[singleSendTransaction] ${hash} Transaction details do not exist`)
+        continue
+      }
+      if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
+        store.removeSymbolsWithData(token, hash);
+        this.logger.warn(`[singleSendTransaction] ${hash} Exceeding the effective payment collection time failed`)
+        continue
+      }
+      if (store.isTransfersExist(tx.sourceId)) {
+        store.removeSymbolsWithData(token, hash);
+        this.logger.warn(`[singleSendTransaction] ${hash} There is a collection record`)
+        continue
+      }
       this.sequencerService.singleSendTransactionByTransfer(token, store, hash);
       store.removeSymbolsWithData(token, hash);
     }
