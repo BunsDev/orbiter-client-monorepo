@@ -36,6 +36,8 @@ export interface TransfersAttributes {
 
 
 export enum TransferOpStatus {
+  INIT_STATUS = 0,
+  VALID = 1,
   SOURCE_CHAIN_OR_TOKEN_NOT_FOUND = 2,
   TARGET_CHAIN_OR_TOKEN_NOT_FOUND = 3,
   RULE_NOT_FOUND = 4,
