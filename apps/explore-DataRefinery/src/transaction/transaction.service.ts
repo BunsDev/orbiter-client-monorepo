@@ -93,6 +93,7 @@ export class TransactionService {
           signature: transfer.signature,
           version: transfer.version,
           feeToken: transfer.feeToken,
+          transactionIndex: transfer.transactionIndex,
         }
         if (transfer.sender === transfer.receiver) {
           upsertData.opStatus = 3;

@@ -1,9 +1,8 @@
-import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish } from 'ethers6';
+import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt } from 'ethers6';
 import { IChainConfig } from '@orbiter-finance/config';
 import { equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
 import * as abis from '@orbiter-finance/abi'
-
 import _, { clone } from 'lodash'
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 
@@ -14,7 +13,7 @@ class Interface2 extends Interface {
   checkArgs(args) {
     const length = args.length
     const newArgs = []
-    _.set(newArgs, 'toArray', function(){
+    _.set(newArgs, 'toArray', function () {
       const result = [];
       this.forEach((item) => {
         result.push(item);
@@ -64,8 +63,8 @@ export default class EVMVUtils {
   }
   public static evmStandardTokenTransfer(
     chainInfo: IChainConfig,
-    transaction: any,
-    receipt: any,
+    transaction: TransactionResponse,
+    receipt: TransactionReceipt,
   ): TransferAmountTransaction[] {
     const contractInterface = new Interface2(abis['ERC20Abi']);
     const transfers: TransferAmountTransaction[] = [];
@@ -84,6 +83,7 @@ export default class EVMVUtils {
         chainId: chainInfo.chainId,
         hash: transaction.hash,
         blockNumber: transaction.blockNumber,
+        transactionIndex: transaction.index,
         sender: transaction.from,
         receiver: parsedData.args[0],
         amount: null,
@@ -122,8 +122,8 @@ export default class EVMVUtils {
   public static evmContract(
     chainInfo: IChainConfig,
     contractInfo: any,
-    transaction: any,
-    receipt: any,
+    transaction: TransactionResponse,
+    receipt: TransactionReceipt,
   ): TransferAmountTransaction[] {
     let transfers: TransferAmountTransaction[] = [];
     const abi = abis[contractInfo.name];
@@ -148,8 +148,8 @@ export default class EVMVUtils {
   }
   public static evmOBSource(
     chainInfo: IChainConfig,
-    transaction: any,
-    receipt: any,
+    transaction: TransactionResponse,
+    receipt: TransactionReceipt,
   ): TransferAmountTransaction[] {
     const transfers: TransferAmountTransaction[] = [];
     const { nonce } = transaction;
@@ -164,6 +164,7 @@ export default class EVMVUtils {
       chainId: chainInfo.chainId,
       hash: transaction.hash,
       blockNumber: transaction.blockNumber,
+      transactionIndex: transaction.index,
       sender: transaction.from,
       receiver: parsedData.args[0],
       amount: null,
@@ -220,8 +221,8 @@ export default class EVMVUtils {
   }
   public static evmObRouterV3(
     chainInfo: IChainConfig,
-    transaction: any,
-    receipt: any,
+    transaction: TransactionResponse,
+    receipt: TransactionReceipt,
   ): TransferAmountTransaction[] {
     const transfers: TransferAmountTransaction[] = [];
     const { nonce } = transaction;
@@ -236,6 +237,7 @@ export default class EVMVUtils {
       chainId: chainInfo.chainId,
       hash: transaction.hash,
       blockNumber: transaction.blockNumber,
+      transactionIndex: transaction.index,
       sender: transaction.from,
       receiver: parsedData.args[0],
       amount: null,
@@ -274,8 +276,8 @@ export default class EVMVUtils {
           copyTxData.receiver = parsedLogData.args[0];
           copyTxData.value = value;
           copyTxData.amount = new BigNumber(value)
-          .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
-          .toString();
+            .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
+            .toString();
           transfers.push(copyTxData);
         }
       }
@@ -321,8 +323,8 @@ export default class EVMVUtils {
   }
   public static evmObRouterV1(
     chainInfo: IChainConfig,
-    transaction: any,
-    receipt: any,
+    transaction: TransactionResponse,
+    receipt: TransactionReceipt,
   ): TransferAmountTransaction[] {
     const transfers: TransferAmountTransaction[] = [];
     const { nonce } = transaction;
@@ -337,6 +339,7 @@ export default class EVMVUtils {
       chainId: chainInfo.chainId,
       hash: transaction.hash,
       blockNumber: transaction.blockNumber,
+      transactionIndex: transaction.index,
       sender: transaction.from,
       receiver: '',
       amount: null,

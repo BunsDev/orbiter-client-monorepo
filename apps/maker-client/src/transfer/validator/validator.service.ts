@@ -30,6 +30,7 @@ export class ValidatorService {
   }
 
   public optimisticCheckTxStatus(hash: string, chainId: string) {
+    
     return true
   }
 
