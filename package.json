@@ -7,8 +7,7 @@
     "dev:arbitration": "npx nx run arbitration:serve",
     "dev:explore-DataCrawler": "npx nx run explore-DataCrawler:serve",
     "dev:explore-DataRefinery": "npx nx run explore-DataRefinery:serve",
-    "dev:maker-client": "npx nx run maker-client:serve",
-    "postinstall": "patch-package"
+    "dev:maker-client": "npx nx run maker-client:serve"
   },
   "resolutions": {
     "ethereumjs-abi": "https://registry.npmjs.org/ethereumjs-abi/-/ethereumjs-abi-0.6.8.tgz"
@@ -20,7 +19,7 @@
     "@ethersproject/wallet": "5.7.0",
     "@imtbl/core-sdk": "^2.2.0",
     "@liaoliaots/nestjs-redis": "^9.0.5",
-    "@loopring-web/loopring-sdk": "2.1.14",    
+    "@loopring-web/loopring-sdk": "2.1.14",
     "@nestjs/common": "^10.2.7",
     "@nestjs/config": "^3.1.1",
     "@nestjs/core": "^10.2.7",
@@ -66,12 +65,11 @@
     "truffle-privatekey-provider": "^1.5.0",
     "tslib": "^2.6.2",
     "typescript": "5.2.2",
-    "web3": "^4.2.0",
+    "web3": "1.3.0",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
     "zksync": "^0.13.1",
-    "zksync-crypto": "^0.6.2",
-    "patch-package": "^8.0.0"
+    "zksync-crypto": "^0.6.2"
   },
   "devDependencies": {
     "@nestjs/schematics": "^10.0.2",
