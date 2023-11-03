@@ -12,6 +12,7 @@ export interface TransfersAttributes {
   chainId?: string;
   hash?: string;
   blockNumber?: string;
+  transactionIndex?:string;
   sender?: string;
   receiver?: string;
   value?: string;
@@ -70,6 +71,9 @@ export class Transfers
 
   @Column({ allowNull: true, type: DataType.BIGINT })
   blockNumber?: string;
+
+  @Column({ allowNull: true, type: DataType.BIGINT })
+  transactionIndex?: string;
 
   @Column({ allowNull: true, type: DataType.STRING(100) })
   @Index({ name: 'transfers_sender_idx', using: 'btree', unique: false })

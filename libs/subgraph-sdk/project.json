@@ -4,6 +4,17 @@
   "sourceRoot": "libs/subgraph-sdk/src",
   "projectType": "library",
   "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/subgraph-sdk",
+        "tsConfig": "libs/subgraph-sdk/tsconfig.lib.json",
+        "packageJson": "libs/subgraph-sdk/package.json",
+        "main": "libs/subgraph-sdk/src/index.ts",
+        "assets": ["libs/subgraph-sdk/*.md"]
+      }
+    },
     "lint": {
       "executor": "@nx/linter:eslint",
       "outputs": [

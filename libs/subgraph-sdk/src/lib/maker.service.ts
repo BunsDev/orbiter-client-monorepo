@@ -122,4 +122,22 @@ export class MakerService {
     const result = await this.ctx.query(queryStr);
     return result['mdcs'][0];
   }
+  async getChallengeUserRatio() {
+    const queryStr = `
+    {
+      challengeUserRatioUpdateds(
+        first: 1
+        orderBy: blockNumber
+        orderDirection: desc
+      ) {
+        challengeUserRatio
+      }
+    }`
+    const result = await this.ctx.query(queryStr);
+    const challengeUserRatioUpdateds = result['challengeUserRatioUpdateds'][0];
+    if (challengeUserRatioUpdateds.length>0){
+      return challengeUserRatioUpdateds[0].challengeUserRatio;
+    }
+    return null;
+  }
 }
