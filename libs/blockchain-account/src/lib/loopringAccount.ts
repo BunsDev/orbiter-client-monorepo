@@ -5,7 +5,7 @@ import {
   ConnectorNames,
   generateKeyPair,
   UserAPI
-} from '../../../../node_modules/@loopring-web/loopring-sdk'
+} from '@loopring-web/loopring-sdk'
 
 import Web3 from 'web3';
 import PrivateKeyProvider from 'truffle-privatekey-provider';
@@ -140,7 +140,7 @@ export class LoopringAccount extends OrbiterAccount {
       apiKey: apiKey,
       isHWAddr: false,
     });
-    this.logger.info('transfer response:', transactionResult);
+    this.logger.info(`transfer response: ${JSON.stringify(transactionResult)}`);
     if (transactionResult) {
       return {
         hash: transactionResult['hash'],
@@ -155,8 +155,10 @@ export class LoopringAccount extends OrbiterAccount {
   }
 
   public async waitForTransactionConfirmation(transactionHash: string) {
-    const response: { totalNum: number, transactions: any[] } = <any>await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/transactions?accountId=${this.accountInfo.accountId}&hashes=${transactionHash}`);
-    if (response && response.transactions.length === 1) {
+    const response: { totalNum: number, transactions: any[] } = <any>await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/transactions?accountId=${this.accountInfo.accountId}&hashes=${transactionHash}`,{
+      'x-api-key': this.chainConfig.api.key,
+    });
+    if (response?.transactions && response.transactions.length === 1) {
       const res: any = response.transactions[0];
       if (res) {
         return { from: res.receiverAddress, to: res.senderAddress, ...res };

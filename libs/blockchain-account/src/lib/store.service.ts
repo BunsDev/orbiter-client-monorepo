@@ -140,7 +140,7 @@ export class StoreService {
   }
   public async isStoreExist(sourceId: string, targetToken: string) {
     const key = `${targetToken}`.toLocaleLowerCase();
-    if (this.symbolRelHash.get(key).has(sourceId)) {
+    if (this.symbolRelHash.get(key) && this.symbolRelHash.get(key).has(sourceId)) {
       return true;
     }
     return false;

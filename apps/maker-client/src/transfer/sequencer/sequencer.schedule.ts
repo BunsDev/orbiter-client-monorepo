@@ -39,7 +39,7 @@ export class SequencerScheduleService {
     // this.validatorService.validatingValueMatches("ETH", "1", "ETH", "2")
   }
 
-  @Cron("* */2 * * * *")
+  @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
     const owners = this.envConfig.get("MAKERS") || [];
     for (const chain of this.chainConfigService.getAllChains()) {
@@ -103,11 +103,11 @@ export class SequencerScheduleService {
           this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
           continue
         }
-        if (store.isStoreExist(tx.sourceId, tx.targetToken)) {
+        if (await store.isStoreExist(tx.sourceId, tx.targetToken)) {
           this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Already exists in the store`)
           continue
         }
-        if (store.isTransfersExist(tx.sourceId)) {
+        if (await store.isTransfersExist(tx.sourceId)) {
           this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} There is a collection record`)
           continue
         }
