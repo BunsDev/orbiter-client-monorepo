@@ -6,8 +6,8 @@ import { isEmpty } from 'lodash';
 import {
     ethers,
     Interface,
-} from "ethers";
-import * as MDCAbi from '../abi/MDC.abi.json'
+} from "ethers6";
+import MDCAbi from '../abi/MDC.abi.json'
 import { ArbitrationTransaction } from './arbitration.interface';
 import { OnEvent } from '@nestjs/event-emitter';
 @Injectable()

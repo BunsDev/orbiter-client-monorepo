@@ -393,8 +393,6 @@ export default class BridgeTransactionBuilder {
       protected chainConfigService: ChainConfigService,
       protected makerV1RuleService: MakerV1RuleService,
       protected envConfigService: ENVConfigService,
-      @InjectModel(TransfersModel)
-      private transfersModel: typeof TransfersModel,
       private standardBuilder: StandardBuilder,
       private loopringBuilder: LoopringBuilder,
       private zksyncLiteBuilder:ZksyncLiteBuilder,

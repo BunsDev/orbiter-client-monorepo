@@ -1,14 +1,14 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { AppService } from './app.service';
-import { HTTPResponse } from './utils/Response';
-import { ProofSubmissionRequest } from './common/interfaces/Proof.interface';
+import { ProofService } from '../services/proof.service';
+import { HTTPResponse } from '../utils/Response';
+import { ProofSubmissionRequest } from '../common/interfaces/Proof.interface';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
-@Controller()
-export class AppController {
+@Controller("proof")
+export class ProofController {
   @LoggerDecorator()
   private readonly logger: OrbiterLogger;
-  constructor(private readonly appService: AppService,
+  constructor(private readonly proofService: ProofService,
     private chainConfig: ChainConfigService,
     private envConfig: ENVConfigService,
   ) { }
@@ -17,7 +17,7 @@ export class AppController {
   async proofSubmission(@Body() data: ProofSubmissionRequest): Promise<HTTPResponse> {
     try {
       this.logger.info(`proofSubmission`, data);
-      await this.appService.proofSubmission(data)
+      await this.proofService.proofSubmission(data)
       return HTTPResponse.success(null)
     } catch (error) {
       this.logger.error('proofSubmission error', error);
@@ -28,7 +28,7 @@ export class AppController {
   @Get("/proof/:hash")
   async getProofByHash(@Param("hash") hash: string): Promise<HTTPResponse> {
     try {
-      const data = await this.appService.getProof(hash)
+      const data = await this.proofService.getProof(hash)
       return HTTPResponse.success(data);
     } catch (error) {
       this.logger.error('getProofByHash error', error);
@@ -59,4 +59,5 @@ export class AppController {
       return HTTPResponse.fail(1000, error.message);
     }
   }
+
 }
