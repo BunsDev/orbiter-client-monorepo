@@ -150,11 +150,11 @@ export class StoreService {
     if (!this.symbolRelHash.has(key)) {
       this.symbolRelHash.set(key, new Set());
     }
-    if (this.isStoreExist(tx.sourceId, tx.targetToken)) {
+    if (await this.isStoreExist(tx.sourceId, tx.targetToken)) {
       return { code: "-1", errmsg: `${tx.sourceId} exist` };
     }
     // Payment has already been refunded
-    if (this.isTransfersExist(tx.sourceId)) {
+    if (await this.isTransfersExist(tx.sourceId)) {
       // throw new Error(`${tx.sourceId} Payment has already been refunded`);
       return {
         code: "-1",
