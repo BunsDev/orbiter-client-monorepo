@@ -60,6 +60,7 @@ export class MemoryMatchingService {
 
       if(['loopring','loopring_test'].includes(bt.targetChain)) {
         return (
+          transfer?.calldata && transfer.calldata.length &&
           equals(bt.targetNonce, transfer.calldata[0]) &&
           equals(bt.targetSymbol, transfer.symbol) &&
           equals(bt.targetAddress, transfer.receiver) &&

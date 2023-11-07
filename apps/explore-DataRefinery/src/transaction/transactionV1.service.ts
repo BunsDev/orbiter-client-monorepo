@@ -224,6 +224,7 @@ export class TransactionV1Service {
             targetMaker: transfer.sender
           },
           {
+            limit: 1,
             where: {
               id: memoryBT.id,
               status: [0, 97, 98],
@@ -237,7 +238,7 @@ export class TransactionV1Service {
         );
         if (rowCount != 1) {
           throw new Error(
-            'The number of modified rows in bridgeTransactionModel is incorrect',
+            `The number of modified rows(${rowCount}) in bridgeTransactionModel is incorrect`,
           );
         }
         const [updateTransferRows] = await this.transfersModel.update(

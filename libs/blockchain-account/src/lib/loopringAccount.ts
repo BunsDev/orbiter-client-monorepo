@@ -12,12 +12,14 @@ import PrivateKeyProvider from 'truffle-privatekey-provider';
 import { HTTPGet } from "@orbiter-finance/request";
 import { sleep } from '@orbiter-finance/utils';
 import { LoopringSendTokenRequest, TransferResponse } from './IAccount.interface';
+import { NonceManager } from "./nonceManager";
 
 export class LoopringAccount extends OrbiterAccount {
   private L1Wallet: ethers.Wallet;
   private client: ExchangeAPI;
   private accountInfo;
   private privateKey;
+  public nonceManager: NonceManager;
 
   async connect(privateKey: string, address: string) {
     this.privateKey = privateKey;
@@ -29,6 +31,12 @@ export class LoopringAccount extends OrbiterAccount {
       throw Error('account unlocked');
     }
     this.accountInfo = accInfo;
+    if (!this.nonceManager) {
+      this.nonceManager = new NonceManager(this.address, async () => {
+        return 0;
+      });
+      await this.nonceManager.forceRefreshNonce();
+    }
     return this;
   }
 
@@ -131,15 +139,25 @@ export class LoopringAccount extends OrbiterAccount {
       validUntil: ts,
       memo: transactionRequest?.memo,
     };
-    const transactionResult = await userApi.submitInternalTransfer({
-      request: <any>OriginTransferRequestV3,
-      web3: web3 as any,
-      chainId: Number(this.chainConfig.networkId),
-      walletType: ConnectorNames.Unknown,
-      eddsaKey: eddsaKey.sk,
-      apiKey: apiKey,
-      isHWAddr: false,
-    });
+    let transactionResult: any;
+    const { submit, rollback } = await this.nonceManager.getNextNonce();
+    try {
+      transactionResult = await userApi.submitInternalTransfer({
+        request: <any>OriginTransferRequestV3,
+        web3: web3 as any,
+        chainId: Number(this.chainConfig.networkId),
+        walletType: ConnectorNames.Unknown,
+        eddsaKey: eddsaKey.sk,
+        apiKey: apiKey,
+        isHWAddr: false,
+      });
+      submit();
+    } catch (error: any) {
+      rollback();
+      this.logger.error(`rollback nonce:${error.message}`);
+      throw error;
+    }
+
     this.logger.info(`transfer response: ${JSON.stringify(transactionResult)}`);
     if (transactionResult) {
       return {
