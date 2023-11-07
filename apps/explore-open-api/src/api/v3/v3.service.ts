@@ -5,14 +5,13 @@ import { Op } from 'sequelize';
 import { BridgeTransaction, BridgeTransactionAttributes } from "@orbiter-finance/seq-models";
 import { V2Service } from "../v2/v2.service";
 import Keyv from "keyv";
-import { BigIntToString, getDecimalBySymbol } from "@orbiter-finance/utils";
+import { BigIntToString, getDecimalBySymbol, addressPadStart } from "@orbiter-finance/utils";
 import {BigNumber} from "bignumber.js"
 import {
   ChainConfigService, ENVConfigService,
 } from "@orbiter-finance/config";
 import axios from "axios";
 import { ITradingPair } from "../api.interface";
-import { addressPadStart } from '../../utils';
 const keyv = new Keyv();
 const defaultCacheTime = 1000 * 60 * 60;
 
