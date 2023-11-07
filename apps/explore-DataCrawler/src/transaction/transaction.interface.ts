@@ -8,6 +8,7 @@ export enum TransferAmountTransactionStatus {
     chainId: string;
     hash: string;
     blockNumber: number;
+    transactionIndex?:number;
     sender: string;
     receiver: string;
     amount: string;

@@ -45,25 +45,6 @@ export type TransactionResponse = ETransactionResponse
 export interface TransactionRequest extends ETransactionRequest {
   serialId?: string | string[];
 }
-export interface TransferAmountTransaction {
-  transactionId: string;
-  sourceId: string;
-  targetId: string;
-  sourceChain: string;
-  targetChain: string;
-  sourceAmount: string;
-  targetAmount: string;
-  sourceMaker: string;
-  targetMaker: string;
-  sourceAddress: string;
-  targetAddress: string;
-  sourceSymbol: string;
-  targetSymbol: string;
-  sourceNonce: string;
-  sourceToken: string;
-  targetToken: string;
-  responseMaker: string[];
-}
 export interface ZKSpaceSendTokenRequest extends Partial<TransactionRequest> {
   tokenId: number;
   feeTokenId: number;

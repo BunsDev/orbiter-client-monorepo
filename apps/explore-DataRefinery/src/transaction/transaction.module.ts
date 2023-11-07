@@ -15,6 +15,7 @@ BridgeTransactionBuilder,
   EVMRouterV3ContractBuilder,
   StarknetOBSourceContractBuilder,
   LoopringBuilder,
+  ZksyncLiteBuilder,
 }
 from './bridgeTransaction.builder';
 @Module({
@@ -31,6 +32,7 @@ from './bridgeTransaction.builder';
     EVMRouterV3ContractBuilder,
     StarknetOBSourceContractBuilder,
     LoopringBuilder,
+    ZksyncLiteBuilder,
   ],
   exports: [TransactionService, TransactionV1Service, TransactionV2Service],
 })

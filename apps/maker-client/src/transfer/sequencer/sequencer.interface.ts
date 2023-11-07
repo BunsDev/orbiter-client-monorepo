@@ -1,4 +1,5 @@
 import { Mutex } from "async-mutex";
+import { BridgeTransaction } from "@orbiter-finance/seq-models";
 
 export interface Sequencer {}
 
@@ -44,22 +45,6 @@ export interface MonitorState {
   lastSubmit: number;
 }
 
-export interface TransferAmountTransaction {
-  transactionId: string;
-  sourceId: string;
-  targetId: string;
-  sourceChain: string;
-  targetChain: string;
-  sourceAmount: string;
-  targetAmount: string;
-  sourceMaker: string;
-  targetMaker: string;
-  sourceAddress: string;
-  targetAddress: string;
-  sourceSymbol: string;
-  targetSymbol: string;
-  sourceNonce: string;
-  sourceToken: string;
-  targetToken: string;
-  responseMaker: string[];
+export interface TransferAmountTransaction extends BridgeTransaction{
+  
 }

@@ -7,6 +7,7 @@ import OrbiterRouterV3 from './lib/OrbiterRouterV3.json';
 import ChainLinkAggregatorV3 from './lib/ChainLinkAggregatorV3.json';
 import StarknetAccount from './lib/StarknetAccount.json';
 import StarknetERC20 from './lib/StarknetERC20.json';
+import MakerDeposit from './lib/MakerDeposit.json';
 type ABI_JSON = any;
 const abis: { [key: string]: ABI_JSON } = {};
 function loadJsonFiles(directoryPath: string) {
@@ -30,4 +31,5 @@ export {
     OBSource,
     OrbiterRouterV1,
     OrbiterRouterV3,
+    MakerDeposit
 };

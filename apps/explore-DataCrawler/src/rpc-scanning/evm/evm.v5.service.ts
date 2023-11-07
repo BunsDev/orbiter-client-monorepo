@@ -2,11 +2,11 @@ import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 import { isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { ZeroAddress } from 'ethers6';
-import {
-  Block,
-  TransactionReceipt,
-  TransactionResponse,
-} from '../rpc-scanning.interface';
+import ethers from 'ethers';
+export type TransactionResponse = ethers.providers.TransactionResponse;
+export type TransactionReceipt = ethers.providers.TransactionReceipt;
+export type BlockWithTransactions = any;
+export type Block = ethers.providers.Block | BlockWithTransactions;
 import EVMV5Utils from './lib/v6';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 import EVMVUtils from './lib/v6';
@@ -16,6 +16,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   getProvider() {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
+    
     if (!this.#provider) {
       this.#provider = new Orbiter5Provider(rpc);
     }
@@ -31,16 +32,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     const provider = this.getProvider();
     return await provider.getBlockNumber();
   }
-  // async filterTransfers(transfers: TransferAmountTransaction[]) {
-  //   transfers =  await super.filterTransfers(transfers)
-  //   return transfers.filter(row=> {
-  //     if(isAddress(row.sender) && isAddress(row.receiver)) {
-  //       return true;
-  //     }
-  //     this.logger.warn(`${row.hash} Address format verification failed ${JSON.stringify(row)}`)
-  //     return false;
-  //   })
-  // }
+
   async handleBlock(block: Block): Promise<TransferAmountTransaction[]> {
     const transactions = block.transactions; // TAG: v5/v6 difference
     if (!transactions) {
@@ -113,11 +105,12 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         receipt = await provider.getTransactionReceipt(transaction.hash);
       }
       // fix v6/v5 difference
-      receipt.hash = receipt.transactionHash;
-      if (transaction.hash != receipt.hash) {
+      const receiptHash = receipt.transactionHash;
+      receipt['hash'] = receiptHash;
+      if (transaction.hash != receiptHash) {
         this.logger.error(`${transaction.hash} Hash inconsistency ${JSONStringify(receipt)}`)
         throw new Error(
-          `${transaction.hash}/${receipt.hash} Hash inconsistency`,
+          `${transaction.hash}/${receiptHash} Hash inconsistency`,
         );
       }
       const chainConfig = this.chainConfig;
@@ -134,15 +127,15 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       if (tokenInfo) {
         transfers = EVMV5Utils.evmStandardTokenTransfer(
           chainConfig,
-          transaction,
-          receipt,
+          transaction as any,
+          receipt as any,
         );
       } else if (contractInfo) {
         transfers = EVMV5Utils.evmContract(
           chainConfig,
           contractInfo,
-          transaction,
-          receipt,
+          transaction as any,
+          receipt as any,
         );
       } else {
         if (transaction.data === '0x' || await provider.getCode(transaction.to) === '0x') {
@@ -152,6 +145,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
             chainId: String(chainId),
             hash: transaction.hash,
             blockNumber: transaction.blockNumber,
+            transactionIndex: receipt.transactionIndex,
             sender: transaction.from,
             receiver: transaction.to,
             amount: new BigNumber(value)
@@ -173,6 +167,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         }
       }
       transfers = transfers.map((tx) => {
+        tx.transactionIndex = receipt.transactionIndex;
         tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
         tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
         tx.contract = tx.contract && tx.contract.toLocaleLowerCase();

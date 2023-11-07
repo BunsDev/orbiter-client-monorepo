@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { ProofSubmissionRequest } from './common/interfaces/Proof.interface';
+import { ProofSubmissionRequest } from '../common/interfaces/Proof.interface';
 import { Level } from 'level';
 @Injectable()
-export class AppService {
+export class ProofService {
   private db: Level;
   constructor() {
     this.db = new Level('runtime/maker-openapi', { valueEncoding: 'json' })

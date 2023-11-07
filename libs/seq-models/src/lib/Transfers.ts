@@ -12,6 +12,7 @@ export interface TransfersAttributes {
   chainId?: string;
   hash?: string;
   blockNumber?: string;
+  transactionIndex?:string;
   sender?: string;
   receiver?: string;
   value?: string;
@@ -36,6 +37,8 @@ export interface TransfersAttributes {
 
 
 export enum TransferOpStatus {
+  INIT_STATUS = 0,
+  VALID = 1,
   SOURCE_CHAIN_OR_TOKEN_NOT_FOUND = 2,
   TARGET_CHAIN_OR_TOKEN_NOT_FOUND = 3,
   RULE_NOT_FOUND = 4,
@@ -68,6 +71,9 @@ export class Transfers
 
   @Column({ allowNull: true, type: DataType.BIGINT })
   blockNumber?: string;
+
+  @Column({ allowNull: true, type: DataType.BIGINT })
+  transactionIndex?: string;
 
   @Column({ allowNull: true, type: DataType.STRING(100) })
   @Index({ name: 'transfers_sender_idx', using: 'btree', unique: false })

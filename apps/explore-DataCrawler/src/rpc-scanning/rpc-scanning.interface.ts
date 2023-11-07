@@ -6,8 +6,14 @@ import { TransactionService } from '../transaction/transaction.service';
 import { TransferAmountTransaction } from '../transaction/transaction.interface';
 
 export type Block = any;
-export type TransactionResponse = ethers.TransactionResponse | any;
-export type TransactionReceipt = ethers.TransactionReceipt | any;
+
+export interface TransactionResponse {
+
+};
+export interface TransactionReceipt {
+
+};
+ethers.TransactionReceipt
 export interface RpcScanningInterface {
   getLatestBlockNumber(): Promise<number>;
   handleBlock(block: Block): Promise<TransferAmountTransaction[]>;

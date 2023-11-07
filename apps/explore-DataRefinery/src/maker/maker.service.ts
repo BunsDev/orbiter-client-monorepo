@@ -158,6 +158,9 @@ export class MakerService {
         }
         address = address.toLocaleLowerCase();
         // redis
+        if (this.#v2Owners.length<=0) {
+            await this.getV2MakerOwnersFromRedis()
+        }
         if (this.#v2Owners.includes(address)) {
             return true;
         }

@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { ChainRel, SubgraphClient } from '@orbiter-finance/subgraph-sdk';
 import { isEmpty } from 'lodash';
@@ -7,14 +7,13 @@ import {
     ethers,
     Interface,
 } from "ethers6";
-import { LoggerDecorator, OrbiterLogger, abis } from '@orbiter-finance/utils';
+import MDCAbi from '../abi/MDC.abi.json'
 import { ArbitrationTransaction } from './arbitration.interface';
 import { OnEvent } from '@nestjs/event-emitter';
 @Injectable()
 export class ArbitrationService {
     public chainRels: Array<ChainRel> = [];
-    @LoggerDecorator()
-    private readonly logger: OrbiterLogger;
+    private readonly logger: Logger = new Logger(ArbitrationService.name);
     constructor(private schedulerRegistry: SchedulerRegistry) {
     }
     async getSubClient(): Promise<SubgraphClient> {
@@ -46,7 +45,7 @@ export class ArbitrationService {
     }
 
     async initiateArbitration(account: ethers.Wallet, tx: ArbitrationTransaction) {
-        const ifa = new Interface(abis.OrbiterRouterV3);
+        const ifa = new Interface(MDCAbi);
         if (!tx.fromChainId) {
             throw new Error('fromChainId not found');
         }
@@ -68,7 +67,9 @@ export class ArbitrationService {
         // Obtaining arbitration deposit TODO: 
         // TODO: Verify Balance
         const data = ifa.encodeFunctionData("challenge", [
+            tx.fromTimestamp,
             tx.fromChainId,
+            0,
             tx.fromHash,
             tx.fromTimestamp,
             tx.sourceToken,
@@ -106,11 +107,11 @@ export class ArbitrationService {
             const provider = new ethers.JsonRpcProvider(arbitrationRPC);
             const wallet = new ethers.Wallet(arbitrationPrivateKey).connect(provider);
             //
-            this.logger.info(`initiateArbitration wait initiateArbitration ${payload.fromHash}`);
+            this.logger.log(`initiateArbitration wait initiateArbitration ${payload.fromHash}`);
             const result = await this.initiateArbitration(wallet, payload);
-            this.logger.info(`initiateArbitration success ${result.hash}`);
+            this.logger.log(`initiateArbitration success ${result.hash}`);
             // await result.wait()
-            this.logger.info(`initiateArbitration wait success ${result.hash}`);
+            this.logger.log(`initiateArbitration wait success ${result.hash}`);
         } catch (error) {
             this.logger.error('Arbitration encountered an exception', error);
         }

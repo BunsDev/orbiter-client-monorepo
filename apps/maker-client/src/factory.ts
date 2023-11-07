@@ -84,11 +84,7 @@ export class AccountFactoryService {
       case 524:
       case 525:
       case 528:
-        // if (ValidatorService.isSupportXVM(toChainId)) {
-        //   wallet = new XVMAccount(toChainId, privateKey);
-        // } else {
         wallet = new EVMAccount(toChainId, ctx);
-        // }
         break;
       case 512:
         wallet = new ZkSpaceAccount(

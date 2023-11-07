@@ -35,6 +35,22 @@ function parseSourceTxSecurityCode(value) {
   return nCode % 1000;
 }
 
+function parseZksyncLiteSourceTxSecurityCode(value: string) {
+  const stringValue = new BigNumber(value).toString()
+  let code = stringValue.slice(stringValue.length - 4)
+  code = code.slice(code.indexOf('9'))
+  if (code.length !== 4) {
+    for (let i = 0; i < 4 - code.length; i++) {
+      code += '0';
+    }
+  }
+  const nCode = Number(code);
+  if (nCode < 9000 || nCode > 10000) {
+    return 0;
+  }
+  return nCode % 1000;
+}
+
 
 export type BuilderData = {
   targetToken: Token
@@ -59,6 +75,47 @@ export class StandardBuilder {
     async build(transfer: TransfersModel): Promise<BuilderData> {
       const result = {} as BuilderData
       const targetChainId = parseSourceTxSecurityCode(transfer.amount);
+      const targetChain = this.chainConfigService.getChainByKeyValue(
+        'internalId',
+        targetChainId,
+      );
+      if (!targetChain) {
+        return result
+      }
+      result.targetChain = targetChain
+      //
+      const targetToken = this.chainConfigService.getTokenBySymbol(
+        targetChain.chainId,
+        transfer.symbol,
+      );
+      if (!targetToken) {
+        return result
+      }
+      result.targetToken = targetToken
+      result.targetAddress = transfer.sender;
+      return result
+    }
+}
+
+
+
+@Injectable()
+export class ZksyncLiteBuilder {
+    @LoggerDecorator()
+    private readonly logger: OrbiterLogger;
+    constructor(
+      protected chainConfigService: ChainConfigService,
+      protected envConfigService: ENVConfigService,
+      protected makerV1RuleService: MakerV1RuleService,
+    ) {
+
+    }
+    async check(transfer: TransfersModel) {
+      return ['zksync_test', 'zksync'].includes(transfer.chainId)
+    }
+    async build(transfer: TransfersModel): Promise<BuilderData> {
+      const result = {} as BuilderData
+      const targetChainId = parseZksyncLiteSourceTxSecurityCode(transfer.amount);
       const targetChain = this.chainConfigService.getChainByKeyValue(
         'internalId',
         targetChainId,
@@ -149,7 +206,7 @@ export class EVMOBSourceContractBuilder {
       if (
         !['SN_MAIN', 'SN_GOERLI', 'loopring', 'loopring_test'].includes(transfer.chainId)
         && transfer.contract
-        && (contract[transfer.contract] === 'OBSource' || contract[validateAndParseAddress(transfer.contract)] === 'OBSource')
+        && (contract[transfer.contract] === 'OBSource' || contract[utils.getAddress(transfer.contract)] === 'OBSource')
       ) {
         return true
       }
@@ -212,11 +269,8 @@ export class StarknetOBSourceContractBuilder {
     }
 
     check(transfer: TransfersModel, sourceChain: IChainConfig): boolean{
-      const contract = sourceChain.contract
       if (
         ['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
-        && transfer.contract
-        // && (contract[transfer.contract] === 'OBSource' || contract[utils.getAddress(transfer.contract)] === 'OBSource')
       ) {
         return true
       }
@@ -339,10 +393,9 @@ export default class BridgeTransactionBuilder {
       protected chainConfigService: ChainConfigService,
       protected makerV1RuleService: MakerV1RuleService,
       protected envConfigService: ENVConfigService,
-      @InjectModel(TransfersModel)
-      private transfersModel: typeof TransfersModel,
       private standardBuilder: StandardBuilder,
       private loopringBuilder: LoopringBuilder,
+      private zksyncLiteBuilder:ZksyncLiteBuilder,
       private evmOBSourceContractBuilder: EVMOBSourceContractBuilder,
       private starknetOBSourceContractBuilder: StarknetOBSourceContractBuilder,
       private evmRouterV3ContractBuilder: EVMRouterV3ContractBuilder,
@@ -392,6 +445,8 @@ export default class BridgeTransactionBuilder {
           builderData = await this.evmOBSourceContractBuilder.build(transfer)
         } else if (this.starknetOBSourceContractBuilder.check(transfer, sourceChain)) {
           builderData = await this.starknetOBSourceContractBuilder.build(transfer)
+        } else if (this.zksyncLiteBuilder.check(transfer)) {
+          builderData = await this.zksyncLiteBuilder.build(transfer)
         } else {
           builderData = await this.standardBuilder.build(transfer);
         }

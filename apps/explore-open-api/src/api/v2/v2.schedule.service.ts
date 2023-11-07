@@ -38,7 +38,7 @@ export class V2Schedule {
       sourceSymbol: string,
       targetSymbol: string
     }[] = <any[]>this.makerV1RuleService.getAll();
-    const tradingPairs: ITradingPair[] = [];
+    let tradingPairs: ITradingPair[] = [];
     for (const rule of rules) {
       const [fromChainId, toChainId] = rule.chain.split('-');
       const [fromSymbol, toSymbol] = rule.token.split('-');
@@ -96,7 +96,7 @@ export class V2Schedule {
     }
     const netStateList = await this.v2Service.getOffline();
     if (netStateList && netStateList.length) {
-      V2Service.tradingPairs = V2Service.tradingPairs.filter(item => {
+      tradingPairs = tradingPairs.filter(item => {
           return !netStateList.find(net => (net.source === item.fromChain.id || !net.source) &&
             (net.dest === item.toChain.id || !net.dest));
         },
@@ -104,7 +104,8 @@ export class V2Schedule {
     }
     if (JSON.stringify(V2Service.tradingPairs) !== JSON.stringify(tradingPairs)) {
       V2Service.updateTime = new Date().valueOf();
-      console.log(new Date().toLocaleTimeString(), 'tradingPairs update, current count: ', tradingPairs.length);
+      console.log(new Date().toLocaleTimeString(), 'tradingPairs update, current count: ', tradingPairs.length,
+        'rules count: ', rules.length, '80c count: ', rules.filter(item => item.makerAddress.toLowerCase() === '0x80c67432656d59144ceff962e8faf8926599bcf8'.toLowerCase()).length);
     }
     V2Service.tradingPairs = tradingPairs;
   }

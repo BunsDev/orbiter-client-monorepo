@@ -20,15 +20,17 @@ export class ValidatorService {
     private readonly accountFactoryService: AccountFactoryService
   ) { }
 
-  public transactionTimeValid(chainId: string, timestamp: number) {
+  public transactionTimeValid(chainId: string, timestamp: Date) {
     const timeout = Date.now() - dayjs(timestamp).valueOf();
-    if (timeout >= this.envConfig.get(`${chainId}.TransferTimeout`)) {
-      return false; // 'Please collect manually if the transaction exceeds the specified time'
+    const transferTimeout = +(this.envConfig.get<Number>(`${chainId}.TransferTimeout`, 1000 * 60 * 30));
+    if (timeout >= transferTimeout) {
+      return true; // 'Please collect manually if the transaction exceeds the specified time'
     }
-    return true;
+    return false;
   }
 
   public optimisticCheckTxStatus(hash: string, chainId: string) {
+    
     return true
   }
 
@@ -186,14 +188,6 @@ export class ValidatorService {
       return this.envConfig.get(from);
     }
     return privateKey;
-  }
-
-  public isSupportXVM(chainId: number): boolean {
-    const chain = this.chainConfigService.getChainInfo(chainId);
-    if (chain && chain.xvmList) {
-      return chain.xvmList.length > 0;
-    }
-    return false;
   }
 
   public async validatingValueMatches(

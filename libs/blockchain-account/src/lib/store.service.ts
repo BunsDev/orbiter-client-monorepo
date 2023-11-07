@@ -1,5 +1,5 @@
 import { Level } from 'level';
-import { type TransferAmountTransaction } from "../../../../apps/maker-client/src/transfer/sequencer/sequencer.interface";
+import { BridgeTransaction } from "@orbiter-finance/seq-models";
 import { Mutex } from "async-mutex";
 import { cloneDeep } from "lodash";
 import { JSONStringify } from '@orbiter-finance/utils';
@@ -7,7 +7,7 @@ import { JSONStringify } from '@orbiter-finance/utils';
 export class StoreService {
   private static readonly levels = new Map<string, Level>();
   private readonly symbolRelHash = new Map<string, Set<string>>();
-  private readonly transactions = new Map<string, TransferAmountTransaction>(); // key = symbol
+  private readonly transactions = new Map<string, BridgeTransaction>(); // key = symbol
   public lastId = 0;
   public static WalletLock: Record<string, Mutex> = {}; // key = chainId + address
   constructor(public readonly chainId: string) {
@@ -130,18 +130,31 @@ export class StoreService {
     }
     return await level.batch(batchData);
   }
-
-  public async addTransactions(tx: TransferAmountTransaction) {
+  public async isTransfersExist(sourceId: string) {
+    const data = await this.getSerialRecord(sourceId);
+    if (data) {
+      // throw new Error(`${tx.sourceId} Payment has already been refunded`);
+      return true;
+    }
+    return false;
+  }
+  public async isStoreExist(sourceId: string, targetToken: string) {
+    const key = `${targetToken}`.toLocaleLowerCase();
+    if (this.symbolRelHash.get(key) && this.symbolRelHash.get(key).has(sourceId)) {
+      return true;
+    }
+    return false;
+  }
+  public async addTransactions(tx: BridgeTransaction) {
     const key = `${tx.targetToken}`.toLocaleLowerCase();
     if (!this.symbolRelHash.has(key)) {
       this.symbolRelHash.set(key, new Set());
     }
-    if (this.symbolRelHash.get(key).has(tx.sourceId)) {
+    if (await this.isStoreExist(tx.sourceId, tx.targetToken)) {
       return { code: "-1", errmsg: `${tx.sourceId} exist` };
     }
     // Payment has already been refunded
-    const data = await this.getSerialRecord(tx.sourceId);
-    if (data) {
+    if (await this.isTransfersExist(tx.sourceId)) {
       // throw new Error(`${tx.sourceId} Payment has already been refunded`);
       return {
         code: "-1",
