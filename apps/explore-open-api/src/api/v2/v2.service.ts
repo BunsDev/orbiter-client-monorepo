@@ -163,7 +163,7 @@ export class V2Service {
     const dataList: IUserHistory[] = [...await this.UserHistoryModel.findAll({
       attributes: ["fromHash", "toHash", "fromTime", "toTime", "fromChain", "toChain", "fromAmount", "fromToken", "toToken", "toAmount", "replySender", "replyAccount"],
       where: {
-        replySender: address
+        fromSender: address
       }
     }), ...await this.UserHistoryModel.findAll({
       attributes: ["fromHash", "toHash", "fromTime", "toTime", "fromChain", "toChain", "fromAmount", "fromToken", "toToken", "toAmount", "replySender", "replyAccount"],
@@ -174,9 +174,17 @@ export class V2Service {
 
     let list = [];
     for (const data of dataList) {
-      let decimals = 18;
+      let fromDecimals = 18;
+      let toDecimals = 18;
       if (data.fromToken === 'USDT' || data.fromToken === 'USDC') {
-        decimals = 6;
+        fromDecimals = 6;
+        toDecimals = 6;
+        if ([15, 515].includes(+data.fromChain)) {
+          fromDecimals = 18;
+        }
+        if ([15, 515].includes(+data.toChain)) {
+          toDecimals = 18;
+        }
       }
       list.push({
         fromInternalId: data.fromChain,
@@ -188,8 +196,8 @@ export class V2Service {
         fromSymbol: data.fromToken,
         fromTimestamp: data.fromTime,
         toTimestamp: data.toTime,
-        fromValue: new BigNumber(data.fromAmount).dividedBy(10 ** decimals),
-        toValue: new BigNumber(data.toAmount).dividedBy(10 ** decimals),
+        fromValue: new BigNumber(data.fromAmount).dividedBy(10 ** fromDecimals),
+        toValue: new BigNumber(data.toAmount).dividedBy(10 ** toDecimals),
         status: 99,
         isV2: true,
       });
