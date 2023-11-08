@@ -57,6 +57,21 @@ export class MemoryMatchingService {
     // }
     const matchTx = this.bridgeTransactions.find((bt) => {
       const responseMaker: string[] = bt.responseMaker || [];
+
+      if(['loopring','loopring_test'].includes(bt.targetChain)) {
+        return (
+          transfer?.calldata && transfer.calldata.length &&
+          equals(bt.targetNonce, transfer.calldata[0]) &&
+          equals(bt.targetSymbol, transfer.symbol) &&
+          equals(bt.targetAddress, transfer.receiver) &&
+          equals(bt.targetChain, transfer.chainId) &&
+          equals(bt.targetAmount, transfer.amount) &&
+          dayjs(transfer.timestamp).valueOf() > dayjs(bt.sourceTime).valueOf() &&
+          responseMaker.includes(transfer.sender) &&
+
+          bt.version === `${transfer.version.split('-')[0]}-0`
+        )
+      }
       return (
         equals(bt.targetSymbol, transfer.symbol) &&
         equals(bt.targetAddress, transfer.receiver) &&

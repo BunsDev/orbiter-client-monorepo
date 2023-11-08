@@ -322,6 +322,7 @@ export class TransactionV2Service {
             targetMaker: transfer.sender
           },
           {
+            limit: 1,
             where: {
               id: memoryBT.id,
               status: [0, 97, 98],
