@@ -4,6 +4,7 @@ import { ChainConfigService, MakerV1RuleService } from '@orbiter-finance/config'
 import { V2Service } from "./v2.service";
 import { ITradingPair } from "../api.interface";
 import { sleep } from "@orbiter-finance/utils";
+import { INetState } from "../../../../../libs/v1-seq-models/src";
 
 @Injectable()
 export class V2Schedule {
@@ -17,6 +18,7 @@ export class V2Schedule {
   @Cron('* */1 * * * *')
   private async updateConfig() {
     const chainList = this.chainConfigService.getAllChains();
+    V2Service.chainList = chainList;
     chainList.forEach(item => {
       V2Service.idMap[+item.internalId] = item.chainId;
     });
@@ -94,18 +96,21 @@ export class V2Schedule {
         },
       });
     }
-    const netStateList = await this.v2Service.getOffline();
+    const netStateList: INetState[] = await this.v2Service.getOffline();
     if (netStateList && netStateList.length) {
       tradingPairs = tradingPairs.filter(item => {
-          return !netStateList.find(net => (net.source === item.fromChain.id || !net.source) &&
-            (net.dest === item.toChain.id || !net.dest));
+          return !netStateList.find(net =>
+            (net.sourceToken === item.fromChain.symbol || !net.sourceToken) &&
+            (net.destToken === item.toChain.symbol || !net.destToken) &&
+            (net.source === +item.fromChain.id || !net.source) &&
+            (net.dest === +item.toChain.id || !net.dest));
         },
       );
     }
     if (JSON.stringify(V2Service.tradingPairs) !== JSON.stringify(tradingPairs)) {
       V2Service.updateTime = new Date().valueOf();
       console.log(new Date().toLocaleTimeString(), 'tradingPairs update, current count: ', tradingPairs.length,
-        'rules count: ', rules.length, '80c count: ', rules.filter(item => item.makerAddress.toLowerCase() === '0x80c67432656d59144ceff962e8faf8926599bcf8'.toLowerCase()).length);
+        'rules count: ', rules.length, 'chainList count: ', chainList.length);
     }
     V2Service.tradingPairs = tradingPairs;
   }

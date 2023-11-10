@@ -4,6 +4,8 @@ export interface INetState {
     id?: number;
     source?: number;
     dest?: number;
+    sourceToken?: string;
+    destToken?: string;
     createdAt?: Date;
 }
 
@@ -23,6 +25,12 @@ export class NetState extends Model<INetState, INetState> implements INetState {
 
     @Column({ type: DataType.INTEGER, comment: "Dest chain'" })
     dest!: number;
+
+    @Column({ type: DataType.STRING(20), comment: "Source token" })
+    sourceToken!: string;
+
+    @Column({ type: DataType.STRING(20), comment: "Dest token'" })
+    destToken!: string;
 
     @Column({ type: DataType.DATE })
     createdAt!: Date;

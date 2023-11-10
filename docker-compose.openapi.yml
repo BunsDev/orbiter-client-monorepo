@@ -19,9 +19,10 @@ services:
     environment:
       CONSUL_URL: '${CONSUL_URL}'
     ports:
-      - '9003:3000'
+      - '9001:3000'
     networks:
       - orbiter-network
     volumes:
+      - './sheet-377710-b8d7c8d145e9.json:/app/google/sheet-377710-b8d7c8d145e9.json'
       - './runtime:/app/runtime'
       - './logs:/app/logs'
