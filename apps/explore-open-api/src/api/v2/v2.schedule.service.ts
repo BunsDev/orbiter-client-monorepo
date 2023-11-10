@@ -100,10 +100,20 @@ export class V2Schedule {
     if (netStateList && netStateList.length) {
       tradingPairs = tradingPairs.filter(item => {
           return !netStateList.find(net =>
-            (net.sourceToken === item.fromChain.symbol || !net.sourceToken) &&
-            (net.destToken === item.toChain.symbol || !net.destToken) &&
-            (net.source === +item.fromChain.id || !net.source) &&
-            (net.dest === +item.toChain.id || !net.dest));
+            (
+              (
+                net.source === +item.fromChain.id &&
+                (net.sourceToken === item.fromChain.symbol || !net.sourceToken)
+              )
+              || !net.source) &&
+            (
+              (
+                net.dest === +item.toChain.id &&
+                (net.destToken === item.toChain.symbol || !net.destToken)
+              )
+              || !net.dest
+            )
+          );
         },
       );
     }
