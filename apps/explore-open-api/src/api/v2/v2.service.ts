@@ -25,6 +25,7 @@ export class V2Service {
   static tradingPairs: ITradingPair[] = [];
   static updateTime: number = new Date().valueOf();
   static idMap = {};
+  static chainList = [];
 
   constructor(private chainConfigService: ChainConfigService) {
   }
@@ -35,7 +36,7 @@ export class V2Service {
   @InjectModel(NetState) private NetStateModel: typeof NetState;
 
   async getTradingPairs() {
-    return { ruleList: V2Service.tradingPairs };
+    return { ruleList: V2Service.tradingPairs, chainList: V2Service.chainList };
   }
 
   async getTransactionByHash(params: string[]) {
@@ -116,7 +117,7 @@ export class V2Service {
       return cache;
     }
     const result: INetState[] = await this.NetStateModel.findAll(<any>{
-      attributes: ['source', 'dest'],
+      attributes: ['source', 'dest', 'sourceToken', 'destToken'],
       raw: true,
     });
     await keyv.set('net_state', result, 1000 * 10);
