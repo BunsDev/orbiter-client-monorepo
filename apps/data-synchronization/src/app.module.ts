@@ -9,6 +9,7 @@ import { MakerTransaction, NetState, UserHistory } from '@orbiter-finance/v1-seq
 import { Transaction } from 'ethers6';
 import { join, isEmpty } from 'lodash';
 import { SequelizeModule } from "@nestjs/sequelize";
+import { TransactionService } from './app/transaction.service';
 
 @Module({
   imports: [
@@ -52,8 +53,9 @@ import { SequelizeModule } from "@nestjs/sequelize";
         return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
       },
     }),
+
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, TransactionService],
 })
 export class AppModule {}
