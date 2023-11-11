@@ -19,6 +19,7 @@ export class TransactionService {
   ) {
     // this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
     // this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
+    // TODO: Receive and process mq messages
   }
 
 

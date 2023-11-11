@@ -190,7 +190,7 @@ export class TransactionV1Service {
         );
       }
       await t.commit();
-      return createdData
+      return { errno: 0, data: createdData }
     } catch (error) {
       console.error(error);
       this.logger.error(
@@ -247,6 +247,7 @@ export class TransactionV1Service {
           },
           {
             where: {
+              opStatus: 1,
               hash: {
                 [Op.in]: [transfer.hash, memoryBT.sourceId],
               },
@@ -265,7 +266,10 @@ export class TransactionV1Service {
         this.logger.info(
           `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
         );
-        return memoryBT;
+        return {
+          errno: 0,
+          data: memoryBT
+        };
       }
     } catch (error) {
       this.logger.error(
@@ -289,6 +293,7 @@ export class TransactionV1Service {
       if (!btTx || !btTx.id) {
         const where = {
           status: [0, 97, 98],
+          targetId: null,
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,
           targetChain: transfer.chainId,
@@ -320,6 +325,7 @@ export class TransactionV1Service {
           },
           {
             where: {
+              opStatus: 1,
               hash: {
                 [Op.in]: [btTx.sourceId, btTx.targetId],
               },
@@ -343,6 +349,10 @@ export class TransactionV1Service {
           });
       }
       await t2.commit();
+      return {
+        errno: 0,
+        data: btTx
+      }
     } catch (error) {
       t2 && (await t2.rollback());
       throw error;
