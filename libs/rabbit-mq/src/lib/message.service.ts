@@ -35,7 +35,7 @@ export class MessageService {
       throw error;
     }
   }
-
+  
   async sendTransferToMakerClient(data: BridgeTransactionAttributes) {
     const queue = 'makerWaitTransfer'
     const channel = this.connectionManager.getChannel();
@@ -48,6 +48,21 @@ export class MessageService {
       return result;
     } catch (error) {
       Logger.error('Failed to send message:', (error as any).message);
+      throw error;
+    }
+  }
+  async sendMessageToDataSynchronization(data: BridgeTransactionAttributes) {
+    const queue = 'dataSynchronization'
+    const channel = this.connectionManager.getChannel();
+    try {
+      await channel.assertQueue(queue);
+      const result = await channel.sendToQueue(
+        queue,
+        Buffer.from(JSONStringify(data)),
+      );
+      return result;
+    } catch (error) {
+      Logger.error(`${queue} Failed to send message:`, (error as any).message);
       throw error;
     }
   }

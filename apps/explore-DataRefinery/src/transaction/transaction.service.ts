@@ -23,7 +23,7 @@ export class TransactionService {
     private transactionV1Service: TransactionV1Service,
     private transactionV2Service: TransactionV2Service,
     private makerService: MakerService,
-    private envConfig:ENVConfigService
+    private envConfig: ENVConfigService
   ) {
     this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
     this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
@@ -134,18 +134,20 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
-        if (+this.envConfig.get("enableDataSync") ==1 && result.errno ===0) {
-            // TODO: send mq to data-synchronization message
+        if (+this.envConfig.get("enableDataSync") == 1 && result.errno === 0) {
+          // TAG:data-synchronization
+          this.messageService.sendMessageToDataSynchronization(result.data)
         }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
-        if (+this.envConfig.get("enableDataSync") ==1 && result.errno ===0) {
-          // TODO: send mq to data-synchronization message
-      }
+        if (+this.envConfig.get("enableDataSync") == 1 && result.errno === 0) {
+          // TAG:data-synchronization
+          this.messageService.sendMessageToDataSynchronization(result.data)
+        }
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
-     
+
       } else if (payload.version === '2-1') {
         result = await this.transactionV2Service.handleTransferByDestTx(payload);
       } else {

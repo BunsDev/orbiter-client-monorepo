@@ -1,3 +1,4 @@
+import { BridgeTransaction } from '@orbiter-finance/seq-models';
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { BigIntToString } from '@orbiter-finance/utils';
@@ -17,14 +18,13 @@ export class TransactionService {
     private messageService: MessageService,
     private consumerService: ConsumerService
   ) {
-    // this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
-    // this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
+    this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
     // TODO: Receive and process mq messages
+    // TAG:data-synchronization
   }
 
-
-  syncTransferToV1() {
-
+  consumeDataSynchronizationMessages(bridgeTransaction: BridgeTransaction) {
+    // TODO: convert struct save
   }
 
 }
