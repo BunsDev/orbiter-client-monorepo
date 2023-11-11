@@ -1,18 +1,14 @@
 import { Module } from '@nestjs/common';
-import { ApiModule } from './api/api.module';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
-import { ConfigModule, ConfigService } from "@nestjs/config";
-import { ConsulModule } from "@orbiter-finance/consul";
-import { join } from "path";
+import { AppController } from './app/app.controller';
+import { AppService } from './app/app.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
+import { ConsulModule } from '@orbiter-finance/consul';
+import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
+import { MakerTransaction, NetState, UserHistory } from '@orbiter-finance/v1-seq-models';
+import { Transaction } from 'ethers6';
+import { join, isEmpty } from 'lodash';
 import { SequelizeModule } from "@nestjs/sequelize";
-import { isEmpty } from "@orbiter-finance/utils";
-import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
-import { MakerTransaction, NetState, Transaction, UserHistory } from "@orbiter-finance/v1-seq-models";
-import { ScheduleModule } from "@nestjs/schedule";
-
-dayjs.extend(utc);
 
 @Module({
   imports: [
@@ -23,14 +19,14 @@ dayjs.extend(utc);
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         return {
-          name: 'explore-open-api',
+          name: 'data-synchronization',
           url:config.get("CONSUL_URL")
         };
       },
     }),
     OrbiterConfigModule.forRoot({
       chainConfigPath: "explore-open-api/chains.json",
-      envConfigPath: "explore-open-api/config.yaml",
+      envConfigPath: "data-synchronization/config.yaml",
       makerV1RulePath: "rules",
       cachePath: join(__dirname,'runtime')
     }),
@@ -56,10 +52,8 @@ dayjs.extend(utc);
         return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
       },
     }),
-    ApiModule,
-    ScheduleModule.forRoot(),
   ],
-  controllers: [],
-  providers: [],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
