@@ -7,6 +7,7 @@ import { Transfers as TransfersModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { OrbiterLogger } from '@orbiter-finance/utils';
+import { Cron } from '@nestjs/schedule';
 import { LoggerDecorator } from '@orbiter-finance/utils';
 @Injectable()
 export class TransactionService {
@@ -26,5 +27,16 @@ export class TransactionService {
   consumeDataSynchronizationMessages(bridgeTransaction: BridgeTransaction) {
     // TODO: convert struct save
   }
-
+  @Cron('0 */1 * * * *')
+  async syncV3V1FromDatabase() {
+    // TODO: convert struct save
+    const result = [];
+    for (const row of result) {
+      try {
+      await this.consumeDataSynchronizationMessages(riw);
+      } catch (error) {
+          // TODO:
+      }
+    }
+  }
 }
