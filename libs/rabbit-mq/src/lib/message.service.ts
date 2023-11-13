@@ -8,7 +8,6 @@ import { BridgeTransactionAttributes, Transfers } from '@orbiter-finance/seq-mod
 export class MessageService {
   constructor(private readonly connectionManager: RabbitmqConnectionManager) { }
 
-
   async sendTransactionReceiptMessage(data: any) {
     const queue = 'TransactionReceipt';
     const channel = this.connectionManager.getChannel();
@@ -40,6 +39,7 @@ export class MessageService {
     const queue = 'makerWaitTransfer'
     const channel = this.connectionManager.getChannel();
     try {
+      Logger.log(`sendTransferToMakerClient ${JSON.stringify(data)}`)
       await channel.assertQueue(queue);
       const result = await channel.sendToQueue(
         queue,
