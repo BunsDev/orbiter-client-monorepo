@@ -68,7 +68,10 @@ export class TransactionV1Service {
           error,
         );
       });
-      await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
+
+      if (+this.envConfigService.get('enableDataSync') === 1) {
+        await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
+      }
     }
   }
 
@@ -94,7 +97,9 @@ export class TransactionV1Service {
           error,
         );
       });
-      await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
+      if (+this.envConfigService.get('enableDataSync') === 1) {
+        await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
+      }
     }
   }
 
