@@ -46,11 +46,11 @@ export class MakerService {
                 errmsg: 'sourceChainData not found'
             }
         }
-        const sourceToken = sourceChainData.tokens.find(token => equals(token.tokenAddress, addressPadStart(transfer.token, 64)));
+        const sourceToken = sourceChainData.tokens.find(token => equals(token.tokenAddress, addressPadStart(transfer.token, 66)));
         if (!sourceToken) {
             return {
                 errno: 1000,
-                errmsg: `sourceToken not found ${addressPadStart(transfer.token, 64)}`
+                errmsg: `sourceToken not found ${addressPadStart(transfer.token, 66)}`
             }
         }
         const owner = transfer.receiver;
