@@ -70,7 +70,7 @@ export class TransactionService {
       gasPrice: null,
       gas: null,
       input: '',
-      status: bridgeTransaction ? 1 : 3, //Change the status of invalid transfer to 3
+      status: bridgeTransaction ? 1 : (transfer.version === '1-1' ? 1 : 3), //Change the status of invalid transfer to 3
       tokenAddress: transfer.token,
       timestamp: transfer.timestamp,
       fee: transfer.fee,
@@ -166,7 +166,7 @@ export class TransactionService {
     }
     const mt = await this.makerTransactionModel.findOne({ where: findWhere })
     if (mt && mt.inId && mt.outId) {
-      console.log('already matched ', mt.transcationId)
+      this.logger.info(`already matched: ${mt.transcationId} `)
       return
     }
     if (!mt && transaction && transaction.side === 0) {
@@ -176,7 +176,7 @@ export class TransactionService {
         outId: null,
         fromChain: inTransaction.chainId,
         toChain: Number(inTransaction.memo),
-        toAmount: inTransaction.value,
+        toAmount: inTransaction.expectValue,
         replySender: inTransaction.replySender,
         replyAccount: inTransaction.replyAccount,
         createdAt: new Date(),

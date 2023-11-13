@@ -38,10 +38,17 @@ class Interface2 extends Interface {
     return newArgs
   }
   parseTransaction(tx: { data: string, value?: BigNumberish }): null | TransactionDescription {
-    const parsedData = super.parseTransaction(tx)
-    const { args, ...residualParsedData } = parsedData
-    const newArgs: unknown = this.checkArgs(args)
-    return { ...residualParsedData, args: newArgs } as TransactionDescription;
+    try {
+      const parsedData = super.parseTransaction(tx)
+      const { args, ...residualParsedData } = parsedData
+      const newArgs: unknown = this.checkArgs(args)
+      return { ...residualParsedData, args: newArgs } as TransactionDescription;
+    } catch (error) {
+      if (error.code === 'BUFFER_OVERRUN') {
+        return null
+      }
+      throw error
+    }
   }
 }
 
