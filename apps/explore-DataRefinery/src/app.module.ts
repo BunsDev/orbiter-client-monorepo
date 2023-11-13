@@ -48,6 +48,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       inject: [ENVConfigService],
       useFactory: async (envConfig: ENVConfigService) => {
         const config: SequelizeModuleOptions = await envConfig.getAsync('DATABASE_URL');
+        console.log(config, '===config');
         if (isEmpty(config)) {
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
