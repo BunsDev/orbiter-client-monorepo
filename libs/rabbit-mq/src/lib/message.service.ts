@@ -3,12 +3,12 @@ import { Logger } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
 import { RabbitmqConnectionManager } from './rabbitmq-connection.manager';
 import { JSONStringify } from '@orbiter-finance/utils';
-import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
+import { BridgeTransactionAttributes, Transfers } from '@orbiter-finance/seq-models';
 @Injectable()
 export class MessageService {
   constructor(private readonly connectionManager: RabbitmqConnectionManager) { }
 
-  
+
   async sendTransactionReceiptMessage(data: any) {
     const queue = 'TransactionReceipt';
     const channel = this.connectionManager.getChannel();
@@ -48,6 +48,21 @@ export class MessageService {
       return result;
     } catch (error) {
       Logger.error('Failed to send message:', (error as any).message);
+      throw error;
+    }
+  }
+  async sendMessageToDataSynchronization(data: { type: string; data: Transfers }) {
+    const queue = 'dataSynchronization'
+    const channel = this.connectionManager.getChannel();
+    try {
+      await channel.assertQueue(queue);
+      const result = await channel.sendToQueue(
+        queue,
+        Buffer.from(JSONStringify(data)),
+      );
+      return result;
+    } catch (error) {
+      Logger.error(`${queue} Failed to send message:`, (error as any).message);
       throw error;
     }
   }

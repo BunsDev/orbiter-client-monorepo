@@ -12,6 +12,7 @@ export class ConsumerService {
   ) {
   }
   async consumeScanTransferReceiptMessages(callback: (data: any) => Promise<any>) {
+    const queue = 'TransactionReceipt';
     try {
       if (!this.connectionManager.getChannel()) {
         await sleep(500);
@@ -20,17 +21,16 @@ export class ConsumerService {
       }
       const channel = await this.connectionManager.createChannel();
       channel.on('close', () => {
-        Logger.error('Channel closed');
+        Logger.error(`${queue} Channel closed`);
         this.alertService.sendMessage('Channel closed', 'TG');
         this.consumeScanTransferReceiptMessages(callback)
       });
 
       channel.on('error', (err) => {
-        Logger.error(`Channel error:${err.message}`, err.stack);
+        Logger.error(`${queue} Channel error:${err.message}`, err.stack);
         this.alertService.sendMessage(`Channel error:${err.message}`, 'TG');
       });
 
-      const queue = 'TransactionReceipt';
       await channel.assertQueue(queue);
       channel.prefetch(10);
       channel.consume(queue, async (msg: Message | null) => {
@@ -41,7 +41,7 @@ export class ConsumerService {
             await callback(data);
             channel.ack(msg);
           } catch (error: any) {
-            Logger.error(`consumeTransactionReceiptMessages Error ${error.message}`, error);
+            Logger.error(`${queue} consumeTransactionReceiptMessages Error ${error.message}`, error);
             channel.nack(msg);
           }
         }
@@ -49,11 +49,54 @@ export class ConsumerService {
     } catch (error: any) {
       await sleep(500);
       this.consumeScanTransferReceiptMessages(callback);
-      Logger.error(`consumeScanTransferReceiptMessages error ${error.message}`, error);
+      Logger.error(`${queue} consumeScanTransferReceiptMessages error ${error.message}`, error);
+    }
+  }
+  
+  async consumeDataSynchronizationMessages(callback: (data: any) => Promise<any>) {
+    const queue = 'dataSynchronization';
+    try {
+      if (!this.connectionManager.getChannel()) {
+        await sleep(500);
+        this.consumeDataSynchronizationMessages(callback);
+        return;
+      }
+      const channel = await this.connectionManager.createChannel();
+      channel.on('close', () => {
+        Logger.error(`${queue} Channel closed`);
+        this.alertService.sendMessage('Channel closed', 'TG');
+        this.consumeDataSynchronizationMessages(callback)
+      });
+
+      channel.on('error', (err) => {
+        Logger.error(`${queue} Channel error:${err.message}`, err.stack);
+        this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
+      });
+
+      await channel.assertQueue(queue);
+      channel.prefetch(10);
+      channel.consume(queue, async (msg: Message | null) => {
+        if (msg) {
+          try {
+            const messageContent = msg.content.toString();
+            const data = JSON.parse(messageContent);
+            await callback(data);
+            channel.ack(msg);
+          } catch (error: any) {
+            Logger.error(`${queue} consumeDataSynchronizationMessages Error ${error.message}`, error);
+            channel.nack(msg);
+          }
+        }
+      });
+    } catch (error: any) {
+      await sleep(500);
+      this.consumeDataSynchronizationMessages(callback);
+      Logger.error(`${queue} consumeDataSynchronizationMessages error ${error.message}`, error);
     }
   }
 
   async consumeScanTransferSaveDBAfterMessages(callback: (data: any) => Promise<any>) {
+    const queue = 'TransferWaitMatch';
     try {
       if (!this.connectionManager.getChannel()) {
         await sleep(500);
@@ -61,16 +104,15 @@ export class ConsumerService {
         return;
       }
       const channel = await this.connectionManager.createChannel();
-      const queue = 'TransferWaitMatch';
       await channel.assertQueue(queue);
       channel.on('close', () => {
-        Logger.error('Channel closed');
+        Logger.error(`${queue} Channel closed`);
         this.alertService.sendMessage(`${queue} Channel closed`, 'TG');
         this.consumeScanTransferSaveDBAfterMessages(callback)
       });
 
       channel.on('error', (err) => {
-        Logger.error(`Channel error:${err.message}`, err.stack);
+        Logger.error(`${queue} Channel error:${err.message}`, err.stack);
         this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
       });
       channel.prefetch(10);
@@ -80,10 +122,10 @@ export class ConsumerService {
             const messageContent = msg.content.toString();
             const data = JSON.parse(messageContent);
             const result = await callback(data);
-            Logger.log(`consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
+            Logger.log(`${queue} consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
             channel.ack(msg);
           } catch (error: any) {
-            Logger.error(`consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
+            Logger.error(`${queue} consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
             channel.reject(msg);
           }
         }
@@ -91,12 +133,13 @@ export class ConsumerService {
     } catch (error: any) {
       await sleep(500);
       this.consumeScanTransferSaveDBAfterMessages(callback);
-      Logger.error(`consumeScanTransferSaveDBAfterMessages error ${error.message}`, error);
+      Logger.error(`${queue} consumeScanTransferSaveDBAfterMessages error ${error.message}`, error);
     }
 
   }
 
   async consumeMakerWaitTransferMessage(callback: (data: any) => Promise<any>) {
+    const queue = 'makerWaitTransfer';
     try {
       if (!this.connectionManager.getChannel()) {
         await sleep(500);
@@ -104,10 +147,9 @@ export class ConsumerService {
         return;
       }
       const channel = await this.connectionManager.createChannel();
-      const queue = 'makerWaitTransfer';
       await channel.assertQueue(queue);
       channel.on('close', () => {
-        Logger.error('Channel closed');
+        Logger.error(`${queue} Channel closed`);
         this.alertService.sendMessage(`${queue} Channel closed`, 'TG');
         this.consumeMakerWaitTransferMessage(callback)
       });
@@ -126,7 +168,7 @@ export class ConsumerService {
             channel.ack(msg);
           } catch (error: any) {
             console.error(
-              `consumeTransferWaitMessages Error processing message: ${error.message}`,
+              `${queue} consumeTransferWaitMessages Error processing message: ${error.message}`,
               error,
             );
             channel.reject(msg);
@@ -136,7 +178,7 @@ export class ConsumerService {
     } catch (error: any) {
       await sleep(500);
       this.consumeMakerWaitTransferMessage(callback);
-      Logger.error(`consumeMakerWaitTransferMessage error ${error.message}`, error);
+      Logger.error(`${queue} consumeMakerWaitTransferMessage error ${error.message}`, error);
     }
   }
 }

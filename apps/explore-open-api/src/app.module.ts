@@ -31,7 +31,6 @@ dayjs.extend(utc);
     OrbiterConfigModule.forRoot({
       chainConfigPath: "explore-open-api/chains.json",
       envConfigPath: "explore-open-api/config.yaml",
-      tradingPairsPath: "common/trading-pairs",
       makerV1RulePath: "rules",
       cachePath: join(__dirname,'runtime')
     }),

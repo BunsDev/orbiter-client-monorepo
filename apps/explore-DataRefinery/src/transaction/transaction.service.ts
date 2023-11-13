@@ -10,6 +10,7 @@ import { TransactionV2Service } from './transactionV2.service';
 import { MakerService } from '../maker/maker.service'
 import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
+import { ENVConfigService } from '@orbiter-finance/config';
 @Injectable()
 export class TransactionService {
   @LoggerDecorator()
@@ -21,7 +22,8 @@ export class TransactionService {
     private consumerService: ConsumerService,
     private transactionV1Service: TransactionV1Service,
     private transactionV2Service: TransactionV2Service,
-    private makerService: MakerService
+    private makerService: MakerService,
+    private envConfig: ENVConfigService
   ) {
     this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
     this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
@@ -94,6 +96,7 @@ export class TransactionService {
           version: transfer.version,
           feeToken: transfer.feeToken,
           transactionIndex: transfer.transactionIndex,
+          syncStatus: 0,
         }
         if (transfer.sender === transfer.receiver) {
           upsertData.opStatus = 3;
@@ -132,18 +135,29 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
+        this.logger.info('enableDataSync', +this.envConfig.get("enableDataSync"))
+        if (+this.envConfig.get("enableDataSync") == 1) {
+          // TAG:data-synchronization
+          this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
+        }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
+        this.logger.info('enableDataSync', +this.envConfig.get("enableDataSync"))
+        if (+this.envConfig.get("enableDataSync") == 1) {
+          // TAG:data-synchronization
+          this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
+        }
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
+
       } else if (payload.version === '2-1') {
         result = await this.transactionV2Service.handleTransferByDestTx(payload);
       } else {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
-      if (['2-0'].includes(payload.version) && result && result.id && result.sourceId) {
+      if (['2-0'].includes(payload.version) && result.errno === 0 && result.data.id && result.data.sourceId) {
         this.messageService.sendTransferToMakerClient(result)
       }
       return result;

@@ -14,6 +14,7 @@ import { utils } from 'ethers'
 import { validateAndParseAddress } from 'starknet'
 import BridgeTransactionBuilder from './bridgeTransaction.builder'
 import { ValidSourceTxError, decodeV1SwapData, addressPadStart } from '../utils';
+import { MessageService } from '@orbiter-finance/rabbit-mq'
 @Injectable()
 export class TransactionV1Service {
   @LoggerDecorator()
@@ -28,7 +29,8 @@ export class TransactionV1Service {
     private sequelize: Sequelize,
     protected envConfigService: ENVConfigService,
     protected makerV1RuleService: MakerV1RuleService,
-    protected bridgeTransactionBuilder: BridgeTransactionBuilder
+    protected bridgeTransactionBuilder: BridgeTransactionBuilder,
+    private messageService: MessageService,
   ) {
     this.matchScheduleTask()
       .then((_res) => {
@@ -66,6 +68,7 @@ export class TransactionV1Service {
           error,
         );
       });
+      await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
     }
   }
 
@@ -91,6 +94,7 @@ export class TransactionV1Service {
           error,
         );
       });
+      await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
     }
   }
 
@@ -190,7 +194,7 @@ export class TransactionV1Service {
         );
       }
       await t.commit();
-      return createdData
+      return { errno: 0, data: createdData }
     } catch (error) {
       console.error(error);
       this.logger.error(
@@ -247,6 +251,7 @@ export class TransactionV1Service {
           },
           {
             where: {
+              opStatus: 1,
               hash: {
                 [Op.in]: [transfer.hash, memoryBT.sourceId],
               },
@@ -265,7 +270,10 @@ export class TransactionV1Service {
         this.logger.info(
           `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
         );
-        return memoryBT;
+        return {
+          errno: 0,
+          data: memoryBT
+        };
       }
     } catch (error) {
       this.logger.error(
@@ -289,6 +297,7 @@ export class TransactionV1Service {
       if (!btTx || !btTx.id) {
         const where = {
           status: [0, 97, 98],
+          targetId: null,
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,
           targetChain: transfer.chainId,
@@ -320,6 +329,7 @@ export class TransactionV1Service {
           },
           {
             where: {
+              opStatus: 1,
               hash: {
                 [Op.in]: [btTx.sourceId, btTx.targetId],
               },
@@ -343,6 +353,10 @@ export class TransactionV1Service {
           });
       }
       await t2.commit();
+      return {
+        errno: 0,
+        data: btTx
+      }
     } catch (error) {
       t2 && (await t2.rollback());
       throw error;
