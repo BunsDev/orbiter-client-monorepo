@@ -15,6 +15,11 @@ import { ethers } from 'ethers6';
 import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
 import { padStart } from 'lodash';
 import { TransactionID } from '../utils';
+export interface handleTransferReturn {
+  errno: number;
+  errmsg?: string;
+  data?: any
+}
 @Injectable()
 export class TransactionV2Service {
   @LoggerDecorator()
@@ -91,14 +96,14 @@ export class TransactionV2Service {
     }
   }
 
-  errorBreakResult(errmsg: string) {
+  errorBreakResult(errmsg: string):handleTransferReturn {
     this.logger.error(errmsg);
     return {
       errno: 1000,
       errmsg: errmsg
     }
   }
-  public async handleTransferBySourceTx(transfer: Transfers) {
+  public async handleTransferBySourceTx(transfer: Transfers):Promise<handleTransferReturn> {
     if (transfer.status != 2) {
       return this.errorBreakResult(`validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`)
     }
@@ -241,7 +246,10 @@ export class TransactionV2Service {
         );
       }
       await t.commit();
-      return createdData
+      return {
+        errno: 0,
+        data: createdData
+      }
     } catch (error) {
       this.logger.error(
         `handleTransferBySourceTx ${transfer.hash} error`,
@@ -300,7 +308,7 @@ export class TransactionV2Service {
     }
     return null;
   }
-  public async handleTransferByDestTx(transfer: Transfers) {
+  public async handleTransferByDestTx(transfer: Transfers):Promise<handleTransferReturn> {
     if (transfer.version != '2-1') {
       throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
     }
@@ -363,7 +371,10 @@ export class TransactionV2Service {
         this.logger.info(
           `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
         );
-        return memoryBT;
+        return {
+          errno: 0,
+          data: memoryBT
+        };
       }
     } catch (error) {
       this.logger.error(
