@@ -60,7 +60,7 @@ export class TransactionService {
     const transaction: ITransaction = {
       hash: transfer.hash,
       nonce: transfer.nonce,
-      blockHash: null, // 无blocHash
+      blockHash: null, // no blockHash
       blockNumber: Number(transfer.blockNumber),
       transactionIndex: Number(transfer.transactionIndex),
       from: transfer.sender,
@@ -90,12 +90,14 @@ export class TransactionService {
       updatedAt: new Date(),
     }
     if (bridgeTransaction) {
-
+      transaction.extra = { toSymbol: bridgeTransaction.targetSymbol }
       if (transaction.side === 0) {
         const targetToken = this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol)
         const targetChain = this.chainConfigService.getChainInfo(bridgeTransaction.targetChain)
         transaction.expectValue = utils.parseUnits(bridgeTransaction.targetAmount, targetToken.decimals).toString()
         transaction.memo = String(targetChain?.internalId)
+      } else {
+        transaction.memo = bridgeTransaction.sourceNonce
       }
       transaction.replyAccount = bridgeTransaction.targetAddress
       transaction.replySender = bridgeTransaction.targetMaker
