@@ -168,10 +168,10 @@ export class TransactionService {
     }
     const mt = await this.makerTransactionModel.findOne({ where: findWhere })
     if (mt && mt.inId && mt.outId) {
-      this.logger.info(`already matched: ${mt.transcationId} `)
+      // this.logger.info(`already matched: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
       return
     }
-    if (!mt && transaction && transaction.side === 0) {
+    if (!mt && transaction.side === 0) {
       const mtCreateData: MakerTransactionAttributes = {
         transcationId: bridgeTransaction.transactionId,
         inId: inTransaction.id,
@@ -184,16 +184,25 @@ export class TransactionService {
         createdAt: new Date(),
         updatedAt: new Date(),
       }
-      // delete mtCreateData.createdAt
-      // delete mtCreateData.updatedAt
       const mtResult = await this.makerTransactionModel.create(mtCreateData)
       return mtResult
-    } else if (mt && transaction.side === 1 && outTransaction) {
-      const updateData = {
-        outId: outTransaction.id,
-        UpdatedAt: new Date(),
-      }
+    } else if (mt) {
       const t = await this.v1Sequelize.transaction()
+      const updateData = {
+        outId: null,
+        UpdatedAt: new Date(),
+      } as any
+      if (transaction.side === 1 && outTransaction) {
+        updateData.outId = outTransaction.id
+      } else if (transaction.side === 0 && inTransaction) {
+        updateData.toAmount = inTransaction.expectValue
+        updateData.replyAccount = inTransaction.replyAccount
+        updateData.replySender = inTransaction.replySender
+        if (bridgeTransaction.targetId) {
+          outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+          updateData.outId = outTransaction.id
+        }
+      }
       const mtResult = await this.makerTransactionModel.update(updateData, {
         where: {
           transcationId: bridgeTransaction.transactionId,
@@ -201,12 +210,15 @@ export class TransactionService {
         },
         transaction: t
       })
-      await this.transactionModel.update({ status: 99 }, {
-        where: {
-          id: [inTransaction.id, outTransaction.id]
-        },
-        transaction: t
-      })
+      if (updateData.outId) {
+        await this.transactionModel.update({ status: 99 }, {
+          where: {
+            id: [inTransaction.id, outTransaction.id]
+          },
+          transaction: t
+        })
+        this.logger.info(`v1 match success id: ${inTransaction.id}/${outTransaction.id}, hash: ${inTransaction.hash}/${outTransaction.hash} `)
+      }
       t.commit()
       return mtResult
     }
