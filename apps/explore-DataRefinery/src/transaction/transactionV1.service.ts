@@ -67,14 +67,13 @@ export class TransactionV1Service {
       },
     });
     for (const transfer of transfers) {
-      await this.handleTransferBySourceTx(transfer).catch((error) => {
+      const result = await this.handleTransferBySourceTx(transfer).catch((error) => {
         this.logger.error(
           `matchScheduleTask handleTransferBySourceTx ${transfer.hash} error`,
           error,
         );
       });
-
-      if (+this.envConfigService.get('enableDataSync') === 1) {
+      if (result && result.errno === 0) {
         await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
       }
     }
@@ -96,25 +95,25 @@ export class TransactionV1Service {
       },
     });
     for (const transfer of transfers) {
-      await this.handleTransferByDestTx(transfer).catch((error) => {
+      const result = await this.handleTransferByDestTx(transfer).catch((error) => {
         this.logger.error(
           `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error`,
           error,
         );
       });
-      if (+this.envConfigService.get('enableDataSync') === 1) {
+      if (result && result.errno === 0) {
         await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
       }
     }
   }
-  errorBreakResult(errmsg: string):handleTransferReturn {
+  errorBreakResult(errmsg: string): handleTransferReturn {
     this.logger.error(errmsg);
     return {
       errno: 1000,
       errmsg: errmsg
     }
   }
-  public async handleTransferBySourceTx(transfer: TransfersModel):Promise<handleTransferReturn> {
+  public async handleTransferBySourceTx(transfer: TransfersModel): Promise<handleTransferReturn> {
     if (transfer.status != 2) {
       return this.errorBreakResult(`validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`)
     }
@@ -155,7 +154,7 @@ export class TransactionV1Service {
 
     try {
       if (createdData.targetAddress.length >= 100) {
-        return this.errorBreakResult( `${transfer.hash} There is an issue with the transaction format`)
+        return this.errorBreakResult(`${transfer.hash} There is an issue with the transaction format`)
       }
 
       if (sourceBT && sourceBT.id) {
@@ -212,7 +211,7 @@ export class TransactionV1Service {
     }
   }
 
-  public async handleTransferByDestTx(transfer: TransfersModel):Promise<handleTransferReturn>{
+  public async handleTransferByDestTx(transfer: TransfersModel): Promise<handleTransferReturn> {
     if (transfer.version != '1-1') {
       throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
     }
@@ -257,7 +256,7 @@ export class TransactionV1Service {
           },
           {
             where: {
-              opStatus: [0,1],
+              opStatus: [0, 1],
               hash: {
                 [Op.in]: [transfer.hash, memoryBT.sourceId],
               },
@@ -335,7 +334,7 @@ export class TransactionV1Service {
           },
           {
             where: {
-              opStatus: [0,1],
+              opStatus: [0, 1],
               hash: {
                 [Op.in]: [btTx.sourceId, btTx.targetId],
               },
