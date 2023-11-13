@@ -87,7 +87,7 @@ export class TransactionV2Service {
           error,
         );
       });
-      this.logger.info(`handleTransferByDestTx result:${JSON.stringify(result)}`)
+      this.logger.info(`${transfer.hash} handleTransferByDestTx result:${JSON.stringify(result)}`)
     }
   }
 
