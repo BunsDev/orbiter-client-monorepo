@@ -50,7 +50,7 @@ export class MakerService {
         if (!sourceToken) {
             return {
                 errno: 1000,
-                errmsg: 'sourceToken not found'
+                errmsg: `sourceToken not found ${addressPadStart(transfer.token, 64)}`
             }
         }
         const owner = transfer.receiver;
