@@ -217,7 +217,7 @@ export class TransactionService {
           },
           transaction: t
         })
-        this.logger.info(`v1 match success id: ${inTransaction.id}/${outTransaction.id}, hash: ${inTransaction.hash}/${outTransaction.hash} `)
+        this.logger.info(`v1 match success id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
       }
       t.commit()
       return mtResult
