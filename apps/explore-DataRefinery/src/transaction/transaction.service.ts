@@ -158,7 +158,8 @@ export class TransactionService {
       }
       // send to maker client when side is 0
       this.logger.info(`${payload.hash} executeMatch result: ${JSON.stringify(result || {})}`)
-      if (['2-0'].includes(payload.version) && result.errno === 0 && result.data.id && result.data.sourceId) {
+      // && result.errno === 0 && result.data.id && result.data.sourceId
+      if (['2-0'].includes(payload.version) ) {
         this.messageService.sendTransferToMakerClient(result)
       }
       return result;
