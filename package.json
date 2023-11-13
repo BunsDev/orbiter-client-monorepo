@@ -7,6 +7,7 @@
     "dev:arbitration": "npx nx run arbitration:serve",
     "dev:explore-DataCrawler": "npx nx run explore-DataCrawler:serve",
     "dev:explore-DataRefinery": "npx nx run explore-DataRefinery:serve",
+    "dev:data-synchronization": "npx nx run data-synchronization:serve",
     "dev:maker-client": "npx nx run maker-client:serve"
   },
   "resolutions": {

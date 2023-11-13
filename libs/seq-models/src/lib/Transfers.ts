@@ -33,6 +33,7 @@ export interface TransfersAttributes {
   updatedAt?: Date;
   version?: string;
   feeToken?: string;
+  syncStatus?: number;
 }
 
 
@@ -162,4 +163,12 @@ export class Transfers
 
   @Column({ allowNull: true, type: DataType.STRING(100) })
   feeToken?: string;
+
+  @Column({ allowNull: true, type: DataType.INTEGER })
+  @Index({
+    name: 'syncStatus',
+    using: 'btree',
+    unique: false
+  })
+  syncStatus?: number
 }

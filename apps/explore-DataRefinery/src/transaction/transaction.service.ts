@@ -96,6 +96,7 @@ export class TransactionService {
           version: transfer.version,
           feeToken: transfer.feeToken,
           transactionIndex: transfer.transactionIndex,
+          syncStatus: 0,
         }
         if (transfer.sender === transfer.receiver) {
           upsertData.opStatus = 3;
@@ -134,15 +135,16 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
-        if (+this.envConfig.get("enableDataSync") == 1 && result.errno === 0) {
+
+        if (+this.envConfig.get("enableDataSync") == 1) {
           // TAG:data-synchronization
-          this.messageService.sendMessageToDataSynchronization(result.data)
+          this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
-        if (+this.envConfig.get("enableDataSync") == 1 && result.errno === 0) {
+        if (+this.envConfig.get("enableDataSync") == 1) {
           // TAG:data-synchronization
-          this.messageService.sendMessageToDataSynchronization(result.data)
+          this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
       } else if (payload.version === '2-0') {
         result =
@@ -154,7 +156,7 @@ export class TransactionService {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
-      if (['2-0'].includes(payload.version) && result && result.id && result.sourceId) {
+      if (['2-0'].includes(payload.version) && result.errno === 0 && result.data.id && result.data.sourceId) {
         this.messageService.sendTransferToMakerClient(result)
       }
       return result;
