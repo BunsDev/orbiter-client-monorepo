@@ -62,10 +62,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           continue;
         }
         if (row['data'] && row['data'] != '0x') {
-          const calldata = row['data'].slice(10);
-          if (isEmpty(calldata)) {
-            continue;
-          }
           const tokenInfo = this.ctx.chainConfigService.getTokenByAddress(
             this.chainId,
             toAddrLower,
