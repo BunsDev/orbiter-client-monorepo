@@ -251,7 +251,7 @@ export class TransactionV1Service {
           },
           {
             where: {
-              opStatus: 1,
+              opStatus: [0,1],
               hash: {
                 [Op.in]: [transfer.hash, memoryBT.sourceId],
               },
@@ -329,7 +329,7 @@ export class TransactionV1Service {
           },
           {
             where: {
-              opStatus: 1,
+              opStatus: [0,1],
               hash: {
                 [Op.in]: [btTx.sourceId, btTx.targetId],
               },
