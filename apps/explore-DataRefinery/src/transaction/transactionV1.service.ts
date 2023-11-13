@@ -14,6 +14,7 @@ import { utils } from 'ethers'
 import { validateAndParseAddress } from 'starknet'
 import BridgeTransactionBuilder from './bridgeTransaction.builder'
 import { ValidSourceTxError, decodeV1SwapData, addressPadStart } from '../utils';
+import { MessageService } from '@orbiter-finance/rabbit-mq'
 @Injectable()
 export class TransactionV1Service {
   @LoggerDecorator()
@@ -28,7 +29,8 @@ export class TransactionV1Service {
     private sequelize: Sequelize,
     protected envConfigService: ENVConfigService,
     protected makerV1RuleService: MakerV1RuleService,
-    protected bridgeTransactionBuilder: BridgeTransactionBuilder
+    protected bridgeTransactionBuilder: BridgeTransactionBuilder,
+    private messageService: MessageService,
   ) {
     this.matchScheduleTask()
       .then((_res) => {
@@ -66,6 +68,7 @@ export class TransactionV1Service {
           error,
         );
       });
+      await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
     }
   }
 
@@ -91,6 +94,7 @@ export class TransactionV1Service {
           error,
         );
       });
+      await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
     }
   }
 
