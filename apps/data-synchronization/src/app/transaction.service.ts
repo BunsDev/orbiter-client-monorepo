@@ -41,9 +41,16 @@ export class TransactionService {
     // TODO: Receive and process mq messages
     // TAG:data-synchronization
   }
-  consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
-    console.log(data)
-    return this.handleBridgeTransaction(data.data)
+  async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
+    // console.log(data)
+    try {
+      await this.handleBridgeTransaction(data.data)
+    } catch (error) {
+      this.logger.error('handleBridgeTransaction error', error, data.data)
+      console.log('handleBridgeTransaction error', data.data)
+      throw error
+    }
+    return
   }
   async handleTransfer(transfer: TransfersAttributes,  bridgeTransaction?: BridgeTransactionAttributes){
     const chain =  this.chainConfigService.getChainInfo(transfer.chainId)
@@ -149,6 +156,11 @@ export class TransactionService {
       inTransaction = transaction
     } else {
       inTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.sourceId } })
+      if (!inTransaction) {
+        const inTransferV3 = await this.transfersModel.findOne({ where: { hash: bridgeTransaction.sourceId, chainId: bridgeTransaction.sourceChain } })
+        await this.handleTransfer(inTransferV3, bridgeTransaction)
+        inTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.sourceId } })
+      }
       outTransaction = transaction
       findWhere.inId = inTransaction.id
     }
