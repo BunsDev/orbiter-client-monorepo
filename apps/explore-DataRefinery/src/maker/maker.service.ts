@@ -47,7 +47,7 @@ export class MakerService {
             }
         }
         const sourceToken = sourceChainData.tokens.find(token => equals(token.tokenAddress, addressPadStart(transfer.token, 64)));
-        if (!sourceChainData) {
+        if (!sourceToken) {
             return {
                 errno: 1000,
                 errmsg: 'sourceToken not found'
