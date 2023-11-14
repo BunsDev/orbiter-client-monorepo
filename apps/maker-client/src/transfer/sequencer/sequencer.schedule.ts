@@ -10,7 +10,7 @@ import {
   type MonitorState,
   type TransferAmountTransaction,
 } from "./sequencer.interface";
-import { LoggerDecorator, arePropertyValuesConsistent, isEmpty,OrbiterLogger } from "@orbiter-finance/utils";
+import { LoggerDecorator, arePropertyValuesConsistent, isEmpty, OrbiterLogger } from "@orbiter-finance/utils";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
@@ -62,15 +62,16 @@ export class SequencerScheduleService {
   }
 
   private async readDBTransactionRecords(store: StoreService, owner: string) {
+    const maxTransferTimeoutMinute = this.validatorService.getTransferGlobalTimeout();
     const where = {
       status: 0,
       targetChain: store.chainId,
       sourceMaker: owner,
-      id: {
-        [Op.gt]: store.lastId,
-      },
+      // id: {
+      //   [Op.gt]: store.lastId,
+      // },
       sourceTime: {
-        [Op.gte]: dayjs().subtract(24, "hour").toISOString(),
+        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
       },
     }
     const records = await this.bridgeTransactionModel.findAll({
@@ -99,29 +100,35 @@ export class SequencerScheduleService {
     });
     if (records.length > 0) {
       for (const tx of records) {
-        if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
-          this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
-          continue
-        }
-        if (await store.isStoreExist(tx.sourceId, tx.targetToken)) {
-          this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Already exists in the store`)
-          continue
-        }
-        if (await store.isTransfersExist(tx.sourceId)) {
-          this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} There is a collection record`)
-          continue
-        }
-        const checkResult = await this.validatorService.optimisticCheckTxStatus(tx.sourceId, tx.sourceChain)
-        if (!checkResult) {
-          this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} optimisticCheckTxStatus failed`)
-          continue
-        }
-        const result = await store.addTransactions(tx as any);
-        this.logger.debug(
-          `[readDBTransactionRecords] ${tx.sourceId} DB store addTransactions ${JSON.stringify(result)}`
-        );
-        if (+tx.id > store.lastId) {
-          store.lastId = +tx.id;
+        try {
+          if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
+            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
+            continue
+          }
+          if (await store.isStoreExist(tx.sourceId, tx.targetToken)) {
+            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Already exists in the store`)
+            continue
+          }
+          if (await store.isTransfersExist(tx.sourceId)) {
+            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} There is a collection record`)
+            continue
+          }
+          const checkResult = await this.validatorService.optimisticCheckTxStatus(tx.sourceId, tx.sourceChain)
+          if (!checkResult) {
+            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} optimisticCheckTxStatus failed`)
+            continue
+          }
+          const result = await store.addTransactions(tx as any);
+          this.logger.debug(
+            `[readDBTransactionRecords] ${tx.sourceId} DB store addTransactions ${JSON.stringify(result)}`
+          );
+          if (+tx.id > store.lastId) {
+            store.lastId = +tx.id;
+          }
+        } catch (error) {
+          this.logger.error(
+            `[readDBTransactionRecords] ${tx.sourceId} handle error`, error
+          );
         }
       }
     }
@@ -181,7 +188,7 @@ export class SequencerScheduleService {
   }
 
   private async checkStoreReadySend(key: string, store: StoreService) {
-    const lock:Mutex = this.storesState[key].lock;
+    const lock: Mutex = this.storesState[key].lock;
     if (lock.isLocked()) {
       return;
     }
@@ -226,13 +233,13 @@ export class SequencerScheduleService {
       const tx = transfers[i];
       const hash = tx.sourceId;
       if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
-        transfers.splice(i,1);
+        transfers.splice(i, 1);
         store.removeSymbolsWithData(token, hash);
         this.logger.warn(`[batchSendTransaction] ${hash} Exceeding the effective payment collection time failed`)
         continue
       }
       if (store.isTransfersExist(tx.sourceId)) {
-        transfers.splice(i,1);
+        transfers.splice(i, 1);
         store.removeSymbolsWithData(token, hash);
         this.logger.warn(`[batchSendTransaction] ${hash} There is a collection record`)
         continue

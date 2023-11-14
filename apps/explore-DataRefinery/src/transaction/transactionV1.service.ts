@@ -250,6 +250,7 @@ export class TransactionV1Service {
             `The number of modified rows(${rowCount}) in bridgeTransactionModel is incorrect`,
           );
         }
+        // source status 1 ，dest status = 0
         const [updateTransferRows] = await this.transfersModel.update(
           {
             opStatus: 99,
