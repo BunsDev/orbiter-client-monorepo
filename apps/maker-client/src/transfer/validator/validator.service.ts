@@ -21,7 +21,7 @@ export class ValidatorService {
   ) { }
 
   public getTransferGlobalTimeout() {
-    return this.envConfig.get("TransferTimeout", 30);
+    return this.envConfig.get("TransferTimeout", 10);
   }
   public transactionTimeValid(chainId: string, timestamp: Date) {
     const timeout = Date.now() - dayjs(timestamp).valueOf();
