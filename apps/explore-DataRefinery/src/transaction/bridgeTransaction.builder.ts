@@ -27,6 +27,9 @@ function parseSourceTxSecurityCode(value) {
     for (let i = 0; i < 4 - code.length; i++) {
       code += '0';
     }
+  } else if ((/^[1-9]90[1-9]$/.test(code))) {
+    // To fit values like this 0.026786488299999030
+    code = code.slice(1) + '0'
   }
   const nCode = Number(code);
   if (nCode < 9000 || nCode > 10000) {

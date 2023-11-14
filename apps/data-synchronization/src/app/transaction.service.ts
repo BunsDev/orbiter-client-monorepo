@@ -335,7 +335,7 @@ export class TransactionService {
           done = true
         }
       } while(!done)
-      this.logger.info('maxId', maxId)
+      this.logger.info(`maxId: ${maxId}`)
       // sync out tx
       done = false
       const outWhere = {
