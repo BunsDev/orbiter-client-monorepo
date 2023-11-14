@@ -27,7 +27,7 @@ export class ZKSpaceApiScanningService extends ApiScanningService {
         const newTransfers = await this.filterTransfers(
           datas.filter((tx) => tx.timestamp >= prevTime),
         );
-        this.logger.debug(
+        this.chainConfig.debug && this.logger.debug(
           `${this.chainId} timedTetTransactions address ${address},  ${dayjs(
             prevTime,
           ).format('YYYY-MM-DD HH:mm:ss')}  data total: ${datas.length} / ${

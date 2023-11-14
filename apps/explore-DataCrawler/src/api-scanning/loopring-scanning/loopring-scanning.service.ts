@@ -56,7 +56,7 @@ export class LoopringApiScanningService extends ApiScanningService {
       address,
       async (transfers: TransferAmountTransaction[]) => {
         const newTransfers = await this.filterTransfers(transfers);
-        this.logger.debug(
+        this.chainConfig.debug && this.logger.debug(
           `${this.chainId} timedTetTransactions address ${address},  data total: ${transfers.length} / ${newTransfers.length}`,
         );
         const result =await this.processTransaction(newTransfers);

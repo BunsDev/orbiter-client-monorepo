@@ -35,7 +35,7 @@ export class EVMAccount extends OrbiterAccount {
       this.#provider = new Orbiter6Provider(rpc);
     }
     if (this.#provider && this.#provider.getUrl() != rpc) {
-      this.logger.debug(
+      this.chainConfig.debug && this.logger.debug(
         `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
       );
       this.#provider = new Orbiter6Provider(rpc);
@@ -308,7 +308,7 @@ export class EVMAccount extends OrbiterAccount {
       typeof transactionRequest.serialId === "string"
         ? [transactionRequest.serialId]
         : transactionRequest.serialId;
-    this.logger.debug(`sendTransaction serialIds: ${JSONStringify(serialIds)}`)
+    this.chainConfig.debug && this.logger.debug(`sendTransaction serialIds: ${JSONStringify(serialIds)}`)
     const chainConfig = this.chainConfig;
     const provider = this.getProvider();
     const chainId: number | undefined = Number(

@@ -63,7 +63,7 @@ export class IMXAccount extends OrbiterAccount {
       walletConnection,
       unsignedTransferRequest
     );
-    this.logger.debug(`transfer response: ${JSON.stringify(response)}`);
+    this.chainConfig.debug && this.logger.debug(`transfer response: ${JSON.stringify(response)}`);
     return {
       hash: String(response.transfer_id),
       from: this.address,

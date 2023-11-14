@@ -63,7 +63,7 @@ export class ApiScanningService {
         this.prevExecute.fail.splice(index, 1);
 
         if (interval >= 6000 * 2) {
-          this.logger.debug(
+          this.chainConfig.debug && this.logger.debug(
             `${addr} - Previous scan time: ${JSON.stringify(
               this.prevExecute.state[addr],
             )}`,

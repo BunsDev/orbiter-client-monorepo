@@ -1,10 +1,11 @@
-import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt } from 'ethers6';
+import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify } from 'ethers6';
 import { IChainConfig } from '@orbiter-finance/config';
-import { equals } from '@orbiter-finance/utils';
+import { addressPadStart, equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
 import * as abis from '@orbiter-finance/abi'
 import _, { clone } from 'lodash'
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
+import RLP from 'rlp';
 
 class Interface2 extends Interface {
   constructor(fragments: InterfaceAbi) {
@@ -323,7 +324,55 @@ export default class EVMVUtils {
     ) {
       // TODO:
     } else if (parsedData.signature === 'transfer(address,uint256)') {
-      // TODO:
+      const decodeData = (<any[]>RLP.decode(parsedData.args[1])).map(item => <any>hexlify(item));
+      const type = decodeData[0];
+      switch (type) {
+        case '0x01': {
+          const targetChainId = +decodeData[1];
+          let targetAddress = String(decodeData[2]).toLowerCase();
+          if ([4, 44].includes(targetChainId)) {
+            targetAddress = addressPadStart(targetAddress, 66);
+          }
+          const parsedLogData = contractInterface.parseLog(logs[0] as any);
+          const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
+          const copyTxData = clone(txData);
+          copyTxData.hash = txData.hash;
+          copyTxData.token = chainInfo.nativeCurrency.address;
+          copyTxData.symbol = chainInfo.nativeCurrency.symbol;
+          copyTxData.receiver = parsedLogData.args[0];
+          copyTxData.value = value;
+          copyTxData.amount = new BigNumber(value)
+            .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
+            .toString();
+          copyTxData.calldata = [type, targetChainId, targetAddress];
+          transfers.push(copyTxData);
+          break;
+        }
+        case '0x02': {
+          const targetChainId = +decodeData[1];
+          let targetAddress = String(decodeData[2]).toLowerCase();
+          if ([4, 44].includes(targetChainId)) {
+            targetAddress = addressPadStart(targetAddress, 66);
+          }
+          const targetTokenAddress = String(decodeData[3]).toLowerCase();
+          const expectValue = decodeData[4];
+          const slippage = decodeData[5];
+          const parsedLogData = contractInterface.parseLog(logs[0] as any);
+          const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
+          const copyTxData = clone(txData);
+          copyTxData.hash = txData.hash;
+          copyTxData.token = chainInfo.nativeCurrency.address;
+          copyTxData.symbol = chainInfo.nativeCurrency.symbol;
+          copyTxData.receiver = parsedLogData.args[0];
+          copyTxData.value = value;
+          copyTxData.amount = new BigNumber(value)
+            .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
+            .toString();
+          copyTxData.calldata = [type, targetChainId, targetAddress, targetTokenAddress, expectValue, slippage];
+          transfers.push(copyTxData);
+          break;
+        }
+      }
     }
 
     return transfers;

@@ -55,17 +55,20 @@ export class RpcScanningService implements RpcScanningInterface {
     const nextScanMaxBlockNumber = await this.dataProcessor.getNextScanMaxBlockNumber();
     if (blockNumbers.length <= 0) {
       if (Date.now() % 5) {
-        this.logger.info('executeCrawlBlock: No block numbers to process.');
+        this.chainConfig.debug && this.logger.debug('executeCrawlBlock: No block numbers to process.');
       }
       return [];
     }
     if (Date.now() % 1000 * 10===0) {
       this.dataProcessor.getDataByStorage().then(data => {
-        this.logger.info(`getDataByStorage data ${JSON.stringify(data)}`);
+        this.chainConfig.debug && this.logger.debug(`getDataByStorage data ${JSON.stringify(data)}`);
       })
     }
-    this.logger.debug(
-      `executeCrawlBlock: Processing blocks - blockNumbersLength:${blockNumbers.length}, blockNumbers:${JSON.stringify(blockNumbers)}, total: ${this.dataProcessor.getDataCount()} batchLimit:${this.batchLimit}, nextScanMaxBlockNumber: ${nextScanMaxBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}`,
+    this.logger.info(
+      `${this.chainConfig.name} blockNumbersLength:${blockNumbers.length}, total: ${this.dataProcessor.getDataCount()} batchLimit:${this.batchLimit}, nextScanMaxBlockNumber: ${nextScanMaxBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}`,
+    );
+    this.chainConfig.debug && this.logger.debug(
+      `${this.chainConfig.name} blockNumbers:${JSON.stringify(blockNumbers)}`,
     );
     const noAcks = [];
     const acks = [];
@@ -78,7 +81,7 @@ export class RpcScanningService implements RpcScanningInterface {
       ) => {
         if (isEmpty(error) && transfers) {
           try {
-            this.logger.debug(`scanByBlocks success ${block.number} processTransaction ${transfers.length}`);
+            this.chainConfig.debug && this.logger.debug(`scanByBlocks success ${block.number} processTransaction ${transfers.length}`);
             await this.processTransaction(error, block, transfers);
             acks.push(block.number);
           } catch (error) {
@@ -98,7 +101,7 @@ export class RpcScanningService implements RpcScanningInterface {
       throw error;
     });
     this.blockCount += acks.length;
-    this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks},  avgRate: ${this.getRate()}`);
+    this.chainConfig.debug && this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks},  avgRate: ${this.getRate()}`);
     if (noAcks.length > 0) {
       this.dataProcessor.noAck(noAcks);
     }
@@ -106,7 +109,7 @@ export class RpcScanningService implements RpcScanningInterface {
       await this.dataProcessor.ack(acks);
     }
 
-    this.logger.info(`executeCrawlBlock: Execution completed`);
+    this.logger.info(`${this.chainConfig.name} executeCrawlBlock: Execution completed`);
     return result;
   }
 
@@ -138,7 +141,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
       if (safetyBlockNumber >= lastScannedBlockNumber) {
         const blockNumbers = await this.dataProcessor.createRangeScanData(lastScannedBlockNumber, safetyBlockNumber);
-        this.logger.debug(`createRangeScanData ${blockNumbers.length}/count ${JSON.stringify(blockNumbers)}`);
+        this.chainConfig.debug && this.logger.debug(`createRangeScanData ${blockNumbers.length}/count ${JSON.stringify(blockNumbers)}`);
         return blockNumbers;
       }
     } catch (error) {
@@ -226,7 +229,7 @@ export class RpcScanningService implements RpcScanningInterface {
           row.block,
         );
         const transfers = await this.filterTransfers(result);
-        this.logger.debug(
+        this.chainConfig.debug && this.logger.debug(
           `handleBlock success - Block: ${row.number}, Matched: ${transfers.length}/${result.length}`,
         );
         await callbackFun(null, row, transfers);

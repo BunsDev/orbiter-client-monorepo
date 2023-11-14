@@ -65,7 +65,7 @@ export class ZKLiteApiScanningService extends ApiScanningService {
       });
 
       const newTransfers = await this.filterTransfers(transfers);
-      this.logger.debug(
+      this.chainConfig.debug && this.logger.debug(
         `${this.chainId} timedTetTransactions address ${address},  data total: ${transfers.length} / ${newTransfers.length}`,
       );
       if (newTransfers.length > 0) {

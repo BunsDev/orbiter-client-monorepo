@@ -161,7 +161,7 @@ export class StarknetAccount extends OrbiterAccount {
       if (e.message.indexOf('25: Transaction hash not found') === -1) {
         this.logger.error(`waitForTransactionConfirmation error ${e.message}`);
       } else {
-        this.logger.debug(`waitForTransactionConfirmation ${e.message}`);
+        this.chainConfig.debug && this.logger.debug(`waitForTransactionConfirmation ${e.message}`);
       }
     }
     await sleep(3000);
