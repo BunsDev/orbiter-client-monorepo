@@ -148,7 +148,7 @@ export class TransactionService {
     }
     await this.handleTransfer(transfer, bridgeTransaction)
     if (!bridgeTransaction) {
-      this.logger.info(`bridgeTransaction not found sourceId: ${transfer.hash}, version: ${transfer.version}`)
+      this.logger.info(`bridgeTransaction not found, hash: ${transfer.hash}, version: ${transfer.version}`)
       return
     }
     const transaction = await this.transactionModel.findOne({ where: { hash: transfer.hash } })
