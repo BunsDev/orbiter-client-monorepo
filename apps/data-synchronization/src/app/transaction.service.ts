@@ -46,7 +46,6 @@ export class TransactionService {
     try {
       const transfer = data.data
       await this.handleBridgeTransaction(transfer)
-      await this.transfersModel.update({ syncStatus: 1 }, { where: { hash: transfer.hash, chainId: transfer.chainId } })
     } catch (error) {
       this.logger.error('handleBridgeTransaction error', error)
       this.logger.data('handleBridgeTransaction error', data.data)
@@ -132,6 +131,8 @@ export class TransactionService {
       delete transaction.createdAt
       await this.transactionModel.update(transaction, { where: w })
     }
+    const syncStatus = bridgeTransaction ? 2 : 1; // If the bridgeTransaction exists, then the transfer is a valid cross-chain transaction
+    await this.transfersModel.update({ syncStatus }, { where: { hash: transfer.hash, chainId: transfer.chainId, syncStatus: { [Op.ne]: 3 } } })
   }
   async handleBridgeTransaction(data: TransfersAttributes) {
     let bridgeTransaction: BridgeTransactionAttributes
@@ -157,6 +158,14 @@ export class TransactionService {
     if (transaction.side === 0) {
       findWhere.inId = transaction.id
       inTransaction = transaction
+      if (bridgeTransaction.targetId) {
+        outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+        if (!outTransaction) {
+          const outTransferV3 = await this.transfersModel.findOne({ where: { hash: bridgeTransaction.targetId, chainId: bridgeTransaction.targetChain } })
+          await this.handleTransfer(outTransferV3, bridgeTransaction)
+          outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+        }
+      }
     } else {
       inTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.sourceId } })
       if (!inTransaction) {
@@ -185,7 +194,25 @@ export class TransactionService {
         createdAt: new Date(),
         updatedAt: new Date(),
       }
+      if (outTransaction) {
+        mtCreateData.outId = outTransaction.id
+      }
       const mtResult = await this.makerTransactionModel.create(mtCreateData)
+      if (outTransaction) {
+        this.transfersModel.update(
+          { syncStatus: 3 },
+          {
+            where: {
+              hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
+              chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
+              syncStatus: { [Op.ne]: 3 }
+            }
+          }
+        ).catch((error) => {
+          this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
+        });
+        this.logger.info(`v1 match success(create mt) id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
+      }
       return mtResult
     } else if (mt) {
       const t = await this.v1Sequelize.transaction()
@@ -220,22 +247,35 @@ export class TransactionService {
           },
           transaction: t
         })
-        this.logger.info(`v1 match success id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
+        this.transfersModel.update(
+          { syncStatus: 3 },
+          {
+            where: {
+              hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
+              chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
+              syncStatus: { [Op.ne]: 3 }
+            }
+          }
+        ).catch((error) => {
+          this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
+        });
+        this.logger.info(`v1 match success(update mt) id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
       }
       t.commit()
       return mtResult
     }
   }
   @Cron('0 */1 * * * *')
-  private async syncV3V1FromDatabase() {
+  private async syncV3ToV1FromDatabase() {
     if (this.mutex.isLocked()) {
       return
     }
+    this.logger.info('syncV3V1FromDatabase start')
     this.mutex.runExclusive(async () => {
       let done = false
       // sync in tx
       const inWhere = {
-        syncStatus: 0,
+        syncStatus: [0, 2],
         version: ['1-0'],
         timestamp: {
           [Op.lte]: dayjs().subtract(5, 'minutes').toISOString(),
@@ -243,6 +283,8 @@ export class TransactionService {
       } as any;
       const limit = 1000
       let maxId = 0
+      let inTransferFetchCount = 0
+      const maxInTransferFetchCount = 5000
       do {
         const list = await this.transfersModel.findAll({
           where: inWhere,
@@ -254,14 +296,18 @@ export class TransactionService {
             this.logger.error('syncV3V1FromDatabase error', error)
           })
         }
+        inTransferFetchCount += list.length
         if (list.length < limit) {
           done = true
         } else {
           inWhere.id = { [Op.gt]: list[list.length - 1].id }
         }
         maxId = Number(list[list.length - 1]?.id)
+        if (inTransferFetchCount >= maxInTransferFetchCount) {
+          done = true
+        }
       } while(!done)
-      console.log('maxId', maxId)
+      this.logger.info('maxId', maxId)
       // sync out tx
       done = false
       const outWhere = {
