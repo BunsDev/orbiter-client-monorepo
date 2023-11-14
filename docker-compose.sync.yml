@@ -1,0 +1,23 @@
+version: '3.8'
+networks:
+   orbiter-network:
+    external: true
+services:
+  dataSync:
+    image: orbiter/explore-data-synchronization:latest
+    build:
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/explore-data-synchronization/Dockerfile.clients
+    restart: always
+    command: ["node", 'main.js']
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+    ports:
+      - '3222:3007'
+    networks:
+      - orbiter-network
+    volumes:
+      - './runtime/dataSync:/app/runtime'
+      - './logs/dataSync:/app/logs'

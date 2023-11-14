@@ -70,7 +70,7 @@ export class ApiScanningSchedule {
   private async execute() {
     if (Date.now() % 30 === 0) {
       if (this.scanService.size <= 0) {
-        this.logger.warn('RPC chain scanning service not created');
+        this.logger.warn('API chain scanning service not created');
       }
     }
     for (const scanner of this.scanService.values()) {

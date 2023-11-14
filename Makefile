@@ -12,6 +12,7 @@ NETWORK_NAME := orbiter-network
 BASE_IMAGE := orbiter/clients:latest
 CRAWLER_IMAGE := orbiter/explore-data-crawler:latest
 REFINERY_IMAGE := orbiter/explore-data-refinery:latest
+DATASYNC_IMAGE := orbiter/explore-data-synchronization:latest
 MAKER_IMAGE := orbiter/maker-client:latest
 
 # Configuration variables
@@ -39,6 +40,9 @@ build-maker-openapi: ## Build the Docker base image
 
 build-docker-crawler: ## Build the Explore Data Crawler Docker image
 	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t $(CRAWLER_IMAGE)
+
+build-docker-data-synchronization: ## Build the data-synchronization Docker image
+	docker build -f apps/data-synchronization/Dockerfile.clients . -t $(DATASYNC_IMAGE)
 
 build-docker-refinery: ## Build the Explore Data Refinery Docker image
 	docker build -f apps/explore-DataRefinery/Dockerfile.clients . -t $(REFINERY_IMAGE)

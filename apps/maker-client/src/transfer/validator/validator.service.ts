@@ -1,7 +1,7 @@
-import { Injectable,Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import dayjs from "dayjs";
 import BigNumber from "bignumber.js";
-import { ChainConfigService ,ENVConfigService} from "@orbiter-finance/config";
+import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import { ConfigService } from "@nestjs/config";
 import { isEmpty } from "@orbiter-finance/utils";
 import { ChainLinkService } from "../../service/chainlink.service";
@@ -9,7 +9,7 @@ import { type TransferAmountTransaction } from "../sequencer/sequencer.interface
 import { AccountFactoryService } from "../../factory";
 import { groupBy, take, uniq } from "lodash";
 import { PrivateKeyService } from "../../service/privatekey.service";
-import {OrbiterAccount} from "@orbiter-finance/blockchain-account";
+import { OrbiterAccount } from "@orbiter-finance/blockchain-account";
 @Injectable()
 export class ValidatorService {
   constructor(
@@ -20,17 +20,21 @@ export class ValidatorService {
     private readonly accountFactoryService: AccountFactoryService
   ) { }
 
+  public getTransferGlobalTimeout() {
+    return this.envConfig.get("TransferTimeout", 10);
+  }
   public transactionTimeValid(chainId: string, timestamp: Date) {
     const timeout = Date.now() - dayjs(timestamp).valueOf();
-    const transferTimeout = +(this.envConfig.get<Number>(`${chainId}.TransferTimeout`, 1000 * 60 * 30));
+    const defaultTimeout = this.getTransferGlobalTimeout();
+    const transferTimeout = +(this.envConfig.get<Number>(`${chainId}.TransferTimeout`, defaultTimeout));
     if (timeout >= transferTimeout) {
-      return true; // 'Please collect manually if the transaction exceeds the specified time'
+      return true;
     }
     return false;
   }
 
   public optimisticCheckTxStatus(hash: string, chainId: string) {
-    
+
     return true
   }
 

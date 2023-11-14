@@ -1,6 +1,23 @@
 
 import * as JSONbig from 'json-bigint';
 import { padStart } from 'lodash';
+import crypto from 'crypto'
+export function MD5(value: string) {
+  const md5 = crypto.createHash("md5");
+  return md5.update(value).digest("hex");
+}
+export function TransferId(
+  toChainId: string,
+  replySender: string,
+  replyAccount: string,
+  userNonce: number | string,
+  toSymbol: string,
+  toValue: string,
+) {
+  return MD5(
+    `${toChainId}_${replySender}_${replyAccount}_${userNonce}_${toSymbol}_${toValue}`.toLowerCase(),
+  ).toString();
+}
 export function JSONStringify(data: any) {
   return JSONbig.stringify(data);
 }

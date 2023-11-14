@@ -14,6 +14,12 @@ import { utils } from 'ethers'
 import { validateAndParseAddress } from 'starknet'
 import BridgeTransactionBuilder from './bridgeTransaction.builder'
 import { ValidSourceTxError, decodeV1SwapData, addressPadStart } from '../utils';
+import { MessageService } from '@orbiter-finance/rabbit-mq'
+export interface handleTransferReturn {
+  errno: number;
+  errmsg?: string;
+  data?: any
+}
 @Injectable()
 export class TransactionV1Service {
   @LoggerDecorator()
@@ -28,7 +34,8 @@ export class TransactionV1Service {
     private sequelize: Sequelize,
     protected envConfigService: ENVConfigService,
     protected makerV1RuleService: MakerV1RuleService,
-    protected bridgeTransactionBuilder: BridgeTransactionBuilder
+    protected bridgeTransactionBuilder: BridgeTransactionBuilder,
+    private messageService: MessageService,
   ) {
     this.matchScheduleTask()
       .then((_res) => {
@@ -60,12 +67,15 @@ export class TransactionV1Service {
       },
     });
     for (const transfer of transfers) {
-      await this.handleTransferBySourceTx(transfer).catch((error) => {
+      const result = await this.handleTransferBySourceTx(transfer).catch((error) => {
         this.logger.error(
           `matchScheduleTask handleTransferBySourceTx ${transfer.hash} error`,
           error,
         );
       });
+      if (result && result.errno === 0) {
+        await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
+      }
     }
   }
 
@@ -85,23 +95,27 @@ export class TransactionV1Service {
       },
     });
     for (const transfer of transfers) {
-      await this.handleTransferByDestTx(transfer).catch((error) => {
+      const result = await this.handleTransferByDestTx(transfer).catch((error) => {
         this.logger.error(
           `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error`,
           error,
         );
       });
+      if (result && result.errno === 0) {
+        await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
+      }
     }
   }
-
-  public async handleTransferBySourceTx(transfer: TransfersModel) {
+  errorBreakResult(errmsg: string): handleTransferReturn {
+    this.logger.error(errmsg);
+    return {
+      errno: 1000,
+      errmsg: errmsg
+    }
+  }
+  public async handleTransferBySourceTx(transfer: TransfersModel): Promise<handleTransferReturn> {
     if (transfer.status != 2) {
-      this.logger.error(
-        `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`
-      );
-      return {
-        errmsg: `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`
-      }
+      return this.errorBreakResult(`validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`)
     }
     const sourceBT = await this.bridgeTransactionModel.findOne({
       attributes: ['id', 'status', 'targetChain'],
@@ -111,9 +125,7 @@ export class TransactionV1Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-      return {
-        errmsg: `${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`
-      }
+      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`)
     }
     let createdData: BridgeTransactionAttributes
     try {
@@ -131,8 +143,7 @@ export class TransactionV1Service {
             },
           },
         );
-        this.logger.info(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
-        return { errmsg: error.message }
+        return this.errorBreakResult(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
       } else {
         this.logger.error(`ValidSourceTxError throw`, error)
         throw error
@@ -143,9 +154,7 @@ export class TransactionV1Service {
 
     try {
       if (createdData.targetAddress.length >= 100) {
-        return {
-          errmsg: `${transfer.hash} There is an issue with the transaction format`
-        }
+        return this.errorBreakResult(`${transfer.hash} There is an issue with the transaction format`)
       }
 
       if (sourceBT && sourceBT.id) {
@@ -190,7 +199,7 @@ export class TransactionV1Service {
         );
       }
       await t.commit();
-      return createdData
+      return { errno: 0, data: createdData }
     } catch (error) {
       console.error(error);
       this.logger.error(
@@ -202,7 +211,7 @@ export class TransactionV1Service {
     }
   }
 
-  public async handleTransferByDestTx(transfer: TransfersModel) {
+  public async handleTransferByDestTx(transfer: TransfersModel): Promise<handleTransferReturn> {
     if (transfer.version != '1-1') {
       throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
     }
@@ -241,12 +250,14 @@ export class TransactionV1Service {
             `The number of modified rows(${rowCount}) in bridgeTransactionModel is incorrect`,
           );
         }
+        // source status 1 ，dest status = 0
         const [updateTransferRows] = await this.transfersModel.update(
           {
             opStatus: 99,
           },
           {
             where: {
+              opStatus: [0, 1],
               hash: {
                 [Op.in]: [transfer.hash, memoryBT.sourceId],
               },
@@ -265,7 +276,10 @@ export class TransactionV1Service {
         this.logger.info(
           `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
         );
-        return memoryBT;
+        return {
+          errno: 0,
+          data: memoryBT
+        };
       }
     } catch (error) {
       this.logger.error(
@@ -289,6 +303,7 @@ export class TransactionV1Service {
       if (!btTx || !btTx.id) {
         const where = {
           status: [0, 97, 98],
+          targetId: null,
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,
           targetChain: transfer.chainId,
@@ -320,6 +335,7 @@ export class TransactionV1Service {
           },
           {
             where: {
+              opStatus: [0, 1],
               hash: {
                 [Op.in]: [btTx.sourceId, btTx.targetId],
               },
@@ -343,6 +359,10 @@ export class TransactionV1Service {
           });
       }
       await t2.commit();
+      return {
+        errno: 0,
+        data: btTx
+      }
     } catch (error) {
       t2 && (await t2.rollback());
       throw error;
