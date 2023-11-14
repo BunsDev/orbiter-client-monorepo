@@ -83,8 +83,8 @@ export class TransactionService {
       extra: {},
       makerId: null,
       lpId: null,
-      replyAccount: transfer.receiver,
-      replySender: transfer.sender,
+      replyAccount: null,
+      replySender: null,
       expectValue: null,
       transferId: '',
       createdAt: new Date(),
@@ -93,6 +93,8 @@ export class TransactionService {
     if (bridgeTransaction) {
       transaction.extra = { toSymbol: bridgeTransaction.targetSymbol }
       if (transaction.side === 0) {
+        transaction.replyAccount = bridgeTransaction.targetAddress
+        transaction.replySender = bridgeTransaction.targetMaker
         const targetToken = this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol)
         const targetChain = this.chainConfigService.getChainInfo(bridgeTransaction.targetChain)
         transaction.expectValue = utils.parseUnits(bridgeTransaction.targetAmount, targetToken.decimals).toString()
@@ -105,6 +107,8 @@ export class TransactionService {
     }
 
     if (transaction.side === 1) {
+      transaction.replyAccount = transfer.receiver
+      transaction.replySender = transfer.sender
       transaction.transferId = TransferId(
         String(transaction.chainId),
         String(transaction.replySender),
@@ -154,6 +158,7 @@ export class TransactionService {
       console.log('transaction not found:', transfer.hash)
       return
     }
+    // console.log('----', transaction.hash, bridgeTransaction.sourceId, bridgeTransaction.targetId)
     const findWhere = {} as any
     if (transaction.side === 0) {
       findWhere.inId = transaction.id
@@ -178,8 +183,20 @@ export class TransactionService {
     }
     const mt = await this.makerTransactionModel.findOne({ where: findWhere })
     if (mt && mt.inId && mt.outId) {
-      // this.logger.info(`already matched: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
-      return
+      this.logger.info(`already matched: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
+      this.transfersModel.update(
+        { syncStatus: 3 },
+        {
+          where: {
+            hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
+            chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
+            syncStatus: { [Op.ne]: 3 }
+          }
+        }
+      ).catch((error) => {
+        this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
+      });
+      return mt
     }
     if (!mt && transaction.side === 0) {
       const mtCreateData: MakerTransactionAttributes = {
