@@ -44,11 +44,13 @@ export class TransactionService {
   async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
     // console.log(data)
     try {
-      await this.handleBridgeTransaction(data.data)
+      const transfer = data.data
+      await this.handleBridgeTransaction(transfer)
+      await this.transfersModel.update({ syncStatus: 1 }, { where: { hash: transfer.hash, chainId: transfer.chainId } })
     } catch (error) {
-      this.logger.error('handleBridgeTransaction error', error, data.data)
-      console.log('handleBridgeTransaction error', data.data)
-      throw error
+      this.logger.error('handleBridgeTransaction error', error)
+      this.logger.data('handleBridgeTransaction error', data.data)
+      // throw error
     }
     return
   }
@@ -130,7 +132,6 @@ export class TransactionService {
       delete transaction.createdAt
       await this.transactionModel.update(transaction, { where: w })
     }
-    await this.transfersModel.update({ syncStatus: 1 }, { where: { hash: transfer.hash, chainId: transfer.chainId } })
   }
   async handleBridgeTransaction(data: TransfersAttributes) {
     let bridgeTransaction: BridgeTransactionAttributes
@@ -200,7 +201,9 @@ export class TransactionService {
         updateData.replySender = inTransaction.replySender
         if (bridgeTransaction.targetId) {
           outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
-          updateData.outId = outTransaction.id
+          if (outTransaction) {
+            updateData.outId = outTransaction.id
+          }
         }
       }
       const mtResult = await this.makerTransactionModel.update(updateData, {
