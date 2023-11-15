@@ -6,8 +6,8 @@ export function loggerFormat() {
   return winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message, stack, service }) => {
-      return `${timestamp} ${service && service.name} [${level}]: ${message}\n${stack || ''}`;
+    winston.format.printf(({ timestamp, level, message, stack, service,context }) => {
+      return `${timestamp} ${service && service.name} ${context} [${level}]: ${message}\n${stack || ''}`;
     })
   );
 }

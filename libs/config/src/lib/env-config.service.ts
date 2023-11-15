@@ -5,7 +5,7 @@ import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
 import { ConsulService } from 'libs/consul/src/lib/consul.service';
 import { ConfigModuleOptions } from './config.interface';
 import { ORBITER_CONFIG_MODULE_OPTS } from './config.constants';
-
+import {get} from 'lodash';
 @Injectable()
 export class ENVConfigService {
   private configs: any = {};
@@ -50,7 +50,7 @@ export class ENVConfigService {
 
   get<T = any>(name: string, defaultValue?: T): T {
     if (!this.configService.get(name)) {
-      return (this.configs[name] || defaultValue) as T;
+      return (get(this.configs, name) || defaultValue) as T;
     }
     return (this.configService.get(name) || defaultValue) as T;
   }
