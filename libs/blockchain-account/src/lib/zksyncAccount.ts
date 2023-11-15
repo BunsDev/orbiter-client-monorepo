@@ -70,13 +70,14 @@ export class ZkSyncAccount extends OrbiterAccount  {
       throw error;
     }
     if (response) {
-      response.awaitReceipt().then(tx => {
+      await response.awaitReceipt().then(tx => {
         this.logger.info(`${this.chainConfig.name} sendTransaction waitForTransaction: ${JSON.stringify(tx)}`);
       }).catch(err => {
         this.logger.error(`${this.chainConfig.name} sendTransaction Error:`, err);
         if (err && err.message.includes('Nonce mismatch')) {
           this.nonceManager.forceRefreshNonce();
         }
+        throw err;
       });
     }
     const txData = response.txData.tx;
