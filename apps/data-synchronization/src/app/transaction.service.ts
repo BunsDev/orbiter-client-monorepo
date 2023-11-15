@@ -310,7 +310,7 @@ export class TransactionService {
       let done = false
       // sync in tx
       const inWhere = {
-        syncStatus: [0, 2],
+        [Op.or]: [{ syncStatus: [0, 2] }, { syncStatus: 1, opStatus: 99 }],
         version: ['1-0'],
         timestamp: {
           [Op.lte]: dayjs().subtract(5, 'minutes').toISOString(),
