@@ -64,7 +64,7 @@ export class LoopringAccount extends OrbiterAccount {
       throw new Error(`${token} token not found`);
     }
     const { accInfo } = await this.client.getAccount({ owner: address });
-    const balances: any[] = await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/balances?accountId=${String(accInfo.accountId)}&tokens=${String(tokenInfo.id)}`);
+    const balances: any[] = await HTTPGet(`${this.chainConfig.api.url}/user/balances?accountId=${String(accInfo.accountId)}&tokens=${String(tokenInfo.id)}`);
     if (balances.length > 0) {
       return BigInt(balances[0].total);
     }
@@ -173,7 +173,7 @@ export class LoopringAccount extends OrbiterAccount {
   }
 
   public async waitForTransactionConfirmation(transactionHash: string) {
-    const response: { totalNum: number, transactions: any[] } = <any>await HTTPGet(`${this.chainConfig.api.url}/api/v3/user/transactions?accountId=${this.accountInfo.accountId}&hashes=${transactionHash}`,{
+    const response: { totalNum: number, transactions: any[] } = <any>await HTTPGet(`${this.chainConfig.api.url}/user/transactions?accountId=${this.accountInfo.accountId}&hashes=${transactionHash}`,{
       'x-api-key': this.chainConfig.api.key,
     });
     if (response?.transactions && response.transactions.length === 1) {
