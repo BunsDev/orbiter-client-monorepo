@@ -176,7 +176,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         tx.receipt = receipt;
         tx.fee = new BigNumber(fee.toString())
           .dividedBy(transfers.length)
-          .toString();
+          .toFixed(0);
         tx.feeAmount = new BigNumber(tx.fee)
           .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
           .toString();

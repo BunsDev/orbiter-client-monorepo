@@ -60,7 +60,6 @@ import { ScheduleModule } from '@nestjs/schedule';
       name: 'v3',
       useFactory: async (envConfig: ENVConfigService) => {
         const config: any = await envConfig.getAsync('DATABASE_URL');
-        console.log('------', config)
         if (isEmpty(config)) {
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);

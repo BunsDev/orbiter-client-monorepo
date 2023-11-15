@@ -73,7 +73,7 @@ export class TransactionV1Service {
           error,
         );
       });
-      if (result && result.errno === 0) {
+      if (result && result.errno === 0 && +this.envConfigService.get('enableDataSync') === 1) {
         await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
       }
     }
@@ -101,7 +101,7 @@ export class TransactionV1Service {
           error,
         );
       });
-      if (result && result.errno === 0) {
+      if (result && result.errno === 0 && +this.envConfigService.get('enableDataSync') === 1) {
         await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
       }
     }

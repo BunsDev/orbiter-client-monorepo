@@ -14,6 +14,7 @@ import { ChainConfigService } from '@orbiter-finance/config'
 import { Op } from 'sequelize';
 import { Sequelize, UpdatedAt } from 'sequelize-typescript';
 import { Mutex } from 'async-mutex'
+import BigNumber from 'bignumber.js';
 @Injectable()
 export class TransactionService {
   @LoggerDecorator()
@@ -46,7 +47,6 @@ export class TransactionService {
     try {
       const transfer = data.data
       await this.handleBridgeTransaction(transfer)
-      await this.transfersModel.update({ syncStatus: 1 }, { where: { hash: transfer.hash, chainId: transfer.chainId } })
     } catch (error) {
       this.logger.error('handleBridgeTransaction error', error)
       this.logger.data('handleBridgeTransaction error', data.data)
@@ -84,8 +84,8 @@ export class TransactionService {
       extra: {},
       makerId: null,
       lpId: null,
-      replyAccount: transfer.receiver,
-      replySender: transfer.sender,
+      replyAccount: null,
+      replySender: null,
       expectValue: null,
       transferId: '',
       createdAt: new Date(),
@@ -94,6 +94,8 @@ export class TransactionService {
     if (bridgeTransaction) {
       transaction.extra = { toSymbol: bridgeTransaction.targetSymbol }
       if (transaction.side === 0) {
+        transaction.replyAccount = bridgeTransaction.targetAddress
+        transaction.replySender = bridgeTransaction.targetMaker
         const targetToken = this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol)
         const targetChain = this.chainConfigService.getChainInfo(bridgeTransaction.targetChain)
         transaction.expectValue = utils.parseUnits(bridgeTransaction.targetAmount, targetToken.decimals).toString()
@@ -106,6 +108,8 @@ export class TransactionService {
     }
 
     if (transaction.side === 1) {
+      transaction.replyAccount = transfer.receiver
+      transaction.replySender = transfer.sender
       transaction.transferId = TransferId(
         String(transaction.chainId),
         String(transaction.replySender),
@@ -124,6 +128,12 @@ export class TransactionService {
         transaction.expectValue,
       );
     }
+
+    // In order to adapt to the problem that the fee is not exhausted
+    if (new BigNumber(transaction.fee).decimalPlaces() > 0) {
+      transaction.fee = new BigNumber(transaction.fee).toFixed(0)
+    }
+
     const t = await this.transactionModel.findOne({ where: { hash: transaction.hash, chainId: transaction.chainId } })
     if (!t) {
       await this.transactionModel.upsert(transaction, { conflictFields: ['chainId', 'hash'] })
@@ -132,6 +142,8 @@ export class TransactionService {
       delete transaction.createdAt
       await this.transactionModel.update(transaction, { where: w })
     }
+    const syncStatus = bridgeTransaction ? 2 : 1; // If the bridgeTransaction exists, then the transfer is a valid cross-chain transaction
+    await this.transfersModel.update({ syncStatus }, { where: { hash: transfer.hash, chainId: transfer.chainId, syncStatus: { [Op.ne]: 3 } } })
   }
   async handleBridgeTransaction(data: TransfersAttributes) {
     let bridgeTransaction: BridgeTransactionAttributes
@@ -143,7 +155,7 @@ export class TransactionService {
     }
     await this.handleTransfer(transfer, bridgeTransaction)
     if (!bridgeTransaction) {
-      console.log('bridgeTransaction not found sourceId:', transfer.hash)
+      this.logger.info(`bridgeTransaction not found, hash: ${transfer.hash}, version: ${transfer.version}`)
       return
     }
     const transaction = await this.transactionModel.findOne({ where: { hash: transfer.hash } })
@@ -153,10 +165,19 @@ export class TransactionService {
       console.log('transaction not found:', transfer.hash)
       return
     }
+    // console.log('----', transaction.hash, bridgeTransaction.sourceId, bridgeTransaction.targetId)
     const findWhere = {} as any
     if (transaction.side === 0) {
       findWhere.inId = transaction.id
       inTransaction = transaction
+      if (bridgeTransaction.targetId) {
+        outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+        if (!outTransaction) {
+          const outTransferV3 = await this.transfersModel.findOne({ where: { hash: bridgeTransaction.targetId, chainId: bridgeTransaction.targetChain } })
+          await this.handleTransfer(outTransferV3, bridgeTransaction)
+          outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+        }
+      }
     } else {
       inTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.sourceId } })
       if (!inTransaction) {
@@ -169,73 +190,127 @@ export class TransactionService {
     }
     const mt = await this.makerTransactionModel.findOne({ where: findWhere })
     if (mt && mt.inId && mt.outId) {
-      // this.logger.info(`already matched: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
-      return
-    }
-    if (!mt && transaction.side === 0) {
-      const mtCreateData: MakerTransactionAttributes = {
-        transcationId: bridgeTransaction.transactionId,
-        inId: inTransaction.id,
-        outId: null,
-        fromChain: inTransaction.chainId,
-        toChain: Number(inTransaction.memo),
-        toAmount: inTransaction.expectValue,
-        replySender: inTransaction.replySender,
-        replyAccount: inTransaction.replyAccount,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      const mtResult = await this.makerTransactionModel.create(mtCreateData)
-      return mtResult
-    } else if (mt) {
-      const t = await this.v1Sequelize.transaction()
-      const updateData = {
-        outId: null,
-        UpdatedAt: new Date(),
-      } as any
-      if (transaction.side === 1 && outTransaction) {
-        updateData.outId = outTransaction.id
-      } else if (transaction.side === 0 && inTransaction) {
-        updateData.toAmount = inTransaction.expectValue
-        updateData.replyAccount = inTransaction.replyAccount
-        updateData.replySender = inTransaction.replySender
-        if (bridgeTransaction.targetId) {
-          outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
-          if (outTransaction) {
-            updateData.outId = outTransaction.id
+      this.logger.info(`already matched: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
+      this.transfersModel.update(
+        { syncStatus: 3 },
+        {
+          where: {
+            hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
+            chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
+            syncStatus: { [Op.ne]: 3 }
           }
         }
-      }
-      const mtResult = await this.makerTransactionModel.update(updateData, {
-        where: {
+      ).catch((error) => {
+        this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
+      });
+      return mt
+    }
+    const t = await this.v1Sequelize.transaction()
+    try {
+      let mtResult
+      if (!mt && transaction.side === 0) {
+        const mtCreateData: MakerTransactionAttributes = {
           transcationId: bridgeTransaction.transactionId,
-          inId: inTransaction.id
-        },
-        transaction: t
-      })
-      if (updateData.outId) {
-        await this.transactionModel.update({ status: 99 }, {
+          inId: inTransaction.id,
+          outId: null,
+          fromChain: inTransaction.chainId,
+          toChain: Number(inTransaction.memo),
+          toAmount: inTransaction.expectValue,
+          replySender: inTransaction.replySender,
+          replyAccount: inTransaction.replyAccount,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+        if (outTransaction) {
+          mtCreateData.outId = outTransaction.id
+        }
+        mtResult = await this.makerTransactionModel.create(mtCreateData, { transaction: t })
+        if (outTransaction) {
+          await this.transactionModel.update({ status: 99 }, {
+            where: {
+              id: [inTransaction.id, outTransaction.id]
+            },
+            transaction: t
+          })
+          this.transfersModel.update(
+            { syncStatus: 3 },
+            {
+              where: {
+                hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
+                chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
+                syncStatus: { [Op.ne]: 3 }
+              }
+            }
+          ).catch((error) => {
+            this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
+          });
+          this.logger.info(`v1 match success(create mt) id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
+        }
+      } else if (mt) {
+        const updateData = {
+          outId: null,
+          UpdatedAt: new Date(),
+        } as any
+        if (transaction.side === 1 && outTransaction) {
+          updateData.outId = outTransaction.id
+        } else if (transaction.side === 0 && inTransaction) {
+          updateData.toAmount = inTransaction.expectValue
+          updateData.replyAccount = inTransaction.replyAccount
+          updateData.replySender = inTransaction.replySender
+          if (bridgeTransaction.targetId) {
+            outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+            if (outTransaction) {
+              updateData.outId = outTransaction.id
+            }
+          }
+        }
+        mtResult = await this.makerTransactionModel.update(updateData, {
           where: {
-            id: [inTransaction.id, outTransaction.id]
+            transcationId: bridgeTransaction.transactionId,
+            inId: inTransaction.id
           },
           transaction: t
         })
-        this.logger.info(`v1 match success id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
+        if (updateData.outId) {
+          await this.transactionModel.update({ status: 99 }, {
+            where: {
+              id: [inTransaction.id, outTransaction.id]
+            },
+            transaction: t
+          })
+          this.transfersModel.update(
+            { syncStatus: 3 },
+            {
+              where: {
+                hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
+                chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
+                syncStatus: { [Op.ne]: 3 }
+              }
+            }
+          ).catch((error) => {
+            this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
+          });
+          this.logger.info(`v1 match success(update mt) id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
+        }
       }
-      t.commit()
+      await t.commit()
       return mtResult
+    } catch (error) {
+      t.rollback()
+      this.logger.error('handleBridgeTransaction error', error)
     }
   }
   @Cron('0 */1 * * * *')
-  private async syncV3V1FromDatabase() {
+  private async syncV3ToV1FromDatabase() {
     if (this.mutex.isLocked()) {
       return
     }
+    this.logger.info('syncV3V1FromDatabase start')
     this.mutex.runExclusive(async () => {
       let done = false
       // sync in tx
       const inWhere = {
-        syncStatus: 0,
+        syncStatus: [0, 2],
         version: ['1-0'],
         timestamp: {
           [Op.lte]: dayjs().subtract(5, 'minutes').toISOString(),
@@ -243,6 +318,8 @@ export class TransactionService {
       } as any;
       const limit = 1000
       let maxId = 0
+      let inTransferFetchCount = 0
+      const maxInTransferFetchCount = 5000
       do {
         const list = await this.transfersModel.findAll({
           where: inWhere,
@@ -254,14 +331,18 @@ export class TransactionService {
             this.logger.error('syncV3V1FromDatabase error', error)
           })
         }
+        inTransferFetchCount += list.length
         if (list.length < limit) {
           done = true
         } else {
           inWhere.id = { [Op.gt]: list[list.length - 1].id }
         }
         maxId = Number(list[list.length - 1]?.id)
+        if (inTransferFetchCount >= maxInTransferFetchCount) {
+          done = true
+        }
       } while(!done)
-      console.log('maxId', maxId)
+      this.logger.info(`maxId: ${maxId}`)
       // sync out tx
       done = false
       const outWhere = {
