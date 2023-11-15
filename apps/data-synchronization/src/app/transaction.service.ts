@@ -14,6 +14,7 @@ import { ChainConfigService } from '@orbiter-finance/config'
 import { Op } from 'sequelize';
 import { Sequelize, UpdatedAt } from 'sequelize-typescript';
 import { Mutex } from 'async-mutex'
+import BigNumber from 'bignumber.js';
 @Injectable()
 export class TransactionService {
   @LoggerDecorator()
@@ -127,6 +128,12 @@ export class TransactionService {
         transaction.expectValue,
       );
     }
+
+    // In order to adapt to the problem that the fee is not exhausted
+    if (new BigNumber(transaction.fee).decimalPlaces() > 0) {
+      transaction.fee = new BigNumber(transaction.fee).toFixed(0)
+    }
+
     const t = await this.transactionModel.findOne({ where: { hash: transaction.hash, chainId: transaction.chainId } })
     if (!t) {
       await this.transactionModel.upsert(transaction, { conflictFields: ['chainId', 'hash'] })
