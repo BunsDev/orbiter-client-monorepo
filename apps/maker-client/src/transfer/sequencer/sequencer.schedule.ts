@@ -238,7 +238,7 @@ export class SequencerScheduleService {
         this.logger.warn(`[batchSendTransaction] ${hash} Exceeding the effective payment collection time failed`)
         continue
       }
-      if (store.isTransfersExist(tx.sourceId)) {
+      if (await store.isTransfersExist(tx.sourceId)) {
         transfers.splice(i, 1);
         store.removeSymbolsWithData(token, hash);
         this.logger.warn(`[batchSendTransaction] ${hash} There is a collection record`)

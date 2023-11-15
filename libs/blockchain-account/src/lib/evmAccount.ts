@@ -19,7 +19,7 @@ import {
   TransactionSendBeforeError,
   TransferResponse,
 } from "./IAccount.interface";
-import { JSONStringify, promiseWithTimeout, equals } from "@orbiter-finance/utils";
+import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
 import { Orbiter6Provider } from './provider'
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
@@ -204,7 +204,7 @@ export class EVMAccount extends OrbiterAccount {
         );
       }
       router = Object.keys(chainConfig.contract || {}).find(
-        (addr) => chainConfig.contract[addr] === "OrbiterXRouter"
+        (addr) => chainConfig.contract[addr] === "OrbiterRouterV3"
       );
       if (!router) {
         throw new TransactionSendBeforeError(
@@ -223,7 +223,7 @@ export class EVMAccount extends OrbiterAccount {
         );
       }
       if (!OrbiterRouterV3) {
-        throw new TransactionSendBeforeError("OrbiterXRouter ABI Not Found");
+        throw new TransactionSendBeforeError("OrbiterRouterV3 ABI Not Found");
       }
       const ifa = new Interface(OrbiterRouterV3);
       transactionRequest.value = totalValue;
@@ -255,7 +255,7 @@ export class EVMAccount extends OrbiterAccount {
         );
       }
       router = Object.keys(chainConfig.contract || {}).find(
-        (addr) => chainConfig.contract[addr] === "OrbiterXRouter"
+        (addr) => chainConfig.contract[addr] === "OrbiterRouterV3"
       );
       if (!router) {
         throw new TransactionSendBeforeError(
@@ -266,6 +266,14 @@ export class EVMAccount extends OrbiterAccount {
         (accumulator, currentValue) => accumulator + currentValue,
         0n
       );
+      const allowance = await this.allowance(token, router);
+      this.logger.info(`allowance amount ${String(allowance)}`);
+      if (BigInt(String(allowance)) < totalValue) {
+        this.logger.info(`Insufficient authorization amount, ${String(allowance)} < ${String(totalValue)}`);
+        await this.approve(token, router, '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+        await sleep(10000);
+        return await this.transferTokens(token, tos, values, transactionRequest);
+      }
       const balance = await this.getTokenBalance(token);
       if (balance < totalValue) {
         throw new TransactionSendBeforeError(
@@ -273,7 +281,7 @@ export class EVMAccount extends OrbiterAccount {
         );
       }
       if (!OrbiterRouterV3) {
-        throw new TransactionSendBeforeError("OrbiterXRouter ABI Not Found");
+        throw new TransactionSendBeforeError("OrbiterRouterV3 ABI Not Found");
       }
       const ifa = new Interface(OrbiterRouterV3);
       const data = ifa.encodeFunctionData("transferTokens", [

@@ -70,7 +70,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
             this.chainId,
             toAddrLower,
           );
-       
+
           if (tokenInfo && EVMV6Utils.isERC20Transfer(row['data'])) {
             // valid from || to
             const result = EVMV6Utils.decodeERC20TransferData(row['data']);
@@ -208,7 +208,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           receipt,
         );
       } else {
-        if (transaction.data === '0x' || await provider.getCode(transaction.to) === '0x') {
+        if (transaction.data === '0x' || (transaction.to && await provider.getCode(transaction.to) === '0x')) {
           // tag:
           const value = transaction.value.toString();
           transfers.push({
@@ -256,7 +256,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       return await this.handleTransactionAfter(transfers);
     } catch (error) {
       this.logger.error(
-        `handleTransaction error ${transaction.hash}`,
+        `${this.chainConfig.name} handleTransaction error ${transaction.hash}`,
         error,
       );
       throw error;
