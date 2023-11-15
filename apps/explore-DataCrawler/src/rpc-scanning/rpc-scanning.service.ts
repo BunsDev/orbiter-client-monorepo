@@ -277,7 +277,7 @@ export class RpcScanningService implements RpcScanningInterface {
         }
       } catch (error) {
         this.logger.error(
-          `retryBlockRequest error ${retry}/${retryCount} - Block:${blockNumber}`,
+          `${this.chainConfig.name} retryBlockRequest error ${retry}/${retryCount} - Block:${blockNumber}`,
           error,
         );
         if (retry >= retryCount) {
