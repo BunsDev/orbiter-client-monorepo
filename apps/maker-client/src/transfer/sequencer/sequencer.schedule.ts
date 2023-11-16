@@ -101,6 +101,14 @@ export class SequencerScheduleService {
     if (records.length > 0) {
       for (const tx of records) {
         try {
+          const batchTransferCount =
+            this.envConfig.get(`${tx.targetChain}.BatchTransferCount`) || 1;
+          if (batchTransferCount == -1) {
+            this.logger.info(
+              `${tx.sourceId} To ${tx.targetChain} Setting BatchTransferCount to -1 disables sending`
+            );
+            continue;
+          }
           if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
             this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
             continue
@@ -194,7 +202,12 @@ export class SequencerScheduleService {
     }
     const batchTransferCount =
       this.envConfig.get(`${store.chainId}.BatchTransferCount`) || 1;
-
+    if (batchTransferCount == -1) {
+      this.logger.info(
+        `Setting BatchTransferCount to -1 disables sending`
+      );
+      return;
+    }
     lock.runExclusive(async () => {
       this.logger.debug(`checkStoreReadySend ${key}`);
       const wthData = store.getSymbolsWithData();

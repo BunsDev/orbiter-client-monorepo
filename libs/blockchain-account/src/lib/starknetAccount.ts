@@ -9,13 +9,25 @@ export class StarknetAccount extends OrbiterAccount {
   public provider: RpcProvider;
   private nonceManager: NonceManager;
 
-  async connect(privateKey: string, address: string, version: string) {
+  /**
+   * connection wallet
+   *
+   * @param privateKey key
+   * @param address address
+   * @returns Example after connection
+   */
+  async connect(privateKey: string, address: string) {
     const provider = this.getProviderV4();
+    // connect to the account
+    const { abi: accountAbi } = await provider.getClassAt(address);
+    if (accountAbi === undefined) { throw new Error("accountAbi no abi.") };
+    const accountContract = new Contract(accountAbi, address, provider);
+    const isCairo1: boolean = accountContract.isCairo1();
     const account = new Account(
       provider,
       address,
       privateKey,
-      <any>version || "0"
+      <any>String(+isCairo1)
     );
     if (!equals(account.address, address)) {
       throw new Error('The connected wallet address is inconsistent with the private key address');

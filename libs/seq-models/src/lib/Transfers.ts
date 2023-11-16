@@ -63,7 +63,7 @@ export class Transfers
   id?: string;
 
   @Column({ allowNull: true, type: DataType.STRING(20) })
-  @Index({ name: 'transfers_chainId_hash_idx', using: 'btree', unique: true })
+  // @Index({ name: 'transfers_chainId_hash_idx', using: 'btree', unique: true })
   chainId?: string;
 
   @Column({ allowNull: true, type: DataType.STRING(255) })

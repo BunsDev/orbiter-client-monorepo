@@ -74,11 +74,9 @@ export class ValidatorService {
           address,
           transfer.targetChain
         );
-        const cairo1Address: string[] = await this.envConfig.getAsync('cairo1') || [];
         await account.connect(
           privateKey,
-          address,
-          cairo1Address.find(item => item.toLowerCase() === address.toLowerCase()) ? "1" : "0");
+          address);
         const balance = await account.getBalance(address, transfer.targetToken);
         if (balance && balance > transferAmount) {
           return {
@@ -132,7 +130,6 @@ export class ValidatorService {
       const totalSendWei = new BigNumber(totalSend).times(
         10 ** transferToken.decimals
       );
-      const cairo1Address: string[] = await this.envConfig.getAsync('cairo1') || [];
       for (const address of makers) {
         const senderAddress = address.toLocaleLowerCase();
         const privateKey = this.getSenderPrivateKey(senderAddress);
@@ -142,7 +139,7 @@ export class ValidatorService {
         }
         const account = await this.accountFactoryService
           .createMakerAccount(senderAddress, chainId)
-          .connect(privateKey, senderAddress, cairo1Address.find(item => item.toLowerCase() === address.toLowerCase()) ? "1" : "0");
+          .connect(privateKey, senderAddress);
         if (account) {
           if (transferWalletRelAmount[senderAddress] === undefined) {
             const balance = await account.getBalance(senderAddress, token);

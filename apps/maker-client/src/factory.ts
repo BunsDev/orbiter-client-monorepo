@@ -8,14 +8,14 @@ import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 
 @Injectable()
 export class AccountFactoryService {
-  constructor(private readonly chainConfigService: ChainConfigService, private readonly envConfigService:ENVConfigService) {}
+  constructor(private readonly chainConfigService: ChainConfigService, private readonly envConfigService:ENVConfigService) {
+  }
 
   private static wallets: Record<string, OrbiterAccount> = {}; // key = pk + chainId
   createMakerAccount<T extends OrbiterAccount>(
     makerAddress: string,
     toChainId: string
   ): T {
-    // const chainService = new ChainConfigService();
     const chainConfig = this.chainConfigService.getChainInfo(toChainId);
     if (!chainConfig) {
       throw new Error(`${toChainId} chain not found`);
@@ -99,4 +99,5 @@ export class AccountFactoryService {
     AccountFactoryService.wallets[walletId] = wallet;
     return wallet as T;
   }
+  
 }
