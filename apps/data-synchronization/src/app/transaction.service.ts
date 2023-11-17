@@ -46,6 +46,7 @@ export class TransactionService {
     // console.log(data)
     try {
       const transfer = data.data
+      this.logger.info(`transfer: ${transfer.hash}, ${transfer.version}`)
       await this.handleBridgeTransaction(transfer)
     } catch (error) {
       this.logger.error('handleBridgeTransaction error', error)
