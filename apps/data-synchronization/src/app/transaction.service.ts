@@ -328,7 +328,7 @@ export class TransactionService {
         })
         for (const row of list) {
           await this.handleBridgeTransaction(row).catch(error => {
-            this.logger.error('syncV3V1FromDatabase error', error)
+            this.logger.error(`syncV3V1FromDatabase error, id:${row.id}, hash:${row.hash}`, error)
           })
         }
         inTransferFetchCount += list.length
