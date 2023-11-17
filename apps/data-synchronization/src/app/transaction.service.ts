@@ -174,8 +174,10 @@ export class TransactionService {
         outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
         if (!outTransaction) {
           const outTransferV3 = await this.transfersModel.findOne({ where: { hash: bridgeTransaction.targetId, chainId: bridgeTransaction.targetChain } })
-          await this.handleTransfer(outTransferV3, bridgeTransaction)
-          outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+          if (outTransferV3) {
+            await this.handleTransfer(outTransferV3, bridgeTransaction)
+            outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+          }
         }
       }
     } else {
