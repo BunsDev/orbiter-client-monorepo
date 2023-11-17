@@ -156,7 +156,7 @@ export class SequencerService {
       }
       await transaction.commit();
     } catch (error) {
-      if (error instanceof TransactionSendBeforeError) {
+      if (error instanceof TransactionSendBeforeError || !transferResult?.from) {
         await transaction.rollback();
       } else {
         sourceTx.status = 97;
@@ -398,7 +398,7 @@ export class SequencerService {
       );
       await transaction.commit();
     } catch (error) {
-      if (error instanceof TransactionSendBeforeError) {
+      if (error instanceof TransactionSendBeforeError || !transferResult?.from) {
         await transaction.rollback();
       } else {
         await this.bridgeTransactionModel.update(
