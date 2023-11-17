@@ -108,7 +108,7 @@ export class LoopringAccount extends OrbiterAccount {
       eddsaKey.sk
     );
     if (!apiKey) {
-      throw TransactionSendBeforeError('Get Loopring ApiKey Error');
+      throw new TransactionSendBeforeError('Get Loopring ApiKey Error');
     }
     // step 3 get storageId
     const storageId = await userApi.getNextStorageId(
