@@ -188,11 +188,11 @@ export class TransactionService {
         inTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.sourceId } })
       }
       outTransaction = transaction
-      findWhere.inId = inTransaction.id
+      findWhere.outId = outTransaction.id
     }
     const mt = await this.makerTransactionModel.findOne({ where: findWhere })
     if (mt && mt.inId && mt.outId) {
-      this.logger.info(`already matched: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
+      this.logger.info(`already matched ${transfer.id}: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
       this.transfersModel.update(
         { syncStatus: 3 },
         {
