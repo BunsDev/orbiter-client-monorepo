@@ -46,7 +46,7 @@ export class ConsulService implements OnModuleInit {
       key: keyPrefix,
     };
     if (this.options.nameSpace && !keyPrefix.includes(this.options.nameSpace)) {
-      opts.key = `/${this.options.nameSpace}${keyPrefix}`;
+      opts.key = `${this.options.nameSpace}${keyPrefix}`;
     }
     if (this.options.defaults && this.options.defaults.token) {
       opts['token'] = this.options.defaults.token;
