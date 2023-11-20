@@ -36,7 +36,7 @@ export class MakerV1RuleService {
                         })
                     } catch (error) {
                         Logger.error(
-                            `watch config change error ${error.message} ${keys[i]}`,
+                            `${this.configPath} watch config change error ${error.message} ${keys[i]}`,
                             error,
                         );
                     }
@@ -44,7 +44,7 @@ export class MakerV1RuleService {
             } catch (error) {
                 console.error(error);
                 Logger.error(
-                    `watch config change error ${error.message} ${this.configPath}`,
+                    `${this.configPath} watch config change error ${error.message}`,
                     error,
                 );
             }

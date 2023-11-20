@@ -35,14 +35,12 @@ import { BridgeTransaction, Transfers } from "../../../libs/seq-models/src";
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async(configService: ENVConfigService) => {
-        if (configService.get('REDIS_URL')) {
-          return {
-            config: {
-              url:configService.get('REDIS_URL')
-            }
+        const REDIS_URL = await configService.getAsync("REDIS_URL"); 
+        return {
+          config: {
+            url: REDIS_URL
           }
         }
-        return await configService.getAsync("REDIS");
       },
     }),
     SequelizeModule.forRootAsync({

@@ -11,7 +11,6 @@ import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
 import { ConsulModule } from '@orbiter-finance/consul';
 import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
-
 import { MetricModule } from './metric/metric.module';
 import {AppController} from './app.controller'
 
@@ -38,14 +37,12 @@ dayjs.extend(utc);
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (configService: ENVConfigService) => {
-        if (configService.get('REDIS_URL')) {
-          return {
-            config: {
-              url:configService.get('REDIS_URL')
-            }
+        const REDIS_URL = await configService.getAsync("REDIS_URL"); 
+        return {
+          config: {
+            url: REDIS_URL
           }
         }
-        return await configService.getAsync("REDIS");
       },
     }),
     AlertModule.registerAsync({
