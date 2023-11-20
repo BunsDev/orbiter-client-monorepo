@@ -41,9 +41,13 @@ export class ConsulService implements OnModuleInit {
 
   watchConsulConfig(keyPrefix: string, callback: any) {
     const client = this.consulClient;
+
     const opts: any = {
-      key: `${this.options.nameSpace || ""}${keyPrefix}`,
+      key: keyPrefix,
     };
+    if (this.options.nameSpace && !keyPrefix.includes(this.options.nameSpace)) {
+      opts.key = `${this.options.nameSpace}${opts.keyPrefix}`;
+    }
     if (this.options.defaults && this.options.defaults.token) {
       opts['token'] = this.options.defaults.token;
     }
