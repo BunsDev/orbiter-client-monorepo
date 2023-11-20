@@ -76,6 +76,9 @@ export class ArbitrationService {
             new BigNumber(tx.fromAmount).times(10 ** tx.sourceDecimal).times(1)
         ]);
         const client = await this.getSubClient();
+        if (!client) {
+            throw new Error('SubClient not found');
+        }
         const mdcAddress = await client.maker.getMDCAddress(tx.sourceMaker);
         const transactionRequest = {
             data,

@@ -21,6 +21,9 @@ export class ArbitrationJobService {
   // @Interval(1000 * 5)
   async syncChainInfo() {
     const client = await this.arbitrationService.getSubClient()
+    if (!client) {
+      throw new Error('syncChainInfo SubClient not found');
+  }
     this.arbitrationService.chainRels = await client.manager.getChainRels();
   }
   @Interval(1000 * 60 * 1)

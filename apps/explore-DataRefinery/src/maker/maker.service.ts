@@ -56,6 +56,12 @@ export class MakerService {
         const owner = transfer.receiver;
         const txTimestamp = dayjs(transfer.timestamp).unix();
         const subgraphClient = await this.getSubClient();
+        if (!subgraphClient) {
+            return {
+                errno: 1000,
+                errmsg: 'getV2RuleByTransfer SubClient not found'
+            }
+        }
         const securityCodeInfo = await subgraphClient.maker.getCrossChainMakerSecurityCodeInfo(owner, dealerIndex, ebcIndex, targetChainIdIndex, txTimestamp);
         if (!securityCodeInfo) {
             return {
@@ -158,7 +164,7 @@ export class MakerService {
         }
         address = address.toLocaleLowerCase();
         // redis
-        if (this.#v2Owners.length<=0) {
+        if (this.#v2Owners.length <= 0) {
             await this.getV2MakerOwnersFromRedis()
         }
         if (this.#v2Owners.includes(address)) {

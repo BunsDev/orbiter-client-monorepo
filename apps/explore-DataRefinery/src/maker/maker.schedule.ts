@@ -23,7 +23,7 @@ export class MakerScheduuleService {
     async getSubClient(): Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
         if (!SubgraphEndpoint) {
-            throw new Error('SubgraphEndpoint not found');
+            return null;
         }
         return new SubgraphClient(SubgraphEndpoint);
     }
@@ -31,6 +31,9 @@ export class MakerScheduuleService {
     async syncV2ChainTokens() {
         try {
             const subgraphClient = await this.getSubClient();
+            if (!subgraphClient) {
+                return;
+            }
             const chains = await subgraphClient.factory.getChainTokens();
             const chainMap = {
             }
@@ -48,6 +51,9 @@ export class MakerScheduuleService {
     async syncV2Owners() {
         try {
             const subgraphClient = await this.getSubClient()
+            if (!subgraphClient) {
+                return;
+            }
             const owners = await subgraphClient.factory.getOwners() || [];
             const v2OwnersCount = await this.redis.scard("v2Owners");
             if (owners.length > 0 && v2OwnersCount != owners.length) {
