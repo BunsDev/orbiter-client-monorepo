@@ -113,7 +113,7 @@ export class ZksyncLiteBuilder {
     ) {
 
     }
-    async check(transfer: TransfersModel) {
+    check(transfer: TransfersModel) {
       return ['zksync_test', 'zksync'].includes(transfer.chainId)
     }
     async build(transfer: TransfersModel): Promise<BuilderData> {

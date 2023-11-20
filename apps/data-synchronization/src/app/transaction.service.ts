@@ -46,6 +46,7 @@ export class TransactionService {
     // console.log(data)
     try {
       const transfer = data.data
+      this.logger.info(`transfer: ${transfer.hash}, ${transfer.version}`)
       await this.handleBridgeTransaction(transfer)
     } catch (error) {
       this.logger.error('handleBridgeTransaction error', error)
@@ -174,8 +175,10 @@ export class TransactionService {
         outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
         if (!outTransaction) {
           const outTransferV3 = await this.transfersModel.findOne({ where: { hash: bridgeTransaction.targetId, chainId: bridgeTransaction.targetChain } })
-          await this.handleTransfer(outTransferV3, bridgeTransaction)
-          outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+          if (outTransferV3) {
+            await this.handleTransfer(outTransferV3, bridgeTransaction)
+            outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
+          }
         }
       }
     } else {
@@ -186,11 +189,11 @@ export class TransactionService {
         inTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.sourceId } })
       }
       outTransaction = transaction
-      findWhere.inId = inTransaction.id
+      findWhere.outId = outTransaction.id
     }
     const mt = await this.makerTransactionModel.findOne({ where: findWhere })
     if (mt && mt.inId && mt.outId) {
-      this.logger.info(`already matched: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
+      this.logger.info(`already matched ${transfer.id}: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
       this.transfersModel.update(
         { syncStatus: 3 },
         {
@@ -328,7 +331,7 @@ export class TransactionService {
         })
         for (const row of list) {
           await this.handleBridgeTransaction(row).catch(error => {
-            this.logger.error('syncV3V1FromDatabase error', error)
+            this.logger.error(`syncV3V1FromDatabase error, id:${row.id}, hash:${row.hash}`, error)
           })
         }
         inTransferFetchCount += list.length
