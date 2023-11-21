@@ -97,7 +97,7 @@ export class TransactionV1Service {
       }
     }
   }
-  // @Cron('0 */7 * * * *')
+  @Cron('0 */6 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
