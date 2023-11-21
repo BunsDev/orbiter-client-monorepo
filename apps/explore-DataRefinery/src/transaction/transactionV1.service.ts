@@ -83,7 +83,7 @@ export class TransactionV1Service {
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
-      order: [['id', 'desc']],
+      order: [['sourceTime', 'asc']],
       limit: 1000,
       where: {
         status: 2,
