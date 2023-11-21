@@ -67,6 +67,23 @@ export class MessageService {
     }
   }
 
+  async sendMessageToPointsSystem(data: BridgeTransactionAttributes) {
+    const queue = 'pointsSystemTransaction'
+    const channel = this.connectionManager.getChannel();
+    try {
+      await channel.assertQueue(queue);
+      const result = await channel.sendToQueue(
+        queue,
+        Buffer.from(JSONStringify(data)),
+      );
+      return result;
+    } catch (error) {
+      Logger.error(`${queue} Failed to send message:`, (error as any).message);
+      throw error;
+    }
+  }
+
+
   async sendMessage(queue: string, message: string) {
     const channel = this.connectionManager.getChannel();
     try {
