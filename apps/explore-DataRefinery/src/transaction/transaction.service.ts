@@ -150,7 +150,6 @@ export class TransactionService {
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystem(result.data)
         }
-        this.logger.info(`${payload.hash} 1-1 handleTransferByDestTx result: ${JSON.stringify(result || {})}`)
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
@@ -163,9 +162,9 @@ export class TransactionService {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
-      if (result && result.errno!=0) {
-        this.logger.info(`${payload.hash} executeMatch result: ${JSON.stringify(result || {})}`)
-      }
+      // if (result && result.errno!=0) {
+        this.logger.info(`${payload.hash} executeMatch result: errno ${result.errno}, errmsg: ${result.errmsg}`);
+      // }
       if (['2-0'].includes(payload.version) && result && result.errno === 0 && this.envConfig.get("enableTransfer") ) {
         this.messageService.sendTransferToMakerClient(result.data)
       }
