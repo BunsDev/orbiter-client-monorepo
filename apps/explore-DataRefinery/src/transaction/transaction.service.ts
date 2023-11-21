@@ -162,9 +162,11 @@ export class TransactionService {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
-      // if (result && result.errno!=0) {
+      if (result) {
         this.logger.info(`${payload.hash} executeMatch result: errno ${result.errno}, errmsg: ${result.errmsg}`);
-      // }
+      } else {
+        this.logger.error(`${payload.hash} executeMatch result: No result returned`);
+      }
       if (['2-0'].includes(payload.version) && result && result.errno === 0 && this.envConfig.get("enableTransfer") ) {
         this.messageService.sendTransferToMakerClient(result.data)
       }
