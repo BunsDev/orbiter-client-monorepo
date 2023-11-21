@@ -52,7 +52,7 @@ export class ConsumerService {
       Logger.error(`${queue} consumeScanTransferReceiptMessages error ${error.message}`, error);
     }
   }
-  
+
   async consumeDataSynchronizationMessages(callback: (data: any) => Promise<any>) {
     const queue = 'dataSynchronization';
     try {
@@ -122,7 +122,9 @@ export class ConsumerService {
             const messageContent = msg.content.toString();
             const data = JSON.parse(messageContent);
             const result = await callback(data);
-            Logger.log(`${queue} consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
+            if (result && result.errno != 0) {
+              Logger.log(`${queue} consumeScanTransferSaveDBAfterMessages result ${data.hash} ${JSON.stringify(result)}`)
+            }
             channel.ack(msg);
           } catch (error: any) {
             Logger.error(`${queue} consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)

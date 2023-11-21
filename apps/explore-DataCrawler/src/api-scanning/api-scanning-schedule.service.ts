@@ -61,7 +61,7 @@ export class ApiScanningSchedule {
           mutex: new Mutex(),
           service: scanner,
         });
-        this.alertService.sendMessage(`CREATE RPC SCAN SERVICE ${chain.name}`, 'TG')
+        this.alertService.sendMessage(`CREATE API SCAN SERVICE ${chain.name}`, 'TG')
       }
     }
     this.execute();

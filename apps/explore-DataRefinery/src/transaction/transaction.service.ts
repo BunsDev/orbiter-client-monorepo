@@ -135,14 +135,14 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
-        this.logger.info(`enableDataSync: ${this.envConfig.get("enableDataSync")}`)
+        // this.logger.info(`enableDataSync: ${this.envConfig.get("enableDataSync")}`)
         if (+this.envConfig.get("enableDataSync") == 1) {
           // TAG:data-synchronization
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
-        this.logger.info(`enableDataSync: ${this.envConfig.get("enableDataSync")}`)
+        // this.logger.info(`enableDataSync: ${this.envConfig.get("enableDataSync")}`)
         if (+this.envConfig.get("enableDataSync") == 1) {
           // TAG:data-synchronization
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
