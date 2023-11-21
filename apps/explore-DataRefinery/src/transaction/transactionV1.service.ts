@@ -79,7 +79,7 @@ export class TransactionV1Service {
     }
   }
 
-  @Cron('0 */7 * * * *')
+  // @Cron('0 */7 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -174,7 +174,7 @@ export class TransactionV1Service {
           throw new Error(`${transfer.hash} Create Bridge Transaction Fail`);
         }
         createdData.id = createRow.id
-        this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
+        // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.memoryMatchingService
           .addBridgeTransaction(createRow.toJSON())
           .catch((error) => {
@@ -278,7 +278,8 @@ export class TransactionV1Service {
         );
         return {
           errno: 0,
-          data: memoryBT
+          data: memoryBT,
+          errmsg: 'memory success'
         };
       }
     } catch (error) {
@@ -290,6 +291,11 @@ export class TransactionV1Service {
     }
 
     // db match
+    const result = {
+      errmsg: '',
+      data: null,
+      errno:0
+    }
     const t2 = await this.sequelize.transaction();
     try {
       let btTx = await this.bridgeTransactionModel.findOne({
@@ -348,6 +354,8 @@ export class TransactionV1Service {
         );
         this.memoryMatchingService.removeTransferMatchCache(btTx.sourceId);
         this.memoryMatchingService.removeTransferMatchCache(btTx.targetId);
+        result.errno = 0;
+        result.errmsg = 'success';
       } else {
         this.memoryMatchingService
           .addTransferMatchCache(transfer)
@@ -357,12 +365,12 @@ export class TransactionV1Service {
               error,
             );
           });
+          result.errno = 1001;
+          result.errmsg = 'bridgeTransaction not found';
       }
       await t2.commit();
-      return {
-        errno: 0,
-        data: btTx
-      }
+      result.data = btTx;
+      return result
     } catch (error) {
       t2 && (await t2.rollback());
       throw error;

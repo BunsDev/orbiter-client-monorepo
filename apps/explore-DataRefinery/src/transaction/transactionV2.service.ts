@@ -45,7 +45,7 @@ export class TransactionV2Service {
         );
       });
   }
-  @Cron('0 */3 * * * *')
+  @Cron('0 */5 * * * *')
   async matchScheduleUserSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -70,7 +70,7 @@ export class TransactionV2Service {
       this.logger.info(`handleTransferBySourceTx result:${JSON.stringify(result)}`)
     }
   }
-  @Cron('0 */6 * * * *')
+  // @Cron('0 */6 * * * *')
   async matchScheduleMakerSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -373,7 +373,8 @@ export class TransactionV2Service {
         );
         return {
           errno: 0,
-          data: memoryBT
+          data: memoryBT,
+          errmsg: 'memory success'
         };
       }
     } catch (error) {
@@ -384,6 +385,11 @@ export class TransactionV2Service {
       t1 && (await t1.rollback());
     }
 
+    const result = {
+      errmsg: '',
+      data: null,
+      errno:0
+    }
     // db match
     const t2 = await this.sequelize.transaction();
     try {
@@ -441,6 +447,8 @@ export class TransactionV2Service {
         );
         this.memoryMatchingService.removeTransferMatchCache(btTx.sourceId);
         this.memoryMatchingService.removeTransferMatchCache(btTx.targetId);
+        result.errno = 0;
+        result.errmsg = 'success';
       } else {
         this.memoryMatchingService
           .addTransferMatchCache(transfer)
@@ -450,8 +458,12 @@ export class TransactionV2Service {
               error,
             );
           });
+          result.errno = 1001;
+          result.errmsg = 'bridgeTransaction not found';
       }
       await t2.commit();
+      result.data = btTx;
+      return result;
     } catch (error) {
       t2 && (await t2.rollback());
       throw error;

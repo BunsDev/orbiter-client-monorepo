@@ -150,6 +150,7 @@ export class TransactionService {
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystem(result.data)
         }
+        this.logger.info(`${payload.hash} 1-1 handleTransferByDestTx result: ${JSON.stringify(result || {})}`)
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);

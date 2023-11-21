@@ -2,10 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { BridgeTransactionAttributes, TransfersAttributes } from '@orbiter-finance/seq-models';
 import dayjs from 'dayjs';
+import { OrbiterLogger } from '@orbiter-finance/utils';
+import { LoggerDecorator } from '@orbiter-finance/utils';
 import { equals } from '@orbiter-finance/utils';
 
 @Injectable()
 export class MemoryMatchingService {
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
   private maxTimeMS = 1000 * 60 * 10;
   private transfersID: { [key: string]: Set<string> } = {}; // version hash
   private transfers: TransfersAttributes[] = [];
@@ -23,16 +27,14 @@ export class MemoryMatchingService {
           this.transfersID[transfer.version].delete(transfer.hash);
         }
       } else {
-        //   if (transfer.version === '1-1') {
-        //     const matchTx = this.matchV1GetBridgeTransactions(transfer);
-        //     if (matchTx) {
-        //       this.logger.info(
-        //         `for match tx: source hash:${matchTx.sourceId}，dest hash:${
-        //           transfer.hash
-        //         }, ${JSON.stringify(matchTx)}`,
-        //       );
-        //     }
-        //   }
+          if (transfer.version === '1-1') {
+            const matchTx = this.matchV1GetBridgeTransactions(transfer);
+            if (matchTx) {
+              this.logger.info(
+                `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash}`,
+              );
+            }
+          }
       }
     }
     for (let i = this.bridgeTransactions.length - 1; i >= 0; i--) {
