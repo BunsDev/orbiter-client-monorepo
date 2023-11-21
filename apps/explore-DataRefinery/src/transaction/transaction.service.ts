@@ -147,11 +147,17 @@ export class TransactionService {
           // TAG:data-synchronization
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
+        if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
+          this.messageService.sendMessageToPointsSystem(result.data)
+        }
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
       } else if (payload.version === '2-1') {
         result = await this.transactionV2Service.handleTransferByDestTx(payload);
+        if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
+          this.messageService.sendMessageToPointsSystem(result.data)
+        }
       } else {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
