@@ -12,7 +12,7 @@ export class MemoryMatchingService {
   private readonly logger: OrbiterLogger;
   private maxTimeMS = 1000 * 60 * 10;
   private transfersID: { [key: string]: Set<string> } = {}; // version hash
-  private transfers: TransfersAttributes[] = [];
+  public transfers: TransfersAttributes[] = [];
   //
   private bridgeTransactionsID: { [key: string]: Set<string> } = {}; // version
   private bridgeTransactions: BridgeTransactionAttributes[] = [];
@@ -26,15 +26,6 @@ export class MemoryMatchingService {
         if (this.transfersID[transfer.version]) {
           this.transfersID[transfer.version].delete(transfer.hash);
         }
-      } else {
-          if (transfer.version === '1-1') {
-            const matchTx = this.matchV1GetBridgeTransactions(transfer);
-            if (matchTx) {
-              this.logger.info(
-                `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash}`,
-              );
-            }
-          }
       }
     }
     for (let i = this.bridgeTransactions.length - 1; i >= 0; i--) {

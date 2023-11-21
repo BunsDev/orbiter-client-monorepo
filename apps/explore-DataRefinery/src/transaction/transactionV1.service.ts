@@ -78,12 +78,32 @@ export class TransactionV1Service {
       }
     }
   }
-
+  @Cron('*/10 * * * * *')
+  async fromCacheMatch() {
+    const transfers = this.memoryMatchingService.transfers;
+    for (let i = transfers.length - 1; i >= 0; i--) {
+      const transfer = transfers[i];
+      if (transfer.version === '1-1') {
+        const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
+        if (matchTx) {
+          this.logger.info(
+            `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash}`,
+          );
+          const result = await this.handleTransferByDestTx(transfer as any);
+          if (result && result.errno === 0) {
+            this.logger.info(
+              `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash} delete`,
+            );
+          }
+        }
+      }
+    }
+  }
   // @Cron('0 */7 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
-      order: [['sourceTime', 'asc']],
+      order: [['id', 'asc']],
       limit: 1000,
       where: {
         status: 2,
