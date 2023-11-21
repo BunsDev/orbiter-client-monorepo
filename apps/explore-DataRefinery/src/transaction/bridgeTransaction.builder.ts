@@ -518,7 +518,7 @@ export default class BridgeTransactionBuilder {
           }
         }
 
-        createdData.targetMaker = rule.sender
+        createdData.targetMaker = rule.sender.toLocaleLowerCase();
         createdData.transactionId = TransactionID(
           transfer.sender,
           sourceChain.internalId,
@@ -532,7 +532,7 @@ export default class BridgeTransactionBuilder {
         if (v1ResponseMaker) {
           for (const fakeMaker in v1ResponseMaker) {
             if (v1ResponseMaker[fakeMaker].includes(rule.sender.toLocaleLowerCase())) {
-              createdData.responseMaker.push(fakeMaker);
+              createdData.responseMaker.push(fakeMaker.toLocaleLowerCase());
             }
           }
         }
