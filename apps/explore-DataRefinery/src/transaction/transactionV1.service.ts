@@ -78,7 +78,7 @@ export class TransactionV1Service {
       }
     }
   }
-  @Cron('*/10 * * * * *')
+  @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '1-1') {

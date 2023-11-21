@@ -10,7 +10,7 @@ import { equals } from '@orbiter-finance/utils';
 export class MemoryMatchingService {
   @LoggerDecorator()
   private readonly logger: OrbiterLogger;
-  private maxTimeMS = 1000 * 60 * 10;
+  private maxTimeMS = 1000 * 60 * 20;
   private transfersID: { [key: string]: Set<string> } = {}; // version hash
   public transfers: TransfersAttributes[] = [];
   //

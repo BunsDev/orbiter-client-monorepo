@@ -70,7 +70,7 @@ export class TransactionV2Service {
       this.logger.info(`handleTransferBySourceTx result:${JSON.stringify(result)}`)
     }
   }
-  @Cron('*/10 * * * * *')
+  @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '2-1') {
