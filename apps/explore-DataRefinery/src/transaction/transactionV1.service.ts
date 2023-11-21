@@ -291,9 +291,9 @@ export class TransactionV1Service {
         await t1.commit();
         this.memoryMatchingService.removeTransferMatchCache(memoryBT.sourceId);
         this.memoryMatchingService.removeTransferMatchCache(transfer.hash);
-        this.logger.info(
-          `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
-        );
+        // this.logger.info(
+        //   `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
+        // );
         return {
           errno: 0,
           data: memoryBT,
