@@ -3,6 +3,9 @@
 # Default target
 .DEFAULT_GOAL := help
 
+SERVICE ?= default_server
+s ?= default_server
+
 # Docker Compose configuration
 COMPOSE_FILE := docker-compose.explore.yml
 DOCKER_COMPOSE := docker-compose
@@ -72,23 +75,23 @@ openapi: create-network ## Start the OpenApi application
 
 # Stop the Node.js application
 stop: ## Stop the Node.js application
-	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml stop
+	$(DOCKER_COMPOSE) -f docker-compose.$(s).yml stop
 
 # Show all running containers
 ps: ## Show all running containers
-	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml ps
+	$(DOCKER_COMPOSE) -f docker-compose.$(s).yml ps
 
 # Stop and remove Explore and its extra components containers
 down: ## Stop Explore and all its extra components
-	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml down
+	$(DOCKER_COMPOSE) -f docker-compose.$(s).yml down
 
 # Remove Explore and its extra components containers
 rm: ## Remove Explore and all its extra components containers
-	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml rm
+	$(DOCKER_COMPOSE) -f docker-compose.$(s).yml rm
 
 # Show images of Explore and its extra components
 images: ## Show images of Explore and all its extra components
-	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml images
+	$(DOCKER_COMPOSE) -f docker-compose.$(s).yml images
 
 # Push Docker image to Docker registry
 push: ## Push Docker image to the registry
@@ -105,7 +108,7 @@ prune: ## Remove Containers and Delete Volume Data
 
 # Show logs of Explore and its extra components
 logs: ## Show all Images logs
-	$(DOCKER_COMPOSE) -f docker-compose.$(SERVICE).yml logs -f --tail 500
+	$(DOCKER_COMPOSE) -f docker-compose.$(s).yml logs -f --tail 500
 
 docker-makefile:
 	curl -o Makefile.docker -L https://raw.githubusercontent.com/kakui-lau/Makefile/main/makefile.docker
