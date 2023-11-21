@@ -113,7 +113,12 @@ export class TransactionV1Service {
       },
     });
     for (const transfer of transfers) {
-      const result = await this.handleTransferByDestTx(transfer).catch((error) => {
+      const result = await this.handleTransferByDestTx(transfer).then(result=> {
+        if (result && result.errno!=0){
+          this.memoryMatchingService.addTransferMatchCache(transfer);
+        }
+        return result;
+      }).catch((error) => {
         this.logger.error(
           `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error`,
           error,
