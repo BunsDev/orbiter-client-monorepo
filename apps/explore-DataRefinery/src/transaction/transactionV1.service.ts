@@ -80,9 +80,7 @@ export class TransactionV1Service {
   }
   @Cron('*/10 * * * * *')
   async fromCacheMatch() {
-    const transfers = this.memoryMatchingService.transfers;
-    for (let i = transfers.length - 1; i >= 0; i--) {
-      const transfer = transfers[i];
+    for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '1-1') {
         const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
         if (matchTx) {
