@@ -84,15 +84,7 @@ export class TransactionV1Service {
       if (transfer.version === '1-1') {
         const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
         if (matchTx) {
-          this.logger.info(
-            `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash}`,
-          );
-          const result = await this.handleTransferByDestTx(transfer as any);
-          if (result && result.errno === 0) {
-            this.logger.info(
-              `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash} delete`,
-            );
-          }
+          this.handleTransferByDestTx(transfer as any);
         }
       }
     }

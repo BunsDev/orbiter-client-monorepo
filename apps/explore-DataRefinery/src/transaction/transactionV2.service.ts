@@ -76,15 +76,7 @@ export class TransactionV2Service {
       if (transfer.version === '2-1') {
         const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
         if (matchTx) {
-          this.logger.info(
-            `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash}`,
-          );
-          const result = await this.handleTransferByDestTx(transfer as any);
-          if (result && result.errno === 0) {
-            this.logger.info(
-              `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash} delete`,
-            );
-          }
+          this.handleTransferByDestTx(transfer as any);
         }
       }
     }
@@ -105,8 +97,8 @@ export class TransactionV2Service {
       },
     });
     for (const transfer of transfers) {
-      const result = await this.handleTransferByDestTx(transfer).then(result=> {
-        if (result && result.errno!=0){
+      const result = await this.handleTransferByDestTx(transfer).then(result => {
+        if (result && result.errno != 0) {
           this.memoryMatchingService.addTransferMatchCache(transfer);
         }
         return result;
@@ -120,14 +112,14 @@ export class TransactionV2Service {
     }
   }
 
-  errorBreakResult(errmsg: string,errno:number = 1):handleTransferReturn {
+  errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
     return {
       errno: errno,
       errmsg: errmsg
     }
   }
-  public async handleTransferBySourceTx(transfer: Transfers):Promise<handleTransferReturn> {
+  public async handleTransferBySourceTx(transfer: Transfers): Promise<handleTransferReturn> {
     if (transfer.status != 2) {
       return this.errorBreakResult(`validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`)
     }
@@ -283,7 +275,7 @@ export class TransactionV2Service {
       throw error;
     }
   }
-  public async calculateRebateAmount(sourceToken: V3TokenInterface, targetToken: V3TokenInterface, transfer: Transfers, rule: V3RuleInterface){
+  public async calculateRebateAmount(sourceToken: V3TokenInterface, targetToken: V3TokenInterface, transfer: Transfers, rule: V3RuleInterface) {
     const sourceChainId = +sourceToken.chainId;
     const targetChainId = +targetToken.chainId;
     if (equals(sourceChainId, +rule.chain0) && equals(targetChainId, +rule.chain1)) {
@@ -332,7 +324,7 @@ export class TransactionV2Service {
     }
     return null;
   }
-  public async handleTransferByDestTx(transfer: Transfers):Promise<handleTransferReturn> {
+  public async handleTransferByDestTx(transfer: Transfers): Promise<handleTransferReturn> {
     if (transfer.version != '2-1') {
       throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
     }
@@ -412,7 +404,7 @@ export class TransactionV2Service {
     const result = {
       errmsg: '',
       data: null,
-      errno:0
+      errno: 0
     }
     // db match
     const t2 = await this.sequelize.transaction();
@@ -482,8 +474,8 @@ export class TransactionV2Service {
               error,
             );
           });
-          result.errno = 1001;
-          result.errmsg = 'bridgeTransaction not found';
+        result.errno = 1001;
+        result.errmsg = 'bridgeTransaction not found';
       }
       await t2.commit();
       result.data = btTx;
@@ -505,7 +497,7 @@ export class TransactionV2Service {
     targetChainIdIndex: number;
   } {
     const code = this.getSecurityCode(value);
-    const dealerId = Number(code.substring(0,2));
+    const dealerId = Number(code.substring(0, 2));
     const ebcId = Number(code[2]);
     const targetChainIdIndex = Number(code.substring(3));
     return { dealerId, ebcId, targetChainIdIndex };
