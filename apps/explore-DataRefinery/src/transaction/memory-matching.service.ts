@@ -93,7 +93,7 @@ export class MemoryMatchingService {
         }
         if (!this.transfersID[instance.version].has(instance.hash)) {
           this.transfersID[instance.version].add(instance.hash);
-          this.transfers.unshift(instance);
+          this.transfers.push(instance);
         }
         resove(true);
       } catch (error) {
@@ -121,7 +121,7 @@ export class MemoryMatchingService {
           !this.bridgeTransactionsID[instance.version].has(instance.sourceId)
         ) {
           this.bridgeTransactionsID[instance.version].add(instance.sourceId);
-          this.bridgeTransactions.unshift(instance);
+          this.bridgeTransactions.push(instance);
         }
         resove(true);
       } catch (error) {
