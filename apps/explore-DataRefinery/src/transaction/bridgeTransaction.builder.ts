@@ -517,7 +517,9 @@ export default class BridgeTransactionBuilder {
             createdData.tradeFee = amountToSend.tradeFee;
           }
         }
-
+        if (+createdData.targetAmount<=0) {
+          throw new ValidSourceTxError(TransferOpStatus.AMOUNT_TOO_SMALL, 'The payment amount is too small')
+        }
         createdData.targetMaker = rule.sender.toLocaleLowerCase();
         createdData.transactionId = TransactionID(
           transfer.sender,

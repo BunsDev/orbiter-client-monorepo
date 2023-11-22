@@ -73,7 +73,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
       );
       if (receiverTransfers.length > 0) {
         const newTransfers = await this.filterTransfers(receiverTransfers);
-        const result = await this.processTransaction(newTransfers);
+        await this.processTransaction(newTransfers);
         transfers.push(...newTransfers);
         receiverPosition = this.generateLastScannedPositionData(newTransfers);
       }
@@ -93,9 +93,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
     transfers: TransferAmountTransaction[],
   ): string {
     const transfer = transfers[transfers.length - 1];
-    return `${transfer.blockNumber}_${dayjs(transfer.timestamp).format(
-      'YYYY-MM-DD HH:mm:ss',
-    )}`;
+    return `${transfer.blockNumber}_${dayjs(transfer.timestamp).toISOString()}`;
   }
   public timestampToNonce(timestamp: number | string) {
     let nonce = 0;
@@ -181,7 +179,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
         );
         const transferTx: TransferAmountTransaction = {
           chainId: String(this.chainId),
-          hash: `${item.transaction_id}`,
+          hash: `imx:${item.transaction_id}`,
           blockNumber: item.transaction_id,
           sender: item.user,
           receiver: item.receiver,

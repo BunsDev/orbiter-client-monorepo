@@ -78,8 +78,18 @@ export class TransactionV1Service {
       }
     }
   }
-
-  @Cron('0 */7 * * * *')
+  @Cron('*/5 * * * * *')
+  async fromCacheMatch() {
+    for (const transfer of this.memoryMatchingService.transfers) {
+      if (transfer.version === '1-1') {
+        const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
+        if (matchTx) {
+          this.handleTransferByDestTx(transfer as any);
+        }
+      }
+    }
+  }
+  @Cron('0 */10 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -95,7 +105,12 @@ export class TransactionV1Service {
       },
     });
     for (const transfer of transfers) {
-      const result = await this.handleTransferByDestTx(transfer).catch((error) => {
+      const result = await this.handleTransferByDestTx(transfer).then(result=> {
+        if (result && result.errno!=0){
+          this.memoryMatchingService.addTransferMatchCache(transfer);
+        }
+        return result;
+      }).catch((error) => {
         this.logger.error(
           `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error`,
           error,
@@ -106,10 +121,10 @@ export class TransactionV1Service {
       }
     }
   }
-  errorBreakResult(errmsg: string): handleTransferReturn {
+  errorBreakResult(errmsg: string, errno:number = 1): handleTransferReturn {
     this.logger.error(errmsg);
     return {
-      errno: 1000,
+      errno: errno,
       errmsg: errmsg
     }
   }
@@ -125,7 +140,7 @@ export class TransactionV1Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`)
+      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`, sourceBT.status)
     }
     let createdData: BridgeTransactionAttributes
     try {
@@ -151,12 +166,10 @@ export class TransactionV1Service {
     }
 
     const t = await this.sequelize.transaction();
-
     try {
       if (createdData.targetAddress.length >= 100) {
         return this.errorBreakResult(`${transfer.hash} There is an issue with the transaction format`)
       }
-
       if (sourceBT && sourceBT.id) {
         sourceBT.targetChain = createdData.targetChain;
         await sourceBT.update(createdData, {
@@ -174,7 +187,7 @@ export class TransactionV1Service {
           throw new Error(`${transfer.hash} Create Bridge Transaction Fail`);
         }
         createdData.id = createRow.id
-        this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
+        // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.memoryMatchingService
           .addBridgeTransaction(createRow.toJSON())
           .catch((error) => {
@@ -201,7 +214,6 @@ export class TransactionV1Service {
       await t.commit();
       return { errno: 0, data: createdData }
     } catch (error) {
-      console.error(error);
       this.logger.error(
         `handleTransferBySourceTx ${transfer.hash} error`,
         error,
@@ -238,8 +250,8 @@ export class TransactionV1Service {
               id: memoryBT.id,
               status: [0, 97, 98],
               sourceTime: {
-                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
                 [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
+                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
               }
             },
             transaction: t1,
@@ -273,12 +285,13 @@ export class TransactionV1Service {
         await t1.commit();
         this.memoryMatchingService.removeTransferMatchCache(memoryBT.sourceId);
         this.memoryMatchingService.removeTransferMatchCache(transfer.hash);
-        this.logger.info(
-          `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
-        );
+        // this.logger.info(
+        //   `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
+        // );
         return {
           errno: 0,
-          data: memoryBT
+          data: memoryBT,
+          errmsg: 'memory success'
         };
       }
     } catch (error) {
@@ -290,6 +303,11 @@ export class TransactionV1Service {
     }
 
     // db match
+    const result = {
+      errmsg: '',
+      data: null,
+      errno:0
+    }
     const t2 = await this.sequelize.transaction();
     try {
       let btTx = await this.bridgeTransactionModel.findOne({
@@ -343,11 +361,10 @@ export class TransactionV1Service {
             transaction: t2,
           },
         );
-        this.logger.info(
-          `match success from db ${btTx.sourceId}  /  ${btTx.targetId}`,
-        );
         this.memoryMatchingService.removeTransferMatchCache(btTx.sourceId);
         this.memoryMatchingService.removeTransferMatchCache(btTx.targetId);
+        result.errno = 0;
+        result.errmsg = 'success';
       } else {
         this.memoryMatchingService
           .addTransferMatchCache(transfer)
@@ -357,12 +374,12 @@ export class TransactionV1Service {
               error,
             );
           });
+          result.errno = 1001;
+          result.errmsg = 'bridgeTransaction not found';
       }
       await t2.commit();
-      return {
-        errno: 0,
-        data: btTx
-      }
+      result.data = btTx;
+      return result
     } catch (error) {
       t2 && (await t2.rollback());
       throw error;

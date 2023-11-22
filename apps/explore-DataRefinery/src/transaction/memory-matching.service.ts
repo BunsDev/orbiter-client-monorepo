@@ -2,13 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { BridgeTransactionAttributes, TransfersAttributes } from '@orbiter-finance/seq-models';
 import dayjs from 'dayjs';
+import { OrbiterLogger } from '@orbiter-finance/utils';
+import { LoggerDecorator } from '@orbiter-finance/utils';
 import { equals } from '@orbiter-finance/utils';
 
 @Injectable()
 export class MemoryMatchingService {
-  private maxTimeMS = 1000 * 60 * 10;
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
+  private maxTimeMS = 1000 * 60 * 20;
   private transfersID: { [key: string]: Set<string> } = {}; // version hash
-  private transfers: TransfersAttributes[] = [];
+  public transfers: TransfersAttributes[] = [];
   //
   private bridgeTransactionsID: { [key: string]: Set<string> } = {}; // version
   private bridgeTransactions: BridgeTransactionAttributes[] = [];
@@ -22,17 +26,6 @@ export class MemoryMatchingService {
         if (this.transfersID[transfer.version]) {
           this.transfersID[transfer.version].delete(transfer.hash);
         }
-      } else {
-        //   if (transfer.version === '1-1') {
-        //     const matchTx = this.matchV1GetBridgeTransactions(transfer);
-        //     if (matchTx) {
-        //       this.logger.info(
-        //         `for match tx: source hash:${matchTx.sourceId}，dest hash:${
-        //           transfer.hash
-        //         }, ${JSON.stringify(matchTx)}`,
-        //       );
-        //     }
-        //   }
       }
     }
     for (let i = this.bridgeTransactions.length - 1; i >= 0; i--) {
@@ -57,8 +50,7 @@ export class MemoryMatchingService {
     // }
     const matchTx = this.bridgeTransactions.find((bt) => {
       const responseMaker: string[] = bt.responseMaker || [];
-
-      if(['loopring','loopring_test'].includes(bt.targetChain)) {
+      if (['loopring', 'loopring_test'].includes(bt.targetChain)) {
         return (
           transfer?.calldata && (transfer as any).calldata.length &&
           equals(bt.targetNonce, transfer.calldata[0]) &&
@@ -66,10 +58,8 @@ export class MemoryMatchingService {
           equals(bt.targetAddress, transfer.receiver) &&
           equals(bt.targetChain, transfer.chainId) &&
           equals(bt.targetAmount, transfer.amount) &&
-          dayjs(transfer.timestamp).valueOf() > dayjs(bt.sourceTime).valueOf() &&
-          responseMaker.includes(transfer.sender) &&
-
-          bt.version === `${transfer.version.split('-')[0]}-0`
+          dayjs(transfer.timestamp).valueOf() > (dayjs(bt.sourceTime).valueOf() - 1000 * 60) &&
+          responseMaker.includes(transfer.sender) && bt.version === `${transfer.version.split('-')[0]}-0`
         )
       }
       return (
@@ -77,9 +67,8 @@ export class MemoryMatchingService {
         equals(bt.targetAddress, transfer.receiver) &&
         equals(bt.targetChain, transfer.chainId) &&
         equals(bt.targetAmount, transfer.amount) &&
-        dayjs(transfer.timestamp).valueOf() > dayjs(bt.sourceTime).valueOf() &&
+        dayjs(transfer.timestamp).valueOf() > (dayjs(bt.sourceTime).valueOf() - 1000 * 60) &&
         responseMaker.includes(transfer.sender) &&
-
         bt.version === `${transfer.version.split('-')[0]}-0`
       );
     });
@@ -104,7 +93,7 @@ export class MemoryMatchingService {
         }
         if (!this.transfersID[instance.version].has(instance.hash)) {
           this.transfersID[instance.version].add(instance.hash);
-          this.transfers.unshift(instance);
+          this.transfers.push(instance);
         }
         resove(true);
       } catch (error) {
@@ -132,7 +121,7 @@ export class MemoryMatchingService {
           !this.bridgeTransactionsID[instance.version].has(instance.sourceId)
         ) {
           this.bridgeTransactionsID[instance.version].add(instance.sourceId);
-          this.bridgeTransactions.unshift(instance);
+          this.bridgeTransactions.push(instance);
         }
         resove(true);
       } catch (error) {
