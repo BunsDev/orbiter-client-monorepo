@@ -49,7 +49,7 @@ export class TransactionV2Service {
   async matchScheduleUserSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
-      order: [['id', 'asc']],
+      order: [['id', 'desc']],
       limit: 1000,
       where: {
         status: 2,
@@ -89,7 +89,7 @@ export class TransactionV2Service {
       }
     }
   }
-  @Cron('0 */6 * * * *')
+  @Cron('0 */10 * * * *')
   async matchScheduleMakerSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
