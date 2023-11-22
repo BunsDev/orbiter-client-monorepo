@@ -1,24 +1,38 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { equals } from '@orbiter-finance/utils';
-import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
+import {
+  BridgeTransactionAttributes,
+  BridgeTransaction as BridgeTransactionModel,
+  Transfers as TransfersModel,
+  TransferOpStatus,
+} from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
-import { ChainConfigService, ENVConfigService, MakerV1RuleService, Token } from '@orbiter-finance/config';
+import {
+  ChainConfigService,
+  ENVConfigService,
+  MakerV1RuleService,
+  Token,
+} from '@orbiter-finance/config';
 import { Op } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
 import { Sequelize } from 'sequelize-typescript';
 import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
-import { utils } from 'ethers'
-import { validateAndParseAddress } from 'starknet'
-import BridgeTransactionBuilder from './bridgeTransaction.builder'
-import { ValidSourceTxError, decodeV1SwapData, addressPadStart } from '../utils';
-import { MessageService } from '@orbiter-finance/rabbit-mq'
+import { utils } from 'ethers';
+import { validateAndParseAddress } from 'starknet';
+import BridgeTransactionBuilder from './bridgeTransaction.builder';
+import {
+  ValidSourceTxError,
+  decodeV1SwapData,
+  addressPadStart,
+} from '../utils';
+import { MessageService } from '@orbiter-finance/rabbit-mq';
 export interface handleTransferReturn {
   errno: number;
   errmsg?: string;
-  data?: any
+  data?: any;
 }
 @Injectable()
 export class TransactionV1Service {
@@ -42,47 +56,61 @@ export class TransactionV1Service {
         this.matchSenderScheduleTask();
       })
       .catch((error) => {
-        this.logger.error(
-          `constructor matchScheduleTask error `,
-          error,
-        );
+        this.logger.error(`constructor matchScheduleTask error `, error);
       });
   }
   @Cron('0 */5 * * * *')
   async matchScheduleTask() {
-    const transfers = await this.transfersModel.findAll({
-      raw: true,
-      order: [['id', 'desc']],
-      limit: 500,
-      where: {
-        status: 2,
-        opStatus: 0,
-        version: '1-0',
-        timestamp: {
-          [Op.gte]: dayjs().subtract(24, 'hour').toISOString(),
-        },
-        // nonce: {
-        //   [Op.lt]: 9000
-        // }
+    const where: any = {
+      status: 2,
+      opStatus: 0,
+      version: '1-0',
+      timestamp: {
+        [Op.gte]: dayjs().subtract(24, 'hour').toISOString(),
       },
-    });
-    for (const transfer of transfers) {
-      const result = await this.handleTransferBySourceTx(transfer).catch((error) => {
-        this.logger.error(
-          `matchScheduleTask handleTransferBySourceTx ${transfer.hash} error`,
-          error,
-        );
+    };
+    let done = false;
+    const limit = 500
+    do {
+      const transfers = await this.transfersModel.findAll({
+        raw: true,
+        order: [['id', 'desc']],
+        limit: limit,
+        where: where,
       });
-      if (result && result.errno === 0 && +this.envConfigService.get('enableDataSync') === 1) {
-        await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
+      if (transfers.length >= limit) {
+        where.id = { [Op.lt]: transfers[transfers.length - 1].id }
+      } else {
+        done = true
       }
-    }
+      for (const transfer of transfers) {
+        const result = await this.handleTransferBySourceTx(transfer).catch(
+          (error) => {
+            this.logger.error(
+              `matchScheduleTask handleTransferBySourceTx ${transfer.hash} error`,
+              error,
+            );
+          },
+        );
+        if (
+          result &&
+          result.errno === 0 &&
+          +this.envConfigService.get('enableDataSync') === 1
+        ) {
+          await this.messageService.sendMessageToDataSynchronization({
+            type: '2',
+            data: transfer,
+          });
+        }
+      }
+    } while (!done);
   }
   @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '1-1') {
-        const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
+        const matchTx =
+          this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
         if (matchTx) {
           this.logger.info(
             `memory match success: source hash:${matchTx.sourceId}，dest hash:${transfer.hash}`,
@@ -99,46 +127,69 @@ export class TransactionV1Service {
   }
   @Cron('0 */6 * * * *')
   async matchSenderScheduleTask() {
-    const transfers = await this.transfersModel.findAll({
-      raw: true,
-      order: [['id', 'asc']],
-      limit: 1000,
-      where: {
-        status: 2,
-        opStatus: 0,
-        version: '1-1',
-        timestamp: {
-          [Op.gte]: dayjs().subtract(24, 'hour').toISOString(),
-        },
+    const where: any = {
+      status: 2,
+      opStatus: 0,
+      version: '1-1',
+      timestamp: {
+        [Op.gte]: dayjs().subtract(24, 'hour').toISOString(),
       },
-    });
-    for (const transfer of transfers) {
-      const result = await this.handleTransferByDestTx(transfer).then(result=> {
-        if (result && result.errno!=0){
-          this.memoryMatchingService.addTransferMatchCache(transfer);
-        }
-        return result;
-      }).catch((error) => {
-        this.logger.error(
-          `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error`,
-          error,
-        );
-      });
-      if (result && result.errno === 0 && +this.envConfigService.get('enableDataSync') === 1) {
-        await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
-      }
     }
+    let done = false;
+    const limit = 1000;
+    do {
+      const transfers = await this.transfersModel.findAll({
+        raw: true,
+        order: [['id', 'asc']],
+        limit: limit,
+        where: where
+      });
+      if (transfers.length >= limit) {
+        where.id = { [Op.gt]: transfers[transfers.length - 1].id }
+      } else {
+        done = true
+      }
+      for (const transfer of transfers) {
+        const result = await this.handleTransferByDestTx(transfer)
+          .then((result) => {
+            if (result && result.errno != 0) {
+              this.memoryMatchingService.addTransferMatchCache(transfer);
+            }
+            return result;
+          })
+          .catch((error) => {
+            this.logger.error(
+              `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error`,
+              error,
+            );
+          });
+        if (
+          result &&
+          result.errno === 0 &&
+          +this.envConfigService.get('enableDataSync') === 1
+        ) {
+          await this.messageService.sendMessageToDataSynchronization({
+            type: '2',
+            data: transfer,
+          });
+        }
+      }
+    } while (!done);
   }
-  errorBreakResult(errmsg: string, errno:number = 1): handleTransferReturn {
+  errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
     return {
       errno: errno,
-      errmsg: errmsg
-    }
+      errmsg: errmsg,
+    };
   }
-  public async handleTransferBySourceTx(transfer: TransfersModel): Promise<handleTransferReturn> {
+  public async handleTransferBySourceTx(
+    transfer: TransfersModel,
+  ): Promise<handleTransferReturn> {
     if (transfer.status != 2) {
-      return this.errorBreakResult(`validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`)
+      return this.errorBreakResult(
+        `validSourceTxInfo fail ${transfer.hash} Incorrect status ${transfer.status}`,
+      );
     }
     const sourceBT = await this.bridgeTransactionModel.findOne({
       attributes: ['id', 'status', 'targetChain'],
@@ -148,14 +199,19 @@ export class TransactionV1Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`, sourceBT.status)
+      return this.errorBreakResult(
+        `${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`,
+        sourceBT.status,
+      );
     }
-    let createdData: BridgeTransactionAttributes
+    let createdData: BridgeTransactionAttributes;
     try {
-      createdData = await this.bridgeTransactionBuilder.build(transfer)
+      createdData = await this.bridgeTransactionBuilder.build(transfer);
     } catch (error) {
       if (error instanceof ValidSourceTxError) {
-        this.logger.error(`ValidSourceTxError hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`);
+        this.logger.error(
+          `ValidSourceTxError hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`,
+        );
         const r = await this.transfersModel.update(
           {
             opStatus: error.opStatus,
@@ -166,10 +222,14 @@ export class TransactionV1Service {
             },
           },
         );
-        return this.errorBreakResult(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
+        return this.errorBreakResult(
+          `ValidSourceTxError update transferId: ${
+            transfer.id
+          } result: ${JSON.stringify(r)}`,
+        );
       } else {
-        this.logger.error(`ValidSourceTxError throw`, error)
-        throw error
+        this.logger.error(`ValidSourceTxError throw`, error);
+        throw error;
       }
     }
 
@@ -177,7 +237,9 @@ export class TransactionV1Service {
 
     try {
       if (createdData.targetAddress.length >= 100) {
-        return this.errorBreakResult(`${transfer.hash} There is an issue with the transaction format`)
+        return this.errorBreakResult(
+          `${transfer.hash} There is an issue with the transaction format`,
+        );
       }
 
       if (sourceBT && sourceBT.id) {
@@ -185,7 +247,7 @@ export class TransactionV1Service {
         await sourceBT.update(createdData, {
           where: { id: sourceBT.id },
           transaction: t,
-        })
+        });
       } else {
         const createRow = await this.bridgeTransactionModel.create(
           createdData,
@@ -196,7 +258,7 @@ export class TransactionV1Service {
         if (!createRow || !createRow.id) {
           throw new Error(`${transfer.hash} Create Bridge Transaction Fail`);
         }
-        createdData.id = createRow.id
+        createdData.id = createRow.id;
         // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.memoryMatchingService
           .addBridgeTransaction(createRow.toJSON())
@@ -222,7 +284,7 @@ export class TransactionV1Service {
         );
       }
       await t.commit();
-      return { errno: 0, data: createdData }
+      return { errno: 0, data: createdData };
     } catch (error) {
       console.error(error);
       this.logger.error(
@@ -234,9 +296,13 @@ export class TransactionV1Service {
     }
   }
 
-  public async handleTransferByDestTx(transfer: TransfersModel): Promise<handleTransferReturn> {
+  public async handleTransferByDestTx(
+    transfer: TransfersModel,
+  ): Promise<handleTransferReturn> {
     if (transfer.version != '1-1') {
-      throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
+      throw new Error(
+        `handleTransferByDestTx ${transfer.hash} version not 2-1`,
+      );
     }
     let t1;
     try {
@@ -253,7 +319,7 @@ export class TransactionV1Service {
             targetFee: transfer.feeAmount,
             targetFeeSymbol: transfer.feeToken,
             targetNonce: transfer.nonce,
-            targetMaker: transfer.sender
+            targetMaker: transfer.sender,
           },
           {
             limit: 1,
@@ -261,9 +327,13 @@ export class TransactionV1Service {
               id: memoryBT.id,
               status: [0, 97, 98],
               sourceTime: {
-                [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
-                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
-              }
+                [Op.gt]: dayjs(transfer.timestamp)
+                  .subtract(120, 'minute')
+                  .toISOString(),
+                [Op.lt]: dayjs(transfer.timestamp)
+                  .add(5, 'minute')
+                  .toISOString(),
+              },
             },
             transaction: t1,
           },
@@ -302,7 +372,7 @@ export class TransactionV1Service {
         return {
           errno: 0,
           data: memoryBT,
-          errmsg: 'memory success'
+          errmsg: 'memory success',
         };
       }
     } catch (error) {
@@ -317,8 +387,8 @@ export class TransactionV1Service {
     const result = {
       errmsg: '',
       data: null,
-      errno:0
-    }
+      errno: 0,
+    };
     const t2 = await this.sequelize.transaction();
     try {
       let btTx = await this.bridgeTransactionModel.findOne({
@@ -388,12 +458,12 @@ export class TransactionV1Service {
               error,
             );
           });
-          result.errno = 1001;
-          result.errmsg = 'bridgeTransaction not found';
+        result.errno = 1001;
+        result.errmsg = 'bridgeTransaction not found';
       }
       await t2.commit();
       result.data = btTx;
-      return result
+      return result;
     } catch (error) {
       t2 && (await t2.rollback());
       throw error;
