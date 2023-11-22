@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { BigIntToString } from '@orbiter-finance/utils';
 import { TransferAmountTransaction } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
-import { Transfers as TransfersModel } from '@orbiter-finance/seq-models';
+import { Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { TransactionV1Service } from './transactionV1.service';
@@ -11,6 +11,7 @@ import { MakerService } from '../maker/maker.service'
 import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
 import { ENVConfigService } from '@orbiter-finance/config';
+
 @Injectable()
 export class TransactionService {
   @LoggerDecorator()
@@ -54,26 +55,7 @@ export class TransactionService {
         const txTime = dayjs(transfer.timestamp).toDate(); // TODO: time
 
         // valid v1 or v2
-        let versionStr = null;
-        if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver) && await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
-          versionStr = '0-0';
-        } else if (await this.makerService.isV2WhiteWalletAddress(transfer.receiver) && await this.makerService.isV2WhiteWalletAddress(transfer.sender)) {
-          versionStr = '0-0';
-        } else if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver)) {
-          versionStr = '1-0';
-        } else if (await this.makerService.isV2WhiteWalletAddress(transfer.receiver)) {
-          versionStr = '2-0';
-        } else {
-          // maker out
-          if (await this.makerService.isV2WhiteWalletAddress(transfer.sender)) {
-            versionStr = '2-1';
-          } else if (await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
-            versionStr = '1-1';
-          }
-        }
-        if (versionStr) {
-          transfer.version = versionStr;
-        }
+
         const upsertData: any = {
           hash: transfer.hash,
           chainId: transfer.chainId,
@@ -93,14 +75,37 @@ export class TransactionService {
           contract: contractAddr || null,
           selector: transfer.selector,
           signature: transfer.signature,
-          version: transfer.version,
+          version: "",
           feeToken: transfer.feeToken,
           transactionIndex: transfer.transactionIndex,
           syncStatus: 0,
         }
-        if (transfer.sender === transfer.receiver) {
-          upsertData.opStatus = 3;
+        let versionStr = null;
+        const ignoreAddress = this.envConfig.get("IgnoreAddress",'').toLocaleLowerCase().split(',');
+        if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
+          upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
+        } else {
+          if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver) && await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
+            upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
+          } else if (await this.makerService.isV2WhiteWalletAddress(transfer.receiver) && await this.makerService.isV2WhiteWalletAddress(transfer.sender)) {
+            upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
+          } else if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver)) {
+            versionStr = '1-0';
+          } else if (await this.makerService.isV2WhiteWalletAddress(transfer.receiver)) {
+            versionStr = '2-0';
+          } else {
+            // maker out
+            if (await this.makerService.isV2WhiteWalletAddress(transfer.sender)) {
+              versionStr = '2-1';
+            } else if (await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
+              versionStr = '1-1';
+            }
+          }
+          if (transfer.sender === transfer.receiver) {
+            upsertData.opStatus = TransferOpStatus.VALID;
+          }
         }
+        upsertData.version = versionStr;
         await this.transfersModel
           .upsert(
             upsertData,
@@ -167,8 +172,8 @@ export class TransactionService {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
- 
-      if (['2-0'].includes(payload.version) && result && result.errno === 0 && this.envConfig.get("enableTransfer") ) {
+
+      if (['2-0'].includes(payload.version) && result && result.errno === 0 && this.envConfig.get("enableTransfer")) {
         this.messageService.sendTransferToMakerClient(result.data)
       }
       return result;

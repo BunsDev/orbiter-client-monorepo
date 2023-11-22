@@ -45,6 +45,7 @@ export enum TransferOpStatus {
   RULE_NOT_FOUND = 4,
   NONCE_EXCEED_MAXIMUM = 5,
   AMOUNT_TOO_SMALL = 6,
+  BALANCED_LIQUIDITY = 10,
   MATCHED = 99,
 }
 
