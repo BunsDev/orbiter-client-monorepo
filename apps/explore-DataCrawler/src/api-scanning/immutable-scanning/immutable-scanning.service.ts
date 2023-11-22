@@ -181,7 +181,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
         );
         const transferTx: TransferAmountTransaction = {
           chainId: String(this.chainId),
-          hash: `${item.transaction_id}`,
+          hash: `imx:${item.transaction_id}`,
           blockNumber: item.transaction_id,
           sender: item.user,
           receiver: item.receiver,
