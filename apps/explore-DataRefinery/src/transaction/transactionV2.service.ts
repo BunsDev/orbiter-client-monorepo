@@ -120,10 +120,10 @@ export class TransactionV2Service {
     }
   }
 
-  errorBreakResult(errmsg: string):handleTransferReturn {
+  errorBreakResult(errmsg: string,errno:number = 1):handleTransferReturn {
     this.logger.error(errmsg);
     return {
-      errno: 1000,
+      errno: errno,
       errmsg: errmsg
     }
   }
@@ -138,7 +138,7 @@ export class TransactionV2Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`)
+      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`, sourceBT.status)
     }
     const createdData: BridgeTransactionAttributes = {
       sourceId: transfer.hash,

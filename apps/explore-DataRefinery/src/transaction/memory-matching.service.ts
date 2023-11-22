@@ -50,8 +50,7 @@ export class MemoryMatchingService {
     // }
     const matchTx = this.bridgeTransactions.find((bt) => {
       const responseMaker: string[] = bt.responseMaker || [];
-
-      if(['loopring','loopring_test'].includes(bt.targetChain)) {
+      if (['loopring', 'loopring_test'].includes(bt.targetChain)) {
         return (
           transfer?.calldata && (transfer as any).calldata.length &&
           equals(bt.targetNonce, transfer.calldata[0]) &&
@@ -59,10 +58,8 @@ export class MemoryMatchingService {
           equals(bt.targetAddress, transfer.receiver) &&
           equals(bt.targetChain, transfer.chainId) &&
           equals(bt.targetAmount, transfer.amount) &&
-          dayjs(transfer.timestamp).valueOf() > dayjs(bt.sourceTime).valueOf() &&
-          responseMaker.includes(transfer.sender) &&
-
-          bt.version === `${transfer.version.split('-')[0]}-0`
+          dayjs(transfer.timestamp).valueOf() > (dayjs(bt.sourceTime).valueOf() - 1000 * 60) &&
+          responseMaker.includes(transfer.sender) && bt.version === `${transfer.version.split('-')[0]}-0`
         )
       }
       return (
@@ -70,9 +67,8 @@ export class MemoryMatchingService {
         equals(bt.targetAddress, transfer.receiver) &&
         equals(bt.targetChain, transfer.chainId) &&
         equals(bt.targetAmount, transfer.amount) &&
-        dayjs(transfer.timestamp).valueOf() > dayjs(bt.sourceTime).valueOf() &&
+        dayjs(transfer.timestamp).valueOf() > (dayjs(bt.sourceTime).valueOf() - 1000 * 60) &&
         responseMaker.includes(transfer.sender) &&
-
         bt.version === `${transfer.version.split('-')[0]}-0`
       );
     });

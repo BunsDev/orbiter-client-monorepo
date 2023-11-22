@@ -129,10 +129,10 @@ export class TransactionV1Service {
       }
     }
   }
-  errorBreakResult(errmsg: string): handleTransferReturn {
+  errorBreakResult(errmsg: string, errno:number = 1): handleTransferReturn {
     this.logger.error(errmsg);
     return {
-      errno: 1000,
+      errno: errno,
       errmsg: errmsg
     }
   }
@@ -148,7 +148,7 @@ export class TransactionV1Service {
       },
     });
     if (sourceBT && sourceBT.status >= 90) {
-      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`)
+      return this.errorBreakResult(`${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`, sourceBT.status)
     }
     let createdData: BridgeTransactionAttributes
     try {
@@ -261,8 +261,8 @@ export class TransactionV1Service {
               id: memoryBT.id,
               status: [0, 97, 98],
               sourceTime: {
-                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
                 [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
+                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
               }
             },
             transaction: t1,

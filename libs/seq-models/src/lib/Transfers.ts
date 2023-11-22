@@ -44,6 +44,7 @@ export enum TransferOpStatus {
   TARGET_CHAIN_OR_TOKEN_NOT_FOUND = 3,
   RULE_NOT_FOUND = 4,
   NONCE_EXCEED_MAXIMUM = 5,
+  AMOUNT_TOO_SMALL = 6,
   MATCHED = 99,
 }
 
