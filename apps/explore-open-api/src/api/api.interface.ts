@@ -26,6 +26,7 @@ export interface ITradingPair {
   tradingFee: string;
   dealerId?: string;
   ebcId?: string;
+  originWithholdingFee?: string;
   fromChain: {
     id: string;
     networkId: string;
