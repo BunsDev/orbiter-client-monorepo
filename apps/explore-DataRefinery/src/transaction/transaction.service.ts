@@ -81,7 +81,7 @@ export class TransactionService {
           syncStatus: 0,
         }
         let versionStr = null;
-        const ignoreAddress = this.envConfig.get("IgnoreAddress",'').toLocaleLowerCase().split(',');
+        const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');
         if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
           upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
         } else {
@@ -140,14 +140,12 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
-        // this.logger.info(`enableDataSync: ${this.envConfig.get("enableDataSync")}`)
         if (+this.envConfig.get("enableDataSync") == 1) {
           // TAG:data-synchronization
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
-        // this.logger.info(`enableDataSync: ${this.envConfig.get("enableDataSync")}`)
         if (+this.envConfig.get("enableDataSync") == 1) {
           // TAG:data-synchronization
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
@@ -155,7 +153,7 @@ export class TransactionService {
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystem(result.data)
         }
-   
+
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
@@ -168,10 +166,10 @@ export class TransactionService {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
-      if (result && result.errno!=0) {
-        this.logger.info(`${payload.hash} executeMatch result: errno ${result.errno}, errmsg: ${result.errmsg}`);
+      if (result && result.errno != 0) {
+        this.logger.info(`${payload.hash} ${payload.version} executeMatch result: errno ${result.errno}, errmsg: ${result.errmsg}`);
       } else {
-        this.logger.error(`${payload.hash} executeMatch result: No result returned`);
+        this.logger.error(`${payload.hash} ${payload.version} executeMatch result: No result returned`);
       }
       if (['2-0'].includes(payload.version) && result && result.errno === 0 && this.envConfig.get("enableTransfer")) {
         this.messageService.sendTransferToMakerClient(result.data)

@@ -166,12 +166,10 @@ export class TransactionV1Service {
     }
 
     const t = await this.sequelize.transaction();
-
     try {
       if (createdData.targetAddress.length >= 100) {
         return this.errorBreakResult(`${transfer.hash} There is an issue with the transaction format`)
       }
-
       if (sourceBT && sourceBT.id) {
         sourceBT.targetChain = createdData.targetChain;
         await sourceBT.update(createdData, {
@@ -216,7 +214,6 @@ export class TransactionV1Service {
       await t.commit();
       return { errno: 0, data: createdData }
     } catch (error) {
-      console.error(error);
       this.logger.error(
         `handleTransferBySourceTx ${transfer.hash} error`,
         error,
