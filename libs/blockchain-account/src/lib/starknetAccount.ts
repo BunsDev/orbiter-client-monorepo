@@ -84,9 +84,16 @@ export class StarknetAccount extends OrbiterAccount {
     const invocationList: any[] = [];
     for (let i = 0; i < tos.length; i++) {
       const recipient = tos[i];
+      if (new RegExp(/^0x[a-fA-F0-9]{40}$/).test(recipient)) {
+        this.logger.error(`Receive address format error: ${recipient}`);
+        continue;
+      }
       const amount = String(values[i]);
       const ethContract = new Contract(StarknetERC20, token, provider);
       invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
+    }
+    if (!invocationList.length) {
+      throw new TransactionSendBeforeError('Not Invocation Length');
     }
     const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
     if (!nonce && nonce != 0) {
