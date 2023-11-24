@@ -173,7 +173,7 @@ export class TransactionService {
       } else {
         this.logger.error(`${payload.hash} ${payload.version} executeMatch result: No result returned`);
       }
-     
+
       if (['2-0'].includes(payload.version) && result && result.errno === 0 && this.envConfig.get("enableTransfer")) {
         this.messageService.sendTransferToMakerClient(result.data)
       }
