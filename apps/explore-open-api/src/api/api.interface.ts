@@ -24,12 +24,12 @@ export interface ITradingPair {
   sender: string;
   gasFee: string;
   tradingFee: string;
-  slippage: string;
+  slippage: number;
   dealerId?: string;
   ebcId?: string;
   originWithholdingFee?: string;
   fromChain: {
-    id: string;
+    id: number;
     networkId: string;
     chainId: string;
     name: string;
@@ -40,7 +40,7 @@ export interface ITradingPair {
     minPrice: number;
   };
   toChain: {
-    id: string;
+    id: number;
     networkId: string;
     chainId: string;
     name: string;

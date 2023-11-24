@@ -75,10 +75,10 @@ export class V2Schedule {
         sender: String(rule.sender).toLowerCase(),
         gasFee: String(rule.gasFee),
         tradingFee: String(rule.tradingFee),
-        slippage: String(rule.slippage || ''),
+        slippage: Number(rule.slippage || 50),
         originWithholdingFee: String(rule.originWithholdingFee || ''),
         fromChain: {
-          id: fromChainId,
+          id: +fromChainId,
           chainId: fromChainInfo.chainId,
           networkId: fromChainInfo.networkId,
           name: fromChainInfo.name,
@@ -89,7 +89,7 @@ export class V2Schedule {
           minPrice: rule.minPrice
         },
         toChain: {
-          id: toChainId,
+          id: +toChainId,
           chainId: toChainInfo.chainId,
           networkId: toChainInfo.networkId,
           name: toChainInfo.name,
