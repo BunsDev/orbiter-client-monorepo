@@ -75,6 +75,7 @@ export class V2Schedule {
         sender: String(rule.sender).toLowerCase(),
         gasFee: String(rule.gasFee),
         tradingFee: String(rule.tradingFee),
+        slippage: String(rule.slippage || ''),
         originWithholdingFee: String(rule.originWithholdingFee || ''),
         fromChain: {
           id: fromChainId,

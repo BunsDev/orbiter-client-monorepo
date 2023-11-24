@@ -24,6 +24,7 @@ export interface ITradingPair {
   sender: string;
   gasFee: string;
   tradingFee: string;
+  slippage: string;
   dealerId?: string;
   ebcId?: string;
   originWithholdingFee?: string;
