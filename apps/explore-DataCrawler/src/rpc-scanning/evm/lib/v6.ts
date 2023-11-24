@@ -319,12 +319,19 @@ export default class EVMVUtils {
           transfers.push(copyTxData);
         }
       }
-    } else if (
-      parsedData.signature === 'transferToken(address,address,uint256,bytes)'
-    ) {
-      // TODO:
-    } else if (parsedData.signature === 'transfer(address,uint256)') {
+    } else if (parsedData.signature === 'transfer(address,bytes)' || parsedData.signature === 'transferToken(address,address,uint256,bytes)') {
+      const parsedLogData = contractInterface.parseLog(logs[0] as any);
       const decodeData = (<any[]>RLP.decode(parsedData.args[1])).map(item => <any>hexlify(item));
+      const copyTxData = clone(txData);
+      let value;
+      if (parsedData.signature === 'transferToken(address,address,uint256,bytes)') {
+        value = new BigNumber(parsedLogData.args[2]).toFixed(0);
+        copyTxData.sender = parsedLogData.args[0];
+        copyTxData.receiver = parsedLogData.args[1];
+      } else {
+        value = new BigNumber(parsedLogData.args[1]).toFixed(0);
+        copyTxData.receiver = parsedLogData.args[0];
+      }
       const type = decodeData[0];
       switch (type) {
         case '0x01': {
@@ -333,13 +340,9 @@ export default class EVMVUtils {
           if ([4, 44].includes(targetChainId)) {
             targetAddress = addressPadStart(targetAddress, 66);
           }
-          const parsedLogData = contractInterface.parseLog(logs[0] as any);
-          const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
-          const copyTxData = clone(txData);
           copyTxData.hash = txData.hash;
           copyTxData.token = chainInfo.nativeCurrency.address;
           copyTxData.symbol = chainInfo.nativeCurrency.symbol;
-          copyTxData.receiver = parsedLogData.args[0];
           copyTxData.value = value;
           copyTxData.amount = new BigNumber(value)
             .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
@@ -350,25 +353,25 @@ export default class EVMVUtils {
         }
         case '0x02': {
           const targetChainId = +decodeData[1];
-          let targetAddress = String(decodeData[2]).toLowerCase();
-          if ([4, 44].includes(targetChainId)) {
-            targetAddress = addressPadStart(targetAddress, 66);
+          const targetTokenAddress = String(decodeData[2]).toLowerCase();
+          const expectValue = decodeData[3];
+          const slippage = decodeData[4];
+          let targetAddress = parsedLogData.args[0].toLowerCase();
+          if (decodeData.length >= 6) {
+            targetAddress = String(decodeData[5]).toLowerCase();
+            if ([4, 44].includes(targetChainId)) {
+              targetAddress = addressPadStart(targetAddress, 66);
+            }
           }
-          const targetTokenAddress = String(decodeData[3]).toLowerCase();
-          const expectValue = decodeData[4];
-          const slippage = decodeData[5];
-          const parsedLogData = contractInterface.parseLog(logs[0] as any);
-          const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           const copyTxData = clone(txData);
           copyTxData.hash = txData.hash;
           copyTxData.token = chainInfo.nativeCurrency.address;
           copyTxData.symbol = chainInfo.nativeCurrency.symbol;
-          copyTxData.receiver = parsedLogData.args[0];
           copyTxData.value = value;
           copyTxData.amount = new BigNumber(value)
             .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
             .toString();
-          copyTxData.calldata = [type, targetChainId, targetAddress, targetTokenAddress, expectValue, slippage];
+          copyTxData.calldata = [type, targetChainId, targetTokenAddress, expectValue, slippage, targetAddress];
           transfers.push(copyTxData);
           break;
         }

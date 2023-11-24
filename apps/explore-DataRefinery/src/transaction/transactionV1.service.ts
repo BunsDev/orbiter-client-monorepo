@@ -361,9 +361,6 @@ export class TransactionV1Service {
             transaction: t2,
           },
         );
-        this.logger.info(
-          `match success from db ${btTx.sourceId}  /  ${btTx.targetId}`,
-        );
         this.memoryMatchingService.removeTransferMatchCache(btTx.sourceId);
         this.memoryMatchingService.removeTransferMatchCache(btTx.targetId);
         result.errno = 0;

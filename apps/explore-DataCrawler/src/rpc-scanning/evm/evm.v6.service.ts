@@ -237,7 +237,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         }
       }
       transfers = transfers.map((tx) => {
-        tx.transactionIndex = transaction.index;
+        tx.transactionIndex = receipt.index;
         tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
         tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
         tx.contract = tx.contract && tx.contract.toLocaleLowerCase();

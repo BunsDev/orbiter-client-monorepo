@@ -28,6 +28,7 @@ export class V2Schedule {
       sender: string,
       gasFee: number,
       tradingFee: number,
+      originWithholdingFee: number,
       maxPrice: number,
       minPrice: number,
       slippage: number,
@@ -74,6 +75,7 @@ export class V2Schedule {
         sender: String(rule.sender).toLowerCase(),
         gasFee: String(rule.gasFee),
         tradingFee: String(rule.tradingFee),
+        originWithholdingFee: String(rule.originWithholdingFee || ''),
         fromChain: {
           id: fromChainId,
           chainId: fromChainInfo.chainId,
