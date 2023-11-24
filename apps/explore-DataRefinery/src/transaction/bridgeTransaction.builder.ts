@@ -304,7 +304,7 @@ export class StarknetOBSourceContractBuilder {
       if (
         Array.isArray(transfer.calldata) &&
         transfer.calldata.length === 5 &&
-        transfer.signature === 'transferERC20(felt,felt,Uint256,felt)'
+        ['transferERC20(felt,felt,Uint256,felt)', 'sign_pending_multisig_transaction(felt,felt*,felt,felt,felt)'].includes(transfer.signature)
       ) {
         result.targetAddress = addressPadStart(
           transfer.calldata[4].toLocaleLowerCase(),
