@@ -144,7 +144,8 @@ export class TransactionService {
           // TAG:data-synchronization
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
-        if (result && result.errno === 0 && this.envConfig.get("enableTransfer1_0")) {
+        const SendMQToMakerV1ClientChains = this.envConfig.get("SendMQToMakerV1ClientChains", "").split(',');
+        if (result && result.errno === 0 && (SendMQToMakerV1ClientChains.includes(payload.chainId) || SendMQToMakerV1ClientChains[0] == '*')) {
           this.messageService.sendTransferToMakerClient(result.data, "1-0")
         }
       } else if (payload.version === '1-1') {

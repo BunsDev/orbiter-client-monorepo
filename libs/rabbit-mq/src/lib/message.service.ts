@@ -39,7 +39,7 @@ export class MessageService {
     const queue = `makerWaitTransfer${version}`
     const channel = this.connectionManager.getChannel();
     try {
-      Logger.log(`sendTransferToMakerClient ${JSON.stringify(data)}`)
+      // Logger.log(`sendTransferToMakerClient ${JSON.stringify(data)}`)
       await channel.assertQueue(queue);
       const result = await channel.sendToQueue(
         queue,
