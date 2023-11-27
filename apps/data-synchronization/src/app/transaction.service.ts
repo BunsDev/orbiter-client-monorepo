@@ -38,7 +38,8 @@ export class TransactionService {
     private chainConfigService: ChainConfigService
   ) {
     this.mutex = new Mutex()
-    this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
+    this.syncV3ToV1FromDatabase()
+    // this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
     // TODO: Receive and process mq messages
     // TAG:data-synchronization
   }
@@ -55,8 +56,8 @@ export class TransactionService {
     }
     return
   }
-  async handleTransfer(transfer: TransfersAttributes,  bridgeTransaction?: BridgeTransactionAttributes){
-    const chain =  this.chainConfigService.getChainInfo(transfer.chainId)
+  async handleTransfer(transfer: TransfersAttributes, bridgeTransaction?: BridgeTransactionAttributes) {
+    const chain = this.chainConfigService.getChainInfo(transfer.chainId)
     if (!chain) {
       return
     }
@@ -79,7 +80,7 @@ export class TransactionService {
       fee: transfer.fee,
       feeToken: transfer.feeToken,
       chainId: chain.internalId,
-      source: 'rpc',
+      source: 'sync',
       memo: '0',
       side: transfer.version === '1-0' ? 0 : 1,
       extra: {},
@@ -91,6 +92,10 @@ export class TransactionService {
       transferId: '',
       createdAt: new Date(),
       updatedAt: new Date(),
+    }
+    if (transfer.chainId === 'SN_MAIN' && transfer.hash.includes("#0")) {
+      transaction.hash = transfer.hash.replace('#0', '');
+      console.log('replace hash:', transaction.hash, transfer.hash)
     }
     if (bridgeTransaction) {
       transaction.extra = { toSymbol: bridgeTransaction.targetSymbol }
@@ -308,76 +313,94 @@ export class TransactionService {
     if (this.mutex.isLocked()) {
       return
     }
+    const limit = 1000;
     this.logger.info('syncV3V1FromDatabase start')
     this.mutex.runExclusive(async () => {
       let done = false
       // sync in tx
-      const inWhere = {
-        [Op.or]: [{ syncStatus: [0, 2] }, { syncStatus: 1, opStatus: 99 }],
-        version: ['1-0'],
-        timestamp: {
-          [Op.lte]: dayjs().subtract(5, 'minutes').toISOString(),
-        },
-      } as any;
-      const limit = 1000
-      let maxId = 0
-      let inTransferFetchCount = 0
-      const maxInTransferFetchCount = 5000
-      do {
-        const list = await this.transfersModel.findAll({
-          where: inWhere,
-          order: [['id', 'asc']],
-          limit: limit
-        })
-        for (const row of list) {
-          await this.handleBridgeTransaction(row).catch(error => {
-            this.logger.error(`syncV3V1FromDatabase error, id:${row.id}, hash:${row.hash}`, error)
-          })
-        }
-        inTransferFetchCount += list.length
-        if (list.length < limit) {
-          done = true
-        } else {
-          inWhere.id = { [Op.gt]: list[list.length - 1].id }
-        }
-        maxId = Number(list[list.length - 1]?.id)
-        if (inTransferFetchCount >= maxInTransferFetchCount) {
-          done = true
-        }
-      } while(!done)
-      this.logger.info(`maxId: ${maxId}`)
+      // const inWhere = {
+      //   [Op.or]: [{ syncStatus: [0, 2] }, { syncStatus: 1, opStatus: 99 }],
+      //   version: ['1-0'],
+      //   chainId:"42161",
+      //   symbol:'USDT',
+      //   timestamp: {
+      //     [Op.lte]: dayjs().subtract(60, 'minutes').toISOString(),
+      //   },
+      // } as any;
+      // // let maxId = 0
+      // // let inTransferFetchCount = 0
+      // // const maxInTransferFetchCount = 5000
+      // do {
+      // const list = await this.transfersModel.findAll({
+      //   where:{
+      //     [Op.or]: [{ syncStatus: [0, 2] }, { syncStatus: 1, opStatus: 99 }],
+      //     version: '1-0',
+      //     chainId:"42161",
+      //     timestamp: {
+      //       [Op.lte]: dayjs().subtract(60 * 5, 'minutes').toISOString(),
+      //     },
+      //   },
+      //   order: [['id', 'desc']],
+      //   limit:limit,
+      // })
+
+      // console.log(list.map(row=> row.hash))
+      // console.log('IN TOTAL:', list.length);
+      // for (const row of list) {
+      //   await this.handleBridgeTransaction(row).catch(error => {
+      //     this.logger.error(`syncV3V1FromDatabase error, id:${row.id}, hash:${row.hash}`, error)
+      //   })
+      // }
+      // inTransferFetchCount += list.length
+      // if (list.length < limit) {
+      //   done = true
+      // } else {
+      //   inWhere.id = { [Op.gt]: list[list.length - 1].id }
+      // }
+      // maxId = Number(list[list.length - 1]?.id)
+      // if (inTransferFetchCount >= maxInTransferFetchCount) {
+      //   done = true
+      // }
+      // } while(!done)
+      // this.logger.info(`maxId: ${maxId}`)
       // sync out tx
-      done = false
-      const outWhere = {
-        syncStatus: 0,
-        version: ['1-1'],
-        timestamp: {
-          [Op.lte]: dayjs().subtract(5, 'minutes').toISOString(),
+      // done = false
+      // if (maxId) {
+      //   // outWhere.id = { [Op.lt]: maxId }
+      // }
+      // do {
+      let index = 0;
+      const list2 = await this.transfersModel.findAll({
+        where: {
+          [Op.or]: [{ syncStatus: [0, 2] }, { syncStatus: 1, opStatus: 99 }],
+          version: ['1-1', '1-0'],
+          status: [2],
+          opStatus: [1, 99],
+          chainId: "42161",
+          timestamp: {
+            [Op.gte]: dayjs().subtract(60, 'minutes').toISOString(),
+          },
         },
-      } as any;
-      if (maxId) {
-        outWhere.id = { [Op.lt]: maxId }
-      }
-      do {
-        const list = await this.transfersModel.findAll({
-          where: outWhere,
-          order: [['id', 'asc']],
-          limit: limit
+        order: [['id', 'asc']],
+        limit: limit
+      })
+      console.log('OUT TOTAL:', list2.length);
+      for (const row of list2) {
+        console.log(`${index} sync = ${row.hash}`);
+        index++;
+        this.handleBridgeTransaction(row).catch(error => {
+          this.logger.error('syncV3V1FromDatabase error', error)
         })
-        for (const row of list) {
-          await this.handleBridgeTransaction(row).catch(error => {
-            this.logger.error('syncV3V1FromDatabase error', error)
-          })
-        }
-        if (list.length < limit) {
-          done = true
-        } else {
-          outWhere.id = { [Op.gt]: list[list.length - 1].id }
-          if (maxId) {
-            outWhere.id = { [Op.gt]: list[list.length - 1].id, [Op.lt]: maxId }
-          }
-        }
-      } while(!done)
+      }
+      // if (list2.length < limit) {
+      //   done = true
+      // } else {
+      //   outWhere.id = { [Op.gt]: list2[list2.length - 1].id }
+      //   if (maxId) {
+      //     outWhere.id = { [Op.gt]: list2[list2.length - 1].id, [Op.lt]: maxId }
+      //   }
+      // }
+      // } while(!done)
     })
   }
 }
