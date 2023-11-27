@@ -97,9 +97,6 @@ export class TransactionService {
       transaction.hash = transfer.hash.replace('#0', '');
       console.log('replace hash:', transaction.hash, transfer.hash)
     }
-    if (transaction.side === 1) {
-      transaction.memo = Number(transaction.value.substring(transaction.value.length - 4)).toString();
-    }
     if (bridgeTransaction) {
       transaction.extra = { toSymbol: bridgeTransaction.targetSymbol }
       if (transaction.side === 0) {
@@ -374,6 +371,7 @@ export class TransactionService {
       // do {
         const list2 = await this.transfersModel.findAll({
           where: {
+            [Op.or]: [{ syncStatus: [0, 2] }, { syncStatus: 1, opStatus: 99 }],
             syncStatus: 0,
             version: ['1-1', '1-0'],
             status:[2],
