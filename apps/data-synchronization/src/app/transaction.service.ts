@@ -97,6 +97,9 @@ export class TransactionService {
       transaction.hash = transfer.hash.replace('#0', '');
       console.log('replace hash:', transaction.hash, transfer.hash)
     }
+    if (transaction.side === 1) {
+      transaction.memo = transaction.value.substring(transaction.value.length - 4);
+    }
     if (bridgeTransaction) {
       transaction.extra = { toSymbol: bridgeTransaction.targetSymbol }
       if (transaction.side === 0) {
