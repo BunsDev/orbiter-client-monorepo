@@ -144,6 +144,9 @@ export class TransactionService {
           // TAG:data-synchronization
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
+        if (['2-0'].includes(payload.version) && result && result.errno === 0 && this.envConfig.get("enableTransfer1-0")) {
+          this.messageService.sendTransferToMakerClient(result.data, "1-0")
+        }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enableDataSync") == 1) {
