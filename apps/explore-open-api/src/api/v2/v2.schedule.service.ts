@@ -69,7 +69,7 @@ export class V2Schedule {
         console.error(`${toSymbol} not configured`, rule.token);
         continue;
       }
-      const isSupportTransfer = fromSymbol === toSymbol && !([4, 44].includes(+fromChainId) || [4, 44].includes(+toChainId))
+      const sendType = (fromSymbol === toSymbol && !([4, 44].includes(+fromChainId) || [4, 44].includes(+toChainId))) ? 1 : 2;
       tradingPairs.push({
         pairId: `${fromChainInfo.chainId}-${toChainInfo.chainId}:${rule.token}`,
         recipient: String(rule.makerAddress).toLowerCase(),
@@ -78,7 +78,7 @@ export class V2Schedule {
         tradingFee: String(rule.tradingFee),
         slippage: Number(rule.slippage || 50),
         originWithholdingFee: String(rule.originWithholdingFee || ''),
-        isSupportTransfer,
+        sendType,
         fromChain: {
           id: +fromChainId,
           chainId: fromChainInfo.chainId,
