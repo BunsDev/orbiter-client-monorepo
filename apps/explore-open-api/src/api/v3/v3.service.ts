@@ -189,6 +189,18 @@ export class V3Service {
         throw new Error('Invalid time parameter');
       }
     }
+    if (params.length >= 6 && params[5]) {
+      where['sourceChain'] = params[5];
+    }
+    if (params.length >= 7 && params[6]) {
+      where['targetChain'] = params[6];
+    }
+    if (params.length >= 8 && params[7]) {
+      where['sourceId'] = params[7];
+    }
+    if (params.length >= 9 && params[8]) {
+      where['targetId'] = params[8];
+    }
     const dataList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll({
       attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceSymbol', 'status', 'sourceTime',
         'targetTime', 'sourceAddress', 'targetAddress', 'sourceMaker', 'targetMaker', 'sourceSymbol', 'targetSymbol', 'sourceToken', 'targetToken'],
