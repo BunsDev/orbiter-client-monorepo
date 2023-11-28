@@ -39,9 +39,7 @@ export class TransactionService {
   ) {
     this.mutex = new Mutex()
     this.syncV3ToV1FromDatabase()
-    // this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
-    // TODO: Receive and process mq messages
-    // TAG:data-synchronization
+    this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
   }
   async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
     // console.log(data)

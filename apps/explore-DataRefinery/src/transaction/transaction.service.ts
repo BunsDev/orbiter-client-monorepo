@@ -11,7 +11,6 @@ import { MakerService } from '../maker/maker.service'
 import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
 import { ENVConfigService } from '@orbiter-finance/config';
-
 @Injectable()
 export class TransactionService {
   @LoggerDecorator()
