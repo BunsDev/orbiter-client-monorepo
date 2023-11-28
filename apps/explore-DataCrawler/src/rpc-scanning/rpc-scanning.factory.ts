@@ -12,6 +12,8 @@ import { Context } from './rpc-scanning.interface'
 import { TransactionService } from '../transaction/transaction.service';
 import { MantleRpcScanningService } from './mantle/mantle.service'
 import { ScrollRpcScanningService } from './scroll/scroll.service'
+import { MantaRpcScanningService } from './manta/manta.service'
+import { OPBNBScanningService } from './opbnb/opbnb.service'
 @Injectable()
 export class RpcScanningFactory {
   public services: { [key: string]: RpcScanningService } = {}
@@ -43,6 +45,18 @@ export class RpcScanningFactory {
         break;
       case 'ScrollRpcScanningService':
         service = new ScrollRpcScanningService(
+          chainId,
+          ctx
+        );
+        break;
+      case 'MantaRpcScanningService':
+        service = new MantaRpcScanningService(
+          chainId,
+          ctx
+        );
+        break;
+      case 'OPBNBScanningService':
+        service = new OPBNBScanningService(
           chainId,
           ctx
         );
