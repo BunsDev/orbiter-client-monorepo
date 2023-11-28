@@ -189,7 +189,7 @@ export class ImmutableApiScanningService extends ApiScanningService {
           symbol: item.token.type,
           fee: '0',
           feeAmount: '0',
-          feeToken: '',
+          feeToken: 'ETH',
           timestamp: dayjs(item.timestamp).valueOf(),
           status: TransferAmountTransactionStatus.failed,
           nonce: this.timestampToNonce(dayjs(item.timestamp).valueOf()),
