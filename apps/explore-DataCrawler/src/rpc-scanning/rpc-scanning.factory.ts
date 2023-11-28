@@ -14,6 +14,7 @@ import { MantleRpcScanningService } from './mantle/mantle.service'
 import { ScrollRpcScanningService } from './scroll/scroll.service'
 import { MantaRpcScanningService } from './manta/manta.service'
 import { OPBNBScanningService } from './opbnb/opbnb.service'
+import {L1FeeRpcScanningService} from './l1FeeService/l1Fee.service'
 @Injectable()
 export class RpcScanningFactory {
   public services: { [key: string]: RpcScanningService } = {}
@@ -49,6 +50,12 @@ export class RpcScanningFactory {
           ctx
         );
         break;
+        case 'L1FeeRpcScanningService':
+          service = new L1FeeRpcScanningService(
+            chainId,
+            ctx
+          );
+          break;
       case 'MantaRpcScanningService':
         service = new MantaRpcScanningService(
           chainId,
