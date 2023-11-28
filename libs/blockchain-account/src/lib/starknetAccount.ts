@@ -1,5 +1,5 @@
 import { Account, Contract, cairo, RpcProvider } from 'starknet';
-import { equals, sleep } from '@orbiter-finance/utils';
+import { equals, sleep, addressPadStart } from '@orbiter-finance/utils';
 import { TransactionRequest, TransactionSendBeforeError, TransferResponse } from "./IAccount.interface";
 import { OrbiterAccount } from "./orbiterAccount";
 import {NonceManager} from './nonceManager';
@@ -137,10 +137,10 @@ export class StarknetAccount extends OrbiterAccount {
       throw new Error(`Starknet Failed to send transaction hash does not exist`);
     }
     await sleep(1000);
-    const hash = trx.transaction_hash;
-    this.logger.info(`${this.chainConfig.name} sendTransaction txHash:${hash}`);
+    const hash = addressPadStart(trx.transaction_hash, 66);
+    this.logger.info(`${ this.chainConfig.name } sendTransaction txHash:${hash}`);
     return {
-      hash: hash,
+      hash,
       from: this.address,
       // to: tos.join(','),
       // value: BigInt(value),

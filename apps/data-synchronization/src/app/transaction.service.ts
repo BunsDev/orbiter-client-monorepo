@@ -49,7 +49,7 @@ export class TransactionService {
       await this.handleBridgeTransaction(transfer)
     } catch (error) {
       this.logger.error('handleBridgeTransaction error', error)
-      this.logger.data('handleBridgeTransaction error', data.data)
+      this.logger.error('handleBridgeTransaction error transfer data', data.data)
       // throw error
     }
     return

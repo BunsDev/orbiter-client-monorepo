@@ -65,7 +65,7 @@ export class IMXAccount extends OrbiterAccount {
     );
     this.chainConfig.debug && this.logger.debug(`transfer response: ${JSON.stringify(response)}`);
     return {
-      hash: String(response.transfer_id),
+      hash: `imx:${String(response.transfer_id)}`,
       from: this.address,
       to,
       value,

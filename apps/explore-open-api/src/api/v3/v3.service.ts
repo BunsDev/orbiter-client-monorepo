@@ -154,7 +154,7 @@ export class V3Service {
       throw new Error('Invalid params');
     }
 
-    const where = {};
+    const where: any = {};
     if (params.length > 0) {
       if (+params[0] === 1) {
         where['status'] = { [Op.not]: 99 };
@@ -200,6 +200,13 @@ export class V3Service {
     }
     if (params.length >= 9 && params[8]) {
       where['targetId'] = params[8];
+    }
+    if (params.length >= 10 && params[9]) {
+      if (+params[9] === 1) {
+        where[Op.or] = [{ version: '1-0' }, { version: '1-1' }];
+      } else if (+params[9] === 2) {
+        where[Op.or] = [{ version: '2-0' }, { version: '2-1' }];
+      }
     }
     const dataList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll({
       attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceSymbol', 'status', 'sourceTime',
