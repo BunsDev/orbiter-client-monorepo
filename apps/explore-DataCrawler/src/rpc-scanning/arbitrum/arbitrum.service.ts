@@ -14,10 +14,4 @@ export class ArbitrumRpcScanningService extends EVMRpcScanningV6Service {
     // const l1Fee = new BigNumber(gasUsed).multipliedBy(gasUsedForL1).toFixed(0);
     return fee;
   }
-  // public async bootstrap(): Promise<any> {
-  //   while(true) {
-  //     await super.bootstrap();
-  //     console.log('ar-----')
-  //   }
-  // }
 }

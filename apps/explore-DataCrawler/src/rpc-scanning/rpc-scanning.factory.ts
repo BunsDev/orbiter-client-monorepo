@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-
-
 import { ChainConfigService } from '@orbiter-finance/config';
 import { ArbitrumRpcScanningService } from './arbitrum/arbitrum.service';
 import { OptimisticRpcScanningService } from './optimistic/optimistic.service';
@@ -12,7 +10,8 @@ import { EVMRpcScanningV5Service } from './evm/evm.v5.service';
 import { ZKSyncEraRpcScanningService } from './zksyncEra/zksyncEra.service'
 import { Context } from './rpc-scanning.interface'
 import { TransactionService } from '../transaction/transaction.service';
-
+import { MantleRpcScanningService } from './mantle/mantle.service'
+import { ScrollRpcScanningService } from './scroll/scroll.service'
 @Injectable()
 export class RpcScanningFactory {
   public services: { [key: string]: RpcScanningService } = {}
@@ -38,6 +37,18 @@ export class RpcScanningFactory {
     switch (key) {
       case 'ZKSyncEraRpcScanningService':
         service = new ZKSyncEraRpcScanningService(
+          chainId,
+          ctx
+        );
+        break;
+      case 'ScrollRpcScanningService':
+        service = new ScrollRpcScanningService(
+          chainId,
+          ctx
+        );
+        break;
+      case 'MantleRpcScanningService':
+        service = new MantleRpcScanningService(
           chainId,
           ctx
         );
