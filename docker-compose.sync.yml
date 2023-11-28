@@ -4,12 +4,12 @@ networks:
     external: true
 services:
   dataSync:
-    image: orbiter/explore-data-synchronization:latest
+    image: orbiter/data-synchronization:latest
     build:
       context: ./
       cache_from:
         - orbiter/clients
-      dockerfile:  ./apps/explore-data-synchronization/Dockerfile.clients
+      dockerfile:  ./apps/data-synchronization/Dockerfile.clients
     restart: always
     command: ["node", 'main.js']
     environment:
