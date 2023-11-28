@@ -35,11 +35,11 @@ export class MessageService {
     }
   }
 
-  async sendTransferToMakerClient(data: BridgeTransactionAttributes) {
-    const queue = 'makerWaitTransfer'
+  async sendTransferToMakerClient(data: BridgeTransactionAttributes, version:string="") {
+    const queue = `makerWaitTransfer${version}`
     const channel = this.connectionManager.getChannel();
     try {
-      Logger.log(`sendTransferToMakerClient ${JSON.stringify(data)}`)
+      // Logger.log(`sendTransferToMakerClient ${JSON.stringify(data)}`)
       await channel.assertQueue(queue);
       const result = await channel.sendToQueue(
         queue,
