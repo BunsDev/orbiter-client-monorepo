@@ -154,7 +154,7 @@ export class V3Service {
       throw new Error('Invalid params');
     }
 
-    const where = {};
+    const where: any = {};
     if (params.length > 0) {
       if (+params[0] === 1) {
         where['status'] = { [Op.not]: 99 };
