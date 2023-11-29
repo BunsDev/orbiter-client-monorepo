@@ -39,7 +39,8 @@ export class TransactionService {
   ) {
     this.mutex = new Mutex()
     this.syncV3ToV1FromDatabase()
-    // this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
+    this.readV1NotMatchTx()
+    this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
   }
   async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
     // console.log(data)
@@ -306,7 +307,7 @@ export class TransactionService {
       this.logger.error('handleBridgeTransaction error', error)
     }
   }
-  @Cron("*/60 * * * * *")
+  @Cron("* */5 * * * *")
   private async syncV3ToV1FromDatabase() {
     if (this.mutex.isLocked()) {
       return
@@ -322,7 +323,7 @@ export class TransactionService {
           status: [2],
           opStatus: [1, 99],
           timestamp: {
-            [Op.gte]: dayjs().subtract(15, 'minutes').toISOString(),
+            [Op.gte]: dayjs().subtract(60 * 24, 'minutes').toISOString(),
             [Op.lte]: dayjs().subtract(2, 'minutes').toISOString(),
           },
         },
@@ -338,6 +339,43 @@ export class TransactionService {
         })
       }
     })
+  }
+  @Cron("*/30 * * * * *")
+  private async readV1NotMatchTx() {
+    const rows = await this.makerTransactionModel.findAll({
+      attributes: ['inId'],
+      raw: true,
+      where: {
+        outId: null,
+        createdAt: {
+          [Op.gte]: dayjs().subtract(60 * 2, 'minutes').toISOString(),
+          [Op.lte]: dayjs().subtract(1, 'minutes').toISOString(),
+        },
+      },
+      limit: 100
+    });
+    let index = 0;
+    console.log(`ready match ${index}/${rows.length} `);
+    for (const row of rows) {
+      const tx = await this.transactionModel.findOne({
+        raw: true,
+        attributes: ['hash', 'status'],
+        where: {
+          id: row.inId
+        }
+      });
+      if (tx.status != 99) {
+        const transfer = await this.transfersModel.findOne({
+          where:{
+            hash: tx.hash
+          }
+        })
+        await this.handleBridgeTransaction(transfer).catch(error => {
+          this.logger.error('syncV3V1FromDatabase error', error)
+        });
+        console.log(`match 2 ${index}/${rows.length} hash: ${tx.hash}`);
+      }
+    }
   }
 
 }
