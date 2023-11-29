@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { ChainRel, SubgraphClient } from '@orbiter-finance/subgraph-sdk';
 import { isEmpty } from 'lodash';
+import { JsonDB, Config } from 'node-json-db';
 import {
     ethers,
     Interface,
@@ -12,6 +13,7 @@ import { ArbitrationTransaction } from './arbitration.interface';
 import { OnEvent } from '@nestjs/event-emitter';
 @Injectable()
 export class ArbitrationService {
+    public jsondb = new JsonDB(new Config("db", true, false, '/'));
     public chainRels: Array<ChainRel> = [];
     private readonly logger: Logger = new Logger(ArbitrationService.name);
     constructor(private schedulerRegistry: SchedulerRegistry) {
@@ -88,27 +90,65 @@ export class ArbitrationService {
         }
         const response = await account.populateTransaction(transactionRequest);
         console.log(response, '===tx', transactionRequest)
+        await this.jsondb.push(`/arbitrationHash/${tx.fromHash.toLowerCase()}`, {
+            fromChainId: tx.fromChainId,
+            sourceTxHash: tx.fromHash.toLowerCase(),
+            submitSourceTxHash: response.transactionHash,
+            mdcAddress,
+            status: 0
+        });
         // const response = await account.sendTransaction(transactionRequest)
+        return response as any;
+    }
+
+    async getWallet() {
+        const arbitrationPrivateKey = process.env["ArbitrationPrivateKey"];
+        if (!arbitrationPrivateKey) {
+            throw new Error('arbitrationPrivateKey not config');
+        }
+        const chainId = process.env['NODE_ENV'] === 'production' ? '1' : '5';
+        const arbitrationRPC = process.env["ArbitrationRPC"];
+        if (!arbitrationRPC) {
+            throw new Error(`${chainId} arbitrationRPC not config`);
+        }
+        const provider = new ethers.JsonRpcProvider(arbitrationRPC);
+        return new ethers.Wallet(arbitrationPrivateKey).connect(provider);
+    }
+
+    async submitProof(txData: any, proof: string) {
+        if (!proof) {
+            throw new Error(`proof is empty`);
+        }
+        const wallet = await this.getWallet();
+        const ifa = new Interface(MDCAbi);
+
+        const data = ifa.encodeFunctionData("", [
+            proof
+        ]);
+        const client = await this.getSubClient();
+        if (!client) {
+            throw new Error('SubClient not found');
+        }
+        const transactionRequest = {
+            data,
+            to: txData.mdcAddress,
+            value: 0n,
+            from: wallet.address,
+        };
+        const response = await wallet.populateTransaction(transactionRequest);
+        console.log(response, '===submitProof tx', transactionRequest);
+        await this.jsondb.push(`/arbitrationHash/${txData.sourceTxHash}`, {
+            ...txData,
+            submitSourceProofHash: response.transactionHash,
+            status: 1
+        });
         return response as any;
     }
 
     @OnEvent('arbitration.create')
     async handleArbitrationCreatedEvent(payload: ArbitrationTransaction) {
-        const arbitrationPrivateKey = process.env["ArbitrationPrivateKey"];
-        console.log(arbitrationPrivateKey, '=arbitrationPrivateKey')
-        if (!arbitrationPrivateKey) {
-            this.logger.error('arbitrationPrivateKey not config');
-            return;
-        }
-        const chainId = process.env['NODE_ENV'] === 'production' ? '1' : '5';
-        const arbitrationRPC = process.env["ArbitrationRPC"];
-        if (!arbitrationRPC) {
-            this.logger.error(`${chainId} arbitrationRPC not config`);
-            return;
-        }
         try {
-            const provider = new ethers.JsonRpcProvider(arbitrationRPC);
-            const wallet = new ethers.Wallet(arbitrationPrivateKey).connect(provider);
+            const wallet = await this.getWallet()
             //
             this.logger.log(`initiateArbitration wait initiateArbitration ${payload.fromHash}`);
             const result = await this.initiateArbitration(wallet, payload);
@@ -118,7 +158,6 @@ export class ArbitrationService {
         } catch (error) {
             this.logger.error('Arbitration encountered an exception', error);
         }
-
     }
 
 }

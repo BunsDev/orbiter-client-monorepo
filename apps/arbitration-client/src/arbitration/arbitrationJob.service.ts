@@ -1,15 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, Interval } from '@nestjs/schedule';
-import { Mutex, MutexInterface, Semaphore, SemaphoreInterface, withTimeout } from 'async-mutex';
+import { Mutex } from 'async-mutex';
 import { ArbitrationService } from './arbitration.service';
 import { ArbitrationTransaction } from './arbitration.interface';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {HTTPGet} from '../utils'
 const mutex = new Mutex();
+const arbitrationHost = process.env['ArbitrationHost'];
 // arbitration-client
 @Injectable()
 export class ArbitrationJobService {
-  private arbitrationHashs: string[] = [];
   private readonly logger: Logger = new Logger(ArbitrationJobService.name);
   constructor(
     private arbitrationService: ArbitrationService,
@@ -18,7 +18,7 @@ export class ArbitrationJobService {
     // this.syncChainInfo()
   }
 
-  // @Interval(1000 * 5)
+  @Interval(1000 * 5)
   async syncChainInfo() {
     const client = await this.arbitrationService.getSubClient()
     if (!client) {
@@ -26,12 +26,15 @@ export class ArbitrationJobService {
   }
     this.arbitrationService.chainRels = await client.manager.getChainRels();
   }
-  @Interval(1000 * 60 * 1)
+  @Interval(1000 * 60)
   async syncProof() {
-    const arbitrationHost = process.env['ArbitrationHost'];
-    for (const hash of this.arbitrationHashs) {
-      const result = await HTTPGet(`${arbitrationHost}/proof/${hash}`);
-      console.log(result, '==result');
+    const arbitrationObj = await this.arbitrationService.jsondb.getData(`/arbitrationHash`);
+    for (const hash in arbitrationObj) {
+      if (arbitrationObj[hash] && arbitrationObj[hash].status) continue;
+      const result = await HTTPGet(`${arbitrationHost}/proof/hash/${hash}`);
+      console.log(result.data, '=== syncProof result');
+      const proof: string = result.data;
+      await this.arbitrationService.submitProof(arbitrationObj[hash], proof);
     }
   }
 
@@ -44,7 +47,8 @@ export class ArbitrationJobService {
       return;
     }
     mutex
-      .runExclusive(() => {
+      .runExclusive(async () => {
+        const res = await HTTPGet(`${arbitrationHost}/transaction/unreimbursedTransactions?startTime=${new Date().valueOf() - 1000 * 10}&endTime=${new Date().valueOf()}`);
         const { result } = {
           "result": {
             "list": [
@@ -253,11 +257,13 @@ export class ArbitrationJobService {
         for (const item of result.list) {
           const result = this.arbitrationService.verifyArbitrationConditions(item as ArbitrationTransaction);
           if (result) {
+            const data = await this.arbitrationService.jsondb.getData(`/arbitrationHash/${item.fromHash.toLowerCase()}`);
+            if (data) {
+              continue;
+            }
             this.eventEmitter.emit("arbitration.create", item);
           }
         }
       })
   }
-
-
 }
