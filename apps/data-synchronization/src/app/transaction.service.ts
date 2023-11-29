@@ -39,7 +39,7 @@ export class TransactionService {
   ) {
     this.mutex = new Mutex()
     this.syncV3ToV1FromDatabase()
-    this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
+    // this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
   }
   async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
     // console.log(data)
@@ -322,10 +322,11 @@ export class TransactionService {
           status: [2],
           opStatus: [1, 99],
           timestamp: {
-            [Op.gte]: dayjs().subtract(60, 'minutes').toISOString(),
+            [Op.gte]: dayjs().subtract(15, 'minutes').toISOString(),
+            [Op.lte]: dayjs().subtract(2, 'minutes').toISOString(),
           },
         },
-        order: [['id', 'asc']],
+        order: [['id', 'desc']],
         limit: limit
       })
       console.log('LIST TOTAL:', list2.length, new Date());
