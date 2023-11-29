@@ -85,7 +85,11 @@ export class TransactionV1Service {
       if (transfer.version === '1-1') {
         const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
         if (matchTx) {
-          this.handleTransferByDestTx(transfer as any);
+          this.handleTransferByDestTx(transfer as any).then(result => {
+            if (result && result.errno === 0 && +this.envConfigService.get('enableDataSync') === 1) {
+              this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer as any })
+            }
+          });
         }
       }
     }
