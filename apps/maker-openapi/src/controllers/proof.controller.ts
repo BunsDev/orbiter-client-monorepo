@@ -25,7 +25,7 @@ export class ProofController {
     }
   }
 
-  @Get("/proof/:hash")
+  @Get("/hash/:hash")
   async getProofByHash(@Param("hash") hash: string): Promise<HTTPResponse> {
     try {
       const data = await this.proofService.getProof(hash)

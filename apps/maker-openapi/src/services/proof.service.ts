@@ -9,11 +9,11 @@ export class ProofService {
   }
   proofSubmission(data: ProofSubmissionRequest) {
     if (+data.status == 1) {
-      this.db.put(data.transaction, data.proof);
+        this.db.put(data.transaction.toLowerCase(), data.proof);
     }
     return true;
   }
-  async getProof(hash:string) {
-    return await this.db.get(hash);
+  async getProof(hash: string) {
+    return await this.db.get(hash.toLowerCase());
   }
 }
