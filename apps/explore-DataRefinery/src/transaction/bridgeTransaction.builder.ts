@@ -210,7 +210,7 @@ export class EVMOBSourceContractBuilder {
       if (
         !['SN_MAIN', 'SN_GOERLI', 'loopring', 'loopring_test'].includes(transfer.chainId)
         && transfer.contract
-        && (contract[transfer.contract] === 'OBSource' || contract[utils.getAddress(transfer.contract)] === 'OBSource')
+        && contract[transfer.contract] === 'OBSource'
       ) {
         return true
       }
@@ -334,9 +334,8 @@ export class EVMRouterV3ContractBuilder {
     const contract = sourceChain.contract;
     return contract
       && transfer.contract
-      && (contract[transfer.contract] === 'OrbiterRouterV3' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV3')
-      && (transfer.signature === 'transfer(address,bytes)' || transfer.signature === 'transferToken(address,address,uint256,bytes)');
-
+      && (transfer.signature === 'transfer(address,bytes)' || transfer.signature === 'transferToken(address,address,uint256,bytes)')
+      && contract[transfer.contract] === 'OrbiterRouterV3';
   }
 
   async build(transfer: TransfersModel): Promise<BuilderData> {
@@ -411,7 +410,7 @@ export class EVMRouterV1ContractBuilder {
         contract
         && transfer.contract
         && !['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
-        && (contract[transfer.contract] === 'OrbiterRouterV1' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV1')
+        && contract[transfer.contract] === 'OrbiterRouterV1'
         && transfer.signature === 'swap(address,address,uint256,bytes)'
       )
       {
