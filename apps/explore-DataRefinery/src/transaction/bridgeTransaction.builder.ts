@@ -498,9 +498,7 @@ export default class BridgeTransactionBuilder {
           transfer.token,
         );
         let builderData: BuilderData
-        if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
-          builderData = await this.evmRouterV3ContractBuilder.build(transfer)
-        } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
+        if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
           builderData = await this.evmRouterV1ContractBuilder.build(transfer)
         } else if (this.loopringBuilder.check(transfer)) {
           builderData = await this.loopringBuilder.build(transfer)

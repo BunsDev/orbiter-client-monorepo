@@ -306,12 +306,12 @@ export class TransactionService {
       this.logger.error('handleBridgeTransaction error', error)
     }
   }
-  @Cron("*/30 * * * * *")
+  @Cron("*/60 * * * * *")
   private async syncV3ToV1FromDatabase() {
     if (this.mutex.isLocked()) {
       return
     }
-    const limit = 1000;
+    const limit = 200;
     this.logger.info('syncV3V1FromDatabase start')
     this.mutex.runExclusive(async () => {
       let index = 0;
@@ -321,7 +321,6 @@ export class TransactionService {
           version: ['1-1', '1-0'],
           status: [2],
           opStatus: [1, 99],
-          chainId: "42161",
           timestamp: {
             [Op.gte]: dayjs().subtract(60, 'minutes').toISOString(),
           },

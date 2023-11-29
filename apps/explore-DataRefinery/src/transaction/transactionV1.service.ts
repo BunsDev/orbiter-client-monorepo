@@ -86,7 +86,8 @@ export class TransactionV1Service {
         const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
         if (matchTx) {
           this.handleTransferByDestTx(transfer as any).then(result => {
-            if (result && result.errno === 0 && +this.envConfigService.get('enableDataSync') === 1) {
+            const SyncV1TDClientChains = this.envConfigService.get("SyncV1TDClientChains", "").split(',');
+            if (result && result.errno === 0 && (SyncV1TDClientChains.includes(transfer.chainId) || SyncV1TDClientChains[0] == '*')) {
               this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer as any })
             }
           });
@@ -166,6 +167,7 @@ export class TransactionV1Service {
         );
         return this.errorBreakResult(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
       } else {
+        console.error(error);
         this.logger.error(`ValidSourceTxError throw`, error)
         throw error
       }
