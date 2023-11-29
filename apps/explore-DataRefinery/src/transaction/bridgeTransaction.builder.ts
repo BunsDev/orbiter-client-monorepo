@@ -11,8 +11,9 @@ import BigNumber from 'bignumber.js';
 import { getAmountToSend } from '../utils/oldUtils'
 import dayjs from 'dayjs';
 import { utils } from 'ethers'
-import { InjectModel } from '@nestjs/sequelize';
+import { hexlify } from 'ethers6';
 import { TransactionID, ValidSourceTxError, addressPadStart, decodeV1SwapData } from '../utils';
+import RLP from "rlp";
 
 function parseSourceTxSecurityCode(value) {
   let index = 0;
@@ -318,19 +319,77 @@ export class StarknetOBSourceContractBuilder {
 
 @Injectable()
 export class EVMRouterV3ContractBuilder {
-    @LoggerDecorator()
-    private readonly logger: OrbiterLogger;
-    constructor(
-      protected chainConfigService: ChainConfigService,
-      protected envConfigService: ENVConfigService,
-      protected makerV1RuleService: MakerV1RuleService,
-    ) {
+  @LoggerDecorator()
+  private readonly logger: OrbiterLogger;
 
-    }
-    build(transfer: TransfersModel): Promise<BuilderData> {
-        throw new Error('unrealized')
+  constructor(
+    protected chainConfigService: ChainConfigService,
+    protected envConfigService: ENVConfigService,
+    protected makerV1RuleService: MakerV1RuleService,
+  ) {
 
+  }
+
+  check(transfer: TransfersModel, sourceChain: IChainConfig): boolean {
+    const contract = sourceChain.contract;
+    return contract
+      && transfer.contract
+      && (contract[transfer.contract] === 'OrbiterRouterV3' || contract[utils.getAddress(transfer.contract)] === 'OrbiterRouterV3')
+      && (transfer.signature === 'transfer(address,bytes)' || transfer.signature === 'transferToken(address,address,uint256,bytes)');
+
+  }
+
+  async build(transfer: TransfersModel): Promise<BuilderData> {
+    const result = {} as BuilderData;
+    const decodeData = (<any[]>RLP.decode(transfer.calldata[1])).map(item => <any>hexlify(item));
+    const type = decodeData[0];
+    const targetChainId = +decodeData[1];
+    const targetChain = this.chainConfigService.getChainByKeyValue('internalId', targetChainId);
+    if (!targetChain) {
+      return result;
     }
+    switch (type) {
+      case '0x01': {
+        const targetToken = this.chainConfigService.getTokenBySymbol(
+          targetChain.chainId,
+          transfer.symbol,
+        );
+        let targetAddress = String(decodeData[2]).toLowerCase();
+        if ([4, 44].includes(targetChainId)) {
+          targetAddress = addressPadStart(targetAddress, 66);
+        }
+
+        result.targetAddress = targetAddress;
+        result.targetChain = targetChain;
+        result.targetToken = targetToken;
+        break;
+      }
+      case '0x02': {
+        const targetTokenAddress = String(decodeData[2]).toLowerCase();
+        // const expectValue = decodeData[3];
+        // const slippage = decodeData[4];
+        let targetAddress = transfer.sender.toLowerCase();
+        if (decodeData.length >= 6) {
+          targetAddress = String(decodeData[5]).toLowerCase();
+          if ([4, 44].includes(targetChainId)) {
+            targetAddress = addressPadStart(targetAddress, 66);
+          }
+        }
+        const targetToken = this.chainConfigService.getTokenByAddress(
+          targetChain.chainId,
+          targetTokenAddress,
+        );
+        // result.targetAmount = new BigNumber(expectValue)
+        //   .div(Math.pow(10, targetToken.decimals))
+        //   .toString();
+        result.targetAddress = targetAddress;
+        result.targetChain = targetChain;
+        result.targetToken = targetToken;
+        break;
+      }
+    }
+    return result;
+  }
 }
 
 
@@ -440,7 +499,9 @@ export default class BridgeTransactionBuilder {
           transfer.token,
         );
         let builderData: BuilderData
-        if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
+        if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
+          builderData = await this.evmRouterV3ContractBuilder.build(transfer)
+        } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
           builderData = await this.evmRouterV1ContractBuilder.build(transfer)
         } else if (this.loopringBuilder.check(transfer)) {
           builderData = await this.loopringBuilder.build(transfer)
@@ -454,14 +515,12 @@ export default class BridgeTransactionBuilder {
           builderData = await this.standardBuilder.build(transfer);
         }
         const { targetAddress: builderDataTargetAddress , targetChain, targetToken, targetAmount } = builderData
-
         if (!targetChain) {
           throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetChain not found`)
         }
         if (!targetToken) {
           throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetToken not found`)
         }
-
         let rule;
         if (targetToken) {
           rule = this.makerV1RuleService.getAll().find((rule) => {
@@ -485,7 +544,6 @@ export default class BridgeTransactionBuilder {
           const errMsg = `sourceChain.internalId: ${sourceChain.internalId}, targetChain.internalId:${targetChain.internalId}, sourceToken.symbol:${sourceToken.symbol}, targetToken.symbol:${targetToken.symbol}, transfer.receiver:${transfer.receiver}`
           throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, errMsg)
         }
-
         if (builderDataTargetAddress) {
           createdData.targetAddress = builderDataTargetAddress.toLowerCase()
         } else {
@@ -494,7 +552,6 @@ export default class BridgeTransactionBuilder {
         createdData.targetChain = targetChain.chainId
         createdData.targetToken = targetToken.address.toLowerCase()
         createdData.targetSymbol = targetToken.symbol
-
         if (targetAmount) {
           createdData.targetAmount = new BigNumber(targetAmount)
           .div(10 ** targetToken.decimals)

@@ -1,11 +1,10 @@
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify } from 'ethers6';
 import { IChainConfig } from '@orbiter-finance/config';
-import { addressPadStart, equals } from '@orbiter-finance/utils';
+import { equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
 import * as abis from '@orbiter-finance/abi'
 import _, { clone } from 'lodash'
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
-import RLP from 'rlp';
 
 class Interface2 extends Interface {
   constructor(fragments: InterfaceAbi) {
@@ -321,7 +320,6 @@ export default class EVMVUtils {
       }
     } else if (parsedData.signature === 'transfer(address,bytes)' || parsedData.signature === 'transferToken(address,address,uint256,bytes)') {
       const parsedLogData = contractInterface.parseLog(logs[0] as any);
-      const decodeData = (<any[]>RLP.decode(parsedData.args[1])).map(item => <any>hexlify(item));
       const copyTxData = clone(txData);
       let value;
       if (parsedData.signature === 'transferToken(address,address,uint256,bytes)') {
@@ -332,50 +330,14 @@ export default class EVMVUtils {
         value = new BigNumber(parsedLogData.args[1]).toFixed(0);
         copyTxData.receiver = parsedLogData.args[0];
       }
-      const type = decodeData[0];
-      switch (type) {
-        case '0x01': {
-          const targetChainId = +decodeData[1];
-          let targetAddress = String(decodeData[2]).toLowerCase();
-          if ([4, 44].includes(targetChainId)) {
-            targetAddress = addressPadStart(targetAddress, 66);
-          }
-          copyTxData.hash = txData.hash;
-          copyTxData.token = chainInfo.nativeCurrency.address;
-          copyTxData.symbol = chainInfo.nativeCurrency.symbol;
-          copyTxData.value = value;
-          copyTxData.amount = new BigNumber(value)
-            .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
-            .toString();
-          copyTxData.calldata = [type, targetChainId, targetAddress];
-          transfers.push(copyTxData);
-          break;
-        }
-        case '0x02': {
-          const targetChainId = +decodeData[1];
-          const targetTokenAddress = String(decodeData[2]).toLowerCase();
-          const expectValue = decodeData[3];
-          const slippage = decodeData[4];
-          let targetAddress = parsedLogData.args[0].toLowerCase();
-          if (decodeData.length >= 6) {
-            targetAddress = String(decodeData[5]).toLowerCase();
-            if ([4, 44].includes(targetChainId)) {
-              targetAddress = addressPadStart(targetAddress, 66);
-            }
-          }
-          const copyTxData = clone(txData);
-          copyTxData.hash = txData.hash;
-          copyTxData.token = chainInfo.nativeCurrency.address;
-          copyTxData.symbol = chainInfo.nativeCurrency.symbol;
-          copyTxData.value = value;
-          copyTxData.amount = new BigNumber(value)
-            .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
-            .toString();
-          copyTxData.calldata = [type, targetChainId, targetTokenAddress, expectValue, slippage, targetAddress];
-          transfers.push(copyTxData);
-          break;
-        }
-      }
+      copyTxData.hash = txData.hash;
+      copyTxData.token = chainInfo.nativeCurrency.address;
+      copyTxData.symbol = chainInfo.nativeCurrency.symbol;
+      copyTxData.value = value;
+      copyTxData.amount = new BigNumber(value)
+        .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
+        .toString();
+      transfers.push(copyTxData);
     }
 
     return transfers;
