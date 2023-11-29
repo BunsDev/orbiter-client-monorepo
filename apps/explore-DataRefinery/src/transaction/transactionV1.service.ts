@@ -167,6 +167,7 @@ export class TransactionV1Service {
         );
         return this.errorBreakResult(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
       } else {
+        console.error(error);
         this.logger.error(`ValidSourceTxError throw`, error)
         throw error
       }
