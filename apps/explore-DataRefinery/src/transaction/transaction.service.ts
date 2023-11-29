@@ -182,6 +182,7 @@ export class TransactionService {
             if (addressList.includes(payload.receiver)) {
               this.messageService.sendTransferToMakerClient(result.data, `1_0_${queue}`)
               isPush = true;
+              break;
             }
           }
           if (!isPush) {
@@ -190,6 +191,7 @@ export class TransactionService {
           return result;
         }
       }
+
       return result;
     } catch (error) {
       if (error.name === 'SequelizeUniqueConstraintError') {
