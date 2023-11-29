@@ -101,7 +101,6 @@ export class IMXAccount extends OrbiterAccount {
   }
 
   public async waitForTransactionConfirmation(transactionHash: string) {
-    transactionHash = transactionHash.replace('imx:', '');
     const response: any = await HTTPGet(`${this.chainConfig.api.url}/v1/transfers/${transactionHash}`);
     if (response?.transaction_id) {
       return { from: response.user, to: response.receiver };

@@ -139,22 +139,11 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
-        const SendMQToMakerV1ClientChains = this.envConfig.get("SendMQToMakerV1ClientChains", "").split(',');
-        if (result && result.errno === 0 && (SendMQToMakerV1ClientChains.includes(payload.chainId) || SendMQToMakerV1ClientChains[0] == '*')) {
-          const maker80c = ['0x07b393627bd514d2aa4c83e9f0c468939df15ea3c29980cd8e7be3ec847795f0', '0x0411c2a2a4dc7b4d3a33424af3ede7e2e3b66691e22632803e37e2e0de450940', "0x80c67432656d59144ceff962e8faf8926599bcf8", "0x41d3d33156ae7c62c094aae2995003ae63f587b3", "0xd7aa9ba6caac7b0436c91396f22ca5a7f31664fc", "0x095d2918b03b2e86d68551dcf11302121fb626c9"];
-          const makere4e = ['0x064a24243f2aabae8d2148fa878276e6e6e452e3941b417f3c33b1649ea83e11', '0xe4edb277e41dc89ab076a1f049f4a3efa700bce8'];
-          if (maker80c.includes(payload.receiver)) {
-            this.messageService.sendTransferToMakerClient(result.data, "1_0_80c")
-          } else if (makere4e.includes(payload.receiver)) {
-            this.messageService.sendTransferToMakerClient(result.data, "1_0_e4e")
-          }
-        }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystem(result.data)
         }
-
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
@@ -182,9 +171,27 @@ export class TransactionService {
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
       }
-      if (['2-0'].includes(payload.version) && result && result.errno === 0 && this.envConfig.get("enableTransfer")) {
-        this.messageService.sendTransferToMakerClient(result.data)
+      if (['2-0', '1-0'].includes(payload.version) && result && result.errno === 0) {
+        const SendTransferToMakerClientChains = this.envConfig.get("SendTransferToMakerClientChains", "").split(',');
+        const SendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
+     
+        if (SendTransferToMakerClientChains[0] == '*' || SendTransferToMakerClientChains.includes(payload.chainId)) {
+          let isPush = false;
+          for (const queue in SendTransferToMakerClientQueue) {
+            const addressList = SendTransferToMakerClientQueue[queue].split(",");
+            if (addressList.includes(payload.receiver)) {
+              this.messageService.sendTransferToMakerClient(result.data, `1_0_${queue}`)
+              isPush = true;
+              break;
+            }
+          }
+          if (!isPush) {
+             this.messageService.sendTransferToMakerClient(result.data)
+          }
+          return result;
+        }
       }
+
       return result;
     } catch (error) {
       if (error.name === 'SequelizeUniqueConstraintError') {

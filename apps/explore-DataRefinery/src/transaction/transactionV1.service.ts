@@ -73,7 +73,8 @@ export class TransactionV1Service {
           error,
         );
       });
-      if (result && result.errno === 0 && +this.envConfigService.get('enableDataSync') === 1) {
+      const SyncV1TDClientChains = this.envConfigService.get("SyncV1TDClientChains", "").split(',');
+      if (result && result.errno === 0 && (SyncV1TDClientChains.includes(transfer.chainId) || SyncV1TDClientChains[0] == '*')) {
         await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
       }
     }
@@ -120,7 +121,8 @@ export class TransactionV1Service {
           error,
         );
       });
-      if (result && result.errno === 0 && +this.envConfigService.get('enableDataSync') === 1) {
+      const SyncV1TDClientChains = this.envConfigService.get("SyncV1TDClientChains", "").split(',');
+      if (result && result.errno === 0 && (SyncV1TDClientChains.includes(transfer.chainId) || SyncV1TDClientChains[0] == '*')) {
         await this.messageService.sendMessageToDataSynchronization({ type: '2', data: transfer })
       }
     }
