@@ -3,6 +3,7 @@ import {
   OrbiterLogger,
   LoggerDecorator,
   equals,
+  getObjKeyByValue
 } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
 import { validateAndParseAddress } from 'starknet'
@@ -335,7 +336,7 @@ export class EVMRouterV3ContractBuilder {
     return contract
       && transfer.contract
       && ['transfer(address,bytes)', 'transferToken(address,address,uint256,bytes)'].includes(transfer.signature)
-      && contract[transfer.contract] === 'OrbiterRouterV3';
+      && getObjKeyByValue(contract, 'OrbiterRouterV3').toLowerCase() === transfer.contract.toLowerCase();
   }
 
   async build(transfer: TransfersModel): Promise<BuilderData> {
