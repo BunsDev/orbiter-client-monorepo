@@ -20,10 +20,16 @@ export class ChainConfigService {
                 this.consul.watchConsulConfig(
                     this.options.chainConfigPath,
                     (config: KeyValueResult) => {
-                        const data = config.toJSON();
-                        if (data) {
-                            ChainConfigService.configs = data;
-                            // this.write();
+                        if (config) {
+                            const data = config.toJSON();
+                            if (data) {
+                                ChainConfigService.configs = data;
+                                // this.write();
+                            }
+                        } else {
+                            Logger.error(
+                                `watch config change null ${this.options.chainConfigPath}`,
+                            );
                         }
                     },
                 );
