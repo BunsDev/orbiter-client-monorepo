@@ -366,7 +366,7 @@ export class EVMRouterV3ContractBuilder {
       }
       case '0x02': {
         const targetTokenAddress = String(decodeData[2]).toLowerCase();
-        // const expectValue = decodeData[3];
+        const expectValue = +decodeData[3];
         // const slippage = decodeData[4];
         let targetAddress = transfer.sender.toLowerCase();
         if (decodeData.length >= 6) {
@@ -379,9 +379,7 @@ export class EVMRouterV3ContractBuilder {
           targetChain.chainId,
           targetTokenAddress,
         );
-        // result.targetAmount = new BigNumber(expectValue)
-        //   .div(Math.pow(10, targetToken.decimals))
-        //   .toString();
+        result.targetAmount = new BigNumber(expectValue).toString();
         result.targetAddress = targetAddress;
         result.targetChain = targetChain;
         result.targetToken = targetToken;
