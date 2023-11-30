@@ -439,11 +439,11 @@ export function getAmountToSend(
     }
   } else if(+toChainID === 8 || +toChainID ==88) {
     if (result.state) {
-        const convertValue = String(+result.tAmount / 10**market.toChain.decimals);
+        const convertValue = String(+result.tAmount / 10**toTokenDecimals);
         const splitValue = convertValue.split('.');
         if (splitValue[1].length>10) {
           splitValue[1] = `${splitValue[1].substring(0,6)}${nonceStr}`;
-          const value = new BigNumber(splitValue.join('.')).times(10**market.toChain.decimals);
+          const value = new BigNumber(splitValue.join('.')).times(10**toTokenDecimals);
           result.tAmount = value.toFixed(0);
         }
     }
