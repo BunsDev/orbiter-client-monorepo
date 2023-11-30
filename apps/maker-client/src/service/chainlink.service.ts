@@ -31,9 +31,16 @@ export class ChainLinkService {
     if (!addr) {
       return new BigNumber(0);
     }
-    const mainnetChain = this.chainConfigService.getChainInfo("1");
+    let mainnetChain: any = this.chainConfigService.getChainInfo("1");
     if (!mainnetChain) {
-      throw new Error('mainnetChain not found')
+      mainnetChain = {
+        "rpc": [
+          "https://rpc.ankr.com/eth",
+          "https://ethereum.blockpi.network/v1/rpc/public",
+          "https://eth.rpc.blxrbdn.com"
+        ]
+      };
+      // throw new Error('mainnetChain not found')
     }
     const provider = new JsonRpcProvider(mainnetChain.rpc[0]);
     const priceFeed = new ethers.Contract(

@@ -303,10 +303,16 @@ export class TransactionV1Service {
         };
       }
     } catch (error) {
-      this.logger.error(
-        `handleTransferByDestTx matchV1GetBridgeTransactions match error ${transfer.hash} `,
-        error,
-      );
+      if (error?.message && error.message.indexOf('The number of modified') !== -1) {
+        this.logger.warn(
+          `handleTransferByDestTx ${transfer.hash} ${error.message}`,
+        );
+      } else {
+        this.logger.error(
+          `handleTransferByDestTx matchV1GetBridgeTransactions match error ${transfer.hash} `,
+          error,
+        );
+      }
       t1 && (await t1.rollback());
     }
 
