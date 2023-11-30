@@ -1,16 +1,16 @@
-import { Injectable, Inject,Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sleep } from './utils';
 import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
 import { ConsulService } from 'libs/consul/src/lib/consul.service';
 import { ConfigModuleOptions } from './config.interface';
 import { ORBITER_CONFIG_MODULE_OPTS } from './config.constants';
-import {get} from 'lodash';
+import { get } from 'lodash';
 @Injectable()
 export class ENVConfigService {
   private configs: any = {};
   private isInitialized: boolean = false;
-  private count:number =0;
+  private count: number = 0;
   constructor(
     private readonly consul: ConsulService,
     private readonly configService: ConfigService,
@@ -21,15 +21,19 @@ export class ENVConfigService {
     }
   }
 
-  private initializeConfigWatcher(configFile:string) {
+  private initializeConfigWatcher(configFile: string) {
     try {
       this.consul.watchConsulConfig(
         configFile,
         (config: KeyValueResult) => {
-          const data = config.yamlToJSON();
-          if (data) {
-            this.configs = data;
-            this.isInitialized = true;
+          if (config) {
+            const data = config.yamlToJSON();
+            if (data) {
+              this.configs = data;
+              this.isInitialized = true;
+            }
+          } else {
+            Logger.error(`Watch config change null ${configFile}`);
           }
         },
       );
@@ -41,7 +45,7 @@ export class ENVConfigService {
   async initAsync(key: string): Promise<void> {
     if (!this.isInitialized) {
       await sleep(1000);
-      if (this.count>=60) {
+      if (this.count >= 60) {
         throw new Error(`Configuration does not exist: ${key}`);
       }
       return await this.initAsync(key)
@@ -55,7 +59,7 @@ export class ENVConfigService {
     return (this.configService.get(name) || defaultValue) as T;
   }
 
-  async getAsync<T = any>(name: string, defaultValue?:T): Promise<T> {
+  async getAsync<T = any>(name: string, defaultValue?: T): Promise<T> {
     await this.initAsync(name);
     return this.get(name, defaultValue);
   }

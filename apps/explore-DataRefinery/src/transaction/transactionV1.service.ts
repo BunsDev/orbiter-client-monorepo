@@ -59,7 +59,7 @@ export class TransactionV1Service {
         opStatus: 0,
         version: '1-0',
         timestamp: {
-          [Op.gte]: dayjs().subtract(24, 'hour').toISOString(),
+          [Op.gte]: dayjs().subtract(48, 'hour').toISOString(),
         },
         // nonce: {
         //   [Op.lt]: 9000
@@ -106,10 +106,11 @@ export class TransactionV1Service {
         opStatus: 0,
         version: '1-1',
         timestamp: {
-          [Op.gte]: dayjs().subtract(24, 'hour').toISOString(),
+          [Op.gte]: dayjs().subtract(48, 'hour').toISOString(),
         },
       },
     });
+    console.log(transfers, '==transfers')
     for (const transfer of transfers) {
       const result = await this.handleTransferByDestTx(transfer).then(result=> {
         if (result && result.errno!=0){
