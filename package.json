@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
+    "dev:maker-openapi": "npx nx run maker-openapi:serve",
     "dev:explore-open-api": "npx nx run explore-open-api:serve",
     "dev:arbitration": "npx nx run arbitration:serve",
     "dev:explore-DataCrawler": "npx nx run explore-DataCrawler:serve",

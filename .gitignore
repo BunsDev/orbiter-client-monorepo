@@ -45,3 +45,5 @@ worker_request.log
 cmd/.env
 /docker/explore-open-api/google
 .nx
+
+/runtime

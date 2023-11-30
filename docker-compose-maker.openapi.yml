@@ -1,0 +1,27 @@
+version: '3.8'
+networks:
+   orbiter-network:
+    external: true
+    labels:
+      - "com.docker.compose.project=maker-openapi"
+services:
+  openapi:
+    container_name: "makeropenapi"
+    image: orbiter/maker-openapi:latest
+    labels:
+      - "com.docker.compose.project=maker-openapi"
+    build:
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/maker-openapi/Dockerfile
+    restart: always
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+    ports:
+      - '9002:3000'
+    networks:
+      - orbiter-network
+    volumes:
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'
