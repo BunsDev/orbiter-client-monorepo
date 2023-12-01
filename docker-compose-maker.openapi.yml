@@ -19,7 +19,7 @@ services:
     environment:
       CONSUL_URL: '${CONSUL_URL}'
     ports:
-      - '9002:3000'
+      - '9003:3000'
     networks:
       - orbiter-network
     volumes:

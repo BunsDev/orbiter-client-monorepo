@@ -10,6 +10,6 @@ FROM orbiter/clients:latest
 
 WORKDIR /app
 COPY --from=builder app/package.json ./
-COPY --from=builder app/dist/apps/explore-open-api ./
+COPY --from=builder app/dist/apps/maker-openapi ./
 # ENV NODE_ENV=$NODE_ENV
 CMD [ "node", "main.js" ]
