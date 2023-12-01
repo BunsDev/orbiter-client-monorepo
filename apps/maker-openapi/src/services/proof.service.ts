@@ -33,18 +33,21 @@ export class ProofService {
             throw new Error('Invalid parameters');
         }
         let bridgeTransaction = data.isSource ? await this.bridgeTransactionModel.findOne(<any>{
-            attributes: ['sourceId', 'sourceChain', 'sourceToken', 'targetId', 'targetChain', 'targetToken'],
+            attributes: ['sourceId', 'sourceChain', 'sourceToken', 'targetId', 'targetChain', 'targetToken', 'ruleId'],
             where: {
                 sourceChain: data.chainId,
                 sourceId: data.hash
             }
         }) : await this.bridgeTransactionModel.findOne(<any>{
-            attributes: ['sourceId', 'sourceChain', 'sourceToken', 'targetId', 'targetChain', 'targetToken'],
+            attributes: ['sourceId', 'sourceChain', 'sourceToken', 'targetId', 'targetChain', 'targetToken', 'ruleId'],
             where: {
                 targetChain: data.chainId,
                 targetId: data.hash
             }
         });
+        if (!bridgeTransaction.ruleId) {
+            throw new Error(`Not the Dealer version of the deal: ${data.chainId} ${data.hash}`);
+        }
 
         if (!bridgeTransaction?.sourceChain) {
             throw new Error(`Unable to locate transaction: ${data.chainId} ${data.hash}`);
