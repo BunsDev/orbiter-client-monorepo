@@ -21,6 +21,9 @@ export class TransactionService {
                     [Op.gte]: dayjs(startTime).toISOString(),
                     [Op.lte]: dayjs(endTime).toISOString()
                 },
+                ruleId: {
+                    [Op.not]: null
+                }
             },
             limit: 200
         });

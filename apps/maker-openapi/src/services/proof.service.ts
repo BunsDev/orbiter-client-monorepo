@@ -55,7 +55,7 @@ export class ProofService {
         const token0 = bridgeTransaction.sourceToken;
         const token1 = bridgeTransaction.targetToken;
         const ruleKey: string = keccak256(solidityPack(['uint256', 'uint256', 'uint256', 'uint256'], [chain0, chain1, token0, token1]));
-        await this.jsondb.push(`/tx/${data.hash.toLowerCase()}`, [data.hash, chain0, chain1, ruleKey, data.isSource ? 1 : 0]);
+        await this.jsondb.push(`/tx/${data.hash.toLowerCase()}`, [data.hash, chain0, chain1, ruleKey, !!data.isSource]);
     }
 
     async getNeedProofTransactionList() {
