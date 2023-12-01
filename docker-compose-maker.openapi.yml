@@ -5,7 +5,7 @@ networks:
     labels:
       - "com.docker.compose.project=maker-openapi"
 services:
-  openapi:
+  makeropenapi:
     container_name: "makeropenapi"
     image: orbiter/maker-openapi:latest
     labels:
