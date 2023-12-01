@@ -45,7 +45,7 @@ export class ProofService {
                 targetId: data.hash
             }
         });
-        if (!bridgeTransaction.ruleId) {
+        if (!bridgeTransaction?.ruleId) {
             throw new Error(`Not the Dealer version of the deal: ${data.chainId} ${data.hash}`);
         }
 
