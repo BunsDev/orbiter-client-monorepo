@@ -4,3 +4,9 @@ export interface ProofSubmissionRequest {
     proof: string;
     message: string;
 }
+
+export interface NeedProofSubmissionRequest {
+    isSource: number;
+    hash: string;
+    chainId: number;
+}

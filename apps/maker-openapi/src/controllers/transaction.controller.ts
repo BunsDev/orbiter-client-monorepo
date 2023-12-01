@@ -1,7 +1,6 @@
 import { TransactionService } from '../services/transaction.service';
 import { HTTPResponse } from '../utils/Response';
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import dayjs from 'dayjs';
 @Controller('transaction')
 export class TransactionController {
     constructor(private readonly transactionService: TransactionService) {
@@ -26,13 +25,24 @@ export class TransactionController {
         const data = await this.transactionService.getUnreimbursedTransactions(+startTime, +endTime);
         return HTTPResponse.success(data)
     }
-    @Get("/rawTransaction/:hash")
-    async rawTransactionDetail(@Param("hash") hash: string) {
+
+    @Get("/source/:hash")
+    async sourceTransactionDetail(@Param("hash") hash: string) {
         if (!hash) {
             return HTTPResponse.fail(1000, "hash Missing parameters");
         }
-        const data = await this.transactionService.getRawTransactionDetail(hash);
-        
+        const data = await this.transactionService.getRawTransactionDetailBySourceId(hash);
+
+        return data ? HTTPResponse.success(data) : HTTPResponse.fail(1000, `${hash} tx not found`);
+    }
+
+    @Get("/target/:hash")
+    async targetTransactionDetail(@Param("hash") hash: string) {
+        if (!hash) {
+            return HTTPResponse.fail(1000, "hash Missing parameters");
+        }
+        const data = await this.transactionService.getRawTransactionDetailByTargetId(hash);
+
         return data ? HTTPResponse.success(data) : HTTPResponse.fail(1000, `${hash} tx not found`);
     }
 }
