@@ -11,9 +11,12 @@ import {
 import MDCAbi from '../abi/MDC.abi.json'
 import { ArbitrationTransaction } from './arbitration.interface';
 import { OnEvent } from '@nestjs/event-emitter';
+import { HTTPGet } from "../utils";
+import { HTTPPost } from "../../../../libs/request/src";
+const arbitrationHost = process.env['ArbitrationHost'];
 @Injectable()
 export class ArbitrationService {
-    public jsondb = new JsonDB(new Config("db", true, false, '/'));
+    public jsondb = new JsonDB(new Config("runtime/arbitrationDB", true, false, '/'));
     public chainRels: Array<ChainRel> = [];
     private readonly logger: Logger = new Logger(ArbitrationService.name);
     constructor(private schedulerRegistry: SchedulerRegistry) {
@@ -115,15 +118,16 @@ export class ArbitrationService {
         return new ethers.Wallet(arbitrationPrivateKey).connect(provider);
     }
 
-    async submitProof(txData: any, proof: string) {
+    async userSubmitProof(txData: any, proof: string) {
         if (!proof) {
             throw new Error(`proof is empty`);
         }
         const wallet = await this.getWallet();
         const ifa = new Interface(MDCAbi);
 
-        const data = ifa.encodeFunctionData("", [
-            proof
+        const data = ifa.encodeFunctionData("verifyChallengeSource", [
+            'spvAddress',
+            proof,
         ]);
         const client = await this.getSubClient();
         if (!client) {
@@ -145,19 +149,74 @@ export class ArbitrationService {
         return response as any;
     }
 
-    @OnEvent('arbitration.create')
-    async handleArbitrationCreatedEvent(payload: ArbitrationTransaction) {
+    async makerSubmitProof(txData: any, proof: string) {
+        if (!proof) {
+            throw new Error(`proof is empty`);
+        }
+        const wallet = await this.getWallet();
+        const ifa = new Interface(MDCAbi);
+
+        const data = ifa.encodeFunctionData("verifyChallengeSource", [
+            'spvAddress',
+            proof,
+        ]);
+        const client = await this.getSubClient();
+        if (!client) {
+            throw new Error('SubClient not found');
+        }
+        const transactionRequest = {
+            data,
+            to: txData.mdcAddress,
+            value: 0n,
+            from: wallet.address,
+        };
+        const response = await wallet.populateTransaction(transactionRequest);
+        console.log(response, '===submitProof tx', transactionRequest);
+        await this.jsondb.push(`/arbitrationHash/${txData.sourceTxHash}`, {
+            ...txData,
+            submitSourceProofHash: response.transactionHash,
+            status: 1
+        });
+        await HTTPPost(`${arbitrationHost}/proof/completeProofSubmission`, {
+            hash: txData.sourceTxHash
+        });
+        return response as any;
+    }
+
+    @OnEvent('user.arbitration.create')
+    async handleUserArbitrationCreatedEvent(payload: ArbitrationTransaction) {
         try {
-            const wallet = await this.getWallet()
-            //
+            const wallet = await this.getWallet();
             this.logger.log(`initiateArbitration wait initiateArbitration ${payload.fromHash}`);
             const result = await this.initiateArbitration(wallet, payload);
-            this.logger.log(`initiateArbitration success ${result.hash}`);
-            // await result.wait()
-            this.logger.log(`initiateArbitration wait success ${result.hash}`);
+            this.logger.log(`initiateArbitration success ${result.hash} ${payload.fromHash}`);
+            await HTTPPost(`${arbitrationHost}/proof/needProofSubmission`, {
+                isSource: 1,
+                chainId: payload.fromChainId,
+                hash: payload.fromHash
+            });
+            this.logger.log(`initiateArbitration submit success ${result.hash} ${payload.fromHash}`);
         } catch (error) {
             this.logger.error('Arbitration encountered an exception', error);
         }
     }
 
+
+    @OnEvent('maker.arbitration.create')
+    async handleMakerArbitrationCreatedEvent(payload: ArbitrationTransaction) {
+        try {
+            const wallet = await this.getWallet();
+            this.logger.log(`maker response arbitration wait ${payload.fromHash}`);
+            const result = await this.initiateArbitration(wallet, payload);
+            this.logger.log(`maker response arbitration success ${result.hash} ${payload.fromHash}`);
+            await HTTPPost(`${arbitrationHost}/proof/needProofSubmission`, {
+                isSource: 0,
+                chainId: payload.fromChainId,
+                hash: payload.fromHash
+            });
+            this.logger.log(`maker response arbitration submit success ${result.hash} ${payload.fromHash}`);
+        } catch (error) {
+            this.logger.error('maker response arbitration encountered an exception', error);
+        }
+    }
 }

@@ -1,7 +1,11 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ProofService } from '../services/proof.service';
 import { HTTPResponse } from '../utils/Response';
-import { NeedProofSubmissionRequest, ProofSubmissionRequest } from '../common/interfaces/Proof.interface';
+import {
+    CompleteProofSubmission,
+    NeedProofSubmissionRequest,
+    ProofSubmissionRequest
+} from '../common/interfaces/Proof.interface';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 
@@ -29,6 +33,16 @@ export class ProofController {
         }
     }
 
+    @Get("/needProofTransactionList")
+    async needProofTransactionList(): Promise<HTTPResponse> {
+        // wj need
+        try {
+            return HTTPResponse.success(await this.proofService.getNeedProofTransactionList());
+        } catch (error) {
+            return HTTPResponse.fail(1000, error.message);
+        }
+    }
+
     @Post("/needProofSubmission")
     async needProofSubmission(@Body() data: NeedProofSubmissionRequest): Promise<HTTPResponse> {
         // arbitration-client submit
@@ -41,11 +55,26 @@ export class ProofController {
         }
     }
 
-    @Get("/needProofTransactionList")
-    async needProofTransactionList(): Promise<HTTPResponse> {
+    @Post("/completeProofSubmission")
+    async completeProofSubmission(@Body() data: CompleteProofSubmission): Promise<HTTPResponse> {
+        // arbitration-client submit
         try {
-            return HTTPResponse.success(await this.proofService.getNeedProofTransactionList());
+            await this.proofService.completeProof(data.hash);
+            return HTTPResponse.success(null);
         } catch (error) {
+            this.logger.error('completeProofSubmission error', error);
+            return HTTPResponse.fail(1000, error.message);
+        }
+    }
+
+    @Get("/needResponseTransactionList")
+    async needResponseTransactionList(): Promise<HTTPResponse> {
+        // maker arbitration-client need
+        try {
+            const data = await this.proofService.getNeedMakerResponseTransactionList();
+            return HTTPResponse.success(data);
+        } catch (error) {
+            this.logger.error('needResponseTransactionList error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
