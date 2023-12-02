@@ -11,17 +11,20 @@ export class ProceedsController extends PrometheusController {
     }
     @Get('/metrics')
     async index(@Res({ passthrough: false }) response: Response) {
-        const result = await this.proceedsService.getTodayProceeds();
-        for (const row of result) {
-            const { targetChainName,targetChain, currencyData } = row;
-            if (currencyData) {
-                this.counter.labels({
-                    "network": targetChainName || targetChain,
-                    "currency": currencyData.currency,
-                }).set(currencyData.proceeds);
+        const symbols = ['ETH', 'USDT', 'BNB', 'USDC', 'DAI'];
+        for (const symbol of symbols) {
+            const result = await this.proceedsService.getTodayProceeds(symbol);
+            for (const row of result) {
+                const { targetChainName, targetChain, currencyData } = row;
+                if (currencyData) {
+                    this.counter.labels({
+                        "targetChain": targetChainName || targetChain,
+                        "targetSymbol": row.targetSymbol,
+                        "currency": currencyData.currency,
+                    }).set(currencyData.proceeds);
+                }
             }
         }
-
         return super.index(response);
     }
 }

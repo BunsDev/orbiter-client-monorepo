@@ -19,7 +19,7 @@ import { ExchangeRateModule } from '../exchange-rate/exchange-rate.module';
     makeGaugeProvider({
       name: "orbiterProceeds",
       help: "orbiterProceeds_help",
-      labelNames: ["network", "currency"]
+      labelNames: ["targetChain",'targetSymbol', "currency"]
     }),],
   controllers: [ProceedsController]
 })

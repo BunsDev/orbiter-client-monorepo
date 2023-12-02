@@ -44,6 +44,8 @@ export class ExchangeRateService {
     }
     private USDTTOBNBRate:string|number = 0;
     async fillBSCRate(source: string, dest: string, rates: any) {
+        rates['BNB'] = 200;
+        return rates
         fetch('https://www.binance.com/api/v3/depth?symbol=BNBUSDT&limit=1').then(res=> {
             const data = res.json();
             this.USDTTOBNBRate = data['bids'][0][0];
