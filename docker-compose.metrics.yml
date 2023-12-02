@@ -4,7 +4,7 @@ networks:
     external: true
 services:
   dataSync:
-    image: orbiter/metrics:latest:latest
+    image: orbiter/metrics:latest
     build:
       context: ./
       cache_from:
@@ -13,7 +13,7 @@ services:
     restart: always
     command: ["node", 'main.js']
     ports:
-      - '3222:3007'
+      - '3002:3000'
     networks:
       - orbiter-network
     volumes:
