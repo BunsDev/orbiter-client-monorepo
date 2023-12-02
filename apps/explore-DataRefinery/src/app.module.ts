@@ -9,7 +9,7 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
 import { AlertModule } from '@orbiter-finance/alert';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ScheduleModule } from '@nestjs/schedule';
-import { BridgeTransaction, Transfers } from "../../../libs/seq-models/src";
+import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
 
 @Module({
   imports: [
