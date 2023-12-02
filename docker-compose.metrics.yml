@@ -3,7 +3,7 @@ networks:
    orbiter-network:
     external: true
 services:
-  dataSync:
+  metrics:
     image: orbiter/metrics:latest
     build:
       context: ./
