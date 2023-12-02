@@ -20,3 +20,9 @@ export interface ArbitrationTransaction {
 	sourceDecimal: number;
 	targetDecimal: number;
 }
+
+export interface MakerResponseArbitrationTransaction {
+    proof: string;
+    hash: string;
+    isSource: number;
+}

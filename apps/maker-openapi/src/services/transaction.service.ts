@@ -7,29 +7,44 @@ import { Op } from 'sequelize';
 @Injectable()
 export class TransactionService {
     constructor(@InjectModel(Transfers)
-    private transfersModel: typeof Transfers,
-        @InjectModel(BridgeTransaction)
-        private bridgeTransactionModel: typeof BridgeTransaction,
-    ) { }
-    getUnreimbursedTransactions(startTime: number, endTime: number) {
-        return this.bridgeTransactionModel.findAll({
+                private transfersModel: typeof Transfers,
+                @InjectModel(BridgeTransaction)
+                private bridgeTransactionModel: typeof BridgeTransaction,
+    ) {
+    }
+    async getUnreimbursedTransactions(startTime: number, endTime: number) {
+        return await this.bridgeTransactionModel.findAll({
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'sourceAddress', 'ruleId', 'sourceSymbol', 'sourceToken'],
             where: {
-                status: 1,
+                status: 0,
                 sourceTime: {
                     [Op.gte]: dayjs(startTime).toISOString(),
                     [Op.lte]: dayjs(endTime).toISOString()
                 },
+                ruleId: {
+                    [Op.not]: null
+                }
+            },
+            limit: 200
+        });
+    }
+
+    async getRawTransactionDetailBySourceId(sourceId: string) {
+        return await this.bridgeTransactionModel.findOne(<any>{
+            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'sourceAddress', 'ruleId', 'sourceSymbol', 'sourceToken'],
+            where: {
+                sourceId
             }
         });
     }
-    async getRawTransactionDetail(sourceId: string) {
-        const transfer = await this.transfersModel.findOne({
-            attributes: ['chainId', 'hash', 'blockNumber', 'transactionIndex', 'sender', 'receiver', 'value', 'token', 'symbol', 'fee', 'status', 'nonce', 'selector'],
+
+    async getRawTransactionDetailByTargetId(targetId: string) {
+        return await this.bridgeTransactionModel.findOne(<any>{
+            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceAddress', 'sourceTime', 'sourceSymbol', 'sourceToken',
+                'targetId', 'targetChain', 'targetAmount', 'targetMaker', 'targetAddress', 'targetTime', 'targetSymbol', 'targetToken', 'status', 'ruleId'],
             where: {
-                hash: sourceId
+                targetId
             }
-        })
-        return transfer;
+        });
     }
 }

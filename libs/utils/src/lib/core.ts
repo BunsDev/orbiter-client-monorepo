@@ -212,3 +212,12 @@ export function addressPadStart(address: string, length: number) {
   }
   return address;
 }
+
+export function getObjKeyByValue(obj: any, value: string) {
+  for (const key in obj) {
+    if (obj[key] && String(obj[key]).toLowerCase() === value.toLowerCase()) {
+      return String(key).toLowerCase();
+    }
+  }
+  return '';
+}

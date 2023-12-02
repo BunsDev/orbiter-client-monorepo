@@ -3,6 +3,7 @@ import {
   OrbiterLogger,
   LoggerDecorator,
   equals,
+  getObjKeyByValue
 } from '@orbiter-finance/utils';
 import { BridgeTransactionAttributes, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
 import { validateAndParseAddress } from 'starknet'
@@ -10,6 +11,7 @@ import { ChainConfigService, ENVConfigService, IChainConfig, MakerV1RuleService,
 import BigNumber from 'bignumber.js';
 import { getAmountToSend } from '../utils/oldUtils'
 import dayjs from 'dayjs';
+import { utils } from 'ethers'
 import { hexlify } from 'ethers6';
 import { TransactionID, ValidSourceTxError, addressPadStart, decodeV1SwapData } from '../utils';
 import RLP from "rlp";
@@ -331,7 +333,10 @@ export class EVMRouterV3ContractBuilder {
 
   check(transfer: TransfersModel, sourceChain: IChainConfig): boolean {
     const contract = sourceChain.contract;
-    return transfer.contract && contract && ['transfer(address,bytes)', 'transferToken(address,address,uint256,bytes)'].includes(transfer.signature) && contract[transfer.contract] === 'OrbiterRouterV3';
+    return contract
+      && transfer.contract
+      && ['transfer(address,bytes)', 'transferToken(address,address,uint256,bytes)'].includes(transfer.signature)
+      && getObjKeyByValue(contract, 'OrbiterRouterV3').toLowerCase() === transfer.contract.toLowerCase();
   }
 
   async build(transfer: TransfersModel): Promise<BuilderData> {
@@ -361,7 +366,7 @@ export class EVMRouterV3ContractBuilder {
       }
       case '0x02': {
         const targetTokenAddress = String(decodeData[2]).toLowerCase();
-        // const expectValue = decodeData[3];
+        const expectValue = +decodeData[3];
         // const slippage = decodeData[4];
         let targetAddress = transfer.sender.toLowerCase();
         if (decodeData.length >= 6) {
@@ -374,9 +379,7 @@ export class EVMRouterV3ContractBuilder {
           targetChain.chainId,
           targetTokenAddress,
         );
-        // result.targetAmount = new BigNumber(expectValue)
-        //   .div(Math.pow(10, targetToken.decimals))
-        //   .toString();
+        result.targetAmount = new BigNumber(expectValue).toString();
         result.targetAddress = targetAddress;
         result.targetChain = targetChain;
         result.targetToken = targetToken;
