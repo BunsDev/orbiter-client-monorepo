@@ -12,6 +12,7 @@ DOCKER_COMPOSE := docker-compose
 NETWORK_NAME := orbiter-network
 
 # Docker build configuration
+METRICS_IMAGE:=orbiter/metrics:latest
 BASE_IMAGE := orbiter/clients:latest
 CRAWLER_IMAGE := orbiter/explore-data-crawler:latest
 REFINERY_IMAGE := orbiter/explore-data-refinery:latest
@@ -44,6 +45,9 @@ build-maker-openapi: ## Build the Docker base image
 build-docker-crawler: ## Build the Explore Data Crawler Docker image
 	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t $(CRAWLER_IMAGE)
 
+build-docker-metrics: ## Build the Explore Data Crawler Docker image
+	docker build -f apps/metrics/Dockerfile . -t $(METRICS_IMAGE)
+
 build-docker-data-synchronization: ## Build the data-synchronization Docker image
 	docker build -f apps/data-synchronization/Dockerfile.clients . -t $(DATASYNC_IMAGE)
 
@@ -65,6 +69,9 @@ build-docker-openapi: ## Build the Open Api Docker image
 # Start Explore application
 explore: create-network ## Start the Explore application
 	$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
+
+metrics: create-network ## Start the Explore application
+	$(DOCKER_COMPOSE) -f docker-compose.metrics.yml up -d
 
 # Start Maker application
 maker: create-network ## Start the Maker application

@@ -1,0 +1,21 @@
+version: '3.8'
+networks:
+   orbiter-network:
+    external: true
+services:
+  dataSync:
+    image: orbiter/metrics:latest:latest
+    build:
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/metrics/Dockerfile
+    restart: always
+    command: ["node", 'main.js']
+    ports:
+      - '3222:3007'
+    networks:
+      - orbiter-network
+    volumes:
+      - './runtime/metrics:/app/runtime'
+      - './logs/metrics:/app/logs'
