@@ -3,6 +3,7 @@ import { PrometheusController } from "@willsoto/nestjs-prometheus";
 import { ProceedsService } from './proceeds.service';
 import { InjectMetric } from "@willsoto/nestjs-prometheus";
 import { Gauge } from "prom-client";
+import { sumBy } from 'lodash';
 
 @Controller("proceeds")
 export class ProceedsController extends PrometheusController {
@@ -11,7 +12,7 @@ export class ProceedsController extends PrometheusController {
     }
     @Get('/metrics')
     async index(@Res({ passthrough: false }) response: Response) {
-        const symbols = ['ETH', 'USDT', 'BNB', 'USDC', 'DAI'];
+        const symbols = ['ETH'];
         for (const symbol of symbols) {
             const result = await this.proceedsService.getTodayProceeds(symbol);
             for (const row of result) {
@@ -24,6 +25,10 @@ export class ProceedsController extends PrometheusController {
                     }).set(currencyData.proceeds);
                 }
             }
+            const total = sumBy(result, row=> {
+                return row['currencyData']['proceeds'];
+            });
+            console.log('总收益：', total);
         }
         return super.index(response);
     }

@@ -54,8 +54,8 @@ export class ProceedsService {
             where: {
                 targetSymbol,
                 sourceTime: {
-                    [Op.gte]: dayjs().startOf('d').toISOString(),
-                    [Op.lte]: dayjs().endOf('d').toISOString(),
+                    [Op.gte]: dayjs().utcOffset(8).startOf('d').toISOString(),
+                    [Op.lte]: dayjs().utcOffset(8).endOf('d').toISOString(),
                 },
                 targetId: {
                     [Op.not]: null

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { writeFile } from 'fs';
+import path from 'path';
 export interface RateData {
 	currency: string;
 	rates: {
@@ -16,7 +17,7 @@ export class CoinbaseService {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             const data = await response.json().then(res => res && res.data);
-            writeFile("../assets/rates.json", JSON.stringify(data), (...res)=> {
+            writeFile(path.join(__filename,'../assets/',"rates.json"), JSON.stringify(data), (...res)=> {
                 console.log('save coinbase rate result:', res)
             });
             return data;

@@ -42,17 +42,18 @@ export class ExchangeRateService {
         rates['MNT'] = 0.4;
         return rates;
     }
-    private USDTTOBNBRate:string|number = 0;
-    async fillBSCRate(source: string, dest: string, rates: any) {
-        rates['BNB'] = 200;
-        return rates
-        fetch('https://www.binance.com/api/v3/depth?symbol=BNBUSDT&limit=1').then(res=> {
-            const data = res.json();
-            this.USDTTOBNBRate = data['bids'][0][0];
+    private USDTTOBNBRate: string | number = 0;
+    async requestBNB() {
+        return await fetch('https://www.binance.com/api/v3/depth?symbol=BNBUSDT&limit=1').then(async res => {
+            const data = await res.json();
+            return +data['bids'][0][0];
         });
-        if(this.USDTTOBNBRate) {
-            rates['BNB'] = +this.USDTTOBNBRate;
+    }
+    async fillBSCRate(source: string, dest: string, rates: any) {
+        if (!this.USDTTOBNBRate) {
+            this.USDTTOBNBRate = await this.requestBNB();
         }
+        rates['BNB'] = +this.USDTTOBNBRate;
         return rates;
     }
 }

@@ -8,8 +8,12 @@ import { ExchangeRateModule } from './exchange-rate/exchange-rate.module';
 import configuration from './config/configuration';
 import {ScheduleModule} from '@nestjs/schedule'
 import utc from 'dayjs/plugin/utc';
-// import dayjs from 'dayjs';
-// dayjs.extend(utc);
+import timezone from 'dayjs/plugin/timezone';
+
+import dayjs from 'dayjs';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -20,7 +24,7 @@ import utc from 'dayjs/plugin/utc';
     SequelizeModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        return { ...config.get("DATABASE_URL"), autoLoadModels: false, models: [Transfers, BridgeTransaction],logging: true};
+        return { ...config.get("DATABASE_URL"), autoLoadModels: false, models: [Transfers, BridgeTransaction],logging: true, timezone:"utc"};
       },
     }),
     ProceedsModule, TransactionModule, ExchangeRateModule],
