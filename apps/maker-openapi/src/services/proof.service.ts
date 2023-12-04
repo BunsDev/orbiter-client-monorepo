@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { NeedProofSubmissionRequest, ProofSubmissionRequest, TxData } from '../common/interfaces/Proof.interface';
+import {
+    NeedProofSubmissionRequest,
+    ProofData,
+    ProofSubmissionRequest,
+    TxData
+} from '../common/interfaces/Proof.interface';
 import { Level } from 'level';
 import { InjectModel } from "@nestjs/sequelize";
 import { BridgeTransaction } from "../../../../libs/seq-models/src";
@@ -19,8 +24,13 @@ export class ProofService {
         if (+data.status == 1) {
             const localData: TxData = await this.jsondb.getData(`/tx/${data.transaction.toLowerCase()}`);
             if (localData) {
-                await this.jsondb.push(`/proof/${data.transaction.toLowerCase()}`, {
-                    proof: data.proof, hash: localData.hash, isSource: localData.isSource
+                await this.jsondb.push(`/proof/${data.transaction.toLowerCase()}`, <ProofData>{
+                    proof: data.proof, hash: localData.hash,
+                    mdcAddress:localData.mdcAddress,
+                    makerAddress: localData.makerAddress,
+                    isSource: localData.isSource,
+                    sourceChain: localData.sourceChain,
+                    targetChain: localData.targetChain,
                 });
                 await this.jsondb.delete(`/tx/${data.transaction.toLowerCase()}`); // TODO security
             }
@@ -68,6 +78,7 @@ export class ProofService {
         const ruleKey: string = keccak256(solidityPack(['uint256', 'uint256', 'uint256', 'uint256'], [chain0, chain1, token0, token1]));
         await this.jsondb.push(`/tx/${data.hash.toLowerCase()}`, <TxData>{
             hash: data.hash,
+            mdcAddress: data.mdcAddress,
             makerAddress: bridgeTransaction.sourceMaker,
             sourceChain: chain0,
             targetChain: chain1,
@@ -91,7 +102,7 @@ export class ProofService {
         return list;
     }
 
-    async getNeedMakerResponseTransactionList() {
+    async getNeedMakerResponseTransactionList(): Promise<ProofData[]> {
         let txObj = {};
         try {
             txObj = await this.jsondb.getData(`/proof`);
