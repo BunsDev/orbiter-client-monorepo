@@ -408,7 +408,6 @@ export class EVMRouterV1ContractBuilder {
     if (
       contract
       && transfer.contract
-      && !['SN_MAIN', 'SN_GOERLI'].includes(transfer.chainId)
       && contract[transfer.contract] === 'OrbiterRouterV1'
       && transfer.signature === 'swap(address,address,uint256,bytes)'
     ) {
