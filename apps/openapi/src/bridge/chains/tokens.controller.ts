@@ -9,18 +9,7 @@ export class TokensController {
     @Get()
     @success('success', 200)
     async index() {
-        const chains = await this.chainService.getChains();
         const tokens = await this.tokenService.getTokens();
-        for (const chainId in tokens) {
-            const tokensList = tokens[chainId];
-            tokens[chainId] = tokensList.splice(0,50);
-        }
-        for (const chain of chains) {
-            if (!tokens[chain.chainId]) {
-                console.log(`${chain.name}-${chain.chainId} 不存在token`);
-            }
-        }
-        
         return tokens;
     }
 }
