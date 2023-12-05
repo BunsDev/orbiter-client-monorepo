@@ -56,6 +56,10 @@ export class TransactionService {
     return
   }
   async handleTransfer(transfer: TransfersAttributes, bridgeTransaction?: BridgeTransactionAttributes) {
+    if (transfer.signature && transfer.signature.includes('swap')) {
+      // TAG: disabled sync v2
+      return;
+    }
     const chain = this.chainConfigService.getChainInfo(transfer.chainId)
     if (!chain) {
       return
