@@ -1,0 +1,28 @@
+version: '3.8'
+networks:
+   orbiter-network:
+    external: true
+    labels:
+      - "com.docker.compose.project=openapi"
+services:
+  sdk-api:
+    container_name: "sdk-api"
+    image: orbiter/sdk-api:latest
+    labels:
+      - "com.docker.compose.project=sdk-api"
+    build:
+      context: ./
+      cache_from:
+        - orbiter/clients
+      dockerfile:  ./apps/openapi/Dockerfile.clients
+    restart: always
+    environment:
+      CONSUL_URL: '${CONSUL_URL}'
+    ports:
+      - '9001:3000'
+    networks:
+      - orbiter-network
+    volumes:
+      - './sheet-377710-b8d7c8d145e9.json:/app/google/sheet-377710-b8d7c8d145e9.json'
+      - './runtime:/app/runtime'
+      - './logs:/app/logs'

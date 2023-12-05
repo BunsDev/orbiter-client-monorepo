@@ -42,6 +42,10 @@ build-maker-openapi: ## Build the Docker base image
 	cd ./apps/maker-openapi
 	docker build -f apps/maker-openapi/Dockerfile . -t orbiter/maker-openapi
 
+build-sdk-api: ## Build the Docker base image
+	cd ./apps/maker-openapi
+	docker build -f apps/openapi/Dockerfile . -t orbiter/sdk-api
+
 build-docker-crawler: ## Build the Explore Data Crawler Docker image
 	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t $(CRAWLER_IMAGE)
 
@@ -72,6 +76,9 @@ explore: create-network ## Start the Explore application
 
 metrics: create-network ## Start the Explore application
 	$(DOCKER_COMPOSE) -f docker-compose.metrics.yml up -d
+
+sdk-api: create-network ## Start the Explore application
+	$(DOCKER_COMPOSE) -f docker-compose.sdk-api.yml up -d
 
 # Start Maker application
 maker: create-network ## Start the Maker application
