@@ -1,11 +1,12 @@
 import { Get, Injectable } from '@nestjs/common';
 import { RoutersConfig } from '../bridge.interface';
-import { MakerV1RuleService } from '@orbiter-finance/config';
+import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
 import { ChainsService } from '../chains/chains.service';
 import { padStart } from 'lodash';
 @Injectable()
 export class RoutersService {
-    constructor(private readonly rulesService: MakerV1RuleService, private readonly chainService: ChainsService) {
+    constructor(private readonly rulesService: MakerV1RuleService, 
+        private readonly chainService: ChainsService, private envConfigService:ENVConfigService) {
     }
     async getV1Routers() {
         const chains = await this.chainService.getChains();
@@ -83,7 +84,8 @@ export class RoutersService {
         myHeaders.append("Accept", "*/*");
         myHeaders.append("Host", "openapi.orbiter.finance");
         myHeaders.append("Connection", "keep-alive");
-        const result = await fetch("http://openapi.orbiter.finance/explore/v3/yj6toqvwh1177e1sexfy0u1pxx5j8o47", {
+        const openapiUrl = this.envConfigService.get("OPENAPI_URL");
+        const result = await fetch(openapiUrl, {
             "method": "POST",
             headers: myHeaders,
             "body": raw,

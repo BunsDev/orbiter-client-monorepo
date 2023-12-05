@@ -8,13 +8,14 @@ import { TransactionController } from './transaction/transaction.controller';
 import { TransactionService } from './transaction/transaction.service';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
+import { TokenService } from './chains/token.service';
 
 @Module({
     imports:[
         SequelizeModule.forFeature([Transfers, BridgeTransaction]),
     ],
     controllers: [ChainsController, TokensController, RoutersController, TransactionController],
-    providers: [ChainsService, RoutersService, TransactionService],
+    providers: [ChainsService, RoutersService, TransactionService, TokenService],
 })
 export class BridgeModule {
 

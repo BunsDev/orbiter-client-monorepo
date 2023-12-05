@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import chains from '../../assets/chains.json'
 import { ChainConfigService } from '@orbiter-finance/config';
-
+import {ChainConfig} from '../bridge.interface'
 @Injectable()
 export class ChainsService {
     constructor(private chainConsulService: ChainConfigService) {
     }
-    async getChains() {
+    async getChains():Promise<ChainConfig[]> {
         const chainConfigs = await this.chainConsulService.getAllChains();
         const result = [];
         const includeChains = chainConfigs.map(row => String(row.chainId));

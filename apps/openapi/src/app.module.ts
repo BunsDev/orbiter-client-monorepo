@@ -23,8 +23,8 @@ import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-server/chains.json",
-      envConfigPath: "explore-server/config.yaml",
+      chainConfigPath: "explore-open-api/chains.json",
+      envConfigPath: "explore-open-api/config.yaml",
       makerV1RulePath: "rules",
       // cachePath: join(__dirname, 'runtime')
     }),

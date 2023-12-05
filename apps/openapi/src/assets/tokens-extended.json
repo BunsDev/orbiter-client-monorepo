@@ -1,0 +1,187 @@
+{
+  "zksync": [
+    {
+      "name": "Ether",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "name": "DAI Stablecoin",
+      "symbol": "DAI",
+      "coinKey": "DAI",
+      "decimals": 18,
+      "address": "0x6b175474e89094c44da98b954eedeac495271d0f"
+    },
+    {
+      "name": "USDC",
+      "symbol": "USDC",
+      "coinKey": "USDC",
+      "decimals": 6,
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    },
+    {
+      "name": "USDT",
+      "symbol": "USDT",
+      "coinKey": "USDT",
+      "decimals": 6,
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+    }
+  ],
+  "SN_MAIN": [
+    {
+      "name": "Ether",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+    },
+    {
+      "name": "DAI",
+      "symbol": "DAI",
+      "coinKey": "DAI",
+      "decimals": 18,
+      "address": "0x00da114221cb83fa859dbdb4c44beeaa0bb37c7537ad5ae66fe5e0efd20e6eb3"
+    },
+    {
+      "name": "USDC",
+      "symbol": "USDC",
+      "coinKey": "USDC",
+      "decimals": 6,
+      "address": "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8"
+    },
+    {
+      "name": "USDT",
+      "symbol": "USDT",
+      "coinKey": "USDT",
+      "decimals": 6,
+      "address": "0x068f5c6a61780768455de69077e07e89787839bf8166decfbf92b645209c0fb8"
+    }
+  ],
+  "immutableX": [
+    {
+      "name": "Ether",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "name": "USD Coin",
+      "symbol": "USDC",
+      "coinKey": "USDC",
+      "decimals": 6,
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    }
+  ],
+  "ZKSpace": [
+    {
+      "id": 4,
+      "name": "USD Coin",
+      "symbol": "USDC",
+      "coinKey": "USDC",
+      "decimals": 6,
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    }
+  ],
+  "loopring": [
+    {
+      "id": 0,
+      "name": "Ethereum",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0x0000000000000000000000000000000000000000"
+    }
+  ],
+  "5000": [
+    {
+      "name": "MNT",
+      "symbol": "MNT",
+      "coinKey": "MNT",
+      "decimals": 18,
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "name": "WETH",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0xdeaddeaddeaddeaddeaddeaddeaddeaddead1111"
+    }
+  ],
+  "7777777": [
+    {
+      "name": "ETH",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0x0000000000000000000000000000000000000000"
+    }
+  ],
+  "204": [
+    {
+      "name": "BNB",
+      "symbol": "BNB",
+      "decimals": 18,
+      "coinKey": "BNB",
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "name": "ETH",
+      "symbol": "ETH",
+      "decimals": 18,
+      "coinKey": "ETH",
+      "address": "0xe7798f023fc62146e8aa1b36da45fb70855a77ea"
+    }
+  ],
+  "169": [
+    {
+      "name": "ETH",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0x0000000000000000000000000000000000000000"
+    }
+  ],
+  "534352": [
+    {
+      "name": "ETH",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "name": "USDC",
+      "symbol": "USDC",
+      "coinKey": "USDC",
+      "decimals": 6,
+      "address": "0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4"
+    },
+    {
+      "name": "USDT",
+      "symbol": "USDT",
+      "coinKey": "USDT",
+      "decimals": 6,
+      "address": "0xf55BEC9cafDbE8730f096Aa55dad6D22d44099Df"
+    }
+  ],
+  "42170": [
+    {
+      "name": "ETH",
+      "symbol": "ETH",
+      "coinKey": "ETH",
+      "decimals": 18,
+      "address": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "name": "USD Coin",
+      "symbol": "USDC",
+      "coinKey": "USDC",
+      "decimals": 6,
+      "address": "0x750ba8b76187092b0d1e87e28daaf484d1b5273b"
+    }
+  ]
+}
