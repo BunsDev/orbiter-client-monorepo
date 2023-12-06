@@ -13,7 +13,7 @@ import { TransformInterceptor } from './interceptors/transform.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const globalPrefix = 'api';
+  const globalPrefix = '';
   app.setGlobalPrefix(globalPrefix);
   const port = process.env.PORT || 3000;
   app.useGlobalFilters(new HttpExceptionFilter())

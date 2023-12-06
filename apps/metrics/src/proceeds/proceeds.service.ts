@@ -90,6 +90,7 @@ export class ProceedsService {
             row['currencyData'] = currencyData;
             // proceedsResult[row.targetChain] = Number(row['in_total_amount'] -row['out_total_amount']);
         }
+        console.debug(`Proceeds data: ${JSON.stringify(result)}`);
         // const total = await sumBy(result, item => item['currencyData']['proceeds']);
         return <Proceeds[]><unknown>result;
     }

@@ -38,8 +38,7 @@ import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
         }
         return config;
       },
-    }),
-    BridgeModule],
+    }),BridgeModule],
   controllers: [],
   providers: [],
 })
