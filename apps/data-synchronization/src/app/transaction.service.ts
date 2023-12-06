@@ -107,7 +107,7 @@ export class TransactionService {
         transaction.replySender = bridgeTransaction.targetMaker
         const targetToken = this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol)
         const targetChain = this.chainConfigService.getChainInfo(bridgeTransaction.targetChain)
-        transaction.expectValue = utils.parseUnits(bridgeTransaction.targetAmount, targetToken.decimals).toString()
+        transaction.expectValue = utils.parseUnits(bridgeTransaction.targetAmount || '0', targetToken.decimals).toString()
         transaction.memo = String(targetChain?.internalId)
       } else {
         transaction.memo = bridgeTransaction.sourceNonce
