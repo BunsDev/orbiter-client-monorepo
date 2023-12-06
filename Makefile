@@ -16,7 +16,7 @@ METRICS_IMAGE:=orbiter/metrics:latest
 BASE_IMAGE := orbiter/clients:latest
 CRAWLER_IMAGE := orbiter/explore-data-crawler:latest
 REFINERY_IMAGE := orbiter/explore-data-refinery:latest
-DATASYNC_IMAGE := orbiter/explore-data-synchronization:latest
+DATASYNC_IMAGE := orbiter/data-synchronization:latest
 MAKER_IMAGE := orbiter/maker-client:latest
 
 # Configuration variables
