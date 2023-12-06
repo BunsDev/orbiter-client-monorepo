@@ -340,6 +340,7 @@ export class TransactionService {
         console.log(`${index} sync = ${row.hash}`);
         index++;
         await this.handleBridgeTransaction(row).catch(error => {
+          this.logger.info(row.toJSON());
           this.logger.error('syncV3V1FromDatabase error', error)
         })
       }
