@@ -34,20 +34,20 @@ export class ArbitrationJobService {
 
     @Interval(1000 * 60)
     async syncProof() {
-        if (process.env['makerList']) {
-            return;
-        }
+        const isMaker = !!process.env['makerList'];
         const arbitrationObj = await this.arbitrationService.jsondb.getData(`/arbitrationHash`);
         for (const hash in arbitrationObj) {
             if (arbitrationObj[hash] && arbitrationObj[hash].status) continue;
             const result = await HTTPGet(`${arbitrationHost}/proof/hash/${hash}`);
             console.log(result.data, '=== syncProof result');
             const proof: string = result.data;
-            await this.arbitrationService.userSubmitProof(arbitrationObj[hash], proof);
+            if (isMaker) {
+                await this.arbitrationService.makerSubmitProof(arbitrationObj[hash], proof);
+            } else {
+                await this.arbitrationService.userSubmitProof(arbitrationObj[hash], proof);
+            }
         }
     }
-
-
 
     @Cron('*/5 * * * * *', {
         name: 'userArbitrationJob',
