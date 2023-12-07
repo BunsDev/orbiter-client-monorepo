@@ -373,9 +373,11 @@ export class TransactionService {
             hash: tx.hash
           }
         })
-        await this.handleBridgeTransaction(transfer).catch(error => {
-          this.logger.error('syncV3V1FromDatabase error', error)
-        });
+        if (transfer) {
+          await this.handleBridgeTransaction(transfer).catch(error => {
+            this.logger.error('syncV3V1FromDatabase error', error)
+          });
+        }
         console.log(`match 2 ${index}/${rows.length} hash: ${tx.hash}`);
       }
     }
