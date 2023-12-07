@@ -18,18 +18,21 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   #provider: Orbiter6Provider;
   getProvider() {
     const rpc = this.chainConfig.rpc[0];
+    const network = new Network(this.chainConfig.name, this.chainConfi.chainId);
     if (!this.#provider) {
-     const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
-      this.#provider = new Orbiter6Provider(rpc, 
-        network ,{
-          staticNetwork:network
-        });
+      const provider = new Orbiter6Provider(rpc,
+        network, {
+        staticNetwork: network,
+      });
+      this.#provider = provider;
     }
     if (this.#provider && this.#provider.getUrl() != rpc) {
       this.logger.info(
         `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
       );
-      this.#provider = new Orbiter6Provider(rpc);
+      this.#provider = new Orbiter6Provider(rpc, network, {
+        staticNetwork: network
+      });
     }
     return this.#provider;
   }
@@ -190,6 +193,9 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       const { nonce } = transaction;
       const fee = await this.getTransferFee(transaction, receipt);
       const chainId = transaction.chainId || this.chainId;
+      if (transaction.chainId && transaction.chainId.toString() != this.chainId) {
+        throw new Error(`${transaction.hash} chainId {${transaction.chainId}} != config chainId {${this.chainId}}`)
+      }
       const status = +receipt.status
         ? TransferAmountTransactionStatus.confirmed
         : TransferAmountTransactionStatus.failed;

@@ -117,6 +117,9 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       const { nonce } = transaction;
       const fee = await this.getTransferFee(transaction, receipt);
       const chainId = transaction.chainId || this.chainId;
+      if (transaction.chainId && transaction.chainId.toString() != this.chainId) {
+        throw new Error(`${transaction.hash} chainId {${transaction.chainId}} != config chainId {${this.chainId}}`)
+      }
       const status = receipt.status
         ? TransferAmountTransactionStatus.confirmed
         : TransferAmountTransactionStatus.failed;
