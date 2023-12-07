@@ -18,7 +18,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   #provider: Orbiter6Provider;
   getProvider() {
     const rpc = this.chainConfig.rpc[0];
-    const network = new Network(this.chainConfig.name, this.chainConfi.chainId);
+    const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
     if (!this.#provider) {
       const provider = new Orbiter6Provider(rpc,
         network, {
