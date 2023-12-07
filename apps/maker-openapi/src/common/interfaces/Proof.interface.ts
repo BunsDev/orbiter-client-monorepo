@@ -31,21 +31,21 @@ export interface CompleteProofSubmission {
 
 
 export interface TxData {
-    hash: string;
-    mdcAddress: string;
-    makerAddress: string;
-    sourceChain: string;
-    targetChain: string;
-    ruleKey: string;
-    isSource: number
+    hash?: string;
+    mdcAddress?: string;
+    makerAddress?: string;
+    sourceChain?: string;
+    targetChain?: string;
+    ruleKey?: string;
+    isSource?: number
 }
 
 export interface ProofData {
-    proof: string;
-    hash: string;
-    mdcAddress: string;
-    makerAddress: string;
-    isSource: number;
-    sourceChain: number;
-    targetChain: number;
+    proof?: string;
+    hash?: string;
+    mdcAddress?: string;
+    makerAddress?: string;
+    isSource?: number;
+    sourceChain?: string;
+    targetChain?: string;
 }

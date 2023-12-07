@@ -83,19 +83,19 @@ export class ProofService {
             sourceChain: chain0,
             targetChain: chain1,
             ruleKey,
-            isSource: !!data.isSource
+            isSource: data.isSource ? 1 : 0
         });
     }
 
     async getNeedProofTransactionList() {
-        let txObj = {};
+        let txObj: any = {};
         try {
             txObj = await this.jsondb.getData(`/tx`);
         } catch (e) {
             console.error('getNeedProofTransactionList', e.message);
         }
         const list = [];
-        for (const hash of txObj) {
+        for (const hash in txObj) {
             const data: any = txObj[hash];
             if (data?.hash) list.push([data.hash, data.sourceChain, data.targetChain, data.ruleKey, data.isSource]);
         }
@@ -103,14 +103,14 @@ export class ProofService {
     }
 
     async getNeedMakerResponseTransactionList(): Promise<ProofData[]> {
-        let txObj = {};
+        let txObj: any = {};
         try {
             txObj = await this.jsondb.getData(`/proof`);
         } catch (e) {
             console.error('getNeedProofTransactionList', e.message);
         }
         const list = [];
-        for (const hash of txObj) {
+        for (const hash in txObj) {
             const data: any = txObj[hash];
             if (data?.isSource) list.push(data);
         }
