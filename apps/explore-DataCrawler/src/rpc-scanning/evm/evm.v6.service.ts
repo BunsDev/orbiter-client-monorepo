@@ -2,7 +2,8 @@ import {
   TransactionResponse,
   TransactionReceipt,
   ZeroAddress,
-  Block
+  Block,
+  Network
 } from 'ethers6';
 import { isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningService } from '../rpc-scanning.service';
@@ -11,7 +12,6 @@ import BigNumber from 'bignumber.js';
 
 import EVMV6Utils from './lib/v6';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
-import EVMVUtils from './lib/v6';
 import { Orbiter6Provider } from '@orbiter-finance/blockchain-account';
 
 export class EVMRpcScanningV6Service extends RpcScanningService {
@@ -19,7 +19,11 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
   getProvider() {
     const rpc = this.chainConfig.rpc[0];
     if (!this.#provider) {
-      this.#provider = new Orbiter6Provider(rpc);
+     const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
+      this.#provider = new Orbiter6Provider(rpc, 
+        network ,{
+          staticNetwork:network
+        });
     }
     if (this.#provider && this.#provider.getUrl() != rpc) {
       this.logger.info(
@@ -273,7 +277,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
             return transfer;
           }
           const logs = transfer.receipt.logs;
-          const event = EVMVUtils.getTransferEvent(
+          const event = EVMV6Utils.getTransferEvent(
             logs,
             transfer.sender,
             transfer.receiver,

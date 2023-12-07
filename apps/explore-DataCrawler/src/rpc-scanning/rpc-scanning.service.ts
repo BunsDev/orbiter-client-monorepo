@@ -17,7 +17,7 @@ export interface RpcScanningInterface {
 export class RpcScanningService implements RpcScanningInterface {
   public logger: winston.Logger;
   public rpcLastBlockNumber: number = 0;
-  protected requestTimeout = 1000 * 30;
+  protected requestTimeout = 1000 * 20;
   readonly dataProcessor: DataProcessor;
   private blockCount: number = 0;
   private firstStartTime: number;
