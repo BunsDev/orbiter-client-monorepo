@@ -45,14 +45,16 @@ export class ENVConfigService {
   async initAsync(key: string): Promise<void> {
     if (!this.isInitialized) {
       await sleep(1000);
-      if (this.count >= 60) {
+      if (this.count >= 10) {
         throw new Error(`Configuration does not exist: ${key}`);
       }
+      this.count++;
       return await this.initAsync(key)
     }
   }
 
   get<T = any>(name: string, defaultValue?: T): T {
+    this.count = 0;
     if (!this.configService.get(name)) {
       return (get(this.configs, name) || defaultValue) as T;
     }
