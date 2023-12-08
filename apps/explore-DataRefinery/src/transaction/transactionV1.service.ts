@@ -15,6 +15,7 @@ import { validateAndParseAddress } from 'starknet'
 import BridgeTransactionBuilder from './bridgeTransaction.builder'
 import { ValidSourceTxError, decodeV1SwapData, addressPadStart } from '../utils';
 import { MessageService } from '@orbiter-finance/rabbit-mq'
+import { parseTragetTxSecurityCode } from './bridgeTransaction.builder'
 export interface handleTransferReturn {
   errno: number;
   errmsg?: string;
@@ -47,6 +48,44 @@ export class TransactionV1Service {
           error,
         );
       });
+  }
+  async fuzzyMatching() {
+    const btList = await this.bridgeTransactionModel.findAll({
+      where: {
+        targetId: null,
+        status: {
+          [Op.not]: 99
+        }
+      },
+      limit: 100
+    });
+    let index = 0;
+    for (const bt of btList) {
+      const transfers = await this.transfersModel.findAll({
+        raw: true,
+        attributes: ['id', 'chainId', 'value', 'amount', 'hash', 'receiver', 'sender'],
+        where: {
+          version: '1-1',
+          sender: bt.targetMaker,
+          receiver: bt.targetAddress,
+          timestamp: {
+            [Op.gte]: bt.sourceTime
+          },
+          status: {
+            [Op.not]: 99
+          }
+        }
+      });
+      const targetTransfer = transfers.find(row => {
+        const code = parseTragetTxSecurityCode(row.amount);
+        return bt.sourceNonce === code && bt.targetMaker === row.sender && bt.targetAddress === row.receiver && bt.targetChain === row.chainId;
+      })
+      if (targetTransfer) {
+        const result = await this.handleTransferMatchTx(bt.sourceId, targetTransfer.hash);
+        console.log(`match result：${index}/${btList.length}`, result);
+      }
+      index++;
+    }
   }
   @Cron('0 */5 * * * *')
   async matchScheduleTask() {
@@ -110,10 +149,9 @@ export class TransactionV1Service {
         },
       },
     });
-    console.log(transfers, '==transfers')
     for (const transfer of transfers) {
-      const result = await this.handleTransferByDestTx(transfer).then(result=> {
-        if (result && result.errno!=0){
+      const result = await this.handleTransferByDestTx(transfer).then(result => {
+        if (result && result.errno != 0) {
           this.memoryMatchingService.addTransferMatchCache(transfer);
         }
         return result;
@@ -129,7 +167,7 @@ export class TransactionV1Service {
       }
     }
   }
-  errorBreakResult(errmsg: string, errno:number = 1): handleTransferReturn {
+  errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
     return {
       errno: errno,
@@ -321,7 +359,7 @@ export class TransactionV1Service {
     const result = {
       errmsg: '',
       data: null,
-      errno:0
+      errno: 0
     }
     const t2 = await this.sequelize.transaction();
     try {
@@ -389,12 +427,92 @@ export class TransactionV1Service {
               error,
             );
           });
-          result.errno = 1001;
-          result.errmsg = 'bridgeTransaction not found';
+        result.errno = 1001;
+        result.errmsg = 'bridgeTransaction not found';
       }
       await t2.commit();
       result.data = btTx;
       return result
+    } catch (error) {
+      t2 && (await t2.rollback());
+      throw error;
+    }
+  }
+
+  public async handleTransferMatchTx(sourceHash: string, targetHash: string): Promise<handleTransferReturn> {
+    const targetTransfer = await this.transfersModel.findOne({
+      raw: true,
+      where: {
+        hash: targetHash
+      }
+    })
+    if (!targetTransfer || targetTransfer.version != '1-1') {
+      throw new Error(`handleTransferByDestTx  targetHash ${targetHash} version not 1-1`);
+    }
+    // const sourceTransfer = await this.transfersModel.findOne({
+    //   where: {
+    //     hash: targetHash
+    //   }
+    // })
+    // if (!sourceTransfer || sourceTransfer.version != '1-0') {
+    //   throw new Error(`handleTransferByDestTx  sourceHash ${sourceHash} version not 1-0`);
+    // }
+    // db match
+    const result = {
+      errmsg: '',
+      data: null,
+      errno: 0
+    }
+    const t2 = await this.sequelize.transaction();
+    try {
+      const btTx = await this.bridgeTransactionModel.findOne({
+        attributes: ['id', 'sourceId'],
+        where: {
+          sourceId: sourceHash
+        },
+        transaction: t2,
+      });
+      if (btTx && btTx.id) {
+        btTx.targetId = targetTransfer.hash;
+        btTx.status = targetTransfer.status == 3 ? 97 : 99;
+        btTx.targetTime = targetTransfer.timestamp;
+        btTx.targetFee = targetTransfer.feeAmount;
+        btTx.targetFeeSymbol = targetTransfer.feeToken;
+        btTx.targetNonce = targetTransfer.nonce;
+        btTx.targetMaker = targetTransfer.sender;
+        await btTx.save({
+          transaction: t2,
+        });
+        await this.transfersModel.update(
+          {
+            opStatus: 99,
+          },
+          {
+            where: {
+              opStatus: [0, 1],
+              hash: {
+                [Op.in]: [btTx.sourceId, btTx.targetId],
+              },
+            },
+            transaction: t2,
+          },
+        );
+        this.memoryMatchingService.removeTransferMatchCache(btTx.sourceId);
+        this.memoryMatchingService.removeTransferMatchCache(btTx.targetId);
+        result.errno = 0;
+        result.errmsg = 'success';
+
+        await t2.commit();
+        result.data = btTx;
+
+        return result
+      } else {
+        return {
+          errno: 1000,
+          data: null,
+          errmsg: 'BT Not Found'
+        };
+      }
     } catch (error) {
       t2 && (await t2.rollback());
       throw error;

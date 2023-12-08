@@ -16,7 +16,7 @@ import { hexlify } from 'ethers6';
 import { TransactionID, ValidSourceTxError, addressPadStart, decodeV1SwapData } from '../utils';
 import RLP from "rlp";
 
-function parseSourceTxSecurityCode(value) {
+export function parseSourceTxSecurityCode(value: string) {
   let index = 0;
   for (let i = value.length - 1; i > 0; i--) {
     if (+value[i] !== 0) {
@@ -39,8 +39,11 @@ function parseSourceTxSecurityCode(value) {
   }
   return nCode % 1000;
 }
+export function parseTragetTxSecurityCode(value: string):string {
+  return (+value.substring(value.length - 4)).toString();
+}
 
-function parseZksyncLiteSourceTxSecurityCode(value: string) {
+export function parseZksyncLiteSourceTxSecurityCode(value: string) {
   const stringValue = new BigNumber(value).toString()
   let code = stringValue.slice(stringValue.length - 4)
   code = code.slice(code.indexOf('9'))
