@@ -7,6 +7,7 @@ import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
 import { join } from 'lodash';
 import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
+import { DealerModule } from './dealer/dealer.module';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
         }
         return config;
       },
-    }),BridgeModule],
+    }),BridgeModule, DealerModule],
   controllers: [],
   providers: [],
 })
