@@ -35,4 +35,10 @@ export class AppController {
     }
   }
 
+    @Get("/config/spv")
+    async getSpvConfig(@Query("chainId") chainId: string | number): Promise<HTTPResponse> {
+        return HTTPResponse.success({
+            spvAddress: "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38"
+        });
+    }
 }

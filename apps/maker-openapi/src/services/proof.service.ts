@@ -7,9 +7,10 @@ import {
 } from '../common/interfaces/Proof.interface';
 import { Level } from 'level';
 import { InjectModel } from "@nestjs/sequelize";
-import { BridgeTransaction } from "../../../../libs/seq-models/src";
+import { BridgeTransaction } from "@orbiter-finance/seq-models";
 import { keccak256, solidityPack } from "ethers/lib/utils";
 import { Config, JsonDB } from "node-json-db";
+import { getDecimalBySymbol } from "@orbiter-finance/utils";
 
 @Injectable()
 export class ProofService {
@@ -25,12 +26,15 @@ export class ProofService {
             const localData: TxData = await this.jsondb.getData(`/tx/${data.transaction.toLowerCase()}`);
             if (localData) {
                 await this.jsondb.push(`/proof/${data.transaction.toLowerCase()}`, <ProofData>{
-                    proof: data.proof, hash: localData.hash,
+                    proof: data.proof,
+                    hash: localData.hash,
                     mdcAddress:localData.mdcAddress,
                     makerAddress: localData.makerAddress,
                     isSource: localData.isSource,
                     sourceChain: localData.sourceChain,
                     targetChain: localData.targetChain,
+                    challenger: localData.challenger,
+                    spvAddress: localData.spvAddress
                 });
                 await this.jsondb.delete(`/tx/${data.transaction.toLowerCase()}`); // TODO security
             }
@@ -50,6 +54,13 @@ export class ProofService {
         if (!data.chainId || !data.hash) {
             throw new Error('Invalid parameters');
         }
+        // +txData.targetNonce,
+        //     +txData.targetChainId,
+        //     +txData.targetFrom,
+        //     +txData.targetToken,
+        //     +txData.targetAmount,
+        //     +txData.responseMakersHash,
+        //     +txData.responseTime,
         let bridgeTransaction = data.isSource ? await this.bridgeTransactionModel.findOne(<any>{
             attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'targetId', 'targetChain', 'targetToken', 'ruleId'],
             where: {
@@ -57,7 +68,9 @@ export class ProofService {
                 sourceId: data.hash
             }
         }) : await this.bridgeTransactionModel.findOne(<any>{
-            attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'targetId', 'targetChain', 'targetToken', 'ruleId'],
+            attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker',
+                'targetId', 'targetChain', 'targetToken', 'targetNonce', 'targetAddress',
+                'targetAmount', 'ruleId'],
             where: {
                 targetChain: data.chainId,
                 targetId: data.hash
@@ -76,15 +89,35 @@ export class ProofService {
         const token0 = bridgeTransaction.sourceToken;
         const token1 = bridgeTransaction.targetToken;
         const ruleKey: string = keccak256(solidityPack(['uint256', 'uint256', 'uint256', 'uint256'], [chain0, chain1, token0, token1]));
-        await this.jsondb.push(`/tx/${data.hash.toLowerCase()}`, <TxData>{
-            hash: data.hash,
-            mdcAddress: data.mdcAddress,
-            makerAddress: bridgeTransaction.sourceMaker,
-            sourceChain: chain0,
-            targetChain: chain1,
-            ruleKey,
-            isSource: data.isSource ? 1 : 0
-        });
+        let txData:TxData
+        if (data.isSource) {
+            txData = {
+                hash: data.hash,
+                mdcAddress: data.mdcAddress,
+                makerAddress: bridgeTransaction.sourceMaker,
+                sourceChain: chain0,
+                targetChain: chain1,
+                ruleKey,
+                isSource: data.isSource ? 1 : 0,
+                challenger: data.challenger,
+                spvAddress: data.spvAddress
+            };
+        } else {
+            getDecimalBySymbol()
+            bridgeTransaction.targetAmount
+            txData = {
+                hash: data.hash,
+                mdcAddress: data.mdcAddress,
+                makerAddress: bridgeTransaction.sourceMaker,
+                sourceChain: chain0,
+                targetChain: chain1,
+                ruleKey,
+                isSource: data.isSource ? 1 : 0,
+                challenger: data.challenger,
+                spvAddress: data.spvAddress
+            };
+        }
+        await this.jsondb.push(`/tx/${data.hash.toLowerCase()}`, txData);
     }
 
     async getNeedProofTransactionList() {

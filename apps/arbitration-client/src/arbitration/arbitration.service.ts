@@ -12,6 +12,7 @@ import MDCAbi from '../abi/MDC.abi.json'
 import { ArbitrationDB, ArbitrationResponseTransaction, ArbitrationTransaction } from './arbitration.interface';
 import { OnEvent } from '@nestjs/event-emitter';
 import { HTTPPost } from "../../../../libs/request/src";
+import { HTTPGet } from "../utils";
 const arbitrationHost = process.env['ArbitrationHost'];
 @Injectable()
 export class ArbitrationService {
@@ -123,20 +124,33 @@ export class ArbitrationService {
         return new ethers.Wallet(arbitrationPrivateKey).connect(provider);
     }
 
+    async getSpvAddress(sourceChainId: string | number) {
+        const client = await this.getSubClient();
+        if (!client) {
+            throw new Error('SubClient not found');
+        }
+        const chain = this.chainRels.find(c => +c.id === +sourceChainId);
+        if (!chain) {
+            throw new Error('ChainRels not found');
+        }
+        const result = await HTTPGet(`${arbitrationHost}/config/spv?chainId=${sourceChainId}`);
+        return result?.data?.spvAddress || '';
+        // const spvAddress = await client.maker.getSpvAddressByChainId(sourceChainId);
+    }
+
     async userSubmitProof(txData: ArbitrationDB, proof: string) {
         if (!proof) {
             throw new Error(`proof is empty`);
         }
         const wallet = await this.getWallet();
         const ifa = new Interface(MDCAbi);
-
         const data = ifa.encodeFunctionData("verifyChallengeSource", [
-            "challenger (address)",
-            'spvAddress (address)',
-            "sourceChainId (uint64)",
+            txData.challenger,
+            txData.spvAddress,
+            txData.sourceChainId,
             proof,
-            "rawDatas (bytes)",
-            "rlpRuleBytes (bytes)"
+            txData.rawDatas,
+            txData.rlpRuleBytes
         ]);
         const client = await this.getSubClient();
         if (!client) {
@@ -169,18 +183,22 @@ export class ArbitrationService {
         if (!client) {
             throw new Error('SubClient not found');
         }
-        const spvAddress =await client.maker.getSpvAddressByChainId(txData.sourceChainId);
 
+        const chain = this.chainRels.find(c => +c.id === +txData.sourceChainId);
+        if (!chain) {
+            throw new Error('ChainRels not found');
+        }
+        const spvAddress = await this.getSpvAddress(txData.sourceChainId);
         const verifiedSourceTxData = [
-            "minChallengeSecond",
-            "maxChallengeSecond",
-            "nonce",
-            "destChainId",
-            "from",
-            "destToken",
-            "destAmount",
-            "responseMakersHash",
-            "responseTime",
+            +chain.minVerifyChallengeSourceTxSecond,
+            +chain.maxVerifyChallengeSourceTxSecond,
+            +txData.targetNonce,
+            +txData.targetChainId,
+            +txData.targetFrom,
+            +txData.targetToken,
+            +txData.targetAmount,
+            +txData.responseMakersHash,
+            +txData.responseTime,
         ];
         const data = ifa.encodeFunctionData("verifyChallengeDest", [
             txData.challenger,

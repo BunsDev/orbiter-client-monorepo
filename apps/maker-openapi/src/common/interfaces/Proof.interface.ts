@@ -23,6 +23,8 @@ export interface NeedProofSubmissionRequest {
     hash: string;
     chainId: number;
     mdcAddress: string;
+    challenger: string;
+    spvAddress: string;
 }
 
 export interface CompleteProofSubmission {
@@ -37,7 +39,9 @@ export interface TxData {
     sourceChain?: string;
     targetChain?: string;
     ruleKey?: string;
-    isSource?: number
+    isSource?: number;
+    challenger?: string;
+    spvAddress?: string;
 }
 
 export interface ProofData {
