@@ -17,6 +17,7 @@ export interface ArbitrationResponseTransaction {
 }
 
 export interface ArbitrationDB {
+    challenger?: string;
     targetChainId?: number;
     targetTxHash?: string;
     sourceChainId?: number;

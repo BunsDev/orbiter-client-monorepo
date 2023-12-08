@@ -131,13 +131,66 @@ export class ArbitrationService {
         const ifa = new Interface(MDCAbi);
 
         const data = ifa.encodeFunctionData("verifyChallengeSource", [
-            'spvAddress',
+            "challenger (address)",
+            'spvAddress (address)',
+            "sourceChainId (uint64)",
             proof,
+            "rawDatas (bytes)",
+            "rlpRuleBytes (bytes)"
         ]);
         const client = await this.getSubClient();
         if (!client) {
             throw new Error('SubClient not found');
         }
+        const transactionRequest = {
+            data,
+            to: txData.mdcAddress,
+            value: 0n,
+            from: wallet.address,
+        };
+        const response = await wallet.populateTransaction(transactionRequest);
+        console.log(response, '===submitProof tx', transactionRequest);
+        await this.jsondb.push(`/arbitrationHash/${txData.sourceTxHash}`, {
+            ...txData,
+            submitSourceProofHash: response.transactionHash,
+            status: 1
+        });
+        return response as any;
+    }
+
+    async makerSubmitProof(txData: ArbitrationDB, proof: string) {
+        if (!proof) {
+            throw new Error(`proof is empty`);
+        }
+        const wallet = await this.getWallet();
+        const ifa = new Interface(MDCAbi);
+
+        const client = await this.getSubClient();
+        if (!client) {
+            throw new Error('SubClient not found');
+        }
+        const spvAddress =await client.maker.getSpvAddressByChainId(txData.sourceChainId);
+
+        const verifiedSourceTxData = [
+            "minChallengeSecond",
+            "maxChallengeSecond",
+            "nonce",
+            "destChainId",
+            "from",
+            "destToken",
+            "destAmount",
+            "responseMakersHash",
+            "responseTime",
+        ];
+        const data = ifa.encodeFunctionData("verifyChallengeDest", [
+            txData.challenger,
+            spvAddress,
+            txData.sourceChainId,
+            txData.sourceTxHash,
+            proof,
+            verifiedSourceTxData,
+            "rawDatas (bytes)"
+        ]);
         const transactionRequest = {
             data,
             to: txData.mdcAddress,

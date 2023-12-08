@@ -140,4 +140,14 @@ export class MakerService {
     }
     return null;
   }
+  async getSpvAddressByChainId(chainId: string | number) {
+        const queryStr = `
+   chainRels(where: {id: "${chainId}"}) {
+    id
+    spvs
+  }
+          `;
+        const result = await this.ctx.query(queryStr);
+        return result['chainRels'][0]?.spvs[0];
+    }
 }
