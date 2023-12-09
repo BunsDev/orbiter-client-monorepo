@@ -110,26 +110,26 @@ export class TransactionService {
           console.log('replace hash:', transaction.hash, transfer.hash)
         }
         if (transfer.version == '1-0') {
-          const v1BTX = await this.bridgeTransactionModel.findOne({
+          const v3BTX = await this.bridgeTransactionModel.findOne({
             where: {
               sourceId: hash
             }
           });
-          if (!v1BTX) {
+          if (!v3BTX) {
             throw new Error(`BT Not Found ${hash}`)
           }
-          const targetChain = await this.chainConfigService.getChainInfo(v1BTX.targetChain);
+          const targetChain = await this.chainConfigService.getChainInfo(v3BTX.targetChain);
           if (!targetChain) {
             throw new Error('targetChain not found');
           }
-          const targetChainToken = await this.chainConfigService.getTokenBySymbol(v1BTX.targetChain, v1BTX.targetSymbol);
+          const targetChainToken = await this.chainConfigService.getTokenBySymbol(v3BTX.targetChain, v3BTX.targetSymbol);
           if (!targetChainToken) {
             throw new Error('targetChainToken not found');
           }
           transaction.side = '0';
-          transaction.expectValue = new BigNumber(v1BTX.targetAmount).times(10 ** 18).toFixed(0);
-          transaction.replyAccount = v1BTX.targetAddress;
-          transaction.replySender = v1BTX.targetMaker;
+          transaction.expectValue = new BigNumber(v3BTX.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
+          transaction.replyAccount = v3BTX.targetAddress;
+          transaction.replySender = v3BTX.targetMaker;
           transaction.memo = String(targetChain.internalId);
           transaction.transferId = transaction.transferId = TransferId(
             String(transaction.memo),
@@ -173,7 +173,9 @@ export class TransactionService {
         transfer.syncStatus = 9;
         await transfer.save();
         if (transfer.opStatus == 99) {
-          this.syncBTTransfer(transfer.hash).then(result => {
+          this.syncBTTransfer(transfer.hash).catch(error=> {
+            console.error('syncBTTransfer erorr1', error);
+          }).then(result => {
             console.log(`sync result ${transfer.hash}`, result);
           })
         }
