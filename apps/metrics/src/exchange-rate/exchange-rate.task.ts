@@ -11,10 +11,9 @@ export class ExchangeRateTask {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCron() {
-    console.log('oook')
     const usdtRate = await this.coinbaseService.getUsdtExchangeRate();
     if (usdtRate !== null && usdtRate.currency) {
-      this.logger.log(`USDT Exchange Rate: ${usdtRate}`);
+      this.logger.log(`USDT Exchange Rate: ${JSON.stringify(usdtRate)}`);
       this.exchangeRateService.rates = usdtRate.rates;
       this.exchangeRateService.ratesCurrency = usdtRate.currency;
     }

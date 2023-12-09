@@ -20,12 +20,11 @@ export class CoinbaseService {
             const data = await response.json().then(res => res && res.data);
             if (data && data.currency === currency) {
                 writeFile(path.join(__filename, '../assets/', "rates.json"), JSON.stringify(data), (...res) => {
-                    console.log('save coinbase rate result:', res)
+                    console.log('save coinbase rate result:', data)
                 });
             } else {
                 console.log('request coinbase rate error:', data)
             }
-
             return data;
         } catch (error) {
             console.error(`Request coinbase rate Error: ${error}`);
