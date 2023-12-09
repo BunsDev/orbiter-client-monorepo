@@ -79,6 +79,7 @@ export class TransactionService {
           Number(chainInfo.internalId),
           transfer.value.toString()
         )
+
         const transaction = {
           hash,
           nonce: transfer.nonce,
@@ -104,6 +105,10 @@ export class TransactionService {
           createdAt: new Date(),
           updatedAt: new Date()
         };
+        if (transfer.chainId === 'SN_MAIN' && transfer.hash.includes("#0")) {
+          transaction.hash = transfer.hash.replace('#0', '');
+          console.log('replace hash:', transaction.hash, transfer.hash)
+        }
         if (transfer.version == '1-0') {
           const v1BTX = await this.bridgeTransactionModel.findOne({
             where: {
