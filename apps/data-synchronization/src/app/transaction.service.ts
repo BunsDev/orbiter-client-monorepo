@@ -39,7 +39,7 @@ export class TransactionService {
     private chainConfigService: ChainConfigService
   ) {
     this.mutex = new Mutex()
-    // this.syncV3ToV1FromDatabase()
+    this.syncV3ToV1FromDatabase()
     this.readV1NotMatchTx()
     this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
   }
@@ -192,12 +192,12 @@ export class TransactionService {
           errmsg: 'v1 transfer not found'
         }
       }
-      if (v1Transfer.status == 99) {
-        return {
-          errno: 0,
-          errmsg: 'Exception transfer'
-        }
-      }
+      // if (v1Transfer.status == 99) {
+      //   return {
+      //     errno: 0,
+      //     errmsg: 'Exception transfer'
+      //   }
+      // }
       const v3Transfer = await this.transfersModel.findOne({
         where: {
           hash
@@ -322,9 +322,9 @@ export class TransactionService {
               }
             }, transaction: t
           });
-          if (updateTransferRows2 != 2) {
-            throw new Error('updateTransferRows row error !=2');
-          }
+          // if (updateTransferRows2 != 2) {
+          //   throw new Error('updateTransferRows row error !=2');
+          // }
           await t.commit();
           return {
             errno: 0,
