@@ -111,7 +111,7 @@ export class TransactionService {
             }
           });
           if (!v1BTX) {
-            throw new Error('BT Not Found')
+            throw new Error(`BT Not Found ${hash}`)
           }
           const targetChain = await this.chainConfigService.getChainInfo(v1BTX.targetChain);
           if (!targetChain) {
@@ -169,12 +169,13 @@ export class TransactionService {
         await transfer.save();
         if (transfer.opStatus == 99) {
           this.syncBTTransfer(transfer.hash).then(result => {
-            console.log('sync result', result);
+            console.log(`sync result ${transfer.hash}`, result);
           })
         }
       }
     } catch (error) {
       console.error('sync transfer error', error);
+      throw error;
     }
   }
   async syncBTTransfer(hash: string) {
@@ -302,7 +303,7 @@ export class TransactionService {
               transaction: t
             })
             if (updateTransferRows != 1) {
-              throw new Error('updateTransferRows row error !=1');
+              throw new Error(`updateTransferRows row error !=1/${updateTransferRows}`);
             }
           } else {
             const res = await this.makerTransactionModel.create(mtCreateData, {
@@ -336,7 +337,7 @@ export class TransactionService {
         }
       }
     } catch (error) {
-      console.error('syncBTTransfer error', error);
+      console.error(`syncBTTransfer error ${hash}`, error);
     }
   }
 
