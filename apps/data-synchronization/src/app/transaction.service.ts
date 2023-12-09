@@ -612,7 +612,6 @@ export class TransactionService {
     if (this.mutex.isLocked()) {
       return
     }
-    const limit = 200;
     this.logger.info('syncV3V1FromDatabase start')
     this.mutex.runExclusive(async () => {
       let index = 0;
@@ -627,11 +626,11 @@ export class TransactionService {
           },
           timestamp: {
             [Op.gte]: dayjs().subtract(60 * 24, 'minutes').toISOString(),
-            [Op.lte]: dayjs().subtract(10, 'minutes').toISOString(),
+            [Op.lte]: dayjs().subtract(5, 'minutes').toISOString(),
           },
         },
         order: [['id', 'desc']],
-        limit: limit
+        limit: 200
       })
       console.log('LIST TOTAL:', list2.length, new Date());
       for (const row of list2) {
@@ -669,16 +668,17 @@ export class TransactionService {
         }
       });
       if (tx.status != 99) {
-        const transfer = await this.transfersModel.findOne({
-          where: {
-            hash: tx.hash
-          }
-        })
-        if (transfer) {
-          await this.syncBTTransfer(transfer.hash).catch(error => {
-            this.logger.error('syncV3V1FromDatabase error', error)
-          });
-        }
+        // const transfer = await this.transfersModel.findOne({
+        //   attributes:['hash'],
+        //   where: {
+        //     hash: tx.hash
+        //   }
+        // })
+        // if (transfer) {
+        await this.syncBTTransfer(tx.hash).catch(error => {
+          this.logger.error('syncV3V1FromDatabase error', error)
+        });
+        // }
         console.log(`match 2 ${index}/${rows.length} hash: ${tx.hash}`);
       }
     }
