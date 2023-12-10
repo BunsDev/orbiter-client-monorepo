@@ -4,7 +4,7 @@ import { map } from 'rxjs/operators'
 import { Injectable, NestInterceptor, CallHandler, ExecutionContext } from '@nestjs/common'
 import { HttpResponseSuccess, ResponseStatus } from '../interfaces/response.interface'
 import { getResponserOptions } from '../decorators/responser.decorator'
-import { isDevEnv } from '../environment'
+import { isDevEnv } from '../../environment'
 
 /**
  * @class TransformInterceptor

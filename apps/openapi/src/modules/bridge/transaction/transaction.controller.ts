@@ -1,6 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
-import { success } from '../../decorators/responser.decorator';
+import { success } from 'apps/openapi/src/shared/decorators/responser.decorator';
 
 @Controller('transaction')
 export class TransactionController {
