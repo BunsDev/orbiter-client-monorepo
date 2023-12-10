@@ -24,8 +24,8 @@ import { DealerModule } from './modules/dealer/dealer.module';
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-open-api/chains.json",
-      envConfigPath: "explore-open-api/config.yaml",
+      chainConfigPath: "explore-server/chains.json",
+      envConfigPath: "openapi/config.yaml",
       makerV1RulePath: "rules",
       // cachePath: join(__dirname, 'runtime')
     }),
