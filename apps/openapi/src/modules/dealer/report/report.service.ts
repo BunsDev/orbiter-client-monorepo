@@ -10,6 +10,7 @@ export class ReportService {
         try {
             // Find or create a transaction with the provided hash
             const [transaction, created] = await this.transactionSource.findOrCreate({
+                attributes:['chainId', 'hash', 'createdAt'],
                 where: { hash }, // Search for an existing record with the given hash
                 defaults: {
                     chainId,
@@ -29,7 +30,7 @@ export class ReportService {
             }
 
             // You can return additional information or the created transaction
-            return { transaction, created };
+            return transaction;
         } catch (error) {
             // Handle errors appropriately
             console.error('Error reporting transaction:', error);

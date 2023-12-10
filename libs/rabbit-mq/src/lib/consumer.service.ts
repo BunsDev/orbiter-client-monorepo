@@ -84,7 +84,7 @@ export class ConsumerService {
             channel.ack(msg);
           } catch (error: any) {
             Logger.error(`${queue} consumeDataSynchronizationMessages Error ${error.message}`, error);
-            channel.nack(msg);
+            channel.nack(msg,false,true);
           }
         }
       });
