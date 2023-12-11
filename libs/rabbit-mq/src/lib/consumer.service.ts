@@ -141,7 +141,7 @@ export class ConsumerService {
   }
 
   async consumeMakerWaitTransferMessage(callback: (data: any) => Promise<any>) {
-    const queue = 'makerWaitTransfer';
+    const queue = 'makerWaitTransfer1_0_1c8';
     try {
       if (!this.connectionManager.getChannel()) {
         await sleep(500);
@@ -183,4 +183,5 @@ export class ConsumerService {
       Logger.error(`${queue} consumeMakerWaitTransferMessage error ${error.message}`, error);
     }
   }
+  
 }
