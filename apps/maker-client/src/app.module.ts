@@ -9,7 +9,7 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { isEmpty } from '@orbiter-finance/utils';
 import { AlertModule } from '@orbiter-finance/alert'
 import { TcpModule } from "@orbiter-finance/tcp";
-import {MetricModule} from './metric/metric.module'
+import { MetricModule } from './metric/metric.module'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -21,13 +21,13 @@ import {MetricModule} from './metric/metric.module'
       useFactory: (config: ConfigService) => {
         return {
           name: 'Maker-Client',
-          url:config.get("CONSUL_URL")
+          url: config.get("CONSUL_URL")
         };
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "maker-client/chains.json",
-      envConfigPath: "maker-client/config.yaml",
+      chainConfigPath: process.env['chainConfigPath'] || "maker-client/chains.json",
+      envConfigPath: process.env['envConfigPath'] || "maker-client/config.yaml",
       // makerV1RulePath: "explore-data-service/rules",
     }),
     SequelizeModule.forRootAsync({
