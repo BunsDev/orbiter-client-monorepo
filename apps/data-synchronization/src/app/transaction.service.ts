@@ -352,8 +352,11 @@ export class TransactionService {
     // console.log(data)
     try {
       const transfer = data.data
+      if(transfer.sender ==='0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2' || transfer.receiver ==='0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2') {
+        return true;
+      }
       this.logger.info(`${transfer.chainId} transfer: ${transfer.hash}, ${transfer.version}`)
-      await this.syncTransferByHash(transfer.hash);
+      return await this.syncTransferByHash(transfer.hash);
     } catch (error) {
       this.logger.error('handleBridgeTransaction error', error)
       this.logger.error('handleBridgeTransaction error transfer data', data.data)
@@ -630,6 +633,12 @@ export class TransactionService {
           // opStatus: [1, 99],
           syncStatus: {
             [Op.not]: 9
+          },
+          receiver:{
+            [Op.not]: '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2'
+          },
+          sender:{
+            [Op.not]: '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2'
           },
           timestamp: {
             [Op.gte]: dayjs().subtract(60 * 24, 'minutes').toISOString(),
