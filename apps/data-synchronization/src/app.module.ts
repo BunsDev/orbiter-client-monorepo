@@ -9,6 +9,7 @@ import { MakerTransaction, Transaction, NetState, UserHistory } from '@orbiter-f
 import { join, isEmpty } from 'lodash';
 import { SequelizeModule } from "@nestjs/sequelize";
 import { TransactionService } from './app/transaction.service';
+import { TransactionV1ToV3Service } from './app/transactionV1ToV3.service';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { AlertModule } from '@orbiter-finance/alert'
@@ -72,6 +73,6 @@ import { ScheduleModule } from '@nestjs/schedule';
     ScheduleModule.forRoot()
   ],
   controllers: [AppController],
-  providers: [AppService, TransactionService],
+  providers: [AppService, TransactionV1ToV3Service],
 })
 export class AppModule {}
