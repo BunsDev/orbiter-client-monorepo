@@ -164,6 +164,9 @@ export class TransactionService {
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystem(result.data)
         }
+        if (+this.envConfig.get("enablePointsSystemGray") == 1 && result.errno === 0) {
+          this.messageService.sendMessageToPointsSystemGray(result.data)
+        }
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
@@ -193,6 +196,9 @@ export class TransactionService {
         result = await this.transactionV2Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystem(result.data)
+        }
+        if (+this.envConfig.get("enablePointsSystemGray") == 1 && result.errno === 0) {
+          this.messageService.sendMessageToPointsSystemGray(result.data)
         }
       } else {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
