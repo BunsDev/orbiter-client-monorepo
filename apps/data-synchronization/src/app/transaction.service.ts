@@ -135,6 +135,7 @@ export class TransactionService {
           }
           transaction.expectValue = new BigNumber(v3BTX.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
           if (transaction.to.toLocaleLowerCase() =='0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
+            transaction.source = 'xvm';
             transaction.extra['xvm'] = {
               "name":"swap",
                 "params":{
@@ -163,16 +164,6 @@ export class TransactionService {
             String(transaction.symbol),
             transaction.expectValue,
           );
-          if (transaction.to.toLocaleLowerCase() =='0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
-            console.log(transaction.transferId, '===', [
-              String(transaction.memo),
-              transaction.replySender,
-              String(transaction.replyAccount),
-              String(transaction.nonce),
-              String(transaction.symbol),
-              transaction.expectValue,
-            ])
-          }
         } else if (transfer.version == '1-1') {
           transaction.side = '1';
           transaction.expectValue = null;
