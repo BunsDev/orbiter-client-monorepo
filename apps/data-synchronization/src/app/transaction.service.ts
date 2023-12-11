@@ -73,7 +73,7 @@ export class TransactionService {
           hash
         }
       });
-      if (v1Transfer || !v1Transfer.version) {
+      if (!v1Transfer || !v1Transfer.version) {
         return
       }
       if (!v1Transfer || transfer.syncStatus != 99) {
