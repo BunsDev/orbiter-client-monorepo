@@ -54,8 +54,8 @@ export class TransactionV1ToV3Service {
     this.V1DataToV3Sql()
   }
   async V1DataToV3Sql() {
-    // const maxId = 20299857;
-    const maxId = 1001;
+    const maxId = 20299857;
+    // const maxId = 1001;
     const where = {
       id: { [Op.gt]: 0, [Op.lte]: maxId },
       outId: { [Op.not]: null },
