@@ -73,6 +73,9 @@ export class TransactionService {
           hash
         }
       });
+      if (!v1Transfer.version) {
+        return
+      }
       if (!v1Transfer || transfer.syncStatus != 99) {
         const chainInfo = this.chainConfigService.getChainInfo(transfer.chainId);
         const result = getPTextFromTAmount(
@@ -389,7 +392,7 @@ export class TransactionService {
     }
     return
   }
-  
+
   @Cron("* */5 * * * *")
   private async syncV3ToV1FromDatabase() {
     if (this.mutex.isLocked()) {
@@ -400,6 +403,7 @@ export class TransactionService {
       let index = 0;
       const list2 = await this.transfersModel.findAll({
         where: {
+          version: ['1-1', '1-0'],
           syncStatus: {
             [Op.not]: 9
           },
