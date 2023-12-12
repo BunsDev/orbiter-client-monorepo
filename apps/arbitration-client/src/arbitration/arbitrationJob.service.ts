@@ -34,7 +34,7 @@ export class ArbitrationJobService {
 
     @Interval(1000 * 60)
     async syncProof() {
-        const isMaker = !!process.env['makerList'];
+        const isMaker = !!process.env['MakerList'];
         const arbitrationObj = await this.arbitrationService.jsondb.getData(`/arbitrationHash`);
         for (const hash in arbitrationObj) {
             if (arbitrationObj[hash] && arbitrationObj[hash].status) continue;
@@ -98,10 +98,10 @@ export class ArbitrationJobService {
         name: 'makerArbitrationJob',
     })
     getListOfUnresponsiveTransactions() {
-        if (!process.env['makerList']) {
+        if (!process.env['MakerList']) {
             return;
         }
-        const makerList = process.env['makerList'].split(',');
+        const makerList = process.env['MakerList'].split(',');
         this.logger.debug('Called when the current second is 45');
         if (mutex.isLocked()) {
             return;

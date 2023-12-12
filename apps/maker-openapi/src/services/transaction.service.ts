@@ -49,11 +49,14 @@ export class TransactionService {
         const dataList: ArbitrationTransaction[] = [];
         for (const bridgeTx of bridgeTransactions) {
             const mainToken = this.chainConfigService.getTokenBySymbol(1, bridgeTx.sourceSymbol);
-            if (!mainToken?.address) continue;
+            if (!mainToken?.address) {
+                console.error('MainToken not found', bridgeTx.sourceId);
+                continue;
+            }
             const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
             if (!sourceToken?.decimals) continue;
             if (!bridgeTx?.targetToken) {
-                console.error(bridgeTx.sourceId, 'TargetToken not found');
+                console.error('TargetToken not found', bridgeTx.sourceId);
                 continue;
             }
             const sourceTxHash = bridgeTx.sourceId;
@@ -63,7 +66,7 @@ export class TransactionService {
                 }
             });
             if (!transfer) {
-                console.error(sourceTxHash, 'Transfer not found');
+                console.error('Transfer not found', sourceTxHash);
                 continue;
             }
             const ruleKey: string = keccak256(solidityPack(
@@ -75,6 +78,10 @@ export class TransactionService {
                 throw new Error('SubClient not found');
             }
             const mdcAddress = await client.maker.getMDCAddress(bridgeTx.sourceMaker);
+            if (!mdcAddress) {
+                console.error('MdcAddress not found', bridgeTx.sourceChain, bridgeTx.sourceId);
+                continue;
+            }
             const { dealers, ebcs, chainIds } = await client.maker.getColumnArray(Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000), mdcAddress, bridgeTx.sourceMaker);
             const spvAddress = "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38"; // TODO
             const ebc = bridgeTx.ebcAddress;
@@ -83,6 +90,10 @@ export class TransactionService {
                 [dealers, ebcs, chainIds, ebc],
             );
             const rule: any = await client.maker.getRules(mdcAddress, ebc, bridgeTx.sourceMaker);
+            if (!rule) {
+                console.error('Rule not found', bridgeTx.sourceChain, bridgeTx.sourceId);
+                continue;
+            }
             const formatRule: any[] = [
                 rule.chain0,
                 rule.chain1,

@@ -120,7 +120,7 @@ export class MakerService {
     }
           `
     const result = await this.ctx.query(queryStr);
-    return result['mdcs'][0];
+    return result?.mdcs?.[0];
   }
   async getChallengeUserRatio() {
     const queryStr = `
@@ -160,7 +160,7 @@ export class MakerService {
     }
           `;
         const result = await this.ctx.query(queryStr);
-        return result.data.data.columnArraySnapshots;
+        return result?.data?.data?.columnArraySnapshots;
     }
     async getRules(mdcAddr: string, ebcAddr: string, maker: string) {
         const queryStr = `
@@ -202,6 +202,6 @@ export class MakerService {
       }
           `;
         const result = await this.ctx.query(queryStr);
-        return result.data.data.latestRuleSnapshots;
+        return result?.data?.data?.latestRuleSnapshots;
     }
 }
