@@ -49,11 +49,14 @@ export class TransactionService {
         const dataList: ArbitrationTransaction[] = [];
         for (const bridgeTx of bridgeTransactions) {
             const mainToken = this.chainConfigService.getTokenBySymbol(1, bridgeTx.sourceSymbol);
-            if (!mainToken?.address) continue;
+            if (!mainToken?.address) {
+                console.error('MainToken not found', bridgeTx.sourceId);
+                continue;
+            }
             const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
             if (!sourceToken?.decimals) continue;
             if (!bridgeTx?.targetToken) {
-                console.error(bridgeTx.sourceId, 'TargetToken not found');
+                console.error('TargetToken not found', bridgeTx.sourceId);
                 continue;
             }
             const sourceTxHash = bridgeTx.sourceId;
@@ -63,7 +66,7 @@ export class TransactionService {
                 }
             });
             if (!transfer) {
-                console.error(sourceTxHash, 'Transfer not found');
+                console.error('Transfer not found', sourceTxHash);
                 continue;
             }
             const ruleKey: string = keccak256(solidityPack(
