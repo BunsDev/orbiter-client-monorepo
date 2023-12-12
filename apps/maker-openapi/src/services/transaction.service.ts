@@ -12,7 +12,10 @@ import { utils, ethers } from "ethers";
 import { SubgraphClient } from "../../../../libs/subgraph-sdk/src";
 @Injectable()
 export class TransactionService {
+    mainChain = 1;
+
     constructor(
+        protected chainConsulService: ChainConfigService,
         protected envConfigService: ENVConfigService,
         private readonly chainConfigService: ChainConfigService,
         @InjectModel(Transfers)
@@ -20,6 +23,14 @@ export class TransactionService {
         @InjectModel(BridgeTransaction)
         private bridgeTransactionModel: typeof BridgeTransaction,
     ) {
+        this.init();
+    }
+
+    async init() {
+        const chains = await this.chainConsulService.getAllChains();
+        if (chains.find(item => +item.internalId === 5)) {
+            this.mainChain = 5;
+        }
     }
 
     async getSubClient(): Promise<SubgraphClient> {
@@ -48,7 +59,7 @@ export class TransactionService {
         });
         const dataList: ArbitrationTransaction[] = [];
         for (const bridgeTx of bridgeTransactions) {
-            const mainToken = this.chainConfigService.getTokenBySymbol(1, bridgeTx.sourceSymbol);
+            const mainToken = this.chainConfigService.getTokenBySymbol(this.mainChain, bridgeTx.sourceSymbol);
             if (!mainToken?.address) {
                 console.error('MainToken not found', bridgeTx.sourceId);
                 continue;
