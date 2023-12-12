@@ -124,23 +124,13 @@ export class ArbitrationService {
         return new ethers.Wallet(arbitrationPrivateKey).connect(provider);
     }
 
-    async getSpvAddress(sourceChainId: string | number) {
-        const client = await this.getSubClient();
-        if (!client) {
-            throw new Error('SubClient not found');
-        }
-        const chain = this.chainRels.find(c => +c.id === +sourceChainId);
-        if (!chain) {
-            throw new Error('ChainRels not found');
-        }
-        const result = await HTTPGet(`${arbitrationHost}/config/spv?chainId=${sourceChainId}`);
-        return result?.data?.spvAddress || '';
-        // const spvAddress = await client.maker.getSpvAddressByChainId(sourceChainId);
-    }
-
     async userSubmitProof(txData: ArbitrationDB, proof: string) {
         if (!proof) {
             throw new Error(`proof is empty`);
+        }
+        const client = await this.getSubClient();
+        if (!client) {
+            throw new Error('SubClient not found');
         }
         const wallet = await this.getWallet();
         const ifa = new Interface(MDCAbi);
@@ -152,10 +142,6 @@ export class ArbitrationService {
             txData.rawDatas,
             txData.rlpRuleBytes
         ]);
-        const client = await this.getSubClient();
-        if (!client) {
-            throw new Error('SubClient not found');
-        }
         const transactionRequest = {
             data,
             to: txData.mdcAddress,
@@ -188,7 +174,6 @@ export class ArbitrationService {
         if (!chain) {
             throw new Error('ChainRels not found');
         }
-        const spvAddress = await this.getSpvAddress(txData.sourceChainId);
         const verifiedSourceTxData = [
             +chain.minVerifyChallengeSourceTxSecond,
             +chain.maxVerifyChallengeSourceTxSecond,
@@ -202,12 +187,12 @@ export class ArbitrationService {
         ];
         const data = ifa.encodeFunctionData("verifyChallengeDest", [
             txData.challenger,
-            spvAddress,
+            txData.spvAddress,
             txData.sourceChainId,
             txData.sourceTxHash,
             proof,
             verifiedSourceTxData,
-            "rawDatas (bytes)"
+            txData.rawDatas
         ]);
         const transactionRequest = {
             data,

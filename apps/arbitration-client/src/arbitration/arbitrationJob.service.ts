@@ -76,16 +76,18 @@ export class ArbitrationJobService {
                         if (data) {
                             continue;
                         }
-                        const spvAddress = await this.arbitrationService.getSpvAddress(item.sourceChainId);
                         await this.arbitrationService.jsondb.push(`/arbitrationHash/${item.sourceTxHash.toLowerCase()}`, <ArbitrationDB>{
                             challenger,
-                            spvAddress,
+                            spvAddress: item.spvAddress,
                             sourceChainId: item.sourceChainId,
                             sourceTxHash: item.sourceTxHash.toLowerCase(),
                             mdcAddress: '',
                             status: 0
                         });
-                        this.eventEmitter.emit("user.arbitration.create", { challenger, spvAddress, ...item });
+                        this.eventEmitter.emit("user.arbitration.create", {
+                            challenger,
+                            ...item
+                        });
                     }
                 }
                 startTime = endTime;

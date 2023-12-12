@@ -238,8 +238,8 @@ export class V3Service {
         targetMaker: data.targetMaker,
         sourceToken: data.sourceToken,
         targetToken: data.targetToken,
-        sourceDecimal: getDecimalBySymbol(data.sourceSymbol),
-        targetDecimal: getDecimalBySymbol(data.targetSymbol)
+        sourceDecimal: getDecimalBySymbol(data.sourceChain, data.sourceSymbol),
+        targetDecimal: getDecimalBySymbol(data.targetChain, data.targetSymbol)
       });
     }
 
