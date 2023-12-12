@@ -5,7 +5,7 @@ import { LoggerDecorator, OrbiterLogger, equals, isEmpty } from "@orbiter-financ
 import { type TransferAmountTransaction } from "./sequencer.interface";
 
 import { InjectModel } from "@nestjs/sequelize";
-import { BridgeTransaction } from "@orbiter-finance/seq-models";
+import { BridgeTransaction, BridgeTransactionStatus } from "@orbiter-finance/seq-models";
 import BigNumber from "bignumber.js";
 import { AlertService } from "@orbiter-finance/alert";
 import { OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendBeforeError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
@@ -108,7 +108,7 @@ export class SequencerService {
           `${sourceChainId} - ${sourceHash} Inconsistent targetSymbol (${sourceTx.targetSymbol}/${transfer.targetSymbol})`
         );
       }
-      sourceTx.status = 96;
+      sourceTx.status = BridgeTransactionStatus.READY_PAID;
       const updateRes = await sourceTx.save({
         transaction,
       });
@@ -144,7 +144,7 @@ export class SequencerService {
           requestParams
         );
       }
-      sourceTx.status = 98;
+      sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
       sourceTx.targetId = transferResult.hash;
       const updateRes = await sourceTx.save({
         transaction,
@@ -160,7 +160,7 @@ export class SequencerService {
         console.error('transferResult', transferResult);
         await transaction.rollback();
       } else {
-        sourceTx.status = 97;
+        sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
         sourceTx.targetMaker = transferResult.from;
         sourceTx.targetId = transferResult && transferResult.hash;
         await sourceTx.save({
@@ -178,7 +178,7 @@ export class SequencerService {
         .then(async (tx) => {
           await this.bridgeTransactionModel.update(
             {
-              status: 99,
+              status: BridgeTransactionStatus.BRIDGE_SUCCESS,
               targetMaker: tx.from,
             },
             {
@@ -347,7 +347,7 @@ export class SequencerService {
     try {
       const result = await this.bridgeTransactionModel.update(
         {
-          status: 96,
+          status: BridgeTransactionStatus.READY_PAID,
         },
         {
           where: {
@@ -387,7 +387,7 @@ export class SequencerService {
       // CHANGE 98
       await this.bridgeTransactionModel.update(
         {
-          status: 98,
+          status: BridgeTransactionStatus.PAID_SUCCESS,
           targetId: transferResult && transferResult.hash
         },
         {
@@ -405,7 +405,7 @@ export class SequencerService {
       } else {
         await this.bridgeTransactionModel.update(
           {
-            status: 97,
+            status: BridgeTransactionStatus.PAID_CRASH,
             targetMaker: transferResult.from,
             targetId: transferResult && transferResult.hash
           },
@@ -427,7 +427,7 @@ export class SequencerService {
         .then(async (tx) => {
           await this.bridgeTransactionModel.update(
             {
-              status: 99,
+              status: BridgeTransactionStatus.BRIDGE_SUCCESS,
               targetMaker: tx.from,
             },
             {

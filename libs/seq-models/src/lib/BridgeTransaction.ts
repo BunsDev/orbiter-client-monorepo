@@ -198,3 +198,12 @@ import {
     })
     responseMaker?: any;
   }
+
+
+  export enum BridgeTransactionStatus {
+    PENDING_MATCH = 0,
+    READY_PAID = 96,
+    PAID_CRASH = 97,
+    PAID_SUCCESS = 98, // pending confirm
+    BRIDGE_SUCCESS = 99,
+  }
