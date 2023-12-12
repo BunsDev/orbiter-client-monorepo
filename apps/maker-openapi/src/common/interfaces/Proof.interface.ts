@@ -47,6 +47,7 @@ export interface TxData {
     challenger?: string;
     spvAddress?: string;
     rawDatas?: string;
+    rlpRuleBytes?: string;
 
     targetNonce?: string;
     targetChainId?: string;

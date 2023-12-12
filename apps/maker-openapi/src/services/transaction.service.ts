@@ -8,7 +8,7 @@ import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import { keccak256 } from "@ethersproject/keccak256";
 import { solidityPack } from "ethers/lib/utils";
 import BigNumber from "bignumber.js";
-import { utils } from "ethers";
+import { utils, ethers } from "ethers";
 import { SubgraphClient } from "../../../../libs/subgraph-sdk/src";
 @Injectable()
 export class TransactionService {
@@ -105,7 +105,7 @@ export class TransactionService {
             ];
             // console.log('formatRule ====', formatRule);
             const rlpRuleBytes = utils.RLP.encode(
-                formatRule.map((r) => utils.stripZeros(BigNumber.from(r).toHexString())),
+                formatRule.map((r) => utils.stripZeros(ethers.BigNumber.from(r).toHexString())),
             );
             const arbitrationTransaction: ArbitrationTransaction = {
                 sourceChainId: Number(bridgeTx.sourceChain),
