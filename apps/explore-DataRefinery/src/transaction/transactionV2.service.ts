@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { equals } from '@orbiter-finance/utils';
-import { BridgeTransactionAttributes, BridgeTransaction, Transfers } from '@orbiter-finance/seq-models';
+import { BridgeTransactionAttributes, BridgeTransaction, Transfers, BridgeTransactionStatus } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
@@ -338,7 +338,7 @@ export class TransactionV2Service {
         const [rowCount] = await this.bridgeTransactionModel.update(
           {
             targetId: transfer.hash,
-            status: 99,
+            status: BridgeTransactionStatus.BRIDGE_SUCCESS,
             targetTime: transfer.timestamp,
             targetFee: transfer.feeAmount,
             targetFeeSymbol: transfer.feeToken,
@@ -349,7 +349,7 @@ export class TransactionV2Service {
             limit: 1,
             where: {
               id: memoryBT.id,
-              status: [0, 97, 98],
+              status: [0, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
               sourceTime: {
                 [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
                 [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
@@ -365,7 +365,7 @@ export class TransactionV2Service {
         }
         const [updateTransferRows] = await this.transfersModel.update(
           {
-            opStatus: transfer.status == 3 ? 97 : 99,
+            opStatus: transfer.status == 3 ? BridgeTransactionStatus.PAID_CRASH : BridgeTransactionStatus.BRIDGE_SUCCESS,
           },
           {
             where: {
@@ -419,7 +419,7 @@ export class TransactionV2Service {
       });
       if (!btTx || !btTx.id) {
         const where = {
-          status: [0, 97, 98],
+          status: [0, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,
           targetChain: transfer.chainId,
@@ -436,7 +436,7 @@ export class TransactionV2Service {
       }
       if (btTx && btTx.id) {
         btTx.targetId = transfer.hash;
-        btTx.status = transfer.status == 3 ? 97 : 99;
+        btTx.status = transfer.status == 3 ? BridgeTransactionStatus.PAID_CRASH : BridgeTransactionStatus.BRIDGE_SUCCESS;
         btTx.targetTime = transfer.timestamp;
         btTx.targetFee = transfer.feeAmount;
         btTx.targetFeeSymbol = transfer.feeToken;
@@ -447,7 +447,7 @@ export class TransactionV2Service {
         });
         await this.transfersModel.update(
           {
-            opStatus: 99,
+            opStatus: BridgeTransactionStatus.BRIDGE_SUCCESS,
           },
           {
             where: {
