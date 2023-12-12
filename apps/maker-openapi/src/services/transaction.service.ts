@@ -75,6 +75,10 @@ export class TransactionService {
                 throw new Error('SubClient not found');
             }
             const mdcAddress = await client.maker.getMDCAddress(bridgeTx.sourceMaker);
+            if (!mdcAddress) {
+                console.error('MdcAddress not found', bridgeTx.sourceChain, bridgeTx.sourceId);
+                continue;
+            }
             const { dealers, ebcs, chainIds } = await client.maker.getColumnArray(Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000), mdcAddress, bridgeTx.sourceMaker);
             const spvAddress = "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38"; // TODO
             const ebc = bridgeTx.ebcAddress;
@@ -83,6 +87,10 @@ export class TransactionService {
                 [dealers, ebcs, chainIds, ebc],
             );
             const rule: any = await client.maker.getRules(mdcAddress, ebc, bridgeTx.sourceMaker);
+            if (!rule) {
+                console.error('Rule not found', bridgeTx.sourceChain, bridgeTx.sourceId);
+                continue;
+            }
             const formatRule: any[] = [
                 rule.chain0,
                 rule.chain1,
