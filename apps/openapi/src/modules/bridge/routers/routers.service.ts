@@ -10,7 +10,7 @@ export class RoutersService {
         private readonly rulesService: MakerV1RuleService,
         private readonly chainService: ChainsService,
         private envConfigService: ENVConfigService,
-    ) {}
+    ) { }
 
     /**
      * Get configurations for V1 routers based on rules.
@@ -31,6 +31,7 @@ export class RoutersService {
             const targetChain = chains.find(row => row.internalId == internalChainId[1]);
 
             const routerConfig: RoutersConfig = {
+                line: '',
                 endpoint: v1Rule['makerAddress'],
                 srcChain: "",
                 tgtChain: "",
@@ -42,7 +43,7 @@ export class RoutersService {
                 withholdingFee: String(v1Rule['tradingFee']),
                 vc: String(+internalChainId[1] + 9000),
                 compRatio: 1,
-                spentTime: 1800,
+                spentTime: 60,
             };
 
             // Populate source and target chain information if available
@@ -57,7 +58,7 @@ export class RoutersService {
             if (routerConfig.vc.length != 4) {
                 continue;
             }
-
+            routerConfig.line = `${routerConfig.srcChain}/${routerConfig.tgtChain}-${routerConfig.srcToken}/${routerConfig.tgtToken}`;
             v1RouterConfigs.push(routerConfig);
         }
 
@@ -78,6 +79,7 @@ export class RoutersService {
         for (const v3Rule of result.ruleList) {
             const { fromChain, toChain } = v3Rule;
             const routerConfig: RoutersConfig = {
+                line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
                 endpoint: v3Rule['recipient'],
                 srcChain: fromChain['chainId'],
                 tgtChain: toChain['chainId'],
