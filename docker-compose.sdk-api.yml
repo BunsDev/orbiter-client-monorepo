@@ -14,7 +14,7 @@ services:
       context: ./
       cache_from:
         - orbiter/clients
-      dockerfile:  ./apps/openapi/Dockerfile.clients
+      dockerfile:  ./apps/openapi/Dockerfile
     restart: always
     environment:
       CONSUL_URL: '${CONSUL_URL}'
