@@ -18,6 +18,7 @@ export class RoutersService {
      */
     async getV1Routers(): Promise<RoutersConfig[]> {
         // Retrieve information about available chains
+        const WHITE_MAKERS = this.envConfigService.get("WHITE_MAKERS", []);
         const chains = await this.chainService.getChains();
         const v1RouterConfigs: RoutersConfig[] = [];
 
@@ -29,7 +30,9 @@ export class RoutersService {
             const internalChainId = v1Rule['chain'].split('-');
             const sourceChain = chains.find(row => row.internalId == internalChainId[0]);
             const targetChain = chains.find(row => row.internalId == internalChainId[1]);
-
+            if (WHITE_MAKERS.length>0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
+                continue;
+            }
             const routerConfig: RoutersConfig = {
                 line: '',
                 endpoint: v1Rule['makerAddress'],
@@ -74,10 +77,13 @@ export class RoutersService {
         // Request V3 router configurations from the remote API
         const { result } = await this.requestRemoteV3Router(dealerAddress);
         const v3RouterConfigs: RoutersConfig[] = [];
-
+        const WHITE_MAKERS = this.envConfigService.get("WHITE_MAKERS", []);
         // Iterate through each rule from the API response and convert it to a router configuration
         for (const v3Rule of result.ruleList) {
             const { fromChain, toChain } = v3Rule;
+            if (WHITE_MAKERS.length>0 && !WHITE_MAKERS.includes(v3Rule['recipient'].toLocaleLowerCase())) {
+                continue;
+            }
             const routerConfig: RoutersConfig = {
                 line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
                 endpoint: v3Rule['recipient'],
