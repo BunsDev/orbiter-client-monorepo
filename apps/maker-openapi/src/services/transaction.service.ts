@@ -44,7 +44,7 @@ export class TransactionService {
     async getUnreimbursedTransactions(startTime: number, endTime: number): Promise<ArbitrationTransaction[]> {
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
-                'targetChain', 'targetToken'],
+                'targetChain', 'targetToken', 'ebcAddress'],
             where: {
                 status: 0,
                 sourceTime: {
@@ -89,13 +89,17 @@ export class TransactionService {
                 throw new Error('SubClient not found');
             }
             const mdcAddress = await client.maker.getMDCAddress(bridgeTx.sourceMaker);
+            console.log("mdcAddress", mdcAddress);
             if (!mdcAddress) {
                 console.error('MdcAddress not found', bridgeTx.sourceChain, bridgeTx.sourceId);
                 continue;
             }
-            const { dealers, ebcs, chainIds } = await client.maker.getColumnArray(Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000), mdcAddress, bridgeTx.sourceMaker);
+            const res = await client.maker.getColumnArray(Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000), mdcAddress, bridgeTx.sourceMaker);
+            if (!res) continue;
+            const { dealers, ebcs, chainIds } = res;
             const spvAddress = "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38"; // TODO
             const ebc = bridgeTx.ebcAddress;
+            console.log('encode data', [dealers, ebcs, chainIds, ebc]);
             const rawDatas = utils.defaultAbiCoder.encode(
                 ['address[]', 'address[]', 'uint64[]', 'address'],
                 [dealers, ebcs, chainIds, ebc],

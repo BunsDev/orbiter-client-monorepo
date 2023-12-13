@@ -78,4 +78,7 @@ export interface ProofData {
     targetAmount?: string;
     responseMakersHash?: string;
     responseTime?: string;
+
+    status: number;
+    message: string;
 }

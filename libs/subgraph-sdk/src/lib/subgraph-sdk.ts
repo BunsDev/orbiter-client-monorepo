@@ -4,6 +4,7 @@ import { ManagerService } from './manager.service';
 export class Context {
   constructor(private readonly url: string) { }
   async query(query: string, variables: any = {}) {
+      console.log("query url", this.url);
     const response = await fetch(this.url, {
       method: 'POST',
       headers: {

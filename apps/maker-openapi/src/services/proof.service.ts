@@ -24,7 +24,8 @@ export class ProofService {
     }
 
     async proofSubmission(data: ProofSubmissionRequest) {
-        if (+data.status == 1) {
+        try {
+            console.log("proofSubmission message", data.message);
             const localData: TxData = await this.jsondb.getData(`/tx/${data.transaction.toLowerCase()}`);
             if (localData) {
                 let proofData: ProofData;
@@ -40,7 +41,9 @@ export class ProofService {
                         challenger: localData.challenger,
                         spvAddress: localData.spvAddress,
                         rawDatas: localData.rawDatas,
-                        rlpRuleBytes: localData.rlpRuleBytes
+                        rlpRuleBytes: localData.rlpRuleBytes,
+                        status: +data.status,
+                        message: data.message
                     };
                 } else {
                     proofData = {
@@ -62,18 +65,23 @@ export class ProofService {
                         targetToken: localData.targetToken,
                         targetAmount: localData.targetAmount,
                         responseMakersHash: localData.responseMakersHash,
-                        responseTime: localData.responseTime
+                        responseTime: localData.responseTime,
+
+                        status: +data.status,
+                        message: data.message
                     };
                 }
                 await this.jsondb.push(`/proof/${data.transaction.toLowerCase()}`, proofData);
                 await this.jsondb.delete(`/tx/${data.transaction.toLowerCase()}`); // TODO security
             }
+        } catch (e) {
+            return { status: 0 };
         }
-        return true;
+        return { status: 1 };
     }
 
     async getProof(hash: string) {
-        return (await this.jsondb.getData(`/proof/${hash.toLowerCase()}`))?.proof;
+        return await this.jsondb.getData(`/proof/${hash.toLowerCase()}`);
     }
 
     async completeProof(hash: string) {
@@ -87,7 +95,7 @@ export class ProofService {
         let bridgeTransaction = data.isSource ? await this.bridgeTransactionModel.findOne(<any>{
             attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'targetId', 'targetChain', 'targetToken', 'ruleId'],
             where: {
-                sourceChain: data.chainId,
+                sourceChain: String(data.chainId),
                 sourceId: data.hash
             }
         }) : await this.bridgeTransactionModel.findOne(<any>{
@@ -95,7 +103,7 @@ export class ProofService {
                 'targetId', 'targetChain', 'targetToken', 'targetNonce', 'targetAddress',
                 'targetAmount', 'ruleId'],
             where: {
-                targetChain: data.chainId,
+                targetChain: String(data.chainId),
                 targetId: data.hash
             }
         });
@@ -163,7 +171,7 @@ export class ProofService {
         const list = [];
         for (const hash in txObj) {
             const data: any = txObj[hash];
-            if (data?.hash) list.push([data.hash, data.sourceChain, data.targetChain, data.ruleKey, data.isSource]);
+            if (data?.hash && !data?.isSource) list.push([data.hash, data.sourceChain, data.targetChain]);
         }
         return list;
     }
