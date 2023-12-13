@@ -9,10 +9,6 @@ export interface ArbitrationTransaction {
     freezeToken: string;
     freezeAmount1: string;
     parentNodeNumOfTargetNode: number;
-
-    spvAddress: string;
-    rawDatas: string;
-    rlpRuleBytes: string;
 }
 
 export interface ProofSubmissionRequest {

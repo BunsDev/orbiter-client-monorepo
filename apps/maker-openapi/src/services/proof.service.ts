@@ -10,8 +10,12 @@ import { BridgeTransaction } from "@orbiter-finance/seq-models";
 import { keccak256, solidityPack } from "ethers/lib/utils";
 import { Config, JsonDB } from "node-json-db";
 import { getDecimalBySymbol } from "@orbiter-finance/utils";
-import { utils } from "ethers";
+import { ethers, utils } from "ethers";
 import BigNumber from "bignumber.js";
+import { SubgraphClient } from "../../../../libs/subgraph-sdk/src";
+import { ENVConfigService } from "../../../../libs/config/src";
+
+const spvAddress = "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38";
 
 @Injectable()
 export class ProofService {
@@ -19,8 +23,17 @@ export class ProofService {
     private db: Level;
 
     constructor(
+        protected envConfigService: ENVConfigService,
         @InjectModel(BridgeTransaction) private bridgeTransactionModel: typeof BridgeTransaction) {
         this.db = new Level('runtime/maker-openapi', { valueEncoding: 'json' });
+    }
+
+    async getSubClient(): Promise<SubgraphClient> {
+        const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
+        if (!SubgraphEndpoint) {
+            return null;
+        }
+        return new SubgraphClient(SubgraphEndpoint);
     }
 
     async proofSubmission(data: ProofSubmissionRequest) {
@@ -56,15 +69,81 @@ export class ProofService {
         }
     }
 
-    async getProof(hash: string) {
+    async getVerifyChallengeSourceParams(hash: string) {
         try {
-            return await this.jsondb.getData(`/proof/${hash.toLowerCase()}`);
+            const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
+                attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
+                    'targetChain', 'targetToken', 'ebcAddress'],
+                where: {
+                    sourceId: hash.toLowerCase()
+                }
+            });
+            const client = await this.getSubClient();
+            if (!client) {
+                console.error('SubClient not found');
+                return null;
+            }
+            const mdcAddress = await client.maker.getMDCAddress(bridgeTx.sourceMaker);
+            console.log("mdcAddress", mdcAddress);
+            if (!mdcAddress) {
+                console.error('MdcAddress not found', bridgeTx.sourceChain, bridgeTx.sourceId);
+                return;
+            }
+            const res = await client.maker.getColumnArray(Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000), mdcAddress, bridgeTx.sourceMaker);
+            if (!res) return;
+            const { dealers, ebcs, chainIds } = res;
+            const ebc = bridgeTx.ebcAddress;
+            console.log('encode data', [dealers, ebcs, chainIds, ebc]);
+            const rawDatas = utils.defaultAbiCoder.encode(
+                ['address[]', 'address[]', 'uint64[]', 'address'],
+                [dealers, ebcs, chainIds, ebc],
+            );
+            const rule: any = await client.maker.getRules(mdcAddress, ebc, bridgeTx.sourceMaker);
+            if (!rule) {
+                console.error('Rule not found', bridgeTx.sourceChain, bridgeTx.sourceId);
+                return;
+            }
+            const formatRule: any[] = [
+                rule.chain0,
+                rule.chain1,
+                rule.chain0Status,
+                rule.chain1Status,
+                rule.chain0Token,
+                rule.chain1Token,
+                rule.chain0minPrice,
+                rule.chain1minPrice,
+                rule.chain0maxPrice,
+                rule.chain1maxPrice,
+                rule.chain0WithholdingFee,
+                rule.chain1WithholdingFee,
+                rule.chain0TradeFee,
+                rule.chain1TradeFee,
+                rule.chain0ResponseTime,
+                rule.chain1ResponseTime,
+                rule.chain0CompensationRatio,
+                rule.chain1CompensationRatio,
+            ];
+            // console.log('formatRule ====', formatRule);
+            const rlpRuleBytes = utils.RLP.encode(
+                formatRule.map((r) => utils.stripZeros(ethers.BigNumber.from(r).toHexString())),
+            );
+
+            const proofData = await this.jsondb.getData(`/proof/${hash.toLowerCase()}`);
+
+            return {
+                sourceMaker: bridgeTx.sourceMaker,
+                sourceChain: bridgeTx.sourceChain,
+                spvAddress,
+                rawDatas,
+                rlpRuleBytes,
+                ...proofData
+            };
         } catch (e) {
             return null;
         }
     }
 
-    async getMakerProof(hash: string) {
+    async getVerifyChallengeDestParams(hash: string) {
         try {
             const proofData = await this.jsondb.getData(`/proof/${hash.toLowerCase()}`);
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
@@ -75,10 +154,14 @@ export class ProofService {
                     targetId: hash.toLowerCase()
                 }
             });
+            if(!bridgeTx){
+                console.error('none of bridgeTx');
+                return null;
+            }
             const responseMaker = bridgeTx?.targetMaker;
             if (!responseMaker) {
-                console.log('none of responseMaker', bridgeTx.sourceId, bridgeTx.targetId);
-                return;
+                console.error('none of responseMaker', bridgeTx.sourceId, bridgeTx.targetId);
+                return null;
             }
             const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
             const targetAmount = new BigNumber(bridgeTx.targetAmount).multipliedBy(10 ** targetDecimal).toFixed(0);
@@ -92,25 +175,29 @@ export class ProofService {
             const token0 = bridgeTx.sourceToken;
             const token1 = bridgeTx.targetToken;
             const ruleKey: string = keccak256(solidityPack(['uint256', 'uint256', 'uint256', 'uint256'], [chain0, chain1, token0, token1]));
-
+            const userSubmitTx = await this.jsondb.getData(`/userTx/${bridgeTx.sourceId.toLowerCase()}`);
+            if (!userSubmitTx) {
+                console.error('none of userSubmitTx');
+                return null;
+            }
             return {
-                ...proofData,
                 targetNonce: bridgeTx.targetNonce,
-                targetChainId: bridgeTx.targetChain,
-                targetFrom: bridgeTx.targetAddress,
+                targetChain: bridgeTx.targetChain,
+                targetAddress: bridgeTx.targetAddress,
                 targetToken: bridgeTx.targetToken,
                 targetAmount,
                 responseMakersHash: bridgeTx.targetId,
                 responseTime: String(60), // TODO
 
-                hash: bridgeTx.sourceId,
+                challenger: userSubmitTx.challenger,
+                sourceId: bridgeTx.sourceId,
                 sourceMaker: bridgeTx.sourceMaker,
                 sourceChain: bridgeTx.sourceChain,
-                targetChain: bridgeTx.targetChain,
                 ruleKey,
                 isSource: 0,
-                spvAddress: "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38",
-                rawDatas
+                spvAddress,
+                rawDatas,
+                ...proofData
             };
         } catch (e) {
 

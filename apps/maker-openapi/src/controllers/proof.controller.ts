@@ -89,9 +89,9 @@ export class ProofController {
     }
 
     @Get("/sourceId/:hash")
-    async getProofByUserHash(@Param("hash") hash: string): Promise<HTTPResponse> {
+    async getVerifyChallengeSourceParamsByUserHash(@Param("hash") hash: string): Promise<HTTPResponse> {
         try {
-            const data = await this.proofService.getProof(hash);
+            const data = await this.proofService.getVerifyChallengeSourceParams(hash);
             return HTTPResponse.success(data);
         } catch (error) {
             this.logger.error('getProofByHash error', error);
@@ -100,9 +100,9 @@ export class ProofController {
     }
 
     @Get("/targetId/:hash")
-    async getProofByMakerHash(@Param("hash") hash: string): Promise<HTTPResponse> {
+    async getVerifyChallengeDestParamsByMakerHash(@Param("hash") hash: string): Promise<HTTPResponse> {
         try {
-            const data = await this.proofService.getMakerProof(hash);
+            const data = await this.proofService.getVerifyChallengeDestParams(hash);
             return HTTPResponse.success(data);
         } catch (error) {
             this.logger.error('getProofByHash error', error);
