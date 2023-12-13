@@ -202,7 +202,6 @@ export class MakerService {
       }
           `;
         const result = await this.ctx.query(queryStr);
-        console.log("result", result?.latestRuleSnapshots?.[0]);
         return result?.latestRuleSnapshots?.[0];
     }
 }
