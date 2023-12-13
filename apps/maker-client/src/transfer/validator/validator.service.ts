@@ -28,14 +28,14 @@ export class ValidatorService {
     return chainPaidTransferCount;
   }
   public async validDisabledPaid(chainId:string) {
-    const disabledPaid = this.envConfig.get<boolean>(`${chainId}.DisabledPaid`, false);
-    if (disabledPaid == true) {
-      return true;
-    }
-    const globalDisabledPaid = this.envConfig.get<boolean>(`DisabledPaid`, false);
-    if (globalDisabledPaid ==true) {
-      return true;
-    }
+    // const disabledPaid = this.envConfig.get<boolean>(`${chainId}.DisabledPaid`, false);
+    // if (disabledPaid == true) {
+    //   return true;
+    // }
+    // const globalDisabledPaid = this.envConfig.get<boolean>(`DisabledPaid`, false);
+    // if (globalDisabledPaid ==true) {
+    //   return true;
+    // }
     return false;
   }
   public transactionTimeValid(chainId: string, timestamp: Date) {
