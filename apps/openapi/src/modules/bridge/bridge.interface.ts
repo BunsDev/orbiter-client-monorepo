@@ -1,4 +1,5 @@
 export interface RoutersConfig {
+	line:string;
     endpoint: string;
     srcChain: string;
     tgtChain: string;
