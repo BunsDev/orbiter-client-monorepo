@@ -120,7 +120,7 @@ export class MakerService {
     }
           `
     const result = await this.ctx.query(queryStr);
-    return result['mdcs'][0];
+    return result?.mdcs?.[0];
   }
   async getChallengeUserRatio() {
     const queryStr = `
@@ -140,14 +140,68 @@ export class MakerService {
     }
     return null;
   }
-  async getSpvAddressByChainId(chainId: string | number) {
+    async getColumnArray(txTimestamp: string | number, mdcAddress: string, maker: string) {
         const queryStr = `
-   chainRels(where: {id: "${chainId}"}) {
-    id
-    spvs
-  }
+   {
+        columnArraySnapshots(
+            where: {
+                enableTimestamp_lt: "${txTimestamp}",
+                mdc_: {
+                    id: "${mdcAddress}"
+                    owner: "${maker}"
+                }
+            }
+            first: 1
+        ) {
+            dealers
+            ebcs
+            chainIds
+        }
+    }
           `;
         const result = await this.ctx.query(queryStr);
-        return result['chainRels'][0]?.spvs[0];
+        return result?.data?.data?.columnArraySnapshots;
+    }
+    async getRules(mdcAddr: string, ebcAddr: string, maker: string) {
+        const queryStr = `
+   {
+        latestRuleSnapshots(
+          where: {
+            owner: "${maker}", 
+            mdcAddr: "${mdcAddr}", 
+            ebcAddr: "${ebcAddr}"
+            }
+        orderBy: ruleRelSnapshot__version 
+        orderDirection : asc
+        ) {
+          ruleRelSnapshot {
+            root
+            version
+          }
+          chain0
+          chain1
+          chain0Status
+          chain1Status
+          chain0Token
+          chain1Token
+          chain0minPrice
+          chain1minPrice
+          chain0maxPrice
+          chain1maxPrice
+          chain0WithholdingFee
+          chain1WithholdingFee
+          chain0TradeFee
+          chain1TradeFee
+          chain0ResponseTime
+          chain1ResponseTime
+          chain0CompensationRatio
+          chain1CompensationRatio
+          enableTimestamp
+          latestUpdateBlockNumber
+        }
+      }
+          `;
+        const result = await this.ctx.query(queryStr);
+        return result?.data?.data?.latestRuleSnapshots;
     }
 }

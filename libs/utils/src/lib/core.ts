@@ -198,8 +198,11 @@ export function promiseWithTimeout<T>(
     });
   }
 
-export function getDecimalBySymbol(symbol: string) {
-  return ['USDC', 'USDT'].includes(symbol.toUpperCase()) ? 6 : 18;
+export function getDecimalBySymbol(chainId: string, symbol: string) {
+    if (String(chainId) === "56") {
+        return 18;
+    }
+    return ['USDC', 'USDT'].includes(symbol.toUpperCase()) ? 6 : 18;
 }
 
 export function addressPadStart(address: string, length: number) {

@@ -23,6 +23,21 @@ export class ValidatorService {
   public getTransferGlobalTimeout() {
     return this.envConfig.get("TransferTimeout", 10);
   }
+  public getPaidTransferCount(chainId:string) {
+    const chainPaidTransferCount = this.envConfig.get<number>(`${chainId}.PaidTransferCount`, 1);
+    return chainPaidTransferCount;
+  }
+  public async validDisabledPaid(chainId:string) {
+    const disabledPaid = this.envConfig.get<boolean>(`${chainId}.DisabledPaid`, false);
+    if (disabledPaid == true) {
+      return true;
+    }
+    const globalDisabledPaid = this.envConfig.get<boolean>(`DisabledPaid`, false);
+    if (globalDisabledPaid ==true) {
+      return true;
+    }
+    return false;
+  }
   public transactionTimeValid(chainId: string, timestamp: Date) {
     const timeout = Date.now() - dayjs(timestamp).valueOf();
     const defaultTimeout = this.getTransferGlobalTimeout();
@@ -115,7 +130,7 @@ export class ValidatorService {
       throw new Error(`${token} transferToken not found`);
     }
     const batchTransferCount =
-      this.envConfig.get(`${chainId}.BatchTransferCount`) || 1;
+      this.envConfig.get(`${chainId}.PaidTransferCount`) || 1;
     const transferWalletRelAmount = {};
     for (const key in groupData) {
       const makers = key.split(",");

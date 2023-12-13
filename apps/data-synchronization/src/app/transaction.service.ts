@@ -1,14 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { BigIntToString } from '@orbiter-finance/utils';
-import { TransferAmountTransaction } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 import { Transfers as TransfersModel, BridgeTransaction as BridgeTransactionModel, TransfersAttributes, BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { MakerTransaction as MakerTransactionModel, MakerTransactionAttributes, Transaction as TransactionModel, ITransaction } from '@orbiter-finance/v1-seq-models'
 import { InjectModel, InjectConnection } from '@nestjs/sequelize';
-import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
+import { ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { OrbiterLogger } from '@orbiter-finance/utils';
-import { Cron, Interval } from '@nestjs/schedule';
-import { utils } from 'ethers'
+import { Cron } from '@nestjs/schedule';
 import { LoggerDecorator, TransferId } from '@orbiter-finance/utils';
 import { ChainConfigService } from '@orbiter-finance/config'
 import { Op } from 'sequelize';
@@ -34,7 +31,6 @@ export class TransactionService {
     private readonly v1Sequelize: Sequelize,
     @InjectConnection('v3')
     private readonly v3Sequelize: Sequelize,
-    private messageService: MessageService,
     private consumerService: ConsumerService,
     private chainConfigService: ChainConfigService
   ) {
@@ -73,6 +69,9 @@ export class TransactionService {
           hash
         }
       });
+      if (!v1Transfer || !v1Transfer.version) {
+        return
+      }
       if (!v1Transfer || transfer.syncStatus != 99) {
         const chainInfo = this.chainConfigService.getChainInfo(transfer.chainId);
         const result = getPTextFromTAmount(
@@ -134,21 +133,22 @@ export class TransactionService {
             toSymbol: v3BTX.targetSymbol
           }
           transaction.expectValue = new BigNumber(v3BTX.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
-          if (transaction.to.toLocaleLowerCase() =='0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
+          if (transaction.to.toLocaleLowerCase() == '0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
+            transaction.source = 'xvm';
             transaction.extra['xvm'] = {
-              "name":"swap",
-                "params":{
-                    "data":{
-                        "slippage":50,
-                        "toChainId":targetChain.internalId,
-                        "expectValue":transaction.expectValue,
-                        "toTokenAddress":v3BTX.targetToken,
-                        "toWalletAddress":v3BTX.targetAddress
-                    },
-                    "token":transfer.token,
-                    "value":transfer.value,
-                    "recipient":transfer.receiver
-                }
+              "name": "swap",
+              "params": {
+                "data": {
+                  "slippage": 50,
+                  "toChainId": targetChain.internalId,
+                  "expectValue": transaction.expectValue,
+                  "toTokenAddress": v3BTX.targetToken,
+                  "toWalletAddress": v3BTX.targetAddress
+                },
+                "token": transfer.token,
+                "value": transfer.value,
+                "recipient": transfer.receiver
+              }
             }
           }
           transaction.side = '0';
@@ -163,16 +163,6 @@ export class TransactionService {
             String(transaction.symbol),
             transaction.expectValue,
           );
-          if (transaction.to.toLocaleLowerCase() =='0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
-            console.log(transaction.transferId, '===', [
-              String(transaction.memo),
-              transaction.replySender,
-              String(transaction.replyAccount),
-              String(transaction.nonce),
-              String(transaction.symbol),
-              transaction.expectValue,
-            ])
-          }
         } else if (transfer.version == '1-1') {
           transaction.side = '1';
           transaction.expectValue = null;
@@ -207,7 +197,7 @@ export class TransactionService {
         transfer.syncStatus = 9;
         await transfer.save();
         if (transfer.opStatus == 99) {
-          this.syncBTTransfer(transfer.hash).catch(error=> {
+          this.syncBTTransfer(transfer.hash).catch(error => {
             console.error('syncBTTransfer erorr1', error);
           }).then(result => {
             console.log(`sync result ${transfer.hash}`, result);
@@ -381,12 +371,196 @@ export class TransactionService {
       console.error(`syncBTTransfer error ${hash}`, error);
     }
   }
+  async syncBTTransferOverride(hash: string) {
+    try {
+      const v1Transfer = await this.transactionModel.findOne({
+        where: {
+          hash
+        }
+      });
+      if (!v1Transfer) {
+        await this.syncTransferByHash(hash);
+        return {
+          errno: 0,
+          errmsg: 'v1 transfer not found'
+        }
+      }
+      // if (v1Transfer.status == 99) {
+      //   return {
+      //     errno: 0,
+      //     errmsg: 'Exception transfer'
+      //   }
+      // }
+      const v3Transfer = await this.transfersModel.findOne({
+        where: {
+          hash
+        }
+      });
+      if (!v3Transfer) {
+        return {
+          errno: 0,
+          errmsg: 'V3 transfer not found'
+        }
+      }
+      // if (v3Transfer.opStatus != 99) {
+      //   return {
+      //     errno: 0,
+      //     errmsg: 'v3Transfer transfer status not 99'
+      //   }
+      // }
+      // if (v3Transfer.opStatus == 99) {
+      let where: any = {
+        version: '-'
+      }
+      if (v3Transfer.version === '1-0') {
+        where = {
+          version: '1-0',
+          sourceId: hash,
+        }
 
+      } else if (v3Transfer.version === '1-1') {
+        where = {
+          version: '1-0',
+          targetId: hash,
+        }
+
+      }
+      const bridgeTransaction = await this.bridgeTransactionModel.findOne({
+        where,
+        raw: true
+      });
+      if (!bridgeTransaction) {
+        throw new Error('btTx not found');
+      }
+      const sourceTx = await this.transactionModel.findOne({
+        attributes: ['id', 'value'],
+        where: {
+          hash: bridgeTransaction.sourceId
+        }
+      });
+      if (!sourceTx) {
+        await this.syncTransferByHash(bridgeTransaction.sourceId);
+        // throw new Error(`${bridgeTransaction.sourceId} bridgeTransaction.sourceId not found`);
+        return {
+          errno: 0,
+          errmsg: 're match 1'
+        }
+      }
+      // if (sourceTx.status === 99) {
+      //   return {
+      //     errno: 0,
+      //     errmsg: 'success break sync'
+      //   }
+      // }
+
+      const sourceChain = this.chainConfigService.getChainInfo(bridgeTransaction.sourceChain);
+      if (!sourceChain) {
+        throw new Error('sourceChain not found');
+      }
+      const targetChain = this.chainConfigService.getChainInfo(bridgeTransaction.targetChain);
+      if (!targetChain) {
+        throw new Error('targetChain not found');
+      }
+      const targetChainToken = await this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol);
+      if (!targetChainToken) {
+        throw new Error('targetChainToken not found');
+      }
+      const expectValue = new BigNumber(bridgeTransaction.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
+
+      const mtCreateData: MakerTransactionAttributes = {
+        transcationId: bridgeTransaction.transactionId,
+        inId: sourceTx.id,
+        outId: null,
+        fromChain: sourceChain.internalId,
+        toChain: Number(targetChain.internalId),
+        toAmount: expectValue,
+        replySender: bridgeTransaction.targetMaker,
+        replyAccount: bridgeTransaction.targetAddress,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      if (bridgeTransaction.targetId) {
+        let targetHash = bridgeTransaction.targetId;
+        if (bridgeTransaction.targetChain === 'SN_MAIN' && bridgeTransaction.targetId.includes("#0")) {
+          targetHash = bridgeTransaction.targetId.replace('#0', '');
+        }
+        const targetTx = await this.transactionModel.findOne({
+          attributes: ['id', 'value'],
+          where: {
+            hash: targetHash
+          }
+        });
+        if (!targetTx) {
+          await this.syncTransferByHash(bridgeTransaction.targetId);
+          return {
+            errno: 0,
+            errmsg: 're match 2'
+          }
+        }
+        mtCreateData.outId = targetTx.id;
+      }
+      const t = await this.v1Sequelize.transaction()
+      try {
+        const [makerTx, created] = await this.makerTransactionModel.findOrCreate({
+          where: {
+            inId: mtCreateData.inId
+          },
+          defaults: mtCreateData,
+          transaction: t
+        })
+        if (!created) {
+          if (mtCreateData.outId) {
+            makerTx.outId = mtCreateData.outId;
+            await makerTx.save({
+              transaction: t
+            });
+            //   
+            const [updateTransferRows2] = await this.transactionModel.update({
+              status: 99
+            }, {
+              where: {
+                id: [mtCreateData.inId, mtCreateData.outId],
+                status: {
+                  [Op.not]: 99
+                }
+              }, transaction: t
+            });
+          } else {
+            // update
+            makerTx.toAmount = mtCreateData.toAmount;
+            const [updateTransferRows2] = await this.transactionModel.update({
+              status: 1
+            }, {
+              where: {
+                id: [mtCreateData.inId],
+              }, transaction: t
+            });
+            await makerTx.save({
+              transaction: t
+            });
+          }
+        }
+        await t.commit();
+        return {
+          errno: 0,
+          errmsg: 'success'
+        }
+
+      } catch (error) {
+        await t.rollback();
+        throw error;
+      }
+      // }
+    } catch (error) {
+      console.error(`syncBTTransfer error ${hash}`, error);
+    }
+  }
   async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
     // console.log(data)
     try {
       const transfer = data.data
-      if(transfer.sender ==='0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2' || transfer.receiver ==='0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2') {
+      if (transfer.sender === '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2' || transfer.receiver === '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2') {
         return true;
       }
       this.logger.info(`${transfer.chainId} transfer: ${transfer.hash}, ${transfer.version}`)
@@ -398,7 +572,7 @@ export class TransactionService {
     }
     return
   }
-  
+
   @Cron("* */5 * * * *")
   private async syncV3ToV1FromDatabase() {
     if (this.mutex.isLocked()) {
@@ -409,13 +583,14 @@ export class TransactionService {
       let index = 0;
       const list2 = await this.transfersModel.findAll({
         where: {
+          version: ['1-1', '1-0'],
           syncStatus: {
             [Op.not]: 9
           },
-          receiver:{
+          receiver: {
             [Op.not]: '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2'
           },
-          sender:{
+          sender: {
             [Op.not]: '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2'
           },
           timestamp: {
@@ -431,7 +606,6 @@ export class TransactionService {
         console.log(`${index}/${list2.length} sync = ${row.hash}`);
         index++;
         await this.syncTransferByHash(row.hash).catch(error => {
-          this.logger.info(row.toJSON());
           this.logger.error('syncV3V1FromDatabase error', error)
         })
       }
@@ -469,6 +643,7 @@ export class TransactionService {
         //   }
         // })
         // if (transfer) {
+        index++;
         await this.syncBTTransfer(tx.hash).catch(error => {
           this.logger.error('syncV3V1FromDatabase error', error)
         });

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { HTTPResponse } from '../utils/Response';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
@@ -34,11 +34,4 @@ export class AppController {
       return HTTPResponse.fail(1000, error.message);
     }
   }
-
-    @Get("/config/spv")
-    async getSpvConfig(@Query("chainId") chainId: string | number): Promise<HTTPResponse> {
-        return HTTPResponse.success({
-            spvAddress: "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38"
-        });
-    }
 }
