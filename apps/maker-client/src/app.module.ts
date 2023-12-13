@@ -26,8 +26,8 @@ import { MetricModule } from './metric/metric.module'
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: process.env['chainConfigPath'] || "maker-client/chains.json",
-      envConfigPath: process.env['envConfigPath'] || "maker-client/config.yaml",
+      chainConfigPath: process.env['CHAINS_CONFIG_PATH'] || "maker-client/chains.json",
+      envConfigPath: process.env['ENV_VAR_PATH'] || "maker-client/config.yaml",
       // makerV1RulePath: "explore-data-service/rules",
     }),
     SequelizeModule.forRootAsync({
