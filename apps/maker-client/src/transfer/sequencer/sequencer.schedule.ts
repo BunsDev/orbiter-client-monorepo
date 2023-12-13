@@ -173,12 +173,12 @@ export class SequencerScheduleService {
     const storeKeys = this.stores.keys();
     for (const k of storeKeys) {
       const store = this.stores.get(k);
-      if (this.validatorService.validDisabledPaid(store.chainId)) {
-        this.logger.debug(
-          `checkStoreWaitSend ${store.chainId} Disabled Paid collection function`
-        );
-        continue;
-      }
+      // if (this.validatorService.validDisabledPaid(store.chainId)) {
+      //   this.logger.debug(
+      //     `checkStoreWaitSend ${store.chainId} Disabled Paid collection function`
+      //   );
+      //   continue;
+      // }
       if (!this.storesState[k]) {
         this.storesState[k] = {
           lock: new Mutex(),
@@ -205,12 +205,12 @@ export class SequencerScheduleService {
     if (lock.isLocked()) {
       return;
     }
-    if (this.validatorService.validDisabledPaid(store.chainId)) {
-      this.logger.debug(
-        `checkStoreReadySend ${store.chainId} Disabled Paid collection function`
-      );
-      return;
-    }
+    // if (this.validatorService.validDisabledPaid(store.chainId)) {
+    //   this.logger.debug(
+    //     `checkStoreReadySend ${store.chainId} Disabled Paid collection function`
+    //   );
+    //   return;
+    // }
     const batchTransferCount = this.validatorService.getPaidTransferCount(store.chainId);
     if (batchTransferCount == -1) {
       this.logger.info(
