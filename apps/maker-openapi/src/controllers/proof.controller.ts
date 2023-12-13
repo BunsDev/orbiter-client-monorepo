@@ -25,8 +25,7 @@ export class ProofController {
         // wj submit
         try {
             this.logger.info(`proofSubmission`, data);
-            await this.proofService.proofSubmission(data);
-            return HTTPResponse.success(null);
+            return HTTPResponse.success(await this.proofService.proofSubmission(data));
         } catch (error) {
             this.logger.error('proofSubmission error', error);
             return HTTPResponse.fail(1000, error.message);
