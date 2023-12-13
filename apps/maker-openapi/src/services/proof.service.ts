@@ -72,7 +72,9 @@ export class ProofService {
                     };
                 }
                 await this.jsondb.push(`/proof/${data.transaction.toLowerCase()}`, proofData);
-                await this.jsondb.delete(`/tx/${data.transaction.toLowerCase()}`); // TODO security
+                // await this.jsondb.delete(`/tx/${data.transaction.toLowerCase()}`);
+            } else {
+                return { status: 0 };
             }
         } catch (e) {
             return { status: 0 };
