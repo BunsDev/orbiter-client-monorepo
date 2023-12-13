@@ -31,8 +31,8 @@ dayjs.extend(utc);
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-server/chains.json",
-      envConfigPath: "explore-server/config.yaml",
+      chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-server/chains.json",
+      envConfigPath: process.env['ENV_VAR_PATH'] || "explore-server/config.yaml",
     }),
     RedisModule.forRootAsync({
       inject: [ENVConfigService],

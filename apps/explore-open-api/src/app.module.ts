@@ -29,9 +29,9 @@ dayjs.extend(utc);
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-open-api/chains.json",
-      envConfigPath: "explore-open-api/config.yaml",
-      makerV1RulePath: "rules",
+      chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-open-api/chains.json",
+      envConfigPath: process.env['ENV_VAR_PATH'] || "explore-open-api/config.yaml",
+      makerV1RulePath: process.env['ENV_RULES_PATH'] || "rules",
       cachePath: join(__dirname,'runtime')
     }),
     SequelizeModule.forRootAsync({
