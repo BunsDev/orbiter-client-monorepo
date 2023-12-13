@@ -102,11 +102,10 @@ export class SequencerScheduleService {
     if (records.length > 0) {
       for (const tx of records) {
         try {
-          const batchTransferCount =
-            this.envConfig.get(`${tx.targetChain}.BatchTransferCount`) || 1;
+          const batchTransferCount = this.validatorService.getPaidTransferCount(tx.targetChain);
           if (batchTransferCount == -1) {
             this.logger.info(
-              `${tx.sourceId} To ${tx.targetChain} Setting BatchTransferCount to -1 disables sending`
+              `${tx.sourceId} To ${tx.targetChain} Setting PaidTransferCount to -1 disables sending`
             );
             continue;
           }
@@ -145,7 +144,6 @@ export class SequencerScheduleService {
 
   private async consumeMQTransactionRecords(bridgeTransaction: BridgeTransactionAttributes) {
     this.logger.info(`consumeMQTransactionRecords ${JSON.stringify(bridgeTransaction)}`)
-    // const owners = this.envConfig.get("MAKERS") || [];
     const chains = this.chainConfigService.getAllChains()
     const targetChainInfo = chains.find(chain => String(chain.chainId) === String(bridgeTransaction.targetChain))
     if (!targetChainInfo) {
@@ -171,10 +169,15 @@ export class SequencerScheduleService {
 
   @Cron("*/1 * * * * *")
   private checkStoreWaitSend() {
-
     const storeKeys = this.stores.keys();
     for (const k of storeKeys) {
       const store = this.stores.get(k);
+      if (this.validatorService.validDisabledPaid(store.chainId)) {
+        this.logger.debug(
+          `checkStoreWaitSend ${store.chainId} Disabled Paid collection function`
+        );
+        continue;
+      }
       if (!this.storesState[k]) {
         this.storesState[k] = {
           lock: new Mutex(),
@@ -201,11 +204,16 @@ export class SequencerScheduleService {
     if (lock.isLocked()) {
       return;
     }
-    const batchTransferCount =
-      this.envConfig.get(`${store.chainId}.BatchTransferCount`) || 1;
+    if (this.validatorService.validDisabledPaid(store.chainId)) {
+      this.logger.debug(
+        `checkStoreReadySend ${store.chainId} Disabled Paid collection function`
+      );
+      return;
+    }
+    const batchTransferCount = this.validatorService.getPaidTransferCount(store.chainId);
     if (batchTransferCount == -1) {
       this.logger.info(
-        `Setting BatchTransferCount to -1 disables sending`
+        `Setting PaidTransferCount to -1 disables sending`
       );
       return;
     }

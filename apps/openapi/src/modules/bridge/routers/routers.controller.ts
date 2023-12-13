@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { RoutersService } from './routers.service';
-import { success } from '../../decorators/responser.decorator';
+import { success } from 'apps/openapi/src/shared/decorators/responser.decorator';
 @Controller('routers')
 export class RoutersController {
     constructor(private readonly routerService:RoutersService) {

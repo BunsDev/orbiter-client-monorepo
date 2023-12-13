@@ -9,6 +9,10 @@ export interface ArbitrationTransaction {
     freezeToken: string;
     freezeAmount1: string;
     parentNodeNumOfTargetNode: number;
+
+    spvAddress: string;
+    rawDatas: string;
+    rlpRuleBytes: string;
 }
 
 export interface ProofSubmissionRequest {
@@ -23,6 +27,8 @@ export interface NeedProofSubmissionRequest {
     hash: string;
     chainId: number;
     mdcAddress: string;
+    challenger: string;
+    spvAddress: string;
 }
 
 export interface CompleteProofSubmission {
@@ -37,7 +43,19 @@ export interface TxData {
     sourceChain?: string;
     targetChain?: string;
     ruleKey?: string;
-    isSource?: number
+    isSource?: number;
+    challenger?: string;
+    spvAddress?: string;
+    rawDatas?: string;
+    rlpRuleBytes?: string;
+
+    targetNonce?: string;
+    targetChainId?: string;
+    targetFrom?: string;
+    targetToken?: string;
+    targetAmount?: string;
+    responseMakersHash?: string;
+    responseTime?: string;
 }
 
 export interface ProofData {
@@ -48,4 +66,16 @@ export interface ProofData {
     isSource?: number;
     sourceChain?: string;
     targetChain?: string;
+    challenger?: string;
+    spvAddress?: string;
+    rawDatas?: string;
+    rlpRuleBytes?: string;
+
+    targetNonce?: string;
+    targetChainId?: string;
+    targetFrom?: string;
+    targetToken?: string;
+    targetAmount?: string;
+    responseMakersHash?: string;
+    responseTime?: string;
 }

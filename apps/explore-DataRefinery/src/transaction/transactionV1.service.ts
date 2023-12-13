@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { equals } from '@orbiter-finance/utils';
-import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
+import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionModel, Transfers as TransfersModel, TransferOpStatus, BridgeTransactionStatus } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService, Token } from '@orbiter-finance/config';
 import { Op } from 'sequelize';
@@ -54,7 +54,7 @@ export class TransactionV1Service {
       where: {
         targetId: null,
         status: {
-          [Op.not]: 99
+          [Op.not]: BridgeTransactionStatus.BRIDGE_SUCCESS
         }
       },
       limit: 100
@@ -72,7 +72,7 @@ export class TransactionV1Service {
             [Op.gte]: bt.sourceTime
           },
           status: {
-            [Op.not]: 99
+            [Op.not]: BridgeTransactionStatus.BRIDGE_SUCCESS
           }
         }
       });
@@ -284,7 +284,7 @@ export class TransactionV1Service {
         const [rowCount] = await this.bridgeTransactionModel.update(
           {
             targetId: transfer.hash,
-            status: transfer.status == 3 ? 97 : 99,
+            status: transfer.status == 3 ? BridgeTransactionStatus.PAID_CRASH : BridgeTransactionStatus.BRIDGE_SUCCESS,
             targetTime: transfer.timestamp,
             targetFee: transfer.feeAmount,
             targetFeeSymbol: transfer.feeToken,
@@ -295,7 +295,7 @@ export class TransactionV1Service {
             limit: 1,
             where: {
               id: memoryBT.id,
-              status: [0, 97, 98],
+              status: [0, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
               sourceTime: {
                 [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
                 [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
@@ -312,7 +312,7 @@ export class TransactionV1Service {
         // source status 1 ，dest status = 0
         const [updateTransferRows] = await this.transfersModel.update(
           {
-            opStatus: 99,
+            opStatus: BridgeTransactionStatus.BRIDGE_SUCCESS,
           },
           {
             where: {
@@ -373,7 +373,7 @@ export class TransactionV1Service {
       });
       if (!btTx || !btTx.id) {
         const where = {
-          status: [0, 97, 98],
+          status: [0, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
           targetId: null,
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,
@@ -391,7 +391,7 @@ export class TransactionV1Service {
       }
       if (btTx && btTx.id) {
         btTx.targetId = transfer.hash;
-        btTx.status = transfer.status == 3 ? 97 : 99;
+        btTx.status = transfer.status == 3 ? BridgeTransactionStatus.PAID_CRASH : BridgeTransactionStatus.BRIDGE_SUCCESS;
         btTx.targetTime = transfer.timestamp;
         btTx.targetFee = transfer.feeAmount;
         btTx.targetFeeSymbol = transfer.feeToken;
@@ -402,7 +402,7 @@ export class TransactionV1Service {
         });
         await this.transfersModel.update(
           {
-            opStatus: 99,
+            opStatus: BridgeTransactionStatus.BRIDGE_SUCCESS,
           },
           {
             where: {
@@ -474,7 +474,7 @@ export class TransactionV1Service {
       });
       if (btTx && btTx.id) {
         btTx.targetId = targetTransfer.hash;
-        btTx.status = targetTransfer.status == 3 ? 97 : 99;
+        btTx.status = targetTransfer.status == 3 ? BridgeTransactionStatus.PAID_CRASH : BridgeTransactionStatus.BRIDGE_SUCCESS;
         btTx.targetTime = targetTransfer.timestamp;
         btTx.targetFee = targetTransfer.feeAmount;
         btTx.targetFeeSymbol = targetTransfer.feeToken;
@@ -485,7 +485,7 @@ export class TransactionV1Service {
         });
         await this.transfersModel.update(
           {
-            opStatus: 99,
+            opStatus: BridgeTransactionStatus.BRIDGE_SUCCESS,
           },
           {
             where: {

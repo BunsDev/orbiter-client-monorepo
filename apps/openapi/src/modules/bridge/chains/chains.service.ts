@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import chains from '../../assets/chains.json'
+import chains from '../../../assets/chains.json'
 import { ChainConfigService } from '@orbiter-finance/config';
 import { ChainConfig } from '../bridge.interface'
 @Injectable()

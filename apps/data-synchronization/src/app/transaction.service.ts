@@ -1,14 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { BigIntToString } from '@orbiter-finance/utils';
-import { TransferAmountTransaction } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 import { Transfers as TransfersModel, BridgeTransaction as BridgeTransactionModel, TransfersAttributes, BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { MakerTransaction as MakerTransactionModel, MakerTransactionAttributes, Transaction as TransactionModel, ITransaction } from '@orbiter-finance/v1-seq-models'
 import { InjectModel, InjectConnection } from '@nestjs/sequelize';
-import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
+import { ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { OrbiterLogger } from '@orbiter-finance/utils';
-import { Cron, Interval } from '@nestjs/schedule';
-import { utils } from 'ethers'
+import { Cron } from '@nestjs/schedule';
 import { LoggerDecorator, TransferId } from '@orbiter-finance/utils';
 import { ChainConfigService } from '@orbiter-finance/config'
 import { Op } from 'sequelize';
@@ -34,7 +31,6 @@ export class TransactionService {
     private readonly v1Sequelize: Sequelize,
     @InjectConnection('v3')
     private readonly v3Sequelize: Sequelize,
-    private messageService: MessageService,
     private consumerService: ConsumerService,
     private chainConfigService: ChainConfigService
   ) {
@@ -73,6 +69,9 @@ export class TransactionService {
           hash
         }
       });
+      if (!v1Transfer || !v1Transfer.version) {
+        return
+      }
       if (!v1Transfer || transfer.syncStatus != 99) {
         const chainInfo = this.chainConfigService.getChainInfo(transfer.chainId);
         const result = getPTextFromTAmount(
@@ -103,7 +102,11 @@ export class TransactionService {
           replyAccount: '',
           replySender: '',
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          extra: {
+            // toSymbol: "".,
+            // toAddress: ""
+          }
         };
         if (transfer.chainId === 'SN_MAIN' && transfer.hash.includes("#0")) {
           transaction.hash = transfer.hash.replace('#0', '');
@@ -126,8 +129,29 @@ export class TransactionService {
           if (!targetChainToken) {
             throw new Error('targetChainToken not found');
           }
-          transaction.side = '0';
+          transaction.extra = {
+            toSymbol: v3BTX.targetSymbol
+          }
           transaction.expectValue = new BigNumber(v3BTX.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
+          if (transaction.to.toLocaleLowerCase() == '0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
+            transaction.source = 'xvm';
+            transaction.extra['xvm'] = {
+              "name": "swap",
+              "params": {
+                "data": {
+                  "slippage": 50,
+                  "toChainId": targetChain.internalId,
+                  "expectValue": transaction.expectValue,
+                  "toTokenAddress": v3BTX.targetToken,
+                  "toWalletAddress": v3BTX.targetAddress
+                },
+                "token": transfer.token,
+                "value": transfer.value,
+                "recipient": transfer.receiver
+              }
+            }
+          }
+          transaction.side = '0';
           transaction.replyAccount = v3BTX.targetAddress;
           transaction.replySender = v3BTX.targetMaker;
           transaction.memo = String(targetChain.internalId);
@@ -173,7 +197,7 @@ export class TransactionService {
         transfer.syncStatus = 9;
         await transfer.save();
         if (transfer.opStatus == 99) {
-          this.syncBTTransfer(transfer.hash).catch(error=> {
+          this.syncBTTransfer(transfer.hash).catch(error => {
             console.error('syncBTTransfer erorr1', error);
           }).then(result => {
             console.log(`sync result ${transfer.hash}`, result);
@@ -347,13 +371,200 @@ export class TransactionService {
       console.error(`syncBTTransfer error ${hash}`, error);
     }
   }
+  async syncBTTransferOverride(hash: string) {
+    try {
+      const v1Transfer = await this.transactionModel.findOne({
+        where: {
+          hash
+        }
+      });
+      if (!v1Transfer) {
+        await this.syncTransferByHash(hash);
+        return {
+          errno: 0,
+          errmsg: 'v1 transfer not found'
+        }
+      }
+      // if (v1Transfer.status == 99) {
+      //   return {
+      //     errno: 0,
+      //     errmsg: 'Exception transfer'
+      //   }
+      // }
+      const v3Transfer = await this.transfersModel.findOne({
+        where: {
+          hash
+        }
+      });
+      if (!v3Transfer) {
+        return {
+          errno: 0,
+          errmsg: 'V3 transfer not found'
+        }
+      }
+      // if (v3Transfer.opStatus != 99) {
+      //   return {
+      //     errno: 0,
+      //     errmsg: 'v3Transfer transfer status not 99'
+      //   }
+      // }
+      // if (v3Transfer.opStatus == 99) {
+      let where: any = {
+        version: '-'
+      }
+      if (v3Transfer.version === '1-0') {
+        where = {
+          version: '1-0',
+          sourceId: hash,
+        }
 
+      } else if (v3Transfer.version === '1-1') {
+        where = {
+          version: '1-0',
+          targetId: hash,
+        }
+
+      }
+      const bridgeTransaction = await this.bridgeTransactionModel.findOne({
+        where,
+        raw: true
+      });
+      if (!bridgeTransaction) {
+        throw new Error('btTx not found');
+      }
+      const sourceTx = await this.transactionModel.findOne({
+        attributes: ['id', 'value'],
+        where: {
+          hash: bridgeTransaction.sourceId
+        }
+      });
+      if (!sourceTx) {
+        await this.syncTransferByHash(bridgeTransaction.sourceId);
+        // throw new Error(`${bridgeTransaction.sourceId} bridgeTransaction.sourceId not found`);
+        return {
+          errno: 0,
+          errmsg: 're match 1'
+        }
+      }
+      // if (sourceTx.status === 99) {
+      //   return {
+      //     errno: 0,
+      //     errmsg: 'success break sync'
+      //   }
+      // }
+
+      const sourceChain = this.chainConfigService.getChainInfo(bridgeTransaction.sourceChain);
+      if (!sourceChain) {
+        throw new Error('sourceChain not found');
+      }
+      const targetChain = this.chainConfigService.getChainInfo(bridgeTransaction.targetChain);
+      if (!targetChain) {
+        throw new Error('targetChain not found');
+      }
+      const targetChainToken = await this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol);
+      if (!targetChainToken) {
+        throw new Error('targetChainToken not found');
+      }
+      const expectValue = new BigNumber(bridgeTransaction.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
+
+      const mtCreateData: MakerTransactionAttributes = {
+        transcationId: bridgeTransaction.transactionId,
+        inId: sourceTx.id,
+        outId: null,
+        fromChain: sourceChain.internalId,
+        toChain: Number(targetChain.internalId),
+        toAmount: expectValue,
+        replySender: bridgeTransaction.targetMaker,
+        replyAccount: bridgeTransaction.targetAddress,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      if (bridgeTransaction.targetId) {
+        let targetHash = bridgeTransaction.targetId;
+        if (bridgeTransaction.targetChain === 'SN_MAIN' && bridgeTransaction.targetId.includes("#0")) {
+          targetHash = bridgeTransaction.targetId.replace('#0', '');
+        }
+        const targetTx = await this.transactionModel.findOne({
+          attributes: ['id', 'value'],
+          where: {
+            hash: targetHash
+          }
+        });
+        if (!targetTx) {
+          await this.syncTransferByHash(bridgeTransaction.targetId);
+          return {
+            errno: 0,
+            errmsg: 're match 2'
+          }
+        }
+        mtCreateData.outId = targetTx.id;
+      }
+      const t = await this.v1Sequelize.transaction()
+      try {
+        const [makerTx, created] = await this.makerTransactionModel.findOrCreate({
+          where: {
+            inId: mtCreateData.inId
+          },
+          defaults: mtCreateData,
+          transaction: t
+        })
+        if (!created) {
+          if (mtCreateData.outId) {
+            makerTx.outId = mtCreateData.outId;
+            await makerTx.save({
+              transaction: t
+            });
+            //   
+            const [updateTransferRows2] = await this.transactionModel.update({
+              status: 99
+            }, {
+              where: {
+                id: [mtCreateData.inId, mtCreateData.outId],
+                status: {
+                  [Op.not]: 99
+                }
+              }, transaction: t
+            });
+          } else {
+            // update
+            makerTx.toAmount = mtCreateData.toAmount;
+            const [updateTransferRows2] = await this.transactionModel.update({
+              status: 1
+            }, {
+              where: {
+                id: [mtCreateData.inId],
+              }, transaction: t
+            });
+            await makerTx.save({
+              transaction: t
+            });
+          }
+        }
+        await t.commit();
+        return {
+          errno: 0,
+          errmsg: 'success'
+        }
+
+      } catch (error) {
+        await t.rollback();
+        throw error;
+      }
+      // }
+    } catch (error) {
+      console.error(`syncBTTransfer error ${hash}`, error);
+    }
+  }
   async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
     // console.log(data)
     try {
       const transfer = data.data
+      if (transfer.sender === '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2' || transfer.receiver === '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2') {
+        return true;
+      }
       this.logger.info(`${transfer.chainId} transfer: ${transfer.hash}, ${transfer.version}`)
-      await this.syncTransferByHash(transfer.hash);
+      return await this.syncTransferByHash(transfer.hash);
     } catch (error) {
       this.logger.error('handleBridgeTransaction error', error)
       this.logger.error('handleBridgeTransaction error transfer data', data.data)
@@ -361,259 +572,7 @@ export class TransactionService {
     }
     return
   }
-  // async handleTransfer(transfer: TransfersAttributes, bridgeTransaction?: BridgeTransactionAttributes) {
-  //   const chain = this.chainConfigService.getChainInfo(transfer.chainId)
-  //   if (!chain) {
-  //     return
-  //   }
-  //   const transaction: ITransaction = {
-  //     hash: transfer.hash,
-  //     nonce: transfer.nonce,
-  //     blockHash: null, // no blockHash
-  //     blockNumber: Number(transfer.blockNumber),
-  //     transactionIndex: Number(transfer.transactionIndex),
-  //     from: transfer.sender,
-  //     to: transfer.receiver,
-  //     value: transfer.value,
-  //     symbol: transfer.symbol,
-  //     gasPrice: null,
-  //     gas: null,
-  //     input: '',
-  //     status: bridgeTransaction ? 1 : (transfer.version === '1-1' ? 1 : 3), //Change the status of invalid transfer to 3
-  //     tokenAddress: transfer.token,
-  //     timestamp: transfer.timestamp,
-  //     fee: transfer.fee,
-  //     feeToken: transfer.feeToken,
-  //     chainId: chain.internalId,
-  //     source: 'sync',
-  //     memo: '0',
-  //     side: transfer.version === '1-0' ? 0 : 1,
-  //     extra: {},
-  //     makerId: null,
-  //     lpId: null,
-  //     replyAccount: null,
-  //     replySender: null,
-  //     expectValue: null,
-  //     transferId: '',
-  //     createdAt: new Date(),
-  //     updatedAt: new Date(),
-  //   }
-  //   if (transfer.chainId === 'SN_MAIN' && transfer.hash.includes("#0")) {
-  //     transaction.hash = transfer.hash.replace('#0', '');
-  //     console.log('replace hash:', transaction.hash, transfer.hash)
-  //   }
-  //   if (bridgeTransaction) {
-  //     transaction.extra = { toSymbol: bridgeTransaction.targetSymbol }
-  //     if (transaction.side === 0) {
-  //       transaction.replyAccount = bridgeTransaction.targetAddress
-  //       transaction.replySender = bridgeTransaction.targetMaker
-  //       const targetToken = this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol)
-  //       const targetChain = this.chainConfigService.getChainInfo(bridgeTransaction.targetChain)
-  //       const decimals = targetToken ? targetToken.decimals : 18
-  //       transaction.expectValue = utils.parseUnits(bridgeTransaction.targetAmount || '0', decimals).toString()
-  //       transaction.memo = String(targetChain?.internalId)
-  //     } else {
-  //       transaction.memo = bridgeTransaction.sourceNonce
-  //     }
-  //     transaction.replyAccount = bridgeTransaction.targetAddress
-  //     transaction.replySender = bridgeTransaction.targetMaker
-  //   }
 
-  //   if (transaction.side === 1) {
-  //     transaction.replyAccount = transfer.receiver
-  //     transaction.replySender = transfer.sender
-  //     transaction.transferId = TransferId(
-  //       String(transaction.chainId),
-  //       String(transaction.replySender),
-  //       String(transaction.replyAccount),
-  //       String(transaction.memo),
-  //       String(transaction.symbol),
-  //       String(transaction.value),
-  //     );
-  //   } else {
-  //     transaction.transferId = TransferId(
-  //       String(transaction.memo),
-  //       transaction.replySender,
-  //       String(transaction.replyAccount),
-  //       String(transaction.nonce),
-  //       String(transaction.symbol),
-  //       transaction.expectValue,
-  //     );
-  //   }
-
-  //   // In order to adapt to the problem that the fee is not exhausted
-  //   if (new BigNumber(transaction.fee).decimalPlaces() > 0) {
-  //     transaction.fee = new BigNumber(transaction.fee).toFixed(0)
-  //   }
-
-  //   const t = await this.transactionModel.findOne({ where: { hash: transaction.hash, chainId: transaction.chainId } })
-  //   if (!t) {
-  //     await this.transactionModel.upsert(transaction, { conflictFields: ['chainId', 'hash'] })
-  //   } else {
-  //     const w = { hash: transaction.hash, chainId: transaction.chainId, status: { [Op.ne]: 99 } }
-  //     delete transaction.createdAt
-  //     await this.transactionModel.update(transaction, { where: w })
-  //   }
-  //   const syncStatus = bridgeTransaction ? 2 : 1; // If the bridgeTransaction exists, then the transfer is a valid cross-chain transaction
-  //   await this.transfersModel.update({ syncStatus }, { where: { hash: transfer.hash, chainId: transfer.chainId, syncStatus: { [Op.ne]: 3 } } })
-  // }
-  // async handleBridgeTransaction(data: TransfersAttributes) {
-  //   let bridgeTransaction: BridgeTransactionAttributes
-  //   const transfer = data
-  //   if (transfer.version === '1-0') {
-  //     bridgeTransaction = await this.bridgeTransactionModel.findOne({ where: { sourceId: transfer.hash } })
-  //   } else {
-  //     bridgeTransaction = await this.bridgeTransactionModel.findOne({ where: { targetId: transfer.hash } })
-  //   }
-  //   await this.handleTransfer(transfer, bridgeTransaction)
-  //   if (!bridgeTransaction) {
-  //     this.logger.info(`bridgeTransaction not found, hash: ${transfer.hash}, version: ${transfer.version}`)
-  //     return
-  //   }
-  //   const transaction = await this.transactionModel.findOne({ where: { hash: transfer.hash } })
-  //   let inTransaction: ITransaction
-  //   let outTransaction: ITransaction
-  //   if (!transaction) {
-  //     console.log('transaction not found:', transfer.hash)
-  //     return
-  //   }
-  //   // console.log('----', transaction.hash, bridgeTransaction.sourceId, bridgeTransaction.targetId)
-  //   const findWhere = {} as any
-  //   if (transaction.side === 0) {
-  //     findWhere.inId = transaction.id
-  //     inTransaction = transaction
-  //     if (bridgeTransaction.targetId) {
-  //       outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
-  //       if (!outTransaction) {
-  //         const outTransferV3 = await this.transfersModel.findOne({ where: { hash: bridgeTransaction.targetId, chainId: bridgeTransaction.targetChain } })
-  //         if (outTransferV3) {
-  //           await this.handleTransfer(outTransferV3, bridgeTransaction)
-  //           outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
-  //         }
-  //       }
-  //     }
-  //   } else {
-  //     inTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.sourceId } })
-  //     if (!inTransaction) {
-  //       const inTransferV3 = await this.transfersModel.findOne({ where: { hash: bridgeTransaction.sourceId, chainId: bridgeTransaction.sourceChain } })
-  //       await this.handleTransfer(inTransferV3, bridgeTransaction)
-  //       inTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.sourceId } })
-  //     }
-  //     outTransaction = transaction
-  //     findWhere.outId = outTransaction.id
-  //   }
-  //   const mt = await this.makerTransactionModel.findOne({ where: findWhere })
-  //   if (mt && mt.inId && mt.outId) {
-  //     this.logger.info(`already matched ${transfer.id}: ${mt.transcationId} inId/outId: ${mt.inId}/${mt.outId}`)
-  //     this.transfersModel.update(
-  //       { syncStatus: 3 },
-  //       {
-  //         where: {
-  //           hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
-  //           chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
-  //           syncStatus: { [Op.ne]: 3 }
-  //         }
-  //       }
-  //     ).catch((error) => {
-  //       this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
-  //     });
-  //     return mt
-  //   }
-  //   const t = await this.v1Sequelize.transaction()
-  //   try {
-  //     let mtResult
-  //     if (!mt && transaction.side === 0) {
-  //       const mtCreateData: MakerTransactionAttributes = {
-  //         transcationId: bridgeTransaction.transactionId,
-  //         inId: inTransaction.id,
-  //         outId: null,
-  //         fromChain: inTransaction.chainId,
-  //         toChain: Number(inTransaction.memo),
-  //         toAmount: inTransaction.expectValue,
-  //         replySender: inTransaction.replySender,
-  //         replyAccount: inTransaction.replyAccount,
-  //         createdAt: new Date(),
-  //         updatedAt: new Date(),
-  //       }
-  //       if (outTransaction) {
-  //         mtCreateData.outId = outTransaction.id
-  //       }
-  //       mtResult = await this.makerTransactionModel.create(mtCreateData, { transaction: t })
-  //       if (outTransaction) {
-  //         await this.transactionModel.update({ status: 99 }, {
-  //           where: {
-  //             id: [inTransaction.id, outTransaction.id]
-  //           },
-  //           transaction: t
-  //         })
-  //         this.transfersModel.update(
-  //           { syncStatus: 3 },
-  //           {
-  //             where: {
-  //               hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
-  //               chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
-  //               syncStatus: { [Op.ne]: 3 }
-  //             }
-  //           }
-  //         ).catch((error) => {
-  //           this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
-  //         });
-  //         this.logger.info(`v1 match success(create mt) id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
-  //       }
-  //     } else if (mt) {
-  //       const updateData = {
-  //         outId: null,
-  //         UpdatedAt: new Date(),
-  //       } as any
-  //       if (transaction.side === 1 && outTransaction) {
-  //         updateData.outId = outTransaction.id
-  //       } else if (transaction.side === 0 && inTransaction) {
-  //         updateData.toAmount = inTransaction.expectValue
-  //         updateData.replyAccount = inTransaction.replyAccount
-  //         updateData.replySender = inTransaction.replySender
-  //         if (bridgeTransaction.targetId) {
-  //           outTransaction = await this.transactionModel.findOne({ where: { hash: bridgeTransaction.targetId } })
-  //           if (outTransaction) {
-  //             updateData.outId = outTransaction.id
-  //           }
-  //         }
-  //       }
-  //       mtResult = await this.makerTransactionModel.update(updateData, {
-  //         where: {
-  //           transcationId: bridgeTransaction.transactionId,
-  //           inId: inTransaction.id
-  //         },
-  //         transaction: t
-  //       })
-  //       if (updateData.outId) {
-  //         await this.transactionModel.update({ status: 99 }, {
-  //           where: {
-  //             id: [inTransaction.id, outTransaction.id]
-  //           },
-  //           transaction: t
-  //         })
-  //         this.transfersModel.update(
-  //           { syncStatus: 3 },
-  //           {
-  //             where: {
-  //               hash: [bridgeTransaction.sourceId, bridgeTransaction.targetId],
-  //               chainId: [bridgeTransaction.sourceChain, bridgeTransaction.targetChain],
-  //               syncStatus: { [Op.ne]: 3 }
-  //             }
-  //           }
-  //         ).catch((error) => {
-  //           this.logger.error(`update transfersModel syncStatus to 3 error sourceId:${bridgeTransaction.sourceId}, targetId:${bridgeTransaction.targetId}`, error)
-  //         });
-  //         this.logger.info(`v1 match success(update mt) id: ${inTransaction.id} / ${outTransaction.id}, hash: ${inTransaction.hash} / ${outTransaction.hash} `)
-  //       }
-  //     }
-  //     await t.commit()
-  //     return mtResult
-  //   } catch (error) {
-  //     t.rollback()
-  //     this.logger.error('handleBridgeTransaction error', error)
-  //   }
-  // }
   @Cron("* */5 * * * *")
   private async syncV3ToV1FromDatabase() {
     if (this.mutex.isLocked()) {
@@ -624,12 +583,15 @@ export class TransactionService {
       let index = 0;
       const list2 = await this.transfersModel.findAll({
         where: {
-          // [Op.or]: [{ syncStatus: [0, 2] }, { syncStatus: 1, opStatus: 99 }],
-          // version: ['1-1', '1-0'],
-          // status: [2],
-          // opStatus: [1, 99],
+          version: ['1-1', '1-0'],
           syncStatus: {
             [Op.not]: 9
+          },
+          receiver: {
+            [Op.not]: '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2'
+          },
+          sender: {
+            [Op.not]: '0x8086061cf07c03559fbb4aa58f191f9c4a5df2b2'
           },
           timestamp: {
             [Op.gte]: dayjs().subtract(60 * 24, 'minutes').toISOString(),
@@ -641,10 +603,9 @@ export class TransactionService {
       })
       console.log('LIST TOTAL:', list2.length, new Date());
       for (const row of list2) {
-        console.log(`${index} sync = ${row.hash}`);
+        console.log(`${index}/${list2.length} sync = ${row.hash}`);
         index++;
         await this.syncTransferByHash(row.hash).catch(error => {
-          this.logger.info(row.toJSON());
           this.logger.error('syncV3V1FromDatabase error', error)
         })
       }
@@ -682,6 +643,7 @@ export class TransactionService {
         //   }
         // })
         // if (transfer) {
+        index++;
         await this.syncBTTransfer(tx.hash).catch(error => {
           this.logger.error('syncV3V1FromDatabase error', error)
         });

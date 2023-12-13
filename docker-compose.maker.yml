@@ -18,6 +18,7 @@ services:
     restart: always
     environment:
       CONSUL_URL: '${CONSUL_URL}'
+      envConfigPath: ''
     ports:
       - '8000:8000'
     networks:

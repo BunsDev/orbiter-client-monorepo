@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { HTTPResponse } from '../utils/Response';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
@@ -34,5 +34,4 @@ export class AppController {
       return HTTPResponse.fail(1000, error.message);
     }
   }
-
 }

@@ -34,7 +34,7 @@ export class ArbitrationJobService {
 
     @Interval(1000 * 60)
     async syncProof() {
-        const isMaker = !!process.env['makerList'];
+        const isMaker = !!process.env['MakerList'];
         const arbitrationObj = await this.arbitrationService.jsondb.getData(`/arbitrationHash`);
         for (const hash in arbitrationObj) {
             if (arbitrationObj[hash] && arbitrationObj[hash].status) continue;
@@ -53,7 +53,12 @@ export class ArbitrationJobService {
         name: 'userArbitrationJob',
     })
     getListOfUnrefundedTransactions() {
-        if (process.env['makerList']) {
+        if (!process.env["ArbitrationAddress"]){
+            return
+        }
+        const challenger = process.env["ArbitrationAddress"];
+        if (!new RegExp(/^0x[a-fA-F0-9]{40}$/).test(challenger)) {
+            console.error(`ArbitrationAddress ${challenger} format error`);
             return;
         }
         this.logger.debug('Called when the current second is 45');
@@ -72,12 +77,17 @@ export class ArbitrationJobService {
                             continue;
                         }
                         await this.arbitrationService.jsondb.push(`/arbitrationHash/${item.sourceTxHash.toLowerCase()}`, <ArbitrationDB>{
+                            challenger,
+                            spvAddress: item.spvAddress,
                             sourceChainId: item.sourceChainId,
                             sourceTxHash: item.sourceTxHash.toLowerCase(),
                             mdcAddress: '',
                             status: 0
                         });
-                        this.eventEmitter.emit("user.arbitration.create", item);
+                        this.eventEmitter.emit("user.arbitration.create", {
+                            challenger,
+                            ...item
+                        });
                     }
                 }
                 startTime = endTime;
@@ -88,10 +98,10 @@ export class ArbitrationJobService {
         name: 'makerArbitrationJob',
     })
     getListOfUnresponsiveTransactions() {
-        if (!process.env['makerList']) {
+        if (!process.env['MakerList']) {
             return;
         }
-        const makerList = process.env['makerList'].split(',');
+        const makerList = process.env['MakerList'].split(',');
         this.logger.debug('Called when the current second is 45');
         if (mutex.isLocked()) {
             return;
@@ -100,7 +110,7 @@ export class ArbitrationJobService {
             .runExclusive(async () => {
                 const res: {
                     proof: string, hash: string, isSource: number, sourceChain: number, targetChain: number,
-                    makerAddress: string, mdcAddress: string
+                    makerAddress: string, mdcAddress: string, challenger: string, spvAddress: string
                 }[] = <any[]>await HTTPGet(`${arbitrationHost}/proof/needResponseTransactionList`);
                 for (const item of res) {
                     if (!makerList.find(maker => maker.toLowerCase() === item.makerAddress.toLowerCase())) {
@@ -113,6 +123,8 @@ export class ArbitrationJobService {
                             continue;
                         }
                         await this.arbitrationService.jsondb.push(`/arbitrationHash/${item.hash.toLowerCase()}`, <ArbitrationDB>{
+                            challenger: item.challenger,
+                            spvAddress: item.spvAddress,
                             toChainId: item.targetChain,
                             sourceTxHash: item.hash.toLowerCase(),
                             status: 0
