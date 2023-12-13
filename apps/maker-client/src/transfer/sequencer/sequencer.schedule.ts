@@ -67,7 +67,8 @@ export class SequencerScheduleService {
       status: 0,
       targetChain: store.chainId,
       sourceMaker: owner,
-      version:"2-0",
+      targetId:null,
+      // version:"2-0",
       // id: {
       //   [Op.gt]: store.lastId,
       // },
