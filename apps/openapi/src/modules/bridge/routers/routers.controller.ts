@@ -54,6 +54,10 @@ export class RoutersController {
         const targetChain = chains.find(row => row.chainId == route.tgtChain);
         const sourceToken = sourceChain.tokens.find(t => t.address == route.srcToken);
         const targetToken = sourceChain.tokens.find(t => t.address == route.tgtToken);
+        const toChainId = v1MakerUtils.getAmountFlag(+sourceChain.internalId, value);
+        if (+toChainId != +targetChain.internalId) {
+            throw new Error('vc security code error');
+        }
         const result = v1MakerUtils.getAmountToSend(
             +sourceChain.internalId,
             sourceToken.decimals,
@@ -72,8 +76,5 @@ export class RoutersController {
         } else {
             throw new Error(result.errmsg);
         }
-
     }
-
-
 }
