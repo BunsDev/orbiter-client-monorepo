@@ -31,7 +31,7 @@ export class ProofService {
         @InjectModel(ArbitrationUserTransaction) private arbitrationUserTransaction: typeof ArbitrationUserTransaction) {}
 
     async getSubClient(): Promise<SubgraphClient> {
-        const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
+        const SubgraphEndpoint = await this.envConfigService.getAsync("THEGRAPH_API");
         if (!SubgraphEndpoint) {
             return null;
         }
@@ -40,7 +40,6 @@ export class ProofService {
 
     async proofSubmission(data: ProofSubmissionRequest) {
         try {
-            console.log("proofSubmission message", data.message);
             const hash = data.transaction.toLowerCase();
             const proofData = {
                 hash, status: data.status,
