@@ -54,7 +54,7 @@ import { isEmpty } from "../../../libs/utils/src";
                     console.error('Missing configuration DATABASE_URL');
                     process.exit(1);
                 }
-                return config;
+                return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
             },
         }),
         SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction, ArbitrationUserTransaction])
