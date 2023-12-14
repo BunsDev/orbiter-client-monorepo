@@ -30,12 +30,13 @@ export class RoutersService {
             const internalChainId = v1Rule['chain'].split('-');
             const sourceChain = chains.find(row => row.internalId == internalChainId[0]);
             const targetChain = chains.find(row => row.internalId == internalChainId[1]);
-            if (WHITE_MAKERS.length>0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
+            if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
                 continue;
             }
             const routerConfig: RoutersConfig = {
                 line: '',
                 endpoint: v1Rule['makerAddress'],
+                endpointContract: null,
                 srcChain: "",
                 tgtChain: "",
                 srcToken: v1Rule['sourceSymbol'],
@@ -45,10 +46,21 @@ export class RoutersService {
                 tradeFee: String(+v1Rule['gasFee'] * 1000),
                 withholdingFee: String(v1Rule['tradingFee']),
                 vc: String(+internalChainId[1] + 9000),
+                state: 'available',
                 compRatio: 1,
                 spentTime: 60,
             };
-
+            if (routerConfig.srcToken != routerConfig.tgtToken) {
+                for (const addr in sourceChain.contract) {
+                    if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
+                        routerConfig.endpointContract = addr;
+                        break;
+                    }
+                }
+                if (!routerConfig.endpointContract) {
+                    routerConfig.state = 'disabled';
+                }
+            }
             // Populate source and target chain information if available
             if (sourceChain) {
                 routerConfig.srcChain = String(sourceChain.chainId);
@@ -77,16 +89,18 @@ export class RoutersService {
         // Request V3 router configurations from the remote API
         const { result } = await this.requestRemoteV3Router(dealerAddress);
         const v3RouterConfigs: RoutersConfig[] = [];
+        const chains = await this.chainService.getChains();
         const WHITE_MAKERS = this.envConfigService.get("WHITE_MAKERS", []);
         // Iterate through each rule from the API response and convert it to a router configuration
         for (const v3Rule of result.ruleList) {
             const { fromChain, toChain } = v3Rule;
-            if (WHITE_MAKERS.length>0 && !WHITE_MAKERS.includes(v3Rule['recipient'].toLocaleLowerCase())) {
+            if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v3Rule['recipient'].toLocaleLowerCase())) {
                 continue;
             }
             const routerConfig: RoutersConfig = {
                 line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
                 endpoint: v3Rule['recipient'],
+                endpointContract: null,
                 srcChain: fromChain['chainId'],
                 tgtChain: toChain['chainId'],
                 srcToken: fromChain['symbol'],
@@ -96,6 +110,7 @@ export class RoutersService {
                 tradeFee: v3Rule['gasFee'],
                 withholdingFee: v3Rule['tradingFee'],
                 vc: `${padStart(v3Rule.dealerId, 2, "0")}${v3Rule['ebcId']}${padStart(toChain.id, 2, "0")}`,
+                state: 'available',
                 compRatio: v3Rule['_compensationRatio'], // 1000000
                 spentTime: v3Rule['spentTime'], // second
             };
@@ -103,6 +118,18 @@ export class RoutersService {
             // Skip configurations with incorrect vc length
             if (routerConfig.vc.length != 5) {
                 continue;
+            }
+            const sourceChain = chains.find(row => row.chainId == routerConfig.srcChain);
+            if (routerConfig.srcToken != routerConfig.tgtToken) {
+                for (const addr in sourceChain.contract) {
+                    if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
+                        routerConfig.endpointContract = addr;
+                        break;
+                    }
+                }
+                if (!routerConfig.endpointContract) {
+                    routerConfig.state = 'disabled';
+                }
             }
 
             v3RouterConfigs.push(routerConfig);

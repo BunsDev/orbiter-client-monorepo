@@ -8,14 +8,17 @@ export class ChainsService {
     }
     async getChains(): Promise<ChainConfig[]> {
         const chainConfigs = await this.chainConsulService.getAllChains();
+        const result: any[] = [];
         for (const config of chainConfigs) {
-            delete config.api;
-            delete config.rpc;
-            delete config.debug;
-            delete config.service;
-            delete config.contracts;
-            delete config.tokens;
+            result.push({
+                chainId: String(config.chainId),
+                networkId: String(config.networkId),
+                internalId: config.internalId,
+                name: config.name,
+                contract: config.contract,
+                nativeCurrency: config.nativeCurrency,
+            })
         }
-        return chainConfigs as any;
+        return result as any;
     }
 }
