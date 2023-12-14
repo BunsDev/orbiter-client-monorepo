@@ -1,34 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import {
     MakerAskProofRequest,
-    ProofData,
-    ProofSubmissionRequest, UserAskProofRequest
+    ProofSubmissionRequest,
+    UserAskProofRequest
 } from '../common/interfaces/Proof.interface';
-import { Level } from 'level';
 import { InjectModel } from "@nestjs/sequelize";
 import { BridgeTransaction } from "@orbiter-finance/seq-models";
 import { keccak256, solidityPack } from "ethers/lib/utils";
-import { Config, JsonDB } from "node-json-db";
 import { getDecimalBySymbol } from "@orbiter-finance/utils";
 import { ethers, utils } from "ethers";
 import BigNumber from "bignumber.js";
-import { SubgraphClient } from "../../../../libs/subgraph-sdk/src";
-import { ENVConfigService } from "../../../../libs/config/src";
-
-// TODO
-const spvAddress = "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38";
-const spvAddressEra = "0xc0EBbafd56d5E68849987d1d5968FDeA04D08CcB";
+import { SubgraphClient } from "@orbiter-finance/subgraph-sdk";
+import { ENVConfigService } from "@orbiter-finance/config";
+import {
+    ArbitrationProof,
+    ArbitrationMakerTransaction,
+    ArbitrationUserTransaction,
+    IArbitrationProof,
+    IArbitrationMakerTransaction,
+    IArbitrationUserTransaction
+} from "@orbiter-finance/maker-api-seq-models";
 
 @Injectable()
 export class ProofService {
-    public jsondb = new JsonDB(new Config("runtime/makerOpenApiDB", true, false, '/'));
-    private db: Level;
-
     constructor(
         protected envConfigService: ENVConfigService,
-        @InjectModel(BridgeTransaction) private bridgeTransactionModel: typeof BridgeTransaction) {
-        this.db = new Level('runtime/maker-openapi', { valueEncoding: 'json' });
-    }
+        @InjectModel(BridgeTransaction) private bridgeTransactionModel: typeof BridgeTransaction,
+        @InjectModel(ArbitrationProof) private arbitrationProof: typeof ArbitrationProof,
+        @InjectModel(ArbitrationMakerTransaction) private arbitrationMakerTransaction: typeof ArbitrationMakerTransaction,
+        @InjectModel(ArbitrationUserTransaction) private arbitrationUserTransaction: typeof ArbitrationUserTransaction) {}
 
     async getSubClient(): Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
@@ -46,22 +46,40 @@ export class ProofService {
                 hash, status: data.status,
                 proof: data.proof, message: data.message
             };
-            const sourceCount = await this.bridgeTransactionModel.count(<any>{
+            const sourceData = await this.bridgeTransactionModel.findOne(<any>{
                 where: {
                     sourceId: hash
                 }
             });
-            if (sourceCount) {
-                await this.jsondb.push(`/proof/${hash}`, { ...proofData, isSource: 1 });
+            if (sourceData) {
+                const arbitrationProof: IArbitrationProof = {
+                    hash,
+                    sourceMaker: sourceData.sourceMaker.toLowerCase(),
+                    proof: proofData.proof,
+                    message: proofData.message,
+                    status: proofData.status,
+                    isSource: 1,
+                    createTime: new Date().valueOf()
+                };
+                await this.arbitrationProof.create(arbitrationProof);
                 return { status: 1 };
             }
-            const targetCount = await this.bridgeTransactionModel.count(<any>{
+            const targetData = await this.bridgeTransactionModel.findOne(<any>{
                 where: {
                     targetId: hash
                 }
             });
-            if (targetCount) {
-                await this.jsondb.push(`/proof/${hash}`, { ...proofData, isSource: 0 });
+            if (targetData) {
+                const arbitrationProof: IArbitrationProof = {
+                    hash,
+                    sourceMaker: targetData.sourceMaker.toLowerCase(),
+                    proof: proofData.proof,
+                    message: proofData.message,
+                    status: proofData.status,
+                    isSource: 0,
+                    createTime: new Date().valueOf()
+                };
+                await this.arbitrationProof.create(arbitrationProof);
                 return { status: 1 };
             }
             return { status: 0 };
@@ -73,6 +91,18 @@ export class ProofService {
 
     async getVerifyChallengeSourceParams(hash: string) {
         try {
+            const proofData: IArbitrationProof = await this.arbitrationProof.findOne(<any>{
+                where: {
+                    hash: hash.toLowerCase(),
+                    isSource: 1
+                },
+                order: [['status', 'DESC'], ['createTime', 'DESC']],
+                raw: true
+            });
+            if (!proofData) {
+                console.error('none of proofData');
+                return null;
+            }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
                 attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
                     'targetChain', 'targetToken', 'ebcAddress'],
@@ -80,6 +110,10 @@ export class ProofService {
                     sourceId: hash.toLowerCase()
                 }
             });
+            if (!bridgeTx) {
+                console.error('none of bridgeTx');
+                return null;
+            }
             const client = await this.getSubClient();
             if (!client) {
                 console.error('SubClient not found');
@@ -126,13 +160,15 @@ export class ProofService {
             const rlpRuleBytes = utils.RLP.encode(
                 formatRule.map((r) => utils.stripZeros(ethers.BigNumber.from(r).toHexString())),
             );
-            const proofData = await this.jsondb.getData(`/proof/${hash.toLowerCase()}`);
-            // TODO
-            const eraNetWorkId = 280;
+
+            const eraNetWorkId = await this.envConfigService.getAsync('IS_TEST_NET') ? 280 : 324;
+            const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
+            const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
+            const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
             return {
                 sourceMaker: bridgeTx.sourceMaker,
                 sourceChain: bridgeTx.sourceChain,
-                spvAddress: +bridgeTx.sourceChain === eraNetWorkId ? spvAddressEra : spvAddress,
+                spvAddress,
                 rawDatas,
                 rlpRuleBytes,
                 ...proofData
@@ -144,7 +180,18 @@ export class ProofService {
 
     async getVerifyChallengeDestParams(hash: string) {
         try {
-            const proofData = await this.jsondb.getData(`/proof/${hash.toLowerCase()}`);
+            const proofData: IArbitrationProof = await this.arbitrationProof.findOne(<any>{
+                where: {
+                    hash: hash.toLowerCase(),
+                    isSource: 0
+                },
+                order: [['status', 'DESC'], ['createTime', 'DESC']],
+                raw: true
+            });
+            if (!proofData) {
+                console.error('none of proofData');
+                return null;
+            }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
                 attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime',
                     'targetId', 'targetChain', 'targetToken', 'targetNonce', 'targetAddress', 'targetMaker',
@@ -174,11 +221,20 @@ export class ProofService {
             const token0 = bridgeTx.sourceToken;
             const token1 = bridgeTx.targetToken;
             const ruleKey: string = keccak256(solidityPack(['uint256', 'uint256', 'uint256', 'uint256'], [chain0, chain1, token0, token1]));
-            const userSubmitTx = await this.jsondb.getData(`/userTx/${bridgeTx.sourceId.toLowerCase()}`);
-            if (!userSubmitTx) {
-                console.error('none of userSubmitTx');
+            const arbitrationUserTransaction: IArbitrationUserTransaction = await this.arbitrationUserTransaction.findOne(<any>{
+                where: {
+                    hash: bridgeTx.sourceId.toLowerCase()
+                },
+                order: [['createTime', 'DESC']]
+            });
+            if (!arbitrationUserTransaction) {
+                console.error('none of arbitrationUserTransaction');
                 return null;
             }
+            const eraNetWorkId = await this.envConfigService.getAsync('IS_TEST_NET') ? 280 : 324;
+            const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
+            const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
+            const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
             return {
                 targetNonce: bridgeTx.targetNonce,
                 targetChain: bridgeTx.targetChain,
@@ -188,7 +244,7 @@ export class ProofService {
                 responseMakersHash: bridgeTx.targetId,
                 responseTime: String(60), // TODO
 
-                challenger: userSubmitTx.challenger,
+                challenger: arbitrationUserTransaction.challenger,
                 sourceId: bridgeTx.sourceId,
                 sourceMaker: bridgeTx.sourceMaker,
                 sourceChain: bridgeTx.sourceChain,
@@ -199,25 +255,30 @@ export class ProofService {
                 ...proofData
             };
         } catch (e) {
-
+            console.error(e);
+            return null;
         }
-    }
-
-    async completeProof(hash: string) {
-        await this.jsondb.delete(`/proof/${hash.toLowerCase()}`); // TODO security
     }
 
     async userAskProof(data: UserAskProofRequest) {
         if (!data.hash || !data.challenger) {
             throw new Error('Invalid parameters');
         }
-        await this.jsondb.push(`/userTx/${data.hash.toLowerCase()}`, {
-            hash: data.hash, challenger: data.challenger
+        const hash = data.hash.toLowerCase();
+        const challenger = data.challenger.toLowerCase();
+        const arbitrationUserTransaction: IArbitrationUserTransaction = {
+            hash,
+            challenger,
+            createTime: new Date().valueOf()
+        };
+        await this.arbitrationUserTransaction.upsert(arbitrationUserTransaction, <any>{
+            hash,
+            challenger
         });
     }
 
     async makerAskProof(data: MakerAskProofRequest) {
-        if (!data.hash) {
+        if (!data?.hash) {
             throw new Error('Invalid parameters');
         }
         const bridgeTransaction = await this.bridgeTransactionModel.findOne(<any>{
@@ -235,54 +296,40 @@ export class ProofService {
         if (!bridgeTransaction?.sourceChain) {
             throw new Error(`Unable to locate transaction: ${data.hash}`);
         }
-        const chain0 = toHex(bridgeTransaction.sourceChain);
-        const chain1 = toHex(bridgeTransaction.targetChain);
-        await this.jsondb.push(`/makerTx/${data.hash.toLowerCase()}`, {
-            hash: data.hash, sourceChain: chain0, targetChain: chain1
+        const hash = data.hash.toLowerCase();
+        const arbitrationMakerTransaction: IArbitrationMakerTransaction = {
+            hash,
+            sourceChain: bridgeTransaction.sourceChain,
+            targetChain: bridgeTransaction.targetChain,
+            createTime: new Date().valueOf()
+        };
+        await this.arbitrationMakerTransaction.upsert(arbitrationMakerTransaction, <any>{
+            hash
         });
     }
 
     async needMakerProofTransactionList() {
-        let txObj: any = {};
-        try {
-            txObj = await this.jsondb.getData(`/makerTx`);
-        } catch (e) {
-            console.error('getNeedProofTransactionList', e.message);
-        }
+        const dataList: IArbitrationMakerTransaction[] = await this.arbitrationMakerTransaction.findAll({
+            raw: true,
+            order: [['createTime', 'DESC']]
+        });
         const list = [];
-        for (const hash in txObj) {
-            const data: any = txObj[hash];
+        for (const data of dataList) {
             if (data?.hash) list.push([data.hash, data.sourceChain, data.targetChain]);
         }
         return list;
     }
 
-    async makerNeedResponseTxList(makerAddress: string): Promise<ProofData[]> {
-        let txObj: any = {};
-        try {
-            txObj = await this.jsondb.getData(`/proof`);
-        } catch (e) {
-            console.error('getNeedProofTransactionList', e.message);
-        }
-        const list = [];
-        for (const hash in txObj) {
-            const data: any = txObj[hash];
-            if (data.status === 1 && data?.isSource) {
-                const userSubmitTx = await this.jsondb.getData(`/userTx/${data.hash.toLowerCase()}`);
-                if (userSubmitTx) {
-                    const count = await this.bridgeTransactionModel.count(<any>{
-                        where: {
-                            sourceId: data.hash.toLowerCase(),
-                            sourceMaker: makerAddress.toLowerCase()
-                        }
-                    });
-                    if (count) {
-                        list.push(data);
-                    }
-                }
-            }
-        }
-        return list;
+    async makerNeedResponseTxList(makerAddress: string): Promise<IArbitrationProof[]> {
+        return await this.arbitrationProof.findAll({
+            attributes: ['hash', 'sourceMaker'],
+            where: {
+                sourceMaker: makerAddress.toLowerCase(),
+                status: 1,
+                isSource: 1
+            },
+            raw: true
+        });
     }
 }
 

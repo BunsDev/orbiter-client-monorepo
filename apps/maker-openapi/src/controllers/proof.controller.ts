@@ -64,18 +64,6 @@ export class ProofController {
         }
     }
 
-    @Post("/completeProofSubmission")
-    async completeProofSubmission(@Body() data: CompleteProofSubmission): Promise<HTTPResponse> {
-        // arbitration-client submit
-        try {
-            await this.proofService.completeProof(data.hash);
-            return HTTPResponse.success(null);
-        } catch (error) {
-            this.logger.error('completeProofSubmission error', error);
-            return HTTPResponse.fail(1000, error.message);
-        }
-    }
-
     @Get("/makerNeedResponseTxList")
     async makerNeedResponseTxList(@Query("makerAddress") makerAddress: string): Promise<HTTPResponse> {
         // maker arbitration-client need
