@@ -26,9 +26,9 @@ import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
       },
     }),
     OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-server/chains.json",
-      envConfigPath: "explore-server/config.yaml",
-      makerV1RulePath: "rules",
+      chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-server/chains.json",
+      envConfigPath: process.env['ENV_VAR_PATH'] || "explore-server/config.yaml",
+      makerV1RulePath: process.env['ENV_RULES_PATH'] || "rules",
       // cachePath: join(__dirname, 'runtime')
     }),
     RabbitMqModule,

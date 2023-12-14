@@ -8,11 +8,6 @@ export interface ArbitrationTransaction {
     ruleKey: string;
     freezeToken: string;
     freezeAmount1: string;
-    parentNodeNumOfTargetNode: number;
-
-    spvAddress: string;
-    rawDatas: string;
-    rlpRuleBytes: string;
 }
 
 export interface ProofSubmissionRequest {
@@ -22,13 +17,13 @@ export interface ProofSubmissionRequest {
     message: string;
 }
 
-export interface NeedProofSubmissionRequest {
-    isSource: number;
+export interface UserAskProofRequest {
+    challenger?: string;
     hash: string;
-    chainId: number;
-    mdcAddress: string;
-    challenger: string;
-    spvAddress: string;
+}
+
+export interface MakerAskProofRequest {
+    hash: string;
 }
 
 export interface CompleteProofSubmission {
@@ -78,4 +73,7 @@ export interface ProofData {
     targetAmount?: string;
     responseMakersHash?: string;
     responseTime?: string;
+
+    status: number;
+    message: string;
 }

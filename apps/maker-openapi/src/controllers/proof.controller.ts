@@ -2,9 +2,7 @@ import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ProofService } from '../services/proof.service';
 import { HTTPResponse } from '../utils/Response';
 import {
-    CompleteProofSubmission,
-    NeedProofSubmissionRequest,
-    ProofSubmissionRequest
+    CompleteProofSubmission, MakerAskProofRequest, ProofSubmissionRequest, UserAskProofRequest
 } from '../common/interfaces/Proof.interface';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
@@ -25,8 +23,7 @@ export class ProofController {
         // wj submit
         try {
             this.logger.info(`proofSubmission`, data);
-            await this.proofService.proofSubmission(data);
-            return HTTPResponse.success(null);
+            return HTTPResponse.success(await this.proofService.proofSubmission(data));
         } catch (error) {
             this.logger.error('proofSubmission error', error);
             return HTTPResponse.fail(1000, error.message);
@@ -34,20 +31,32 @@ export class ProofController {
     }
 
     @Get("/needProofTransactionList")
-    async needProofTransactionList(): Promise<HTTPResponse> {
+    async needMakerProofTransactionList(): Promise<HTTPResponse> {
         // wj need
         try {
-            return HTTPResponse.success(await this.proofService.getNeedProofTransactionList());
+            return HTTPResponse.success(await this.proofService.needMakerProofTransactionList());
         } catch (error) {
             return HTTPResponse.fail(1000, error.message);
         }
     }
 
-    @Post("/needProofSubmission")
-    async needProofSubmission(@Body() data: NeedProofSubmissionRequest): Promise<HTTPResponse> {
+    @Post("/userAskProof")
+    async userAskProof(@Body() data: UserAskProofRequest): Promise<HTTPResponse> {
         // arbitration-client submit
         try {
-            await this.proofService.saveNeedProofTransactionList(data);
+            await this.proofService.userAskProof(data);
+            return HTTPResponse.success(null);
+        } catch (error) {
+            this.logger.error('proofSubmission error', error);
+            return HTTPResponse.fail(1000, error.message);
+        }
+    }
+
+    @Post("/makerAskProof")
+    async makerAskProof(@Body() data: MakerAskProofRequest): Promise<HTTPResponse> {
+        // arbitration-client submit
+        try {
+            await this.proofService.makerAskProof(data);
             return HTTPResponse.success(null);
         } catch (error) {
             this.logger.error('proofSubmission error', error);
@@ -67,11 +76,11 @@ export class ProofController {
         }
     }
 
-    @Get("/needResponseTransactionList")
-    async needResponseTransactionList(): Promise<HTTPResponse> {
+    @Get("/makerNeedResponseTxList")
+    async makerNeedResponseTxList(@Query("makerAddress") makerAddress: string): Promise<HTTPResponse> {
         // maker arbitration-client need
         try {
-            const data = await this.proofService.getNeedMakerResponseTransactionList();
+            const data = await this.proofService.makerNeedResponseTxList(makerAddress);
             return HTTPResponse.success(data);
         } catch (error) {
             this.logger.error('needResponseTransactionList error', error);
@@ -79,10 +88,21 @@ export class ProofController {
         }
     }
 
-    @Get("/hash/:hash")
-    async getProofByHash(@Param("hash") hash: string): Promise<HTTPResponse> {
+    @Get("/sourceId/:hash")
+    async getVerifyChallengeSourceParamsByUserHash(@Param("hash") hash: string): Promise<HTTPResponse> {
         try {
-            const data = await this.proofService.getProof(hash);
+            const data = await this.proofService.getVerifyChallengeSourceParams(hash);
+            return HTTPResponse.success(data);
+        } catch (error) {
+            this.logger.error('getProofByHash error', error);
+            return HTTPResponse.fail(1000, error.message);
+        }
+    }
+
+    @Get("/targetId/:hash")
+    async getVerifyChallengeDestParamsByMakerHash(@Param("hash") hash: string): Promise<HTTPResponse> {
+        try {
+            const data = await this.proofService.getVerifyChallengeDestParams(hash);
             return HTTPResponse.success(data);
         } catch (error) {
             this.logger.error('getProofByHash error', error);

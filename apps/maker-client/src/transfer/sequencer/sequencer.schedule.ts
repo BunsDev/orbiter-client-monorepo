@@ -67,7 +67,8 @@ export class SequencerScheduleService {
       status: 0,
       targetChain: store.chainId,
       sourceMaker: owner,
-      version:"2-0",
+      targetId:null,
+      // version:"2-0",
       // id: {
       //   [Op.gt]: store.lastId,
       // },
@@ -168,11 +169,12 @@ export class SequencerScheduleService {
   }
 
   @Cron("*/1 * * * * *")
-  private checkStoreWaitSend() {
+  private async checkStoreWaitSend() {
     const storeKeys = this.stores.keys();
     for (const k of storeKeys) {
       const store = this.stores.get(k);
-      if (this.validatorService.validDisabledPaid(store.chainId)) {
+      const isDisabledPaid = await this.validatorService.validDisabledPaid(store.chainId);
+      if (isDisabledPaid) {
         this.logger.debug(
           `checkStoreWaitSend ${store.chainId} Disabled Paid collection function`
         );
@@ -204,7 +206,8 @@ export class SequencerScheduleService {
     if (lock.isLocked()) {
       return;
     }
-    if (this.validatorService.validDisabledPaid(store.chainId)) {
+    const isDisabledPaid = await this.validatorService.validDisabledPaid(store.chainId);
+    if (isDisabledPaid) {
       this.logger.debug(
         `checkStoreReadySend ${store.chainId} Disabled Paid collection function`
       );

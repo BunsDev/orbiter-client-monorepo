@@ -7,7 +7,7 @@ import { type TransferAmountTransaction } from "./sequencer.interface";
 import { InjectModel } from "@nestjs/sequelize";
 import { BridgeTransaction, BridgeTransactionStatus } from "@orbiter-finance/seq-models";
 import BigNumber from "bignumber.js";
-import { AlertService } from "@orbiter-finance/alert";
+import { AlertMessageChannel, AlertService } from "@orbiter-finance/alert";
 import { OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendBeforeError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
 @Injectable()
 export class SequencerService {
@@ -189,6 +189,7 @@ export class SequencerService {
           );
         })
         .catch((error) => {
+          this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transferResult.hash}`, [AlertMessageChannel.TG]);
           this.logger.error(
             `${transferResult.hash} waitForTransactionConfirmation error`,
             error
@@ -231,6 +232,7 @@ export class SequencerService {
               this.logger.info(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
               await this.execSingleTransfer(transfer, wallet.account, store).catch(error => {
                 this.logger.error(`execSingleTransfer error`, error)
+                this.alertService.sendMessage(`execSingleTransfer error ${hash}`, [AlertMessageChannel.TG]);
                 if (error instanceof TransactionSendBeforeError) {
                   rollback();
                 }
@@ -242,6 +244,7 @@ export class SequencerService {
           if (error instanceof TransactionSendBeforeError) {
             await rollback();
           }
+          this.alertService.sendMessage(`sequencer.schedule singleSendTransaction ${hash} error`, [AlertMessageChannel.TG]);
           this.logger.error(
             `sequencer.schedule singleSendTransaction ${hash} error`,
             error
@@ -249,6 +252,7 @@ export class SequencerService {
         }
       }
     } catch (error) {
+      this.alertService.sendMessage(`singleSendTransactionByTransfer ${hash} error`, [AlertMessageChannel.TG]);
       this.logger.error(
         `singleSendTransactionByTransfer ${hash} error`,
         error
@@ -438,6 +442,7 @@ export class SequencerService {
           );
         })
         .catch((error) => {
+          this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${transferResult.hash}`, [AlertMessageChannel.TG]);
           this.logger.error(
             `${transferResult.hash} waitForTransactionConfirmation error`,
             error

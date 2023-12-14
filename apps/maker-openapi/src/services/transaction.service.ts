@@ -4,19 +4,17 @@ import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models'
 import dayjs from 'dayjs';
 import { Op } from 'sequelize';
 import { ArbitrationTransaction } from "../common/interfaces/Proof.interface";
-import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
+import { ChainConfigService } from "@orbiter-finance/config";
 import { keccak256 } from "@ethersproject/keccak256";
 import { solidityPack } from "ethers/lib/utils";
 import BigNumber from "bignumber.js";
-import { utils, ethers } from "ethers";
-import { SubgraphClient } from "../../../../libs/subgraph-sdk/src";
+
 @Injectable()
 export class TransactionService {
     mainChain = 1;
 
     constructor(
         protected chainConsulService: ChainConfigService,
-        protected envConfigService: ENVConfigService,
         private readonly chainConfigService: ChainConfigService,
         @InjectModel(Transfers)
         private transfersModel: typeof Transfers,
@@ -33,18 +31,10 @@ export class TransactionService {
         }
     }
 
-    async getSubClient(): Promise<SubgraphClient> {
-        const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
-        if (!SubgraphEndpoint) {
-            return null;
-        }
-        return new SubgraphClient(SubgraphEndpoint);
-    }
-
     async getUnreimbursedTransactions(startTime: number, endTime: number): Promise<ArbitrationTransaction[]> {
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
-                'targetChain', 'targetToken'],
+                'targetChain', 'targetToken', 'ebcAddress'],
             where: {
                 status: 0,
                 sourceTime: {
@@ -84,51 +74,6 @@ export class TransactionService {
                 ['uint256', 'uint256', 'uint256', 'uint256'],
                 [bridgeTx.sourceChain, bridgeTx.targetChain, bridgeTx.sourceToken, bridgeTx.targetToken]
             ));
-            const client = await this.getSubClient();
-            if (!client) {
-                throw new Error('SubClient not found');
-            }
-            const mdcAddress = await client.maker.getMDCAddress(bridgeTx.sourceMaker);
-            if (!mdcAddress) {
-                console.error('MdcAddress not found', bridgeTx.sourceChain, bridgeTx.sourceId);
-                continue;
-            }
-            const { dealers, ebcs, chainIds } = await client.maker.getColumnArray(Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000), mdcAddress, bridgeTx.sourceMaker);
-            const spvAddress = "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38"; // TODO
-            const ebc = bridgeTx.ebcAddress;
-            const rawDatas = utils.defaultAbiCoder.encode(
-                ['address[]', 'address[]', 'uint64[]', 'address'],
-                [dealers, ebcs, chainIds, ebc],
-            );
-            const rule: any = await client.maker.getRules(mdcAddress, ebc, bridgeTx.sourceMaker);
-            if (!rule) {
-                console.error('Rule not found', bridgeTx.sourceChain, bridgeTx.sourceId);
-                continue;
-            }
-            const formatRule: any[] = [
-                rule.chain0,
-                rule.chain1,
-                rule.chain0Status,
-                rule.chain1Status,
-                rule.chain0Token,
-                rule.chain1Token,
-                rule.chain0minPrice,
-                rule.chain1minPrice,
-                rule.chain0maxPrice,
-                rule.chain1maxPrice,
-                rule.chain0WithholdingFee,
-                rule.chain1WithholdingFee,
-                rule.chain0TradeFee,
-                rule.chain1TradeFee,
-                rule.chain0ResponseTime,
-                rule.chain1ResponseTime,
-                rule.chain0CompensationRatio,
-                rule.chain1CompensationRatio,
-            ];
-            // console.log('formatRule ====', formatRule);
-            const rlpRuleBytes = utils.RLP.encode(
-                formatRule.map((r) => utils.stripZeros(ethers.BigNumber.from(r).toHexString())),
-            );
             const arbitrationTransaction: ArbitrationTransaction = {
                 sourceChainId: Number(bridgeTx.sourceChain),
                 sourceTxHash,
@@ -137,12 +82,8 @@ export class TransactionService {
                 sourceTxTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                 sourceTxIndex: Number(transfer.transactionIndex),
                 ruleKey,
-                freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(sourceToken.decimals).toFixed(0),
-                freezeToken: mainToken.address,
-                parentNodeNumOfTargetNode: 0,
-                spvAddress,
-                rawDatas,
-                rlpRuleBytes
+                freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(10 ** sourceToken.decimals).toFixed(0),
+                freezeToken: mainToken.address
             };
             dataList.push(arbitrationTransaction);
         }
