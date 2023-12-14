@@ -10,11 +10,19 @@ export class RoutersController {
     constructor(private readonly routerService: RoutersService, private readonly chainService: ChainsService) {
 
     }
-    @Get("/v1")
+    @Get()
     @success('success', 200)
-    async getRouterV1() {
+    async getRouters(@Query('dealerId') dealerId: string) {
         const configs = await this.routerService.getV1Routers();
-        return configs;
+        let dealerConfigs = [];
+        if (dealerId) {
+            try {
+                dealerConfigs = await this.routerService.getV3Routers(dealerId.toLocaleLowerCase()) || [];
+            } catch (error) {
+                console.error('getRouterV1 -> getV3Routers error', error);
+            }
+        }
+        return [...dealerConfigs, ...configs];
     }
     @Get("/cross-chain")
     @success('success', 200)

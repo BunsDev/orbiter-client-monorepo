@@ -16,7 +16,6 @@ export class ErrorInterceptor implements NestInterceptor {
     const { errorCode, errorMessage } = getResponserOptions(target)
     return next.handle().pipe(
       catchError((error) => {
-        console.log('ErrorInterceptor', typeof error)
         return throwError(
           () => new CustomError({ message: errorMessage ||"Error", error }, errorCode)
         )
