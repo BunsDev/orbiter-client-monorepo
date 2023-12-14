@@ -27,54 +27,70 @@ export class RoutersService {
 
         // Iterate through each rule and convert it to a router configuration
         for (const v1Rule of v1Rules) {
-            const internalChainId = v1Rule['chain'].split('-');
-            const sourceChain = chains.find(row => row.internalId == internalChainId[0]);
-            const targetChain = chains.find(row => row.internalId == internalChainId[1]);
-            if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
-                continue;
-            }
-            const routerConfig: RoutersConfig = {
-                line: '',
-                endpoint: v1Rule['makerAddress'],
-                endpointContract: null,
-                srcChain: "",
-                tgtChain: "",
-                srcToken: v1Rule['sourceSymbol'],
-                tgtToken: v1Rule['targetSymbol'],
-                maxAmt: String(v1Rule['maxPrice']),
-                minAmt: String(v1Rule['minPrice']),
-                tradeFee: String(+v1Rule['gasFee'] * 1000),
-                withholdingFee: String(v1Rule['tradingFee']),
-                vc: String(+internalChainId[1] + 9000),
-                state: 'available',
-                compRatio: 1,
-                spentTime: 60,
-            };
-            if (routerConfig.srcToken != routerConfig.tgtToken) {
-                for (const addr in sourceChain.contract) {
-                    if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
-                        routerConfig.endpointContract = addr;
-                        break;
+            try {
+                const internalChainId = v1Rule['chain'].split('-');
+                const sourceChain = chains.find(row => row.internalId == internalChainId[0]);
+                const targetChain = chains.find(row => row.internalId == internalChainId[1]);
+                if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
+                    continue;
+                }
+                if (!sourceChain.tokens) {
+                    continue;
+                }
+                const sourceToken = sourceChain.tokens.find(t => t.symbol == v1Rule['sourceSymbol']);
+                if (!sourceToken) {
+                    continue;
+                }
+                const targetToken = sourceChain.tokens.find(t => t.symbol == v1Rule['targetSymbol']);
+                if (!targetToken) {
+                    continue;
+                }
+                const routerConfig: RoutersConfig = {
+                    line: '',
+                    endpoint: v1Rule['makerAddress'],
+                    endpointContract: null,
+                    srcChain: "",
+                    tgtChain: "",
+                    srcToken: sourceToken.address,
+                    tgtToken: targetToken.address,
+                    maxAmt: String(v1Rule['maxPrice']),
+                    minAmt: String(v1Rule['minPrice']),
+                    tradeFee: String(+v1Rule['gasFee'] * 1000),
+                    withholdingFee: String(v1Rule['tradingFee']),
+                    vc: String(+internalChainId[1] + 9000),
+                    state: 'available',
+                    compRatio: 1,
+                    spentTime: 60,
+                };
+                if (routerConfig.srcToken != routerConfig.tgtToken) {
+                    for (const addr in sourceChain.contract) {
+                        if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
+                            routerConfig.endpointContract = addr;
+                            break;
+                        }
+                    }
+                    if (!routerConfig.endpointContract) {
+                        routerConfig.state = 'disabled';
                     }
                 }
-                if (!routerConfig.endpointContract) {
-                    routerConfig.state = 'disabled';
+                // Populate source and target chain information if available
+                if (sourceChain) {
+                    routerConfig.srcChain = String(sourceChain.chainId);
                 }
-            }
-            // Populate source and target chain information if available
-            if (sourceChain) {
-                routerConfig.srcChain = String(sourceChain.chainId);
-            }
-            if (targetChain) {
-                routerConfig.tgtChain = String(targetChain.chainId);
+                if (targetChain) {
+                    routerConfig.tgtChain = String(targetChain.chainId);
+                }
+
+                // Skip configurations with incorrect vc length
+                if (routerConfig.vc.length != 4) {
+                    continue;
+                }
+                routerConfig.line = `${routerConfig.srcChain}/${routerConfig.tgtChain}-${v1Rule['sourceSymbol']}/${v1Rule['targetSymbol']}`;
+                v1RouterConfigs.push(routerConfig);
+            } catch (error) {
+                console.error('getV1Routers error', error);
             }
 
-            // Skip configurations with incorrect vc length
-            if (routerConfig.vc.length != 4) {
-                continue;
-            }
-            routerConfig.line = `${routerConfig.srcChain}/${routerConfig.tgtChain}-${routerConfig.srcToken}/${routerConfig.tgtToken}`;
-            v1RouterConfigs.push(routerConfig);
         }
 
         return v1RouterConfigs;
@@ -93,46 +109,51 @@ export class RoutersService {
         const WHITE_MAKERS = this.envConfigService.get("WHITE_MAKERS", []);
         // Iterate through each rule from the API response and convert it to a router configuration
         for (const v3Rule of result.ruleList) {
-            const { fromChain, toChain } = v3Rule;
-            if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v3Rule['recipient'].toLocaleLowerCase())) {
-                continue;
-            }
-            const routerConfig: RoutersConfig = {
-                line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
-                endpoint: v3Rule['recipient'],
-                endpointContract: null,
-                srcChain: fromChain['chainId'],
-                tgtChain: toChain['chainId'],
-                srcToken: fromChain['symbol'],
-                tgtToken: toChain['symbol'],
-                maxAmt: String(fromChain['maxPrice'] || "0"),
-                minAmt: String(fromChain['minPrice'] || "0"),
-                tradeFee: v3Rule['gasFee'],
-                withholdingFee: v3Rule['tradingFee'],
-                vc: `${padStart(v3Rule.dealerId, 2, "0")}${v3Rule['ebcId']}${padStart(toChain.id, 2, "0")}`,
-                state: 'available',
-                compRatio: v3Rule['_compensationRatio'], // 1000000
-                spentTime: v3Rule['spentTime'], // second
-            };
+            try {
+                const { fromChain, toChain } = v3Rule;
+                if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v3Rule['recipient'].toLocaleLowerCase())) {
+                    continue;
+                }
+                const routerConfig: RoutersConfig = {
+                    line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
+                    endpoint: v3Rule['recipient'],
+                    endpointContract: null,
+                    srcChain: fromChain['chainId'],
+                    tgtChain: toChain['chainId'],
+                    srcToken: fromChain['tokenAddress'],
+                    tgtToken: toChain['tokenAddress'],
+                    maxAmt: String(fromChain['maxPrice'] || "0"),
+                    minAmt: String(fromChain['minPrice'] || "0"),
+                    tradeFee: v3Rule['gasFee'],
+                    withholdingFee: v3Rule['tradingFee'],
+                    vc: `${padStart(v3Rule.dealerId, 2, "0")}${v3Rule['ebcId']}${padStart(toChain.id, 2, "0")}`,
+                    state: 'available',
+                    compRatio: v3Rule['_compensationRatio'], // 1000000
+                    spentTime: v3Rule['spentTime'], // second
+                };
 
-            // Skip configurations with incorrect vc length
-            if (routerConfig.vc.length != 5) {
-                continue;
-            }
-            const sourceChain = chains.find(row => row.chainId == routerConfig.srcChain);
-            if (routerConfig.srcToken != routerConfig.tgtToken) {
-                for (const addr in sourceChain.contract) {
-                    if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
-                        routerConfig.endpointContract = addr;
-                        break;
+                // Skip configurations with incorrect vc length
+                if (routerConfig.vc.length != 5) {
+                    continue;
+                }
+                const sourceChain = chains.find(row => row.chainId == routerConfig.srcChain);
+                if (routerConfig.srcToken != routerConfig.tgtToken) {
+                    for (const addr in sourceChain.contract) {
+                        if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
+                            routerConfig.endpointContract = addr;
+                            break;
+                        }
+                    }
+                    if (!routerConfig.endpointContract) {
+                        routerConfig.state = 'disabled';
                     }
                 }
-                if (!routerConfig.endpointContract) {
-                    routerConfig.state = 'disabled';
-                }
+
+                v3RouterConfigs.push(routerConfig);
+            } catch (error) {
+                console.error('getV3Routers error', error);
             }
 
-            v3RouterConfigs.push(routerConfig);
         }
 
         return v3RouterConfigs;

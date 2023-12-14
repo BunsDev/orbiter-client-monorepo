@@ -54,4 +54,5 @@ export interface ChainConfig {
 	explorers: Explorer[];
 	internalId: string;
 	contract: any
+	tokens:any[]
 }

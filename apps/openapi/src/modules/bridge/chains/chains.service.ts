@@ -17,6 +17,7 @@ export class ChainsService {
                 name: config.name,
                 contract: config.contract,
                 nativeCurrency: config.nativeCurrency,
+                tokens: config.tokens
             })
         }
         return result as any;
