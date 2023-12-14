@@ -16,7 +16,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const errorResponse: ExceptionInfo = exception.getResponse() as ExceptionInfo
         const errorMessage = lodash.isString(errorResponse) ? errorResponse : errorResponse.message
         const errorInfo = lodash.isString(errorResponse) ? null : errorResponse.error
-    
         const data: HttpResponseError = {
             status: ResponseStatus.Error,
             message: errorMessage,
@@ -27,7 +26,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         if (exceptionStatus === HttpStatus.NOT_FOUND) {
             data.error = data.error || `Not found`
             data.message = data.message || `Invalid API: ${request.method} > ${request.url}`
-        }
+        } 
 
         return response.status(errorInfo?.status || exceptionStatus).jsonp(data)
     }

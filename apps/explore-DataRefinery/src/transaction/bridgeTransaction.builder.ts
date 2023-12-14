@@ -9,9 +9,8 @@ import { BridgeTransactionAttributes, Transfers as TransfersModel, TransferOpSta
 import { validateAndParseAddress } from 'starknet'
 import { ChainConfigService, ENVConfigService, IChainConfig, MakerV1RuleService, Token } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
-import { getAmountToSend } from '../utils/oldUtils'
+import { v1MakerUtils} from '@orbiter-finance/utils'
 import dayjs from 'dayjs';
-import { utils } from 'ethers'
 import { hexlify } from 'ethers6';
 import { TransactionID, ValidSourceTxError, addressPadStart, decodeV1SwapData } from '../utils';
 import RLP from "rlp";
@@ -556,7 +555,7 @@ export default class BridgeTransactionBuilder {
         .div(10 ** targetToken.decimals)
         .toString();
     } else {
-      const amountToSend = getAmountToSend(
+      const amountToSend = v1MakerUtils.getAmountToSend(
         +sourceChain.internalId,
         sourceToken.decimals,
         +targetChain.internalId,
