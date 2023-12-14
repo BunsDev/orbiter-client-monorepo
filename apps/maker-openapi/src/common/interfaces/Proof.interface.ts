@@ -8,6 +8,7 @@ export interface ArbitrationTransaction {
     ruleKey: string;
     freezeToken: string;
     freezeAmount1: string;
+    minChallengeDepositAmount: string;
 }
 
 export interface ProofSubmissionRequest {
