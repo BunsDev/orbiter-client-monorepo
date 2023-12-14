@@ -4,7 +4,7 @@ import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models'
 import dayjs from 'dayjs';
 import { Op } from 'sequelize';
 import { ArbitrationTransaction } from "../common/interfaces/Proof.interface";
-import { ChainConfigService } from "@orbiter-finance/config";
+import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import { keccak256 } from "@ethersproject/keccak256";
 import { solidityPack } from "ethers/lib/utils";
 import BigNumber from "bignumber.js";
@@ -14,6 +14,7 @@ export class TransactionService {
     mainChain = 1;
 
     constructor(
+        protected envConfigService: ENVConfigService,
         protected chainConsulService: ChainConfigService,
         private readonly chainConfigService: ChainConfigService,
         @InjectModel(Transfers)
@@ -83,7 +84,8 @@ export class TransactionService {
                 sourceTxIndex: Number(transfer.transactionIndex),
                 ruleKey,
                 freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(10 ** sourceToken.decimals).toFixed(0),
-                freezeToken: mainToken.address
+                freezeToken: mainToken.address,
+                minChallengeDepositAmount: String(await this.envConfigService.getAsync("minChallengeDepositAmount") || 0)
             };
             dataList.push(arbitrationTransaction);
         }
