@@ -1,6 +1,7 @@
 export interface RoutersConfig {
 	line:string;
     endpoint: string;
+	endpointContract:string;
     srcChain: string;
     tgtChain: string;
     srcToken: string;
@@ -8,6 +9,7 @@ export interface RoutersConfig {
     maxAmt: string;
     minAmt: string;
     tradeFee: string;
+	state: 'available' | 'disabled',
     withholdingFee: string;
     vc:string;
     compRatio?:number; // 1000000
@@ -45,10 +47,12 @@ export interface ChainConfig {
 	nativeCurrency: NativeCurrency;
 	infoURL: string;
 	shortName: string;
-	chainId: number;
-	networkId: number;
+	chainId: string;
+	networkId: string;
 	slip44: number;
 	ens: En;
 	explorers: Explorer[];
 	internalId: string;
+	contract: any
+	tokens:any[]
 }
