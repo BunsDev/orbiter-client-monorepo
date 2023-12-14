@@ -82,7 +82,7 @@ export class TransactionService {
                 sourceTxTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                 sourceTxIndex: Number(transfer.transactionIndex),
                 ruleKey,
-                freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(sourceToken.decimals).toFixed(0),
+                freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(10 ** sourceToken.decimals).toFixed(0),
                 freezeToken: mainToken.address,
                 parentNodeNumOfTargetNode: 0
             };
