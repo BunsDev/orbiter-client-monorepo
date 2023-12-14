@@ -32,25 +32,29 @@ export class RoutersService {
                 const sourceChain = chains.find(row => row.internalId == internalChainId[0]);
                 const targetChain = chains.find(row => row.internalId == internalChainId[1]);
                 if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
+                    console.log(`v1Rule not white maker ${v1Rule['makerAddress'].toLocaleLowerCase()}`);
                     continue;
                 }
                 if (!sourceChain.tokens) {
+                    console.log(`v1Rule not find sourceChain`, v1Rule);
                     continue;
                 }
                 const sourceToken = sourceChain.tokens.find(t => t.symbol == v1Rule['sourceSymbol']);
                 if (!sourceToken) {
+                    console.log(`v1Rule not find sourceToken`, v1Rule);
                     continue;
                 }
                 const targetToken = sourceChain.tokens.find(t => t.symbol == v1Rule['targetSymbol']);
                 if (!targetToken) {
+                    console.log(`v1Rule not find targetToken`, v1Rule);
                     continue;
                 }
                 const routerConfig: RoutersConfig = {
                     line: '',
                     endpoint: v1Rule['makerAddress'],
                     endpointContract: null,
-                    srcChain: "",
-                    tgtChain: "",
+                    srcChain: String(sourceChain.chainId),
+                    tgtChain: String(targetChain.chainId),
                     srcToken: sourceToken.address,
                     tgtToken: targetToken.address,
                     maxAmt: String(v1Rule['maxPrice']),
@@ -73,16 +77,10 @@ export class RoutersService {
                         routerConfig.state = 'disabled';
                     }
                 }
-                // Populate source and target chain information if available
-                if (sourceChain) {
-                    routerConfig.srcChain = String(sourceChain.chainId);
-                }
-                if (targetChain) {
-                    routerConfig.tgtChain = String(targetChain.chainId);
-                }
 
                 // Skip configurations with incorrect vc length
                 if (routerConfig.vc.length != 4) {
+                    console.log(`v1Rule vc length not 4`, routerConfig);
                     continue;
                 }
                 routerConfig.line = `${routerConfig.srcChain}/${routerConfig.tgtChain}-${v1Rule['sourceSymbol']}/${v1Rule['targetSymbol']}`;
@@ -112,6 +110,7 @@ export class RoutersService {
             try {
                 const { fromChain, toChain } = v3Rule;
                 if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v3Rule['recipient'].toLocaleLowerCase())) {
+                    console.log(`v3Rule not white maker `, v3Rule);
                     continue;
                 }
                 const routerConfig: RoutersConfig = {
