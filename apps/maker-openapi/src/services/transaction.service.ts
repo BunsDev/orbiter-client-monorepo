@@ -73,7 +73,7 @@ export class TransactionService {
             }
             const ruleKey: string = keccak256(solidityPack(
                 ['uint256', 'uint256', 'uint256', 'uint256'],
-                [bridgeTx.sourceChain, bridgeTx.targetChain, bridgeTx.sourceToken, bridgeTx.targetToken]
+                [+bridgeTx.sourceChain, +bridgeTx.targetChain, +bridgeTx.sourceToken, +bridgeTx.targetToken]
             ));
             const arbitrationTransaction: ArbitrationTransaction = {
                 sourceChainId: Number(bridgeTx.sourceChain),
