@@ -413,7 +413,10 @@ export function getAmountToSend(
   let rAmount = <any>realAmount.rAmount;
   if (+nonce > 8999) {
     console.error("nonce too high, not allowed");
-    return;
+    return {
+      state: false,
+      errmsg: 'nonce too high, not allowed'
+    };
   }
   if (toChainID === 3 || toChainID === 33) {
     var prefix = rAmount.substr(0, 11);
@@ -481,12 +484,12 @@ function getTimeZoneString(timeZone: any) {
     }:00`;
 }
 
-function getAccountAddressError(address, chainId): string | null {
+function getAccountAddressError(address:string, chainId:number): string | null {
   if (Number(chainId) == 4 || Number(chainId) == 44) {
     try {
       validateAndParseAddress(address);
       return null;
-    } catch (e) {
+    } catch (e:any) {
       return e.message;
     }
   } else {

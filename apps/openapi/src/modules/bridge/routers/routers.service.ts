@@ -35,8 +35,12 @@ export class RoutersService {
                     console.log(`v1Rule not white maker ${v1Rule['makerAddress'].toLocaleLowerCase()}`);
                     continue;
                 }
-                if (!sourceChain.tokens) {
+                if (!sourceChain || !sourceChain.tokens) {
                     console.log(`v1Rule not find sourceChain`, v1Rule);
+                    continue;
+                }
+                if (!targetChain) {
+                    console.log(`v1Rule not find targetChain`, v1Rule);
                     continue;
                 }
                 const sourceToken = sourceChain.tokens.find(t => t.symbol == v1Rule['sourceSymbol']);
