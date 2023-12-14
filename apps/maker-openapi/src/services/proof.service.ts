@@ -15,7 +15,9 @@ import BigNumber from "bignumber.js";
 import { SubgraphClient } from "../../../../libs/subgraph-sdk/src";
 import { ENVConfigService } from "../../../../libs/config/src";
 
+// TODO
 const spvAddress = "0xcB39e8Ab9d6100fa5228501608Cf0138f94c2d38";
+const spvAddressEra = "0xc0EBbafd56d5E68849987d1d5968FDeA04D08CcB";
 
 @Injectable()
 export class ProofService {
@@ -84,7 +86,6 @@ export class ProofService {
                 return null;
             }
             const mdcAddress = await client.maker.getMDCAddress(bridgeTx.sourceMaker);
-            console.log("mdcAddress", mdcAddress);
             if (!mdcAddress) {
                 console.error('MdcAddress not found', bridgeTx.sourceChain, bridgeTx.sourceId);
                 return;
@@ -93,7 +94,6 @@ export class ProofService {
             if (!res) return;
             const { dealers, ebcs, chainIds } = res;
             const ebc = bridgeTx.ebcAddress;
-            console.log('encode data', [dealers, ebcs, chainIds, ebc]);
             const rawDatas = utils.defaultAbiCoder.encode(
                 ['address[]', 'address[]', 'uint64[]', 'address'],
                 [dealers, ebcs, chainIds, ebc],
@@ -123,17 +123,16 @@ export class ProofService {
                 rule.chain0CompensationRatio,
                 rule.chain1CompensationRatio,
             ];
-            // console.log('formatRule ====', formatRule);
             const rlpRuleBytes = utils.RLP.encode(
                 formatRule.map((r) => utils.stripZeros(ethers.BigNumber.from(r).toHexString())),
             );
-
             const proofData = await this.jsondb.getData(`/proof/${hash.toLowerCase()}`);
-
+            // TODO
+            const eraNetWorkId = 280;
             return {
                 sourceMaker: bridgeTx.sourceMaker,
                 sourceChain: bridgeTx.sourceChain,
-                spvAddress,
+                spvAddress: +bridgeTx.sourceChain === eraNetWorkId ? spvAddressEra : spvAddress,
                 rawDatas,
                 rlpRuleBytes,
                 ...proofData

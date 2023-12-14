@@ -26,24 +26,4 @@ export class TransactionController {
         const data = await this.transactionService.getUnreimbursedTransactions(+startTime, +endTime);
         return HTTPResponse.success(data)
     }
-
-    @Get("/source/:hash")
-    async sourceTransactionDetail(@Param("hash") hash: string) {
-        if (!hash) {
-            return HTTPResponse.fail(1000, "hash Missing parameters");
-        }
-        const data = await this.transactionService.getRawTransactionDetailBySourceId(hash);
-
-        return data ? HTTPResponse.success(data) : HTTPResponse.fail(1000, `${hash} tx not found`);
-    }
-
-    @Get("/target/:hash")
-    async targetTransactionDetail(@Param("hash") hash: string) {
-        if (!hash) {
-            return HTTPResponse.fail(1000, "hash Missing parameters");
-        }
-        const data = await this.transactionService.getRawTransactionDetailByTargetId(hash);
-
-        return data ? HTTPResponse.success(data) : HTTPResponse.fail(1000, `${hash} tx not found`);
-    }
 }

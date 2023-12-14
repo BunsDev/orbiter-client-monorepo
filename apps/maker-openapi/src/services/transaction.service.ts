@@ -91,23 +91,4 @@ export class TransactionService {
         }
         return dataList;
     }
-
-    async getRawTransactionDetailBySourceId(sourceId: string) {
-        return await this.bridgeTransactionModel.findOne(<any>{
-            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'sourceAddress', 'ruleId', 'sourceSymbol', 'sourceToken'],
-            where: {
-                sourceId
-            }
-        });
-    }
-
-    async getRawTransactionDetailByTargetId(targetId: string) {
-        return await this.bridgeTransactionModel.findOne(<any>{
-            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceAddress', 'sourceTime', 'sourceSymbol', 'sourceToken',
-                'targetId', 'targetChain', 'targetAmount', 'targetMaker', 'targetAddress', 'targetTime', 'targetSymbol', 'targetToken', 'status', 'ruleId'],
-            where: {
-                targetId
-            }
-        });
-    }
 }
