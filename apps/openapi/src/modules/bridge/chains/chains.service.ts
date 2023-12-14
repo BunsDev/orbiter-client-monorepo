@@ -13,7 +13,7 @@ export class ChainsService {
             delete config.rpc;
             delete config.debug;
             delete config.service;
-            delete config.contract;
+            delete config.contracts;
             delete config.tokens;
         }
         return chainConfigs as any;
