@@ -83,8 +83,7 @@ export class TransactionService {
                 sourceTxIndex: Number(transfer.transactionIndex),
                 ruleKey,
                 freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(10 ** sourceToken.decimals).toFixed(0),
-                freezeToken: mainToken.address,
-                parentNodeNumOfTargetNode: 0
+                freezeToken: mainToken.address
             };
             dataList.push(arbitrationTransaction);
         }

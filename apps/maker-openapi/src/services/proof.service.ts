@@ -290,10 +290,3 @@ export class ProofService {
 function toHex(num: string | number) {
     return '0x' + Number(num).toString(16);
 }
-
-function encodeChallengeRawDataWORule(dealers: string[], ebcs: string[], chainIds: number[], ebc: string) {
-    return utils.defaultAbiCoder.encode(
-        ['address[]', 'address[]', 'uint64[]', 'address'],
-        [dealers, ebcs, chainIds, ebc],
-    );
-}

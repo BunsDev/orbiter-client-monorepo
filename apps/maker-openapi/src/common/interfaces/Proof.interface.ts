@@ -8,7 +8,6 @@ export interface ArbitrationTransaction {
     ruleKey: string;
     freezeToken: string;
     freezeAmount1: string;
-    parentNodeNumOfTargetNode: number;
 }
 
 export interface ProofSubmissionRequest {
