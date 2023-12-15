@@ -90,6 +90,10 @@ export class ProofService {
 
     async getVerifyChallengeSourceParams(hash: string) {
         try {
+            if (!hash) {
+                console.error('Invalid parameters');
+                return [];
+            }
             const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
                 where: {
                     hash: hash.toLowerCase(),
@@ -184,6 +188,10 @@ export class ProofService {
 
     async getVerifyChallengeDestParams(hash: string) {
         try {
+            if (!hash) {
+                console.error('Invalid parameters');
+                return [];
+            }
             const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
                 where: {
                     hash: hash.toLowerCase(),
@@ -219,10 +227,6 @@ export class ProofService {
             }
             const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
             const targetAmount = new BigNumber(bridgeTx.targetAmount).multipliedBy(10 ** targetDecimal).toFixed(0);
-            const rawDatas = utils.defaultAbiCoder.encode(
-                ['uint256[]'],
-                [responseMaker.toLowerCase()],
-            );
 
             const chain0 = toHex(bridgeTx.sourceChain);
             const chain1 = toHex(bridgeTx.targetChain);
@@ -260,7 +264,6 @@ export class ProofService {
                     ruleKey,
                     isSource: 0,
                     spvAddress,
-                    rawDatas,
                     ...proofData
                 })
             }
