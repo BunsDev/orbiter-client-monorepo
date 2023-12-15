@@ -303,9 +303,12 @@ export class ProofService {
         if (!bridgeTransaction?.sourceChain) {
             throw new Error(`Unable to locate transaction: ${data.hash}`);
         }
+        if (!bridgeTransaction.targetId) {
+            throw new Error(`No payment transaction found: ${data.hash}`);
+        }
         const hash = data.hash.toLowerCase();
         const arbitrationMakerTransaction: IArbitrationMakerTransaction = {
-            hash,
+            hash: bridgeTransaction.targetId,
             sourceChain: bridgeTransaction.sourceChain,
             targetChain: bridgeTransaction.targetChain,
             createTime: new Date().valueOf()
