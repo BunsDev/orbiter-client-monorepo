@@ -58,6 +58,7 @@ export class V3Controller {
         }
       }
     } catch (e) {
+      console.error(e);
       return { id, jsonrpc, error: { code: ECode.Fail, message: e.message } };
     }
     return { id, jsonrpc, error: { code: ECode.MethodNotFound, message: 'Method not found' } };

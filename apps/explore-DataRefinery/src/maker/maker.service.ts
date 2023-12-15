@@ -70,21 +70,21 @@ export class MakerService {
             }
         }
 
-        const ebc = securityCodeInfo['ebcMappingSnapshots'][0];
+        const ebc = securityCodeInfo['ebcMappingSnapshot']?.[0];
         if (!ebc) {
             return {
                 errno: 1000,
                 errmsg: `ebc not found ${ebcIndex}`
             }
         }
-        const dealer = securityCodeInfo['dealerMappingSnapshots'][0];
+        const dealer = securityCodeInfo['dealerMappingSnapshot']?.[0];
         if (!dealer) {
             return {
                 errno: 1000,
                 errmsg: `dealer not found ${dealerIndex}`
             }
         }
-        const targetChain = securityCodeInfo['chainIdMappingSnapshots'][0];
+        const targetChain = securityCodeInfo['chainIdMappingSnapshot']?.[0];
         if (!targetChain) {
             return {
                 errno: 1000,
