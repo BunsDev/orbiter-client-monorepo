@@ -240,18 +240,17 @@ export class ProofService {
             const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
             const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
             const list = [];
-            for(const proofData of proofDataList){
+            for (const proofData of proofDataList) {
                 list.push({
                     targetNonce: bridgeTx.targetNonce,
                     targetChain: bridgeTx.targetChain,
                     targetAddress: bridgeTx.targetAddress,
                     targetToken: bridgeTx.targetToken,
                     targetAmount,
-                    responseMakersHash: bridgeTx.targetId,
-                    responseTime: String(60), // TODO
 
                     challenger: arbitrationUserTransaction.challenger,
                     sourceId: bridgeTx.sourceId,
+                    sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                     sourceMaker: bridgeTx.sourceMaker,
                     sourceChain: bridgeTx.sourceChain,
                     ruleKey,
