@@ -28,9 +28,23 @@ import { Mutex } from 'async-mutex';
 import BigNumber from 'bignumber.js';
 import _ from 'lodash';
 import { appendFile, writeFile } from 'fs/promises'
+import fs from 'fs'
 import path from 'path'
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
+function ensureDirectoryExistence(filePath) {
+  const dirname = path.dirname(filePath);
+  if (fs.existsSync(dirname)) {
+    return true;
+  }
+  ensureDirectoryExistence(dirname);
+  fs.mkdirSync(dirname);
+}
+
+function createFileWithDirectory(filePath, content) {
+  ensureDirectoryExistence(filePath);
+  fs.writeFileSync(filePath, content);
+}
 dayjs.extend(utc);
 dayjs.extend(timezone);
 @Injectable()
@@ -69,7 +83,8 @@ export class TransactionV1ToV3Service {
     };
     const limit = 5000;
     let done = false;
-    const fileName = path.resolve(__dirname, `./bt.sql`);
+    const fileName = path.resolve(__dirname, `./sqls/bt.sql`);
+    ensureDirectoryExistence(fileName)
     await writeFile(fileName, '');
     this.logger.info(`start V1DataToV3Sql`)
     do {
