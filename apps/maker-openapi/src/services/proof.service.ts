@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import {
     MakerAskProofRequest,
     ProofSubmissionRequest,
-    UserAskProofRequest
 } from '../common/interfaces/Proof.interface';
 import { InjectModel } from "@nestjs/sequelize";
 import { BridgeTransaction } from "@orbiter-finance/seq-models";
@@ -15,10 +14,8 @@ import { ENVConfigService } from "@orbiter-finance/config";
 import {
     ArbitrationProof,
     ArbitrationMakerTransaction,
-    ArbitrationUserTransaction,
     IArbitrationProof,
-    IArbitrationMakerTransaction,
-    IArbitrationUserTransaction
+    IArbitrationMakerTransaction
 } from "@orbiter-finance/maker-api-seq-models";
 
 @Injectable()
@@ -27,8 +24,7 @@ export class ProofService {
         protected envConfigService: ENVConfigService,
         @InjectModel(BridgeTransaction) private bridgeTransactionModel: typeof BridgeTransaction,
         @InjectModel(ArbitrationProof) private arbitrationProof: typeof ArbitrationProof,
-        @InjectModel(ArbitrationMakerTransaction) private arbitrationMakerTransaction: typeof ArbitrationMakerTransaction,
-        @InjectModel(ArbitrationUserTransaction) private arbitrationUserTransaction: typeof ArbitrationUserTransaction) {}
+        @InjectModel(ArbitrationMakerTransaction) private arbitrationMakerTransaction: typeof ArbitrationMakerTransaction) {}
 
     async getSubClient(): Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("THEGRAPH_API");
@@ -233,16 +229,6 @@ export class ProofService {
             const token0 = bridgeTx.sourceToken;
             const token1 = bridgeTx.targetToken;
             const ruleKey: string = keccak256(solidityPack(['uint256', 'uint256', 'uint256', 'uint256'], [chain0, chain1, token0, token1]));
-            const arbitrationUserTransaction: IArbitrationUserTransaction = await this.arbitrationUserTransaction.findOne(<any>{
-                where: {
-                    hash: bridgeTx.sourceId.toLowerCase()
-                },
-                order: [['createTime', 'DESC']]
-            });
-            if (!arbitrationUserTransaction) {
-                console.error('none of arbitrationUserTransaction');
-                return null;
-            }
             const eraNetWorkId = await this.envConfigService.getAsync('IS_TEST_NET') ? 280 : 324;
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
             const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
@@ -256,7 +242,6 @@ export class ProofService {
                     targetToken: bridgeTx.targetToken,
                     targetAmount,
 
-                    challenger: arbitrationUserTransaction.challenger,
                     sourceId: bridgeTx.sourceId,
                     sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                     sourceMaker: bridgeTx.sourceMaker,
@@ -272,23 +257,6 @@ export class ProofService {
             console.error('getVerifyChallengeDestParams error', e);
             return [];
         }
-    }
-
-    async userAskProof(data: UserAskProofRequest) {
-        if (!data.hash || !data.challenger) {
-            throw new Error('Invalid parameters');
-        }
-        const hash = data.hash.toLowerCase();
-        const challenger = data.challenger.toLowerCase();
-        const arbitrationUserTransaction: IArbitrationUserTransaction = {
-            hash,
-            challenger,
-            createTime: new Date().valueOf()
-        };
-        await this.arbitrationUserTransaction.upsert(arbitrationUserTransaction, <any>{
-            hash,
-            challenger
-        });
     }
 
     async makerAskProof(data: MakerAskProofRequest) {

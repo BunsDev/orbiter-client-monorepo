@@ -11,8 +11,7 @@ import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
 import {
     ArbitrationProof,
-    ArbitrationMakerTransaction,
-    ArbitrationUserTransaction
+    ArbitrationMakerTransaction
 } from '@orbiter-finance/maker-api-seq-models';
 import { TransactionService } from './services/transaction.service';
 import { isEmpty } from "../../../libs/utils/src";
@@ -43,7 +42,7 @@ import { isEmpty } from "../../../libs/utils/src";
                     console.error('Missing configuration MAKER_API_DATABASE_URL');
                     process.exit(1);
                 }
-                return { ...config, autoLoadModels: false, models: [ArbitrationProof, ArbitrationMakerTransaction, ArbitrationUserTransaction] };
+                return { ...config, autoLoadModels: false, models: [ArbitrationProof, ArbitrationMakerTransaction] };
             },
         }),
         SequelizeModule.forRootAsync({
@@ -57,7 +56,7 @@ import { isEmpty } from "../../../libs/utils/src";
                 return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
             },
         }),
-        SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction, ArbitrationUserTransaction])
+        SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction])
     ],
     controllers: [AppController, ProofController, TransactionController],
     providers: [ProofService, TransactionService],

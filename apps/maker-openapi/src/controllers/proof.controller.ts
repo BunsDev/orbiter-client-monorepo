@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ProofService } from '../services/proof.service';
 import { HTTPResponse } from '../utils/Response';
 import {
-    CompleteProofSubmission, MakerAskProofRequest, ProofSubmissionRequest, UserAskProofRequest
+    MakerAskProofRequest, ProofSubmissionRequest, UserAskProofRequest
 } from '../common/interfaces/Proof.interface';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
@@ -36,18 +36,6 @@ export class ProofController {
         try {
             return HTTPResponse.success(await this.proofService.needMakerProofTransactionList());
         } catch (error) {
-            return HTTPResponse.fail(1000, error.message);
-        }
-    }
-
-    @Post("/userAskProof")
-    async userAskProof(@Body() data: UserAskProofRequest): Promise<HTTPResponse> {
-        // arbitration-client submit
-        try {
-            await this.proofService.userAskProof(data);
-            return HTTPResponse.success(null);
-        } catch (error) {
-            this.logger.error('userAskProof error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
