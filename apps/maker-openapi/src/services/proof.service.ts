@@ -90,7 +90,7 @@ export class ProofService {
 
     async getVerifyChallengeSourceParams(hash: string) {
         try {
-            const proofData: IArbitrationProof = await this.arbitrationProof.findOne(<any>{
+            const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
                 where: {
                     hash: hash.toLowerCase(),
                     isSource: 1
@@ -98,9 +98,9 @@ export class ProofService {
                 order: [['status', 'DESC'], ['createTime', 'DESC']],
                 raw: true
             });
-            if (!proofData) {
+            if (!proofDataList) {
                 console.error('none of proofData');
-                return null;
+                return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
                 attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
@@ -111,20 +111,20 @@ export class ProofService {
             });
             if (!bridgeTx) {
                 console.error('none of bridgeTx');
-                return null;
+                return [];
             }
             const client = await this.getSubClient();
             if (!client) {
                 console.error('SubClient not found');
-                return null;
+                return [];
             }
             const mdcAddress = await client.maker.getMDCAddress(bridgeTx.sourceMaker);
             if (!mdcAddress) {
                 console.error('MdcAddress not found', bridgeTx.sourceChain, bridgeTx.sourceId);
-                return;
+                return [];
             }
             const res = await client.maker.getColumnArray(Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000), mdcAddress, bridgeTx.sourceMaker);
-            if (!res) return;
+            if (!res) return [];
             const { dealers, ebcs, chainIds } = res;
             const ebc = bridgeTx.ebcAddress;
             const rawDatas = utils.defaultAbiCoder.encode(
@@ -134,7 +134,7 @@ export class ProofService {
             const rule: any = await client.maker.getRules(mdcAddress, ebc, bridgeTx.sourceMaker);
             if (!rule) {
                 console.error('Rule not found', bridgeTx.sourceChain, bridgeTx.sourceId);
-                return;
+                return [];
             }
             const formatRule: any[] = [
                 rule.chain0,
@@ -164,22 +164,27 @@ export class ProofService {
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
             const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
             const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
-            return {
-                sourceMaker: bridgeTx.sourceMaker,
-                sourceChain: bridgeTx.sourceChain,
-                spvAddress,
-                rawDatas,
-                rlpRuleBytes,
-                ...proofData
-            };
+            const list = [];
+            for (const proofData of proofDataList) {
+                list.push({
+                    sourceMaker: bridgeTx.sourceMaker,
+                    sourceChain: bridgeTx.sourceChain,
+                    spvAddress,
+                    rawDatas,
+                    rlpRuleBytes,
+                    ...proofData
+                });
+            }
+            return list;
         } catch (e) {
-            return null;
+            console.error('getVerifyChallengeSourceParams error', e);
+            return [];
         }
     }
 
     async getVerifyChallengeDestParams(hash: string) {
         try {
-            const proofData: IArbitrationProof = await this.arbitrationProof.findOne(<any>{
+            const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
                 where: {
                     hash: hash.toLowerCase(),
                     isSource: 0
@@ -187,9 +192,9 @@ export class ProofService {
                 order: [['status', 'DESC'], ['createTime', 'DESC']],
                 raw: true
             });
-            if (!proofData) {
+            if (!proofDataList) {
                 console.error('none of proofData');
-                return null;
+                return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
                 attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime',
@@ -201,12 +206,12 @@ export class ProofService {
             });
             if(!bridgeTx){
                 console.error('none of bridgeTx');
-                return null;
+                return [];
             }
             const responseMaker = bridgeTx?.targetMaker;
             if (!responseMaker) {
                 console.error('none of responseMaker', bridgeTx.sourceId, bridgeTx.targetId);
-                return null;
+                return [];
             }
             const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
             const targetAmount = new BigNumber(bridgeTx.targetAmount).multipliedBy(10 ** targetDecimal).toFixed(0);
@@ -234,28 +239,32 @@ export class ProofService {
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
             const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
             const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
-            return {
-                targetNonce: bridgeTx.targetNonce,
-                targetChain: bridgeTx.targetChain,
-                targetAddress: bridgeTx.targetAddress,
-                targetToken: bridgeTx.targetToken,
-                targetAmount,
-                responseMakersHash: bridgeTx.targetId,
-                responseTime: String(60), // TODO
+            const list = [];
+            for(const proofData of proofDataList){
+                list.push({
+                    targetNonce: bridgeTx.targetNonce,
+                    targetChain: bridgeTx.targetChain,
+                    targetAddress: bridgeTx.targetAddress,
+                    targetToken: bridgeTx.targetToken,
+                    targetAmount,
+                    responseMakersHash: bridgeTx.targetId,
+                    responseTime: String(60), // TODO
 
-                challenger: arbitrationUserTransaction.challenger,
-                sourceId: bridgeTx.sourceId,
-                sourceMaker: bridgeTx.sourceMaker,
-                sourceChain: bridgeTx.sourceChain,
-                ruleKey,
-                isSource: 0,
-                spvAddress,
-                rawDatas,
-                ...proofData
-            };
+                    challenger: arbitrationUserTransaction.challenger,
+                    sourceId: bridgeTx.sourceId,
+                    sourceMaker: bridgeTx.sourceMaker,
+                    sourceChain: bridgeTx.sourceChain,
+                    ruleKey,
+                    isSource: 0,
+                    spvAddress,
+                    rawDatas,
+                    ...proofData
+                })
+            }
+            return list;
         } catch (e) {
-            console.error(e);
-            return null;
+            console.error('getVerifyChallengeDestParams error', e);
+            return [];
         }
     }
 
