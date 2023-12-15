@@ -177,7 +177,7 @@ export class ProofService {
             }
             return list;
         } catch (e) {
-            console.error('getVerifyChallengeSourceParams error', e);
+            console.error('getVerifyChallengeSourceParams error', hash, e);
             return [];
         }
     }
@@ -254,7 +254,7 @@ export class ProofService {
             }
             return list;
         } catch (e) {
-            console.error('getVerifyChallengeDestParams error', e);
+            console.error('getVerifyChallengeDestParams error', hash, e);
             return [];
         }
     }
