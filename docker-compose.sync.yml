@@ -21,3 +21,4 @@ services:
     volumes:
       - './runtime/dataSync:/app/runtime'
       - './logs/dataSync:/app/logs'
+      - './sqls:/app/'

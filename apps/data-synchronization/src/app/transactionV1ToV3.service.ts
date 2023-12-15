@@ -69,7 +69,8 @@ export class TransactionV1ToV3Service {
     };
     const limit = 5000;
     let done = false;
-    const fileName = path.resolve(__dirname, `../../../export/bt.sql`);
+    const fileName = path.resolve(__dirname, `./bt.sql`);
+    await writeFile(fileName, '');
     this.logger.info(`start V1DataToV3Sql`)
     do {
       const createDataList = []
