@@ -24,7 +24,8 @@ export class ProofService {
         protected envConfigService: ENVConfigService,
         @InjectModel(BridgeTransaction) private bridgeTransactionModel: typeof BridgeTransaction,
         @InjectModel(ArbitrationProof) private arbitrationProof: typeof ArbitrationProof,
-        @InjectModel(ArbitrationMakerTransaction) private arbitrationMakerTransaction: typeof ArbitrationMakerTransaction) {}
+        @InjectModel(ArbitrationMakerTransaction) private arbitrationMakerTransaction: typeof ArbitrationMakerTransaction) {
+    }
 
     async getSubClient(): Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("THEGRAPH_API");
@@ -79,7 +80,7 @@ export class ProofService {
             }
             return { status: 0 };
         } catch (e) {
-            console.error('proofSubmission error', e);
+            console.error('proofSubmission error', data, e);
             return { status: 0 };
         }
     }
@@ -196,8 +197,7 @@ export class ProofService {
                 order: [['status', 'DESC'], ['createTime', 'DESC']],
                 raw: true
             });
-            if (!proofDataList) {
-                console.error('none of proofData');
+            if (!proofDataList || !proofDataList.length) {
                 return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
@@ -208,11 +208,11 @@ export class ProofService {
                     sourceId: hash.toLowerCase()
                 }
             });
-            if(!bridgeTx){
+            if (!bridgeTx) {
                 console.error('none of bridgeTx');
                 return [];
             }
-            if(!bridgeTx.targetId){
+            if (!bridgeTx.targetId) {
                 console.error('none of targetId');
                 return [];
             }
@@ -250,7 +250,7 @@ export class ProofService {
                     isSource: 0,
                     spvAddress,
                     ...proofData
-                })
+                });
             }
             return list;
         } catch (e) {
