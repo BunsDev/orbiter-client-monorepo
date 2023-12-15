@@ -293,7 +293,7 @@ export class ProofService {
                 'targetId', 'targetChain', 'targetToken', 'targetNonce', 'targetAddress', 'targetMaker',
                 'targetAmount', 'ruleId', 'ebcAddress'],
             where: {
-                targetId: data.hash
+                sourceId: data.hash
             }
         });
         if (!bridgeTransaction?.ruleId) {
