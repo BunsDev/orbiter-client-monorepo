@@ -69,9 +69,12 @@ export class TransactionService {
           hash
         }
       });
-      if (!v1Transfer || !v1Transfer.version) {
-        return
-      }
+      // if (!v1Transfer || !v1Transfer.id) {
+      //   return {
+      //     errno:0,
+      //     errmsg: 'v1 Transfer'
+      //   }
+      // }
       if (!v1Transfer || transfer.syncStatus != 99) {
         const chainInfo = this.chainConfigService.getChainInfo(transfer.chainId);
         const result = getPTextFromTAmount(
@@ -292,10 +295,11 @@ export class TransactionService {
           }
         });
         if (!targetTx) {
-          await this.syncTransferByHash(bridgeTransaction.targetId);
+          const result = await this.syncTransferByHash(bridgeTransaction.targetId);
           return {
             errno: 0,
-            errmsg: 're match 2'
+            errmsg: 're match 2',
+            data: result
           }
         }
         const sourceChain = this.chainConfigService.getChainInfo(bridgeTransaction.sourceChain);
@@ -619,11 +623,11 @@ export class TransactionService {
       where: {
         outId: null,
         createdAt: {
-          [Op.gte]: dayjs().subtract(60 * 2, 'minutes').toISOString(),
+          [Op.gte]: dayjs().subtract(30, 'minutes').toISOString(),
           [Op.lte]: dayjs().subtract(1, 'minutes').toISOString(),
         },
       },
-      limit: 100
+      limit: 200
     });
     let index = 0;
     console.log(`ready match ${index}/${rows.length} `);
@@ -644,13 +648,54 @@ export class TransactionService {
         // })
         // if (transfer) {
         index++;
-        await this.syncBTTransfer(tx.hash).catch(error => {
+        const result = await this.syncBTTransfer(tx.hash).catch(error => {
           this.logger.error('syncV3V1FromDatabase error', error)
         });
         // }
-        console.log(`match 2 ${index}/${rows.length} hash: ${tx.hash}`);
+        console.log(`readV1NotMatchTx  ${index}/${rows.length} hash: ${tx.hash}`, result);
       }
     }
   }
 
+  @Cron("* */5 * * * *")
+  private async readV1NotMatchTx2() {
+    const rows = await this.makerTransactionModel.findAll({
+      attributes: ['inId'],
+      raw: true,
+      where: {
+        outId: null,
+        createdAt: {
+          [Op.gte]: dayjs().subtract(60 * 24, 'minutes').toISOString(),
+          [Op.lte]: dayjs().subtract(5, 'minutes').toISOString(),
+        },
+      },
+      limit: 1000
+    });
+    let index = 0;
+    console.log(`ready match ${index}/${rows.length} `);
+    for (const row of rows) {
+      const tx = await this.transactionModel.findOne({
+        raw: true,
+        attributes: ['hash', 'status'],
+        where: {
+          id: row.inId
+        }
+      });
+      if (tx.status != 99) {
+        // const transfer = await this.transfersModel.findOne({
+        //   attributes:['hash'],
+        //   where: {
+        //     hash: tx.hash
+        //   }
+        // })
+        // if (transfer) {
+        index++;
+        const result = await this.syncBTTransfer(tx.hash).catch(error => {
+          this.logger.error('syncV3V1FromDatabase error', error)
+        });
+        // }
+        console.log(`readV1NotMatchTx2  ${index}/${rows.length} hash: ${tx.hash}`, result);
+      }
+    }
+  }
 }
