@@ -202,7 +202,7 @@ export class ProofService {
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
                 attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime',
-                    'targetId', 'targetChain', 'targetToken', 'targetNonce', 'targetAddress', 'targetMaker',
+                    'targetId', 'targetChain', 'targetToken', 'targetSymbol', 'targetNonce', 'targetAddress', 'targetMaker',
                     'targetAmount', 'ruleId', 'ebcAddress'],
                 where: {
                     sourceId: hash.toLowerCase()
