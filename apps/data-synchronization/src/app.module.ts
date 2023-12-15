@@ -14,6 +14,7 @@ import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { AlertModule } from '@orbiter-finance/alert'
 import { ScheduleModule } from '@nestjs/schedule';
+import {  MakerTransactionSyncStatus } from './app/models/status.model'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -68,8 +69,21 @@ import { ScheduleModule } from '@nestjs/schedule';
         return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
       },
     }),
+    SequelizeModule.forRootAsync({
+      inject: [ENVConfigService],
+      name: 'v1_sync_status',
+      useFactory: async (envConfig: ENVConfigService) => {
+        const config: any = await envConfig.getAsync('V1_SYNC_STATUS_DATABASE_URL');
+        if (isEmpty(config)) {
+          console.error('Missing configuration DATABASE_URL');
+          process.exit(1);
+        }
+        return { ...config, autoLoadModels: true, models: [MakerTransactionSyncStatus] };
+      },
+    }),
     SequelizeModule.forFeature([MakerTransaction, Transaction], 'v1'),
     SequelizeModule.forFeature([Transfers, BridgeTransaction], 'v3'),
+    SequelizeModule.forFeature([MakerTransactionSyncStatus], 'v1_sync_status'),
     ScheduleModule.forRoot()
   ],
   controllers: [AppController],

@@ -14,6 +14,7 @@ import {
   Transaction as TransactionModel,
   ITransaction,
 } from '@orbiter-finance/v1-seq-models';
+import {  MakerTransactionSyncStatus as MakerTransactionSyncStatusModel } from './models/status.model'
 import { InjectModel, InjectConnection } from '@nestjs/sequelize';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { OrbiterLogger } from '@orbiter-finance/utils';
@@ -21,13 +22,17 @@ import { Cron, Interval } from '@nestjs/schedule';
 import { utils } from 'ethers';
 import { LoggerDecorator, TransferId } from '@orbiter-finance/utils';
 import { ChainConfigService } from '@orbiter-finance/config';
-import { Op } from 'sequelize';
+import { Op, col, FindOptions, Attributes } from 'sequelize';
 import { Sequelize, UpdatedAt } from 'sequelize-typescript';
 import { Mutex } from 'async-mutex';
 import BigNumber from 'bignumber.js';
 import _ from 'lodash';
 import { appendFile, writeFile } from 'fs/promises'
 import path from 'path'
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 @Injectable()
 export class TransactionV1ToV3Service {
   @LoggerDecorator()
@@ -42,6 +47,8 @@ export class TransactionV1ToV3Service {
     private transactionModel: typeof TransactionModel,
     @InjectModel(MakerTransactionModel, 'v1')
     private makerTransactionModel: typeof MakerTransactionModel,
+    @InjectModel(MakerTransactionSyncStatusModel, 'v1_sync_status')
+    private makerTransactionSyncStatusModel: typeof MakerTransactionSyncStatusModel,
     @InjectConnection('v1')
     private readonly v1Sequelize: Sequelize,
     @InjectConnection('v3')
@@ -62,16 +69,22 @@ export class TransactionV1ToV3Service {
     };
     const limit = 5000;
     let done = false;
-    const sqlList = [];
+    const fileName = path.resolve(__dirname, `../../../export/bt.sql`);
+    this.logger.info(`start V1DataToV3Sql`)
     do {
-      const mtList = await this.makerTransactionModel.findAll({
+      const createDataList = []
+      const options: FindOptions<Attributes<MakerTransactionModel>> = {
+        raw: true,
         where: where,
         limit: limit,
         order: [['id', 'asc']],
-      });
+      }
+      const mtList = await this.makerTransactionModel.findAll(options);
       const inIdList = mtList.map((e) => e.inId);
       const outIdList = mtList.map((e) => e.outId);
+      this.logger.info(`---mtList.length ${mtList.length}, ${inIdList.length}, ${outIdList.length}`);
       const transactions = await this.transactionModel.findAll({
+        raw: true,
         where: {
           id: [...inIdList, ...outIdList],
         },
@@ -82,9 +95,16 @@ export class TransactionV1ToV3Service {
         transactionMap[transaction.id] = transaction;
       }
       for (const mt of mtList) {
-        const sql = await this.buildCreateDataSql(mt, transactionMap[mt.inId], transactionMap[mt.outId])
-        sqlList.push(sql)
+        try {
+          const createData = await this.buildCreateData(mt, transactionMap[mt.inId], transactionMap[mt.outId], true)
+          createDataList.push(createData);
+          await this.markSyncStatus(mt, 1);
+        } catch (error) {
+          await this.markSyncStatus(mt, 2);
+          this.logger.error(`buildCreateData error, mt.id: ${mt.id}, `, error);
+        }
       }
+      await this.appendSql(fileName, createDataList);
       if (mtList.length < limit) {
         done = true;
       } else {
@@ -93,14 +113,19 @@ export class TransactionV1ToV3Service {
         this.logger.info(`nextId ${mtList[mtList.length - 1].id}`)
       }
     } while (!done);
-    this.logger.info('start write sql')
-    await this.writeSqlFile(sqlList)
-    this.logger.info('---done')
+    this.logger.info('done')
   }
-  async buildCreateDataSql(
+
+  async markSyncStatus(mt: MakerTransactionModel, status: number) {
+    const id = mt.id;
+    await this.makerTransactionSyncStatusModel.upsert({ id, status: status }, { conflictFields: ['id'] });
+  }
+
+  async buildCreateData(
     mt: MakerTransactionModel,
     inTransaction: TransactionModel,
     outTransaction: TransactionModel,
+    getSql?: boolean,
   ) {
     const { toChain, fromChain } = mt
     const sourceChainInfo = this.chainConfigService.getChainInfo(+fromChain);
@@ -141,6 +166,18 @@ export class TransactionV1ToV3Service {
         version: '1-0',
         responseMaker: [outTransaction.from],
       }
+      if (sourceChainInfo.chainId === 'SN_MAIN' && createData.sourceId.includes('#')) {
+        createData.sourceId = createData.sourceId.replace(/#\d*$/, '');
+      }
+      if (targetChainInfo.chainId === 'SN_MAIN' && !createData.targetId.includes('#')) {
+        const isMultiTransfer = await this.checkIsMultiTransfer(createData.targetId)
+        if (isMultiTransfer) {
+          createData.targetId = `${createData.targetId}#0`
+        }
+      }
+      if (!getSql) {
+        return createData;
+      }
       const instance = this.bridgeTransactionModel.build(createData);
       const dataValues = {...instance.dataValues};
       delete dataValues.id
@@ -168,15 +205,43 @@ export class TransactionV1ToV3Service {
     }
   }
 
-  async writeSqlFile(sqlList: any) {
+  async checkIsMultiTransfer(hash: string) {
+    const list = await this.transactionModel.findAll({
+      raw: true,
+      where: {
+        hash: { [Op.like]: `${hash}%` }
+      }
+    })
+    return list.length > 1
+
+  }
+
+  async batchWriteSqlFileByChunk(sqlList: any) {
     const chunkList = _.chunk(sqlList, 50 * 10000)
     for (let i = 0 ; i < chunkList.length; i++) {
       const chunk = chunkList[i]
-      const fineName = path.resolve(__dirname, `../../../export/${i + 1}.sql`);
-      await writeFile(fineName, '');
+      const fileName = path.resolve(__dirname, `../../../export/${i + 1}.sql`);
+      await writeFile(fileName, '');
       for (const sql of chunk) {
-        await appendFile(fineName, `${sql}\n`)
+        await appendFile(fileName, `${sql}\n`)
       }
+    }
+  }
+
+  async appendSql(fileName: string, sqlList: string[]) {
+    for (const sql of sqlList) {
+      await appendFile(fileName, `${sql}\n`)
+    }
+  }
+
+  async batchInsertData(createDataList: any, concurrency: number = 100) {
+    const chunkList = _.chunk(createDataList, concurrency);
+    for (const chunk of chunkList) {
+      const promiseTask = []
+      for (const createData of chunk) {
+        promiseTask.push(this.bridgeTransactionModel.upsert(createData));
+      }
+      await Promise.all(promiseTask)
     }
   }
 }
