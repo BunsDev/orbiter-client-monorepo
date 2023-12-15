@@ -201,11 +201,15 @@ export class ProofService {
                     'targetId', 'targetChain', 'targetToken', 'targetNonce', 'targetAddress', 'targetMaker',
                     'targetAmount', 'ruleId', 'ebcAddress'],
                 where: {
-                    targetId: hash.toLowerCase()
+                    sourceId: hash.toLowerCase()
                 }
             });
             if(!bridgeTx){
                 console.error('none of bridgeTx');
+                return [];
+            }
+            if(!bridgeTx.targetId){
+                console.error('none of targetId');
                 return [];
             }
             const responseMaker = bridgeTx?.targetMaker;

@@ -76,7 +76,7 @@ export class ProofController {
         }
     }
 
-    @Get("/sourceId/:hash")
+    @Get("/verifyChallengeSourceParams/:hash")
     async getVerifyChallengeSourceParamsByUserHash(@Param("hash") hash: string): Promise<HTTPResponse> {
         try {
             const data = await this.proofService.getVerifyChallengeSourceParams(hash);
@@ -87,7 +87,7 @@ export class ProofController {
         }
     }
 
-    @Get("/targetId/:hash")
+    @Get("/verifyChallengeDestParams/:hash")
     async getVerifyChallengeDestParamsByMakerHash(@Param("hash") hash: string): Promise<HTTPResponse> {
         try {
             const data = await this.proofService.getVerifyChallengeDestParams(hash);
