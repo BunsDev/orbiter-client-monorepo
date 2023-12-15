@@ -47,7 +47,7 @@ export class ProofController {
             await this.proofService.userAskProof(data);
             return HTTPResponse.success(null);
         } catch (error) {
-            this.logger.error('proofSubmission error', error);
+            this.logger.error('userAskProof error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
@@ -59,7 +59,7 @@ export class ProofController {
             await this.proofService.makerAskProof(data);
             return HTTPResponse.success(null);
         } catch (error) {
-            this.logger.error('proofSubmission error', error);
+            this.logger.error('makerAskProof error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
