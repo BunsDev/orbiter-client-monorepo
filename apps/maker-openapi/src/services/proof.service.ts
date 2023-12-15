@@ -281,15 +281,14 @@ export class ProofService {
         if (!bridgeTransaction.targetId) {
             throw new Error(`No payment transaction found: ${data.hash}`);
         }
-        const hash = data.hash.toLowerCase();
         const arbitrationMakerTransaction: IArbitrationMakerTransaction = {
-            hash: bridgeTransaction.targetId,
+            hash: bridgeTransaction.targetId.toLowerCase(),
             sourceChain: bridgeTransaction.sourceChain,
             targetChain: bridgeTransaction.targetChain,
             createTime: new Date().valueOf()
         };
-        await this.arbitrationMakerTransaction.upsert(arbitrationMakerTransaction, <any>{
-            hash
+        await this.arbitrationMakerTransaction.upsert(arbitrationMakerTransaction, {
+            conflictFields: ['hash']
         });
     }
 
