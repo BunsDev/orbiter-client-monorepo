@@ -35,39 +35,39 @@ create-network: ## Create a Docker network if it doesn't exist
 	fi
 
 # Build Docker images
-build-docker-base: ## Build the Docker base image
+bd-base: ## Build the Docker base image
 	docker build -f ./Dockerfile . -t $(BASE_IMAGE)
 
-build-maker-openapi: ## Build the Docker base image
+bd-maker-openapi: ## Build the Docker base image
 	cd ./apps/maker-openapi
 	docker build -f apps/maker-openapi/Dockerfile . -t orbiter/maker-openapi
 
-build-sdk-api: ## Build the Docker base image
+bd-sdk-api: ## Build the Docker base image
 	cd ./apps/maker-openapi
 	docker build -f apps/openapi/Dockerfile . -t orbiter/sdk-api
 
-build-docker-crawler: ## Build the Explore Data Crawler Docker image
+bd-crawler: ## Build the Explore Data Crawler Docker image
 	docker build -f apps/explore-DataCrawler/Dockerfile.clients . -t $(CRAWLER_IMAGE)
 
-build-docker-metrics: ## Build the Explore Data Crawler Docker image
+bd-metrics: ## Build the Explore Data Crawler Docker image
 	docker build -f apps/metrics/Dockerfile . -t $(METRICS_IMAGE)
 
-build-docker-data-synchronization: ## Build the data-synchronization Docker image
+bd-data-synchronization: ## Build the data-synchronization Docker image
 	docker build -f apps/data-synchronization/Dockerfile.clients . -t $(DATASYNC_IMAGE)
 
-build-docker-refinery: ## Build the Explore Data Refinery Docker image
+bd-refinery: ## Build the Explore Data Refinery Docker image
 	docker build -f apps/explore-DataRefinery/Dockerfile.clients . -t $(REFINERY_IMAGE)
 
-build-docker-explore: build-docker-crawler build-docker-refinery ## Build Explore Docker images
+bd-explore: build-docker-crawler build-docker-refinery ## Build Explore Docker images
 	# Build success
 
-build-docker-maker: ## Build the Maker Client Docker image
+bd-maker: ## Build the Maker Client Docker image
 	docker build -f apps/maker-client/Dockerfile.clients . -t $(MAKER_IMAGE)
 
-build-docker-arbitration-client: ## Build the Maker Client Docker image
+bd-arbitration-client: ## Build the Maker Client Docker image
 	docker build -f apps/arbitration-client/Dockerfile.clients . -t $(MAKER_IMAGE)
 
-build-docker-openapi: ## Build the Open Api Docker image
+bd-explore-openapi: ## Build the Open Api Docker image
 	docker build -f apps/explore-open-api/Dockerfile.clients . -t $(MAKER_IMAGE)
 
 # Start Explore application
@@ -84,8 +84,8 @@ sdk-api: create-network ## Start the Explore application
 maker: create-network ## Start the Maker application
 	$(DOCKER_COMPOSE) -f docker-compose.maker.yml up -d
 # Start OpenApi application
-openapi: create-network ## Start the OpenApi application
-	$(DOCKER_COMPOSE) -f docker-compose.openapi.yml up -d
+explore-openapi: create-network ## Start the OpenApi application
+	$(DOCKER_COMPOSE) -f docker-compose.explore-openapi.yml up -d
 
 # Stop the Node.js application
 stop: ## Stop the Node.js application
