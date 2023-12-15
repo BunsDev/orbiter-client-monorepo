@@ -9,7 +9,12 @@ import { TransactionController } from './controllers/transaction.controller';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
+import {
+    ArbitrationProof,
+    ArbitrationMakerTransaction
+} from '@orbiter-finance/maker-api-seq-models';
 import { TransactionService } from './services/transaction.service';
+import { isEmpty } from "../../../libs/utils/src";
 
 @Module({
     imports: [
@@ -26,8 +31,19 @@ import { TransactionService } from './services/transaction.service';
             },
         }),
         OrbiterConfigModule.forRoot({
-            chainConfigPath: "explore-server/chains.json",
-            envConfigPath: "explore-server/config.yaml",
+            chainConfigPath: "maker-open-api/chains.json",
+            envConfigPath: "maker-open-api/config.yaml",
+        }),
+        SequelizeModule.forRootAsync({
+            inject: [ENVConfigService],
+            useFactory: async (envConfig: ENVConfigService) => {
+                const config: any = await envConfig.getAsync('MAKER_API_DATABASE_URL');
+                if (isEmpty(config)) {
+                    console.error('Missing configuration MAKER_API_DATABASE_URL');
+                    process.exit(1);
+                }
+                return { ...config, autoLoadModels: false, models: [ArbitrationProof, ArbitrationMakerTransaction] };
+            },
         }),
         SequelizeModule.forRootAsync({
             inject: [ENVConfigService],
@@ -37,10 +53,10 @@ import { TransactionService } from './services/transaction.service';
                     console.error('Missing configuration DATABASE_URL');
                     process.exit(1);
                 }
-                return config;
+                return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
             },
         }),
-        SequelizeModule.forFeature([Transfers, BridgeTransaction])
+        SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction])
     ],
     controllers: [AppController, ProofController, TransactionController],
     providers: [ProofService, TransactionService],
