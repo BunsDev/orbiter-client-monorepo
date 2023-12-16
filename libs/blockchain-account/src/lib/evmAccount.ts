@@ -3,6 +3,7 @@ import {
   Interface,
   isError,
   keccak256,
+  Network,
   type Wallet,
 } from "ethers6";
 import { NonceManager } from './nonceManager';
@@ -29,19 +30,26 @@ export class EVMAccount extends OrbiterAccount {
     super(chainId, ctx);
   }
   getProvider() {
-    const chainConfig = this.chainConfig;
-    const rpc = chainConfig.rpc[0];
+    const rpc = this.chainConfig.rpc[0];
+    const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
     if (!this.#provider) {
-      this.#provider = new Orbiter6Provider(rpc);
+      const provider = new Orbiter6Provider(rpc,
+        network, {
+        staticNetwork: network,
+      });
+      this.#provider = provider;
     }
     if (this.#provider && this.#provider.getUrl() != rpc) {
-      this.chainConfig.debug && this.logger.debug(
+      this.logger.info(
         `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
       );
-      this.#provider = new Orbiter6Provider(rpc);
+      this.#provider = new Orbiter6Provider(rpc, network, {
+        staticNetwork: network
+      });
     }
     return this.#provider;
   }
+
   async connect(privateKey: string, _address?: string) {
     const provider = this.getProvider();
     this.wallet = new ethers.Wallet(privateKey).connect(provider);
