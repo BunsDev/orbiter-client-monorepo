@@ -21,6 +21,7 @@ import {
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
 import { Orbiter6Provider } from './provider'
+import { JsonRpcProvider } from "ethers6";
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
@@ -386,12 +387,14 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     const provider = this.getProvider();
     if (token && token != chainConfig.nativeCurrency.address) {
-      // is native
-      // const chainId = await this.wallet.getChainId();
-      // const issMainToken = await chains.inValidMainToken(String(chainId), token);
-      return await this.getTokenBalance(token, address);
+      const provider = new JsonRpcProvider(provider.getUrl());
+      const erc20 = new ethers.Contract(token, ERC20Abi, provider);
+      return await erc20.balanceOf(address || this.wallet.address);
+      // return await this.getTokenBalance(token, address);
     } else {
+      const provider = new JsonRpcProvider(provider.getUrl());
       return await provider.getBalance(address || this.wallet.address);
+      // return await provider.getBalance(address || this.wallet.address);
     }
   }
 
