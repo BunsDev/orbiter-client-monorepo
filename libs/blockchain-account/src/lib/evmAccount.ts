@@ -32,7 +32,7 @@ export class EVMAccount extends OrbiterAccount {
   getProvider() {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
-    return new JsonRpcProvider(rpc);
+    return new JsonRpcProvider(rpc, { chainId: this.chainId });
     // if (!this.#provider) {
     //   this.#provider = new JsonRpcProvider(rpc);
     //   // this.#provider = new Orbiter6Provider(rpc);
