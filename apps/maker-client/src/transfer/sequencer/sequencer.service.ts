@@ -231,7 +231,7 @@ export class SequencerService {
             async () => {
               this.logger.info(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
               await this.execSingleTransfer(transfer, wallet.account, store).catch(error => {
-                this.logger.error(`execSingleTransfer error`, error)
+                this.logger.error(`sourceId: ${transfer.sourceId}, targetChain: ${transfer.targetChain} execSingleTransfer error`, error)
                 this.alertService.sendMessage(`execSingleTransfer error ${hash}`, [AlertMessageChannel.TG]);
                 if (error instanceof TransactionSendBeforeError) {
                   rollback();

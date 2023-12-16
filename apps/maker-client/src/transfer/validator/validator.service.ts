@@ -39,13 +39,12 @@ export class ValidatorService {
     return false;
   }
   public transactionTimeValid(chainId: string, timestamp: Date) {
-    const timeout = Date.now() - dayjs(timestamp).valueOf();
+    const timeoutMin = Math.floor((Date.now() - dayjs(timestamp).valueOf()) / 1000 / 60);
     const defaultTimeout = this.getTransferGlobalTimeout();
     const transferTimeout = +(this.envConfig.get<Number>(`${chainId}.TransferTimeout`, defaultTimeout));
-    if (timeout >= transferTimeout) {
+    if (timeoutMin >= transferTimeout) {
       return true;
     }
-    console.log(`${dayjs(new Date()).toISOString()} - ${dayjs(timestamp).toISOString()} < ${transferTimeout}`)
     return false;
   }
 
