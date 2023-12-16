@@ -234,6 +234,7 @@ export class ProofService {
             const list = [];
             for (const proofData of proofDataList) {
                 list.push({
+                    sourceNonce: bridgeTx.sourceNonce,
                     targetNonce: bridgeTx.targetNonce,
                     targetChain: bridgeTx.targetChain,
                     sourceAddress: bridgeTx.sourceAddress,
