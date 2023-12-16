@@ -239,7 +239,8 @@ export class ProofService {
                     sourceAddress: bridgeTx.sourceAddress,
                     targetToken: bridgeTx.targetToken,
                     targetAmount,
-
+                    ruleId: bridgeTx.ruleId,
+                    ebcAddress: bridgeTx.ebcAddress,
                     sourceId: bridgeTx.sourceId,
                     sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                     sourceMaker: bridgeTx.sourceMaker,
