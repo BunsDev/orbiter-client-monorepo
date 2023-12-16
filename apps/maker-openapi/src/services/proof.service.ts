@@ -192,17 +192,6 @@ export class ProofService {
                 console.error('Invalid parameters');
                 return [];
             }
-            const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
-                where: {
-                    hash: hash.toLowerCase(),
-                    isSource: 0
-                },
-                order: [['status', 'DESC'], ['createTime', 'DESC']],
-                raw: true
-            });
-            if (!proofDataList || !proofDataList.length) {
-                return [];
-            }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
                 attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime',
                     'targetId', 'targetChain', 'targetToken', 'targetSymbol', 'targetNonce', 'targetAddress', 'targetMaker',
@@ -211,8 +200,19 @@ export class ProofService {
                     sourceId: hash.toLowerCase()
                 }
             });
-            if (!bridgeTx) {
-                console.error('none of bridgeTx');
+            if (!bridgeTx?.targetId) {
+                console.error('none of targetId');
+                return [];
+            }
+            const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
+                where: {
+                    hash: bridgeTx.targetId.toLowerCase(),
+                    isSource: 0
+                },
+                order: [['status', 'DESC'], ['createTime', 'DESC']],
+                raw: true
+            });
+            if (!proofDataList || !proofDataList.length) {
                 return [];
             }
             if (!bridgeTx.targetId) {
