@@ -1,7 +1,7 @@
 
 import { Observable, throwError } from 'rxjs'
 import { catchError } from 'rxjs/operators'
-import { Injectable, NestInterceptor, CallHandler, ExecutionContext } from '@nestjs/common'
+import { Injectable, NestInterceptor, CallHandler, ExecutionContext, BadRequestException } from '@nestjs/common'
 import { getResponserOptions } from '../decorators/responser.decorator'
 import { CustomError } from '../errors/custom.error'
 
@@ -16,9 +16,13 @@ export class ErrorInterceptor implements NestInterceptor {
     const { errorCode, errorMessage } = getResponserOptions(target)
     return next.handle().pipe(
       catchError((error) => {
-        return throwError(
-          () => new CustomError({ message: errorMessage ||"Error", error }, errorCode)
-        )
+        return throwError(error);
+        // if (error instanceof BadRequestException) {
+        //   return error;
+        // }
+        // return throwError(
+        //   () => new CustomError({ message: errorMessage ||"Error", error }, errorCode)
+        // )
       })
     )
   }
