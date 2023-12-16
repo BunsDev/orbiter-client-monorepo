@@ -20,18 +20,19 @@ import {
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-import { Orbiter6Provider } from './provider'
+// import { Orbiter6Provider } from './provider'
+import { JsonRpcProvider } from "ethers6";
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
-  #provider: Orbiter6Provider;
+  #provider: JsonRpcProvider;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
   getProvider() {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
-    return new Orbiter6Provider(rpc);
+    return new JsonRpcProvider(rpc);
     // if (!this.#provider) {
     //   this.#provider = new JsonRpcProvider(rpc);
     //   // this.#provider = new Orbiter6Provider(rpc);
