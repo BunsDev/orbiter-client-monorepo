@@ -232,7 +232,7 @@ export class SequencerScheduleService {
           );
           await this.batchSendTransaction(row.id, store).catch((error) => {
             this.logger.error(
-              "checkStoreReadySend -> batchSendTransaction error",
+              `checkStoreReadySend ${key} -> batchSendTransaction error`,
               error
             );
           });
@@ -242,7 +242,7 @@ export class SequencerScheduleService {
           );
           await this.singleSendTransaction(row.id, store).catch((error) => {
             this.logger.error(
-              "checkStoreReadySend -> singleSendTransaction error",
+              `checkStoreReadySend ${key} -> singleSendTransaction error`,
               error
             );
           });

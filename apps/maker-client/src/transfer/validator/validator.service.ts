@@ -45,6 +45,7 @@ export class ValidatorService {
     if (timeout >= transferTimeout) {
       return true;
     }
+    console.log(`${dayjs(new Date()).toISOString()} - ${dayjs(timestamp).toISOString()} < ${transferTimeout}`)
     return false;
   }
 
