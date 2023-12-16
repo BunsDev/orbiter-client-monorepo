@@ -3,6 +3,7 @@ import {
   Interface,
   isError,
   keccak256,
+  Network,
   type Wallet,
 } from "ethers6";
 import { NonceManager } from './nonceManager';
@@ -20,31 +21,35 @@ import {
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-// import { Orbiter6Provider } from './provider'
-import { JsonRpcProvider } from "ethers6";
+import { Orbiter6Provider } from './provider'
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
-  #provider: JsonRpcProvider;
+  #provider: Orbiter6Provider;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
   getProvider() {
-    const chainConfig = this.chainConfig;
-    const rpc = chainConfig.rpc[0];
-    return new JsonRpcProvider(rpc);
-    // if (!this.#provider) {
-    //   this.#provider = new JsonRpcProvider(rpc);
-    //   // this.#provider = new Orbiter6Provider(rpc);
-    // }
-    // if (this.#provider && this.#provider.getUrl() != rpc) {
-    //   this.chainConfig.debug && this.logger.debug(
-    //     `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
-    //   );
-    //   this.#provider = new JsonRpcProvider(rpc);
-    // }
-    // return this.#provider;
+    const rpc = this.chainConfig.rpc[0];
+    const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
+    if (!this.#provider) {
+      const provider = new Orbiter6Provider(rpc,
+        network, {
+          staticNetwork: network,
+        });
+      this.#provider = provider;
+    }
+    if (this.#provider && this.#provider.getUrl() != rpc) {
+      this.logger.info(
+        `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
+      );
+      this.#provider = new Orbiter6Provider(rpc, network, {
+        staticNetwork: network
+      });
+    }
+    return this.#provider;
   }
+
   async connect(privateKey: string, _address?: string) {
     const provider = this.getProvider();
     this.wallet = new ethers.Wallet(privateKey).connect(provider);
@@ -389,6 +394,9 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     const provider = this.getProvider();
     if (token && token != chainConfig.nativeCurrency.address) {
+      // is native
+      // const chainId = await this.wallet.getChainId();
+      // const issMainToken = await chains.inValidMainToken(String(chainId), token);
       return await this.getTokenBalance(token, address);
     } else {
       return await provider.getBalance(address || this.wallet.address);
