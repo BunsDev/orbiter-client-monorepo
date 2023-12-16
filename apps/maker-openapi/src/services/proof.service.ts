@@ -37,6 +37,9 @@ export class ProofService {
 
     async proofSubmission(data: ProofSubmissionRequest) {
         try {
+            if (!data?.transaction) {
+                return { status: 0 };
+            }
             const hash = data.transaction.toLowerCase();
             const proofData = {
                 hash, status: data.status,
