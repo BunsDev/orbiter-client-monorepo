@@ -387,13 +387,13 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     const provider = this.getProvider();
     if (token && token != chainConfig.nativeCurrency.address) {
-      const provider = new JsonRpcProvider(provider.getUrl());
-      const erc20 = new ethers.Contract(token, ERC20Abi, provider);
+      const jsonRpcProvider = new JsonRpcProvider(provider.getUrl());
+      const erc20 = new ethers.Contract(token, ERC20Abi, jsonRpcProvider);
       return await erc20.balanceOf(address || this.wallet.address);
       // return await this.getTokenBalance(token, address);
     } else {
-      const provider = new JsonRpcProvider(provider.getUrl());
-      return await provider.getBalance(address || this.wallet.address);
+      const jsonRpcProvider = new JsonRpcProvider(provider.getUrl());
+      return await jsonRpcProvider.getBalance(address || this.wallet.address);
       // return await provider.getBalance(address || this.wallet.address);
     }
   }
