@@ -193,7 +193,7 @@ export class ProofService {
                 return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
-                attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime',
+                attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime', 'sourceNonce', 'sourceAddress',
                     'targetId', 'targetChain', 'targetToken', 'targetSymbol', 'targetNonce', 'targetAddress', 'targetMaker',
                     'targetAmount', 'ruleId', 'ebcAddress'],
                 where: {
@@ -234,9 +234,9 @@ export class ProofService {
             const list = [];
             for (const proofData of proofDataList) {
                 list.push({
-                    targetNonce: bridgeTx.targetNonce,
+                    sourceNonce: bridgeTx.sourceNonce,
                     targetChain: bridgeTx.targetChain,
-                    targetAddress: bridgeTx.targetAddress,
+                    sourceAddress: bridgeTx.sourceAddress,
                     targetToken: bridgeTx.targetToken,
                     targetAmount,
 
