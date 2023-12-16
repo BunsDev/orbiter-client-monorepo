@@ -20,12 +20,12 @@ import {
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-import { Orbiter6Provider } from './provider'
+// import { Orbiter6Provider } from './provider'
 import { JsonRpcProvider } from "ethers6";
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
-  #provider: Orbiter6Provider;
+  #provider: JsonRpcProvider;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
@@ -33,13 +33,14 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
     if (!this.#provider) {
-      this.#provider = new Orbiter6Provider(rpc);
+      this.#provider = new JsonRpcProvider(rpc);
+      // this.#provider = new Orbiter6Provider(rpc);
     }
     if (this.#provider && this.#provider.getUrl() != rpc) {
       this.chainConfig.debug && this.logger.debug(
         `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
       );
-      this.#provider = new Orbiter6Provider(rpc);
+      this.#provider = new JsonRpcProvider(rpc);
     }
     return this.#provider;
   }
@@ -387,14 +388,9 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     const provider = this.getProvider();
     if (token && token != chainConfig.nativeCurrency.address) {
-      const jsonRpcProvider = new JsonRpcProvider(provider.getUrl());
-      const erc20 = new ethers.Contract(token, ERC20Abi, jsonRpcProvider);
-      return await erc20.balanceOf(address || this.wallet.address);
-      // return await this.getTokenBalance(token, address);
+      return await this.getTokenBalance(token, address);
     } else {
-      const jsonRpcProvider = new JsonRpcProvider(provider.getUrl());
-      return await jsonRpcProvider.getBalance(address || this.wallet.address);
-      // return await provider.getBalance(address || this.wallet.address);
+      return await provider.getBalance(address || this.wallet.address);
     }
   }
 
