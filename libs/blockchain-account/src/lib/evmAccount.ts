@@ -20,32 +20,29 @@ import {
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-// import { Orbiter6Provider } from './provider'
-import { JsonRpcProvider } from "ethers6";
+import { Orbiter6Provider } from './provider'
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
-  #provider: JsonRpcProvider;
-  #rpc:string
+  #provider: Orbiter6Provider;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
   getProvider() {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
-    if (!this.#provider) {
-      this.#rpc = rpc;
-      this.#provider = new JsonRpcProvider(rpc);
-      // this.#provider = new Orbiter6Provider(rpc);
-    }
-    if (this.#provider && this.#rpc != rpc) {
-      this.chainConfig.debug && this.logger.debug(
-        `rpc url changes new ${rpc} old ${this.#rpc}`,
-      );
-      this.#rpc = rpc
-      this.#provider = new JsonRpcProvider(rpc);
-    }
-    return this.#provider;
+    return new Orbiter6Provider(rpc);
+    // if (!this.#provider) {
+    //   this.#provider = new JsonRpcProvider(rpc);
+    //   // this.#provider = new Orbiter6Provider(rpc);
+    // }
+    // if (this.#provider && this.#provider.getUrl() != rpc) {
+    //   this.chainConfig.debug && this.logger.debug(
+    //     `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
+    //   );
+    //   this.#provider = new JsonRpcProvider(rpc);
+    // }
+    // return this.#provider;
   }
   async connect(privateKey: string, _address?: string) {
     const provider = this.getProvider();
