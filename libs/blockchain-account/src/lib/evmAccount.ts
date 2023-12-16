@@ -26,6 +26,7 @@ export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   public nonceManager: NonceManager;
   #provider: JsonRpcProvider;
+  #rpc:string
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
@@ -33,13 +34,15 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
     if (!this.#provider) {
+      this.#rpc = rpc;
       this.#provider = new JsonRpcProvider(rpc);
       // this.#provider = new Orbiter6Provider(rpc);
     }
-    if (this.#provider && this.#provider.getUrl() != rpc) {
+    if (this.#provider && this.#rpc != rpc) {
       this.chainConfig.debug && this.logger.debug(
-        `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
+        `rpc url changes new ${rpc} old ${this.#rpc}`,
       );
+      this.#rpc = rpc
       this.#provider = new JsonRpcProvider(rpc);
     }
     return this.#provider;
