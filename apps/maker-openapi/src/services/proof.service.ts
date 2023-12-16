@@ -227,11 +227,6 @@ export class ProofService {
             const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
             const targetAmount = new BigNumber(bridgeTx.targetAmount).multipliedBy(10 ** targetDecimal).toFixed(0);
 
-            const chain0 = toHex(bridgeTx.sourceChain);
-            const chain1 = toHex(bridgeTx.targetChain);
-            const token0 = bridgeTx.sourceToken;
-            const token1 = bridgeTx.targetToken;
-            const ruleKey: string = keccak256(solidityPack(['uint256', 'uint256', 'uint256', 'uint256'], [chain0, chain1, token0, token1]));
             const eraNetWorkId = await this.envConfigService.getAsync('IS_TEST_NET') ? 280 : 324;
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
             const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
@@ -249,7 +244,6 @@ export class ProofService {
                     sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                     sourceMaker: bridgeTx.sourceMaker,
                     sourceChain: bridgeTx.sourceChain,
-                    ruleKey,
                     isSource: 0,
                     spvAddress,
                     ...proofData
