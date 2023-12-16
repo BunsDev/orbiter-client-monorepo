@@ -193,9 +193,10 @@ export class ProofService {
                 return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
-                attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime', 'sourceNonce', 'sourceAddress',
+                attributes: [
+                    'sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime', 'sourceNonce', 'sourceAddress',
                     'targetId', 'targetChain', 'targetToken', 'targetSymbol', 'targetNonce', 'targetAddress', 'targetMaker',
-                    'targetAmount', 'ruleId', 'ebcAddress'],
+                    'sourceSymbol','sourceAmount','targetAmount', 'ruleId', 'ebcAddress'],
                 where: {
                     sourceId: hash.toLowerCase()
                 }
@@ -226,6 +227,8 @@ export class ProofService {
             }
             const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
             const targetAmount = new BigNumber(bridgeTx.targetAmount).multipliedBy(10 ** targetDecimal).toFixed(0);
+            const sourceDecimal = getDecimalBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
+            const sourceAmount = new BigNumber(bridgeTx.sourceAmount).multipliedBy(10 ** sourceDecimal).toFixed(0);
 
             const eraNetWorkId = await this.envConfigService.getAsync('IS_TEST_NET') ? 280 : 324;
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
@@ -240,6 +243,7 @@ export class ProofService {
                     sourceAddress: bridgeTx.sourceAddress,
                     targetToken: bridgeTx.targetToken,
                     targetAmount,
+                    sourceAmount,
                     ruleId: bridgeTx.ruleId,
                     ebcAddress: bridgeTx.ebcAddress,
                     sourceId: bridgeTx.sourceId,
