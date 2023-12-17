@@ -189,9 +189,9 @@ export class SequencerService {
           );
         })
         .catch((error) => {
-          this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transferResult.hash}`, [AlertMessageChannel.TG]);
+          this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${store.chainId} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
           this.logger.error(
-            `${transferResult.hash} waitForTransactionConfirmation error`,
+            `${transferResult.hash} waitForTransactionConfirmation error ${store.chainId}`,
             error
           );
         });
@@ -203,7 +203,7 @@ export class SequencerService {
     store: StoreService,
     hash: string
   ) {
-    this.logger.info(`singleSendTransactionByTransfer: ${hash}`)
+    this.logger.info(`singleSendTransactionByTransfer: ${store.chainId} -  ${hash}`)
     try {
       const transfer = store.getTransaction(hash);
       const wallet = await this.validatorService.transactionGetPrivateKey(
@@ -215,7 +215,7 @@ export class SequencerService {
             wallet["errors"] || {}
           )}`
         );
-        this.alertService.sendMessage(`singleTransfer validatorService error ${hash} ${JSON.stringify(wallet["errors"] || {})}`, 'TG');
+        this.alertService.sendMessage(`singleTransfer validatorService ${store.chainId} error ${hash} ${JSON.stringify(wallet["errors"] || {})}`, 'TG');
         return;
       }
       if (wallet?.account) {
@@ -231,8 +231,8 @@ export class SequencerService {
             async () => {
               this.logger.info(`ready for sending step2  ${transfer.sourceId} ${senderAddress}-${transfer.targetAddress} ${transfer.targetAmount} ${transfer.targetSymbol}`);
               await this.execSingleTransfer(transfer, wallet.account, store).catch(error => {
-                this.logger.error(`execSingleTransfer error`, error)
-                this.alertService.sendMessage(`execSingleTransfer error ${hash}`, [AlertMessageChannel.TG]);
+                this.logger.error(`execSingleTransfer ${store.chainId} error`, error)
+                this.alertService.sendMessage(`execSingleTransfer ${store.chainId} error ${hash}`, [AlertMessageChannel.TG]);
                 if (error instanceof TransactionSendBeforeError) {
                   rollback();
                 }
@@ -274,7 +274,7 @@ export class SequencerService {
         const record = await store.getSerialRecord(transfer.sourceId);
         if (record) {
           this.logger.error(
-            `${transfer.sourceId} batchSendTransaction getSerialRecord exist`
+            `${transfer.sourceChain} - ${transfer.sourceId} batchSendTransaction getSerialRecord exist`
           );
           await store.removeTransaction(token, transfer.sourceId);
           continue;
@@ -295,7 +295,7 @@ export class SequencerService {
       }
       if (passTransfers.length <= 0) {
         this.logger.warn(
-          `Original data length ${transfers.length}, filtered 0`
+          `Original data length ${transfers.length}, filtered 0 ${store.chainId}`
         );
         return;
       }
@@ -311,12 +311,12 @@ export class SequencerService {
           await rollback();
         }
         this.logger.error(
-          "sequencer.schedule batchSendTransactionByTransfer error",
+          `sequencer.schedule batchSendTransactionByTransfer error: ${store.chainId}`,
           error
         );
-        this.alertService.sendMessage(`sequencer.schedule batchSendTransactionByTransfer error: ${error.message}`, 'TG').catch((e) => {
+        this.alertService.sendMessage(`sequencer.schedule batchSendTransactionByTransfer error: ${store.chainId} - ${error.message}`, 'TG').catch((e) => {
           this.logger.error(
-            "sequencer.schedule sendTelegramAlert error",
+            `sequencer.schedule sendTelegramAlert error ${store.chainId} `,
             error
           );
         });
@@ -363,7 +363,7 @@ export class SequencerService {
       );
       if (result[0] != sourecIds.length) {
         throw new Error(
-          "The number of successful modifications is inconsistent"
+          `The number of successful modifications is inconsistent ${store.chainId}`
         );
       }
     } catch (error) {
@@ -442,9 +442,9 @@ export class SequencerService {
           );
         })
         .catch((error) => {
-          this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${transferResult.hash}`, [AlertMessageChannel.TG]);
+          this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${store.chainId} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
           this.logger.error(
-            `${transferResult.hash} waitForTransactionConfirmation error`,
+            `${transferResult.hash} waitForTransactionConfirmation error ${store.chainId}`,
             error
           );
         });
