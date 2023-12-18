@@ -211,7 +211,7 @@ export class SequencerService {
       );
       if (wallet && !wallet.account) {
         this.logger.error(
-          `${hash} validatorService ${hash} warn ${JSON.stringify(
+          `transactionGetPrivateKey ${hash} validatorService ${hash} warn ${JSON.stringify(
             wallet["errors"] || {}
           )}`
         );

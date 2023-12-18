@@ -93,7 +93,7 @@ export class AccountFactoryService {
         );
         break;
       default:
-        throw new Error("Chain Not implemented");
+        throw new Error(`${toChain} Chain Not implemented`);
         break;
     }
     AccountFactoryService.wallets[walletId] = wallet;

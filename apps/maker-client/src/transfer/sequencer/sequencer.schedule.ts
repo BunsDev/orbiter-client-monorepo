@@ -131,9 +131,9 @@ export class SequencerScheduleService {
           this.logger.debug(
             `[readDBTransactionRecords] ${tx.sourceId} DB store addTransactions ${JSON.stringify(result)}`
           );
-          if (+tx.id > store.lastId) {
-            store.lastId = +tx.id;
-          }
+          // if (+tx.id > store.lastId) {
+          //   store.lastId = +tx.id;
+          // }
         } catch (error) {
           this.logger.error(
             `[readDBTransactionRecords] ${tx.sourceId} handle error`, error

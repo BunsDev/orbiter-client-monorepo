@@ -353,6 +353,7 @@ export class EVMAccount extends OrbiterAccount {
       this.logger.info(
         `${chainConfig.name} sendTransaction txHash:${txHash}`
       );
+      //
       await this.store.saveSerialRelTxHash(serialIds, txHash);
       submit();
       return response;
