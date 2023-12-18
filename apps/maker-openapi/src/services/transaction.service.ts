@@ -36,7 +36,7 @@ export class TransactionService {
         });
         const dataList: ArbitrationTransaction[] = [];
         for (const bridgeTx of bridgeTransactions) {
-            const mainToken = this.chainConfigService.getTokenBySymbol(await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceSymbol);
+            const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
             if (!mainToken?.address) {
                 console.error('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
                 continue;
