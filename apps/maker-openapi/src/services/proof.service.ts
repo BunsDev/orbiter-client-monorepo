@@ -4,8 +4,7 @@ import {
     ProofSubmissionRequest,
 } from '../common/interfaces/Proof.interface';
 import { InjectModel } from "@nestjs/sequelize";
-import { BridgeTransaction } from "@orbiter-finance/seq-models";
-import { keccak256, solidityPack } from "ethers/lib/utils";
+import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
 import { getDecimalBySymbol } from "@orbiter-finance/utils";
 import { ethers, utils } from "ethers";
 import BigNumber from "bignumber.js";
@@ -22,6 +21,7 @@ import {
 export class ProofService {
     constructor(
         protected envConfigService: ENVConfigService,
+        @InjectModel(Transfers) private transfersModel: typeof Transfers,
         @InjectModel(BridgeTransaction) private bridgeTransactionModel: typeof BridgeTransaction,
         @InjectModel(ArbitrationProof) private arbitrationProof: typeof ArbitrationProof,
         @InjectModel(ArbitrationMakerTransaction) private arbitrationMakerTransaction: typeof ArbitrationMakerTransaction) {
@@ -302,7 +302,13 @@ export class ProofService {
         });
         const list = [];
         for (const data of dataList) {
-            if (data?.hash) list.push([data.hash, data.sourceChain, data.targetChain]);
+            if (data?.hash) {
+                const transfer = await this.transfersModel.findOne(<any>{
+                    attributes: ['createdAt'],
+                    where: { hash: data.hash }
+                });
+                list.push([data.hash, data.sourceChain, data.targetChain, Math.floor(new Date(transfer.createdAt).valueOf() / 1000)]);
+            }
         }
         return list;
     }
