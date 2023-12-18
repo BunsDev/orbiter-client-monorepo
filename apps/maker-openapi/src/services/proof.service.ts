@@ -27,14 +27,6 @@ export class ProofService {
         @InjectModel(ArbitrationMakerTransaction) private arbitrationMakerTransaction: typeof ArbitrationMakerTransaction) {
     }
 
-    async getSubClient(): Promise<SubgraphClient> {
-        const SubgraphEndpoint = await this.envConfigService.getAsync("THEGRAPH_API");
-        if (!SubgraphEndpoint) {
-            return null;
-        }
-        return new SubgraphClient(SubgraphEndpoint);
-    }
-
     async proofSubmission(data: ProofSubmissionRequest) {
         try {
             if (!data?.transaction) {
@@ -117,52 +109,6 @@ export class ProofService {
                 console.error('none of bridgeTx');
                 return [];
             }
-            const client = await this.getSubClient();
-            if (!client) {
-                console.error('SubClient not found');
-                return [];
-            }
-            const mdcAddress = await client.maker.getMDCAddress(bridgeTx.sourceMaker);
-            if (!mdcAddress) {
-                console.error('MdcAddress not found', bridgeTx.sourceChain, bridgeTx.sourceId);
-                return [];
-            }
-            const res = await client.maker.getColumnArray(Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000), mdcAddress, bridgeTx.sourceMaker);
-            if (!res) return [];
-            const { dealers, ebcs, chainIds } = res;
-            const ebc = bridgeTx.ebcAddress;
-            const rawDatas = utils.defaultAbiCoder.encode(
-                ['address[]', 'address[]', 'uint64[]', 'address'],
-                [dealers, ebcs, chainIds, ebc],
-            );
-            const rule: any = await client.maker.getRules(mdcAddress, ebc, bridgeTx.sourceMaker);
-            if (!rule) {
-                console.error('Rule not found', bridgeTx.sourceChain, bridgeTx.sourceId);
-                return [];
-            }
-            const formatRule: any[] = [
-                rule.chain0,
-                rule.chain1,
-                rule.chain0Status,
-                rule.chain1Status,
-                rule.chain0Token,
-                rule.chain1Token,
-                rule.chain0minPrice,
-                rule.chain1minPrice,
-                rule.chain0maxPrice,
-                rule.chain1maxPrice,
-                rule.chain0WithholdingFee,
-                rule.chain1WithholdingFee,
-                rule.chain0TradeFee,
-                rule.chain1TradeFee,
-                rule.chain0ResponseTime,
-                rule.chain1ResponseTime,
-                rule.chain0CompensationRatio,
-                rule.chain1CompensationRatio,
-            ];
-            const rlpRuleBytes = utils.RLP.encode(
-                formatRule.map((r) => utils.stripZeros(ethers.BigNumber.from(r).toHexString())),
-            );
 
             const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 280 : 324;
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
@@ -173,9 +119,10 @@ export class ProofService {
                 list.push({
                     sourceMaker: bridgeTx.sourceMaker,
                     sourceChain: bridgeTx.sourceChain,
+                    sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
+                    ruleId: bridgeTx.ruleId,
+                    ebcAddress: bridgeTx.ebcAddress,
                     spvAddress,
-                    rawDatas,
-                    rlpRuleBytes,
                     ...proofData
                 });
             }
