@@ -36,11 +36,11 @@ export class RoutersService {
                     continue;
                 }
                 if (!sourceChain || !sourceChain.tokens) {
-                    console.log(`v1Rule not find sourceChain`, v1Rule);
+                    console.log(`v1Rule not find sourceChain`, v1Rule.srcChain);
                     continue;
                 }
                 if (!targetChain) {
-                    console.log(`v1Rule not find targetChain`, v1Rule);
+                    console.log(`v1Rule not find targetChain`, v1Rule.tgtChain);
                     continue;
                 }
                 const sourceToken = sourceChain.tokens.find(t => t.symbol == v1Rule['sourceSymbol']);
@@ -70,7 +70,28 @@ export class RoutersService {
                     compRatio: 1,
                     spentTime: 60,
                 };
-                if (routerConfig.srcToken != routerConfig.tgtToken) {
+                if (sourceToken.symbol != targetToken.symbol) {
+                    for (const addr in sourceChain.contract) {
+                        if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
+                            routerConfig.endpointContract = addr;
+                            break;
+                        }
+                    }
+                    if (!routerConfig.endpointContract) {
+                        routerConfig.state = 'disabled';
+                    }
+                } else if (routerConfig.srcChain == 'SN_MAIN') {
+                    for (const addr in sourceChain.contract) {
+                        if (sourceChain.contract[addr] === 'OBSource') {
+                            routerConfig.endpointContract = addr;
+                            break;
+                        }
+                    }
+                    if (!routerConfig.endpointContract) {
+                        routerConfig.state = 'disabled';
+                    }
+                }
+                else if (routerConfig.tgtChain == 'SN_MAIN') {
                     for (const addr in sourceChain.contract) {
                         if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
                             routerConfig.endpointContract = addr;
@@ -117,6 +138,8 @@ export class RoutersService {
                     console.log(`v3Rule not white maker `, v3Rule);
                     continue;
                 }
+
+
                 const routerConfig: RoutersConfig = {
                     line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
                     endpoint: v3Rule['recipient'],
@@ -140,7 +163,7 @@ export class RoutersService {
                     continue;
                 }
                 const sourceChain = chains.find(row => row.chainId == routerConfig.srcChain);
-                if (routerConfig.srcToken != routerConfig.tgtToken) {
+                if (fromChain.symbol != toChain.symbol) {
                     for (const addr in sourceChain.contract) {
                         if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
                             routerConfig.endpointContract = addr;
