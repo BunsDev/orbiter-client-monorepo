@@ -307,7 +307,7 @@ export class ProofService {
                     attributes: ['createdAt'],
                     where: { hash: data.hash }
                 });
-                list.push([data.hash, data.sourceChain, data.targetChain, Math.floor(new Date(transfer.createdAt).valueOf() / 1000)]);
+                list.push([data.hash, String(data.sourceChain), String(data.targetChain), String(Math.floor(new Date(transfer.createdAt).valueOf() / 1000))]);
             }
         }
         return list;
