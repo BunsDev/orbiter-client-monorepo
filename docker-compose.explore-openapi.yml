@@ -3,13 +3,13 @@ networks:
    orbiter-network:
     external: true
     labels:
-      - "com.docker.compose.project=openapi"
+      - "com.docker.compose.project=explore-openapi"
 services:
   openapi:
-    container_name: "openapi"
-    image: orbiter/openapi:latest
+    container_name: "explore-openapi"
+    image: orbiter/explore-openapi:latest
     labels:
-      - "com.docker.compose.project=openapi"
+      - "com.docker.compose.project=explore-openapi"
     build:
       context: ./
       cache_from:

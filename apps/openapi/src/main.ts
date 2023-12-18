@@ -14,10 +14,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'sdk';
   app.setGlobalPrefix(globalPrefix);
-  app.enableCors({
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  });
+  app.enableCors();
   const port = process.env.PORT || 3000;
   app.useGlobalPipes(new ValidationPipe());
   app.useGlobalFilters(new HttpExceptionFilter())
