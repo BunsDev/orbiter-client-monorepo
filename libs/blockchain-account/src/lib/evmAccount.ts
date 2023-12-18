@@ -35,8 +35,8 @@ export class EVMAccount extends OrbiterAccount {
     if (!this.#provider) {
       const provider = new Orbiter6Provider(rpc,
         network, {
-          staticNetwork: network,
-        });
+        staticNetwork: network,
+      });
       this.#provider = provider;
     }
     if (this.#provider && this.#provider.getUrl() != rpc) {
