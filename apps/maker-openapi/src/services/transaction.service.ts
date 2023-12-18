@@ -38,7 +38,7 @@ export class TransactionService {
         for (const bridgeTx of bridgeTransactions) {
             const mainToken = this.chainConfigService.getTokenBySymbol(await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceSymbol);
             if (!mainToken?.address) {
-                console.error('MainToken not found', bridgeTx.sourceId);
+                console.error('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
                 continue;
             }
             const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
