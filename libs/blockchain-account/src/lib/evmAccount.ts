@@ -145,13 +145,13 @@ export class EVMAccount extends OrbiterAccount {
       } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
         gasPrice = new BigNumber(chainCustomConfig.MinFeePerGas);
       }
-      transactionRequest.maxFeePerGas = gasPrice.toString();
+      transactionRequest.maxFeePerGas = gasPrice.toFixed(0);
       // maxPriorityFeePerGas
       let maxPriorityFeePerGas = new BigNumber(feeData.maxPriorityFeePerGas.toString()).times(priorityFeePerGasRedouble);
       if (chainCustomConfig.MaxPriorityFeePerGas && maxPriorityFeePerGas.gte(chainCustomConfig.MaxPriorityFeePerGas)) {
         maxPriorityFeePerGas = new BigNumber(chainCustomConfig.MaxPriorityFeePerGas);
       }
-      transactionRequest.maxPriorityFeePerGas = maxPriorityFeePerGas.toString();
+      transactionRequest.maxPriorityFeePerGas = maxPriorityFeePerGas.toFixed(0);
 
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
         throw new Error(`EIP1559 Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
@@ -165,7 +165,7 @@ export class EVMAccount extends OrbiterAccount {
         } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
           transactionRequest.gasPrice = chainCustomConfig.MinFeePerGas;
         }
-        transactionRequest.gasPrice = gasPrice.toString();
+        transactionRequest.gasPrice = gasPrice.toFixed(0);
       }
       if (!transactionRequest.gasPrice) {
         throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
