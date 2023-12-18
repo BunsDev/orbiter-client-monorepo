@@ -5,32 +5,18 @@ import dayjs from 'dayjs';
 import { Op } from 'sequelize';
 import { ArbitrationTransaction } from "../common/interfaces/Proof.interface";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
-import { keccak256 } from "@ethersproject/keccak256";
-import { solidityPack } from "ethers/lib/utils";
 import BigNumber from "bignumber.js";
 
 @Injectable()
 export class TransactionService {
-    mainChain = 1;
-
     constructor(
         protected envConfigService: ENVConfigService,
-        protected chainConsulService: ChainConfigService,
         private readonly chainConfigService: ChainConfigService,
         @InjectModel(Transfers)
         private transfersModel: typeof Transfers,
         @InjectModel(BridgeTransaction)
         private bridgeTransactionModel: typeof BridgeTransaction,
-    ) {
-        this.init();
-    }
-
-    async init() {
-        const chains = await this.chainConsulService.getAllChains();
-        if (chains.find(item => +item.internalId === 5)) {
-            this.mainChain = 5;
-        }
-    }
+    ) {}
 
     async getUnreimbursedTransactions(startTime: number, endTime: number): Promise<ArbitrationTransaction[]> {
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
@@ -50,7 +36,7 @@ export class TransactionService {
         });
         const dataList: ArbitrationTransaction[] = [];
         for (const bridgeTx of bridgeTransactions) {
-            const mainToken = this.chainConfigService.getTokenBySymbol(this.mainChain, bridgeTx.sourceSymbol);
+            const mainToken = this.chainConfigService.getTokenBySymbol(await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceSymbol);
             if (!mainToken?.address) {
                 console.error('MainToken not found', bridgeTx.sourceId);
                 continue;
