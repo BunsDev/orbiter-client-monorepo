@@ -22,9 +22,10 @@ export class AppController {
           contract: row.contract,
           nativeCurrency: row.nativeCurrency,
           tokens: row.tokens
-        }
+        };
       });
       return HTTPResponse.success({
+        subgraphEndpoint: await this.envConfig.getAsync("SubgraphEndpoint"),
         chains: filterChains,
         allowArbitrationChains: this.envConfig.get("AllowArbitrationChains") || [],
         arbitration: this.envConfig.get("ArbitrationRPC")
