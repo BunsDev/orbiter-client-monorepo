@@ -14,21 +14,10 @@ export class AppController {
   @Get("/config/arbitration-client")
   async getArbitrationConfig(): Promise<HTTPResponse> {
     try {
-      const chains = await this.chainConfig.getAllChains();
-      const filterChains = chains.map(row => {
-        return {
-          chainId: row.chainId,
-          name: row.name,
-          contract: row.contract,
-          nativeCurrency: row.nativeCurrency,
-          tokens: row.tokens
-        };
-      });
       return HTTPResponse.success({
-        subgraphEndpoint: await this.envConfig.getAsync("SubgraphEndpoint"),
-        chains: filterChains,
-        allowArbitrationChains: this.envConfig.get("AllowArbitrationChains") || [],
-        arbitration: this.envConfig.get("ArbitrationRPC")
+        subgraphEndpoint: await this.envConfig.getAsync("SubgraphEndpoint")
+        // allowArbitrationChains: this.envConfig.get("AllowArbitrationChains") || [],
+        // arbitration: this.envConfig.get("ArbitrationRPC")
       });
     } catch (error) {
       this.logger.error('getArbitrationConfig error', error);
