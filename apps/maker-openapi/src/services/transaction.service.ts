@@ -68,7 +68,7 @@ export class TransactionService {
                 ruleId: bridgeTx.ruleId,
                 freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(10 ** sourceToken.decimals).toFixed(0),
                 freezeToken: mainToken.address,
-                minChallengeDepositAmount: String(await this.envConfigService.getAsync("MinChallengeDepositAmount") ?? 0.005)
+                minChallengeDepositAmount: String(await this.envConfigService.getAsync("MinChallengeDepositAmount") ?? 0.005 * 10 ** sourceToken.decimals)
             };
             dataList.push(arbitrationTransaction);
         }
