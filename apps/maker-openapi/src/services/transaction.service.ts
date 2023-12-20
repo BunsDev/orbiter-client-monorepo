@@ -82,6 +82,6 @@ export class TransactionService {
                 sourceId
             }
         });
-        return bridgeTransaction?.status || -1;
+        return bridgeTransaction?.status ?? -1;
     }
 }
