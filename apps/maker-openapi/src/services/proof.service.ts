@@ -110,7 +110,7 @@ export class ProofService {
                 return [];
             }
 
-            const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 280 : 324;
+            const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 300 : 324;
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
             const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
             const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
@@ -177,7 +177,7 @@ export class ProofService {
             const sourceDecimal = getDecimalBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
             const sourceAmount = new BigNumber(bridgeTx.sourceAmount).multipliedBy(10 ** sourceDecimal).toFixed(0);
 
-            const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 280 : 324;
+            const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 300 : 324;
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
             const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
             const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
