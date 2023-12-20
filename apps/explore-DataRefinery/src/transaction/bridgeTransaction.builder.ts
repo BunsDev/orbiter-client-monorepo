@@ -472,6 +472,7 @@ export default class BridgeTransactionBuilder {
       sourceNonce: transfer.nonce,
       sourceSymbol: transfer.symbol,
       sourceToken: transfer.token,
+      status:0,
       targetToken: null,
       sourceTime: transfer.timestamp,
       dealerAddress: null,
