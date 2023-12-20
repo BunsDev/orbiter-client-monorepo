@@ -218,8 +218,35 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           receipt,
         );
       } else {
-        if (transaction.data === '0x' || (transaction.to && await provider.getCode(transaction.to) === '0x')) {
-          // tag:
+        const decodeData = EVMV6Utils.deCodeMintCallData(transaction.data)
+        if (decodeData) {
+          console.log('----', decodeData)
+          const value = transaction.value.toString();
+          transfers.push({
+              chainId: String(chainId),
+              hash: transaction.hash,
+              blockNumber: transaction.blockNumber,
+              transactionIndex: transaction.index,
+              sender: transaction.from,
+              receiver: transaction.to,
+              amount: new BigNumber(value)
+                .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+                .toString(),
+              value,
+              calldata: decodeData,
+              token: chainConfig.nativeCurrency.address,
+              symbol: chainConfig.nativeCurrency.symbol,
+              fee: fee.toString(),
+              feeToken: chainConfig.nativeCurrency.symbol,
+              feeAmount: new BigNumber(fee.toString())
+                .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+                .toString(),
+              timestamp: 0,
+              status,
+              nonce,
+              receipt
+          })
+        } else if (transaction.data === '0x' || (transaction.to && await provider.getCode(transaction.to) === '0x')) {
           const value = transaction.value.toString();
           transfers.push({
             chainId: String(chainId),
