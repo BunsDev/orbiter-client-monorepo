@@ -2,15 +2,12 @@ import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ProofService } from '../services/proof.service';
 import { HTTPResponse } from '../utils/Response';
 import {
-    MakerAskProofRequest, ProofSubmissionRequest, UserAskProofRequest
+    MakerAskProofRequest, ProofSubmissionRequest
 } from '../common/interfaces/Proof.interface';
-import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 
 @Controller("proof")
 export class ProofController {
-    @LoggerDecorator()
-    private readonly logger: OrbiterLogger;
 
     constructor(private readonly proofService: ProofService,
                 private chainConfig: ChainConfigService,
@@ -22,10 +19,10 @@ export class ProofController {
     async proofSubmission(@Body() data: ProofSubmissionRequest): Promise<HTTPResponse> {
         // spv-client submit
         try {
-            this.logger.info(`proofSubmission`, data);
+            console.log(`proofSubmission`, data);
             return HTTPResponse.success(await this.proofService.proofSubmission(data));
         } catch (error) {
-            this.logger.error('proofSubmission error', error);
+            console.error('proofSubmission error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
@@ -47,7 +44,7 @@ export class ProofController {
             await this.proofService.makerAskProof(data);
             return HTTPResponse.success(null);
         } catch (error) {
-            this.logger.error('makerAskProof error', error);
+            console.error('makerAskProof error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
@@ -59,7 +56,7 @@ export class ProofController {
             const data = await this.proofService.makerNeedResponseTxList(makerAddress);
             return HTTPResponse.success(data);
         } catch (error) {
-            this.logger.error('needResponseTransactionList error', error);
+            console.error('needResponseTransactionList error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
@@ -70,7 +67,7 @@ export class ProofController {
             const data = await this.proofService.getVerifyChallengeSourceParams(hash);
             return HTTPResponse.success(data);
         } catch (error) {
-            this.logger.error('getProofByHash error', error);
+            console.error('getProofByHash error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
@@ -81,7 +78,7 @@ export class ProofController {
             const data = await this.proofService.getVerifyChallengeDestParams(hash);
             return HTTPResponse.success(data);
         } catch (error) {
-            this.logger.error('getProofByHash error', error);
+            console.error('getProofByHash error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
@@ -105,7 +102,7 @@ export class ProofController {
                 arbitration: this.envConfig.get("ArbitrationRPC")
             });
         } catch (error) {
-            this.logger.error('getArbitrationConfig error', error);
+            console.error('getArbitrationConfig error', error);
             return HTTPResponse.fail(1000, error.message);
         }
     }
