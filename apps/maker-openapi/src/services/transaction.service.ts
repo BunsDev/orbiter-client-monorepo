@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models'
+import { Transfers, BridgeTransaction, BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import dayjs from 'dayjs';
 import { Op } from 'sequelize';
 import { ArbitrationTransaction } from "../common/interfaces/Proof.interface";
@@ -73,5 +73,15 @@ export class TransactionService {
             dataList.push(arbitrationTransaction);
         }
         return dataList;
+    }
+
+    async getSourceIdStatus(sourceId: string): Promise<number> {
+        const bridgeTransaction: BridgeTransactionAttributes = await this.bridgeTransactionModel.findOne(<any>{
+            attributes: ['status'],
+            where: {
+                sourceId
+            }
+        });
+        return bridgeTransaction?.status || -1;
     }
 }

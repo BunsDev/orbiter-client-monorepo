@@ -1,6 +1,6 @@
 import { TransactionService } from '../services/transaction.service';
 import { HTTPResponse } from '../utils/Response';
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 @Controller('transaction')
 export class TransactionController {
     constructor(private readonly transactionService: TransactionService) {
@@ -25,5 +25,14 @@ export class TransactionController {
         // }
         const data = await this.transactionService.getUnreimbursedTransactions(+startTime, +endTime);
         return HTTPResponse.success(data)
+    }
+
+    @Get("/status/:hash")
+    async status(@Param("hash") hash: string) {
+        if (!hash) {
+            return HTTPResponse.fail(1000, "Invalid parameters");
+        }
+        const data = await this.transactionService.getSourceIdStatus(hash);
+        return HTTPResponse.success(data);
     }
 }
