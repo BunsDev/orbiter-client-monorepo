@@ -220,7 +220,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       } else {
         const decodeData = EVMV6Utils.deCodeMintCallData(transaction.data)
         if (decodeData) {
-          console.log('----', decodeData)
           const value = transaction.value.toString();
           transfers.push({
               chainId: String(chainId),
