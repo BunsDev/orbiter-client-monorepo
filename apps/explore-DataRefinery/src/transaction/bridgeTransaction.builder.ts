@@ -5,7 +5,7 @@ import {
   equals,
   getObjKeyByValue
 } from '@orbiter-finance/utils';
-import { BridgeTransactionAttributes, Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
+import { BridgeTransactionAttributes, Transfers as TransfersModel, TransferOpStatus, BridgeTransactionStatus } from '@orbiter-finance/seq-models';
 import { validateAndParseAddress } from 'starknet'
 import { ChainConfigService, ENVConfigService, IChainConfig, MakerV1RuleService, Token } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
@@ -473,6 +473,7 @@ export default class BridgeTransactionBuilder {
       sourceSymbol: transfer.symbol,
       sourceToken: transfer.token,
       targetToken: null,
+      status:BridgeTransactionStatus.PENDING_PAID,
       sourceTime: transfer.timestamp,
       dealerAddress: null,
       ebcAddress: null,

@@ -100,6 +100,7 @@ export class ZkSyncAccount extends OrbiterAccount  {
     }
   }
   public async getTokenBalance(token: string, address?: string): Promise<bigint> {
+    console.log(this.address, '====', address)
     if (address && address.toLowerCase() != this.address.toLowerCase()) {
       throw new Error(`The specified address query is not supported temporarily ${address} - ${this.address}`);
     }

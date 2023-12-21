@@ -329,26 +329,26 @@ export class V3Service {
             mdcs {
             id
             owner
-            chainIdSnapshot {
-              chainIdMappingSnapshot{
-                  chainId
-                  chainIdIndex
-                  enableTimestamp
+            columnArraySnapshot(
+              where: {enableTimestamp_lt: "${Math.floor(new Date().valueOf() / 1000)}"}
+              orderBy: enableTimestamp
+              orderDirection: desc
+              first: 1
+            ) {
+              enableTimestamp
+              chainIdMappingSnapshot {
+                    chainId
+                    chainIdIndex
+                
               }
-            }
-            ebcSnapshot {
-              ebcMappingSnapshot{
-                ebcAddr
-                ebcIndex
-                enableTimestamp
+              ebcMappingSnapshot {
+                  ebcAddr
+                  ebcIndex
               }
-            }
-            dealerSnapshot {
               dealerMappingSnapshot {
-                 dealerAddr
-                 dealerIndex
-                 enableTimestamp
-              }
+                   dealerAddr
+                   dealerIndex
+              }             
             }
             ruleSnapshot(orderBy: version, orderDirection: desc) {
               version
@@ -384,18 +384,36 @@ export class V3Service {
       }`,
       });
       response = res.data?.data;
-      responseCache = JSON.parse(JSON.stringify(response));
+        try {
+            responseCache = JSON.parse(JSON.stringify(response));
+        } catch (e) {
+            console.log("response", response);
+            throw new Error(e);
+        }
     }
     if (!response?.dealer || !response?.chainRels) return [];
     let updateTime = 0;
     const v3ChainList = await this.convertV3ChainList(response.chainRels);
-    const mdcs: any[] = response.dealer.mdcs || [];
+    const mdcs: any[] = response?.dealer?.mdcs || [];
     const marketList = [];
     const makerAddressList = [];
     for (const mdc of mdcs) {
-      if(!mdc?.chainIdSnapshot.length) continue;
-      if(!mdc?.ebcSnapshot.length) continue;
-      if(!mdc?.dealerSnapshot.length) continue;
+      if (!mdc?.columnArraySnapshot) {
+        continue;
+      }
+      const columnArraySnapshot = mdc?.columnArraySnapshot[0];
+      const chainIdMappingSnapshots = columnArraySnapshot.chainIdMappingSnapshot;
+      const ebcMappingSnapshot = columnArraySnapshot.ebcMappingSnapshot;
+      const dealerMappingSnapshot = columnArraySnapshot.dealerMappingSnapshot;
+      if (!chainIdMappingSnapshots || !chainIdMappingSnapshots.length) {
+        continue;
+      }
+      if (!ebcMappingSnapshot || !ebcMappingSnapshot.length) {
+        continue;
+      }
+      if (!dealerMappingSnapshot || !dealerMappingSnapshot.length) {
+        continue;
+      }
       const whiteListConfig = await this.envConfigService.getAsync('WHITE_LIST');
       if (whiteListConfig) {
         const whiteList = whiteListConfig.split(',');
@@ -407,53 +425,17 @@ export class V3Service {
       const ebcIdMap = {};
       const dealerIdMap = {};
 
-      mdc.chainIdSnapshot.sort(function (a, b) {
-        return a.chainIdMappingSnapshot[0].enableTimestamp - b.chainIdMappingSnapshot[0].enableTimestamp;
-      }).forEach((item) => {
-        if (item.chainIdMappingSnapshot.length) {
-          const enableTimestamp = +item.chainIdMappingSnapshot[0].enableTimestamp * 1000;
-          if (enableTimestamp > timestamp) {
-            if (!updateTime) updateTime = enableTimestamp;
-            updateTime = Math.min(updateTime, enableTimestamp);
-          } else {
-            for (const snapshot of item.chainIdMappingSnapshot) {
-              chainIdMap[snapshot.chainId] = snapshot.chainIdIndex;
-            }
-          }
-        }
-      });
+      for (const snapshot of chainIdMappingSnapshots) {
+        chainIdMap[snapshot.chainId] = snapshot.chainIdIndex;
+      }
 
-      mdc.ebcSnapshot.sort(function (a, b) {
-        return a.ebcMappingSnapshot[0].enableTimestamp - b.ebcMappingSnapshot[0].enableTimestamp;
-      }).forEach((item) => {
-        if (item.ebcMappingSnapshot.length) {
-          const enableTimestamp = +item.ebcMappingSnapshot[0].enableTimestamp * 1000;
-          if (enableTimestamp > timestamp) {
-            if (!updateTime) updateTime = enableTimestamp;
-            updateTime = Math.min(updateTime, enableTimestamp);
-          } else {
-            for (const snapshot of item.ebcMappingSnapshot) {
-              ebcIdMap[snapshot.ebcAddr.toLowerCase()] = snapshot.ebcIndex;
-            }
-          }
-        }
-      });
+      for (const snapshot of ebcMappingSnapshot) {
+        ebcIdMap[snapshot.ebcAddr.toLowerCase()] = snapshot.ebcIndex;
+      }
 
-      mdc.dealerSnapshot.sort(function (a, b) {
-        return a.dealerMappingSnapshot[0].enableTimestamp - b.dealerMappingSnapshot[0].enableTimestamp;
-      }).forEach((item) => {
-        if (item.dealerMappingSnapshot.length) {
-          const enableTimestamp = +item.dealerMappingSnapshot[0].enableTimestamp * 1000;
-          if (enableTimestamp > timestamp) {
-            if (!updateTime) updateTime = enableTimestamp;
-            updateTime = Math.min(updateTime, enableTimestamp);
-          } else {
-            for (const snapshot of item.dealerMappingSnapshot) {
-              dealerIdMap[snapshot.dealerAddr.toLowerCase()] = snapshot.dealerIndex;
-            }
-          }
-        }
-      });
+      for (const snapshot of dealerMappingSnapshot) {
+        dealerIdMap[snapshot.dealerAddr.toLowerCase()] = snapshot.dealerIndex;
+      }
 
       const ruleSnapshots = mdc.ruleSnapshot.sort(function(a, b) {
         return b.version - a.version;
@@ -465,7 +447,9 @@ export class V3Service {
           continue;
         }
         const rules = ruleSnapshot?.ruleLatest;
-        if (!rules) continue;
+        if (!rules) {
+            continue;
+        }
         for (const rule of rules) {
           const fromId = rule.chain0 + rule.chain0Token + rule.chain1 + rule.chain1Token + mdc.owner;
           const toId = rule.chain1 + rule.chain1Token + rule.chain0 + rule.chain0Token + mdc.owner;

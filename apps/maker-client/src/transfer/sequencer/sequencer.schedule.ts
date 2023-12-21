@@ -1,88 +1,82 @@
+import { Cron } from '@nestjs/schedule';
 import { Inject, Injectable } from "@nestjs/common";
-import { Cron } from "@nestjs/schedule";
 import { InjectModel } from "@nestjs/sequelize";
 import { Mutex } from "async-mutex";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import { Transfers as TransfersModel, BridgeTransaction as BridgeTransactionModel } from "@orbiter-finance/seq-models";
-import { SequencerService } from "./sequencer.service";
 import { ValidatorService } from "../validator/validator.service";
-import {
-  type MonitorState,
-  type TransferAmountTransaction,
-} from "./sequencer.interface";
-import { LoggerDecorator, arePropertyValuesConsistent, isEmpty, OrbiterLogger } from "@orbiter-finance/utils";
+import { AlertService } from "@orbiter-finance/alert";
+import { groupBy, maxBy, sumBy } from 'lodash';
+import { LoggerDecorator, isEmpty, OrbiterLogger, sleep, equals, JSONStringify } from "@orbiter-finance/utils";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
-import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';
-import { AlertService } from "@orbiter-finance/alert";
-import { StoreService } from "@orbiter-finance/blockchain-account";
+import { MemoryQueue } from '../../utils/MemoryQueue'
+import { AccountFactoryService } from "../../factory";
+import BigNumber from "bignumber.js";
+import * as Errors from "../../utils/Errors";
+import { TransferService } from "./transfer.service";
 
 @Injectable()
 export class SequencerScheduleService {
   @LoggerDecorator()
   private readonly logger: OrbiterLogger;
-  public readonly stores = new Map<string, StoreService>(); // chainId + owner
-  private storesState: Record<string, MonitorState> = {};
-
+  private readonly applicationStartupTime: number = Date.now();
+  private queue: { [key: string]: MemoryQueue<BridgeTransactionModel> } = {};
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
     @InjectModel(BridgeTransactionModel)
     private readonly bridgeTransactionModel: typeof BridgeTransactionModel,
-    private readonly sequencerService: SequencerService,
     private readonly envConfig: ENVConfigService,
     private alertService: AlertService,
+    private accountFactoryService: AccountFactoryService,
+    private transferService: TransferService,
     private readonly consumerService: ConsumerService) {
-    this.checkDBTransactionRecords();
-    this.consumerService.consumeMakerWaitTransferMessage(this.consumeMQTransactionRecords.bind(this))
-    // this.validatorService.validatingValueMatches("ETH", "1", "ETH", "2")
-  }
 
+    this.checkDBTransactionRecords();
+    const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER", []);
+    if (subMakers && subMakers.length > 0) {
+      for (const key of subMakers) {
+        this.consumerService.consumeMakerWaitTransferMessage(this.addQueue.bind(this), key)
+      }
+    } else {
+      this.consumerService.consumeMakerWaitTransferMessage(this.addQueue.bind(this))
+    }
+  }
   @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
     const owners = this.envConfig.get("MAKERS") || [];
-    for (const chain of this.chainConfigService.getAllChains()) {
-      for (const owner of owners) {
-        // targetChainId + owner
-        const key = `${chain.chainId}-${owner}`.toLocaleLowerCase();
-        if (!this.stores.has(key)) {
-          this.stores.set(key, new StoreService(chain.chainId));
-        }
-        const store = this.stores.get(key);
-        // read db history
-        this.readDBTransactionRecords(store, owner).catch((error) => {
-          this.logger.error(
-            "checkDBTransactionRecords -> readDBTransactionRecords error",
-            error
-          );
-        });
-      }
+    for (const owner of owners) {
+      // read db history
+      this.readDBTransactionRecords(owner.toLocaleLowerCase()).catch((error) => {
+        this.logger.error(
+          "checkDBTransactionRecords -> readDBTransactionRecords error",
+          error
+        );
+      });
     }
   }
-
-  private async readDBTransactionRecords(store: StoreService, owner: string) {
+  private async readDBTransactionRecords(owner: string) {
     const maxTransferTimeoutMinute = this.validatorService.getTransferGlobalTimeout();
     const where = {
       status: 0,
-      targetChain: store.chainId,
       sourceMaker: owner,
-      targetId:null,
-      // version:"2-0",
-      // id: {
-      //   [Op.gt]: store.lastId,
+      targetId: null,
+      version: '3-0',
+      // sourceTime: {
+      //   [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
       // },
-      sourceTime: {
-        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
-      },
     }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
       attributes: [
         "id",
         "transactionId",
+        'status',
         "sourceId",
         "targetId",
+        'sourceTime',
         "sourceChain",
         "targetChain",
         "sourceAmount",
@@ -97,43 +91,16 @@ export class SequencerScheduleService {
         "sourceToken",
         "targetToken",
         "responseMaker",
+        'ruleId',
+        "version"
       ],
       where,
+      limit: 100
     });
     if (records.length > 0) {
       for (const tx of records) {
         try {
-          const batchTransferCount = this.validatorService.getPaidTransferCount(tx.targetChain);
-          if (batchTransferCount == -1) {
-            this.logger.info(
-              `${tx.sourceId} To ${tx.targetChain} Setting PaidTransferCount to -1 disables sending`
-            );
-            continue;
-          }
-          if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
-            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
-            continue
-          }
-          if (await store.isStoreExist(tx.sourceId, tx.targetToken)) {
-            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Already exists in the store`)
-            continue
-          }
-          if (await store.isTransfersExist(tx.sourceId)) {
-            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} There is a collection record`)
-            continue
-          }
-          const checkResult = await this.validatorService.optimisticCheckTxStatus(tx.sourceId, tx.sourceChain)
-          if (!checkResult) {
-            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} optimisticCheckTxStatus failed`)
-            continue
-          }
-          const result = await store.addTransactions(tx as any);
-          this.logger.debug(
-            `[readDBTransactionRecords] ${tx.sourceId} DB store addTransactions ${JSON.stringify(result)}`
-          );
-          if (+tx.id > store.lastId) {
-            store.lastId = +tx.id;
-          }
+          this.addQueue(tx);
         } catch (error) {
           this.logger.error(
             `[readDBTransactionRecords] ${tx.sourceId} handle error`, error
@@ -142,203 +109,282 @@ export class SequencerScheduleService {
       }
     }
   }
-
-  private async consumeMQTransactionRecords(bridgeTransaction: BridgeTransactionAttributes) {
-    this.logger.info(`consumeMQTransactionRecords ${JSON.stringify(bridgeTransaction)}`)
-    const chains = this.chainConfigService.getAllChains()
-    const targetChainInfo = chains.find(chain => String(chain.chainId) === String(bridgeTransaction.targetChain))
-    if (!targetChainInfo) {
-      this.logger.warn(`sourceId:${bridgeTransaction.sourceId}, bridgeTransaction does not match the maker or chain, sourceMaker:${bridgeTransaction.sourceMaker}, chainId:${bridgeTransaction.targetChain}`)
+  async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel, queue: MemoryQueue) {
+    // is exist
+    // if (dayjs(bridgeTx.sourceTime).valueOf() <= this.applicationStartupTime) {
+    //   throw new Errors.PaidSourceTimeLessStartupTime()
+    // }
+    const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
+    if (transactionTimeValid) {
+      throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
+    }
+    const isConsume = await queue.store.has(bridgeTx.sourceId);
+    if (isConsume) {
+      throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+    }
+    if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
+      throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
     }
 
-    const key = `${bridgeTransaction.targetChain}-${bridgeTransaction.sourceMaker}`.toLocaleLowerCase();
-    if (!this.stores.has(key)) {
-      this.stores.set(key, new StoreService(bridgeTransaction.targetChain));
+    const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
+    if (validDisabledPaid) {
+      await queue.add(bridgeTx);
+      throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
     }
-    const checkResult = await this.validatorService.optimisticCheckTxStatus(bridgeTransaction.sourceId, bridgeTransaction.sourceChain)
-    if (!checkResult) {
-      this.logger.warn(`${bridgeTransaction.sourceId} optimisticCheckTxStatus failed`)
+    const wallets = await this.validatorService.checkMakerPrivateKey(bridgeTx);
+    if (!wallets || wallets.length <= 0) {
+      await queue.add(bridgeTx);
+      throw new Errors.MakerNotPrivetKey();
+    }
+    const isFluidityOK = await this.validatorService.checkMakerFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
+    if (!isFluidityOK) {
+      await queue.add(bridgeTx);
+      throw new Error(`${bridgeTx.sourceId}`);
+    }
+
+    const success = await this.validatorService.validatingValueMatches(
+      bridgeTx.sourceSymbol,
+      bridgeTx.sourceAmount,
+      bridgeTx.targetSymbol,
+      bridgeTx.targetAmount
+    )
+    if (!success) {
+      throw new Errors.AmountRiskControlError(`${bridgeTx.sourceId}`)
+    }
+    // start paid
+    const account = await this.accountFactoryService.createMakerAccount(
+      bridgeTx.targetMaker,
+      bridgeTx.targetChain
+    );
+    await account.connect(wallets[0].key, bridgeTx.targetMaker);
+    const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
+    if (!saveRecord) {
+      throw new Error(`${bridgeTx.sourceId}`);
+    }
+    try {
+      return await this.transferService.execSingleTransfer(bridgeTx, account);
+    } catch (error) {
+      if (error instanceof Errors.PaidRollbackError) {
+        this.logger.error(`execSingleTransfer error PaidRollbackError ${bridgeTx.sourceId} message ${error.message}`);
+      }
+      throw error;
+    }
+  }
+  async paidSingleBridgeInscriptionTransaction(bridgeTx: BridgeTransactionModel, queue: MemoryQueue) {
+    // is exist
+    // if (dayjs(bridgeTx.sourceTime).valueOf() <= this.applicationStartupTime) {
+    //   throw new Errors.PaidSourceTimeLessStartupTime()
+    // }
+    const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
+    if (transactionTimeValid) {
+      throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
+    }
+    const isConsume = await queue.store.has(bridgeTx.sourceId);
+    if (isConsume) {
+      throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+    }
+    if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
+      throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+    }
+
+    const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
+    if (validDisabledPaid) {
+      await queue.add(bridgeTx);
+      throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
+    }
+    const wallets = await this.validatorService.checkMakerPrivateKey(bridgeTx);
+    if (!wallets || wallets.length <= 0) {
+      await queue.add(bridgeTx);
+      throw new Errors.MakerNotPrivetKey();
+    }
+    const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
+    if (!isFluidityOK) {
+      await queue.add(bridgeTx);
+      throw new Error(`${bridgeTx.sourceId}`);
+    }
+
+    const success = await this.validatorService.validatingValueMatches(
+      bridgeTx.sourceSymbol,
+      bridgeTx.sourceAmount,
+      bridgeTx.targetSymbol,
+      bridgeTx.targetAmount
+    )
+    if (!success) {
+      throw new Errors.AmountRiskControlError(`${bridgeTx.sourceId}`)
+    }
+    // start paid
+    const account = await this.accountFactoryService.createMakerAccount(
+      bridgeTx.targetMaker,
+      bridgeTx.targetChain
+    );
+    await account.connect(wallets[0].key, bridgeTx.targetMaker);
+
+    const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
+    if (!saveRecord) {
+      throw new Error(`${bridgeTx.sourceId}`);
+    }
+    try {
+      return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
+    } catch (error) {
+      if (error instanceof Errors.PaidRollbackError) {
+        this.logger.error(`execSingleTransfer error PaidRollbackError ${bridgeTx.sourceId} message ${error.message}`);
+      }
+      throw error;
+    }
+  }
+  async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queue: MemoryQueue) {
+    const legalTransaction = [];
+    const [targetChain, targetMaker] = queue.id.split('-');
+    // 
+    const privateKey = await this.validatorService.getSenderPrivateKey(targetMaker);
+    if (!privateKey) {
+      throw new Errors.MakerNotPrivetKey(`${targetMaker} privateKey ${bridgeTxs.map(row => row.sourceId).join(',')}`);
+    }
+    for (const bridgeTx of bridgeTxs) {
+      try {
+        // if (dayjs(bridgeTx.sourceTime).valueOf() <= this.applicationStartupTime) {
+        //   throw new Errors.PaidSourceTimeLessStartupTime()
+        // }
+        if (bridgeTx.version != bridgeTxs[0].version) {
+          throw new Error('The versions of batch refunds are inconsistent')
+        }
+        const isConsume = await queue.store.has(bridgeTx.sourceId);
+        if (isConsume) {
+          throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+        }
+        if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
+          throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+        }
+        const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
+        if (transactionTimeValid) {
+          throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
+        }
+        const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
+        if (validDisabledPaid) {
+          await queue.add(bridgeTx);
+          throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
+        }
+        if (targetMaker != bridgeTx.targetMaker.toLocaleLowerCase()) {
+          throw new Errors.BatchPaidSameMaker(`${bridgeTx.sourceId} expect ${targetMaker} get ${bridgeTx.targetMaker}`);
+        }
+        legalTransaction.push(bridgeTx);
+      } catch (error) {
+        this.logger.error(`paidManyBridgeTransaction for error ${error.message}`, error);
+      }
+    }
+    const groupData = groupBy(legalTransaction, 'targetToken');
+    const maxItem = maxBy(Object.entries(groupData), item => {
+      return item[1];
+    });
+    // cancel
+    for (const tokenAddr in groupData) {
+      if (tokenAddr != maxItem[0]) {
+        queue.addBatch(groupData[tokenAddr])
+        delete groupData[tokenAddr];
+      }
+    }
+    const totalValue = sumBy(maxItem[1], item => +item.targetAmount);
+    const isFluidityOK = await this.validatorService.checkMakerFluidity(targetChain, targetMaker, maxItem[0], totalValue)
+    if (!isFluidityOK) {
+      await queue.addBatch(maxItem[1]);
+      throw new Error(`${maxItem[1].map(row => row.sourceId).join(',')}`);
+    }
+    // send
+    const account = await this.accountFactoryService.createMakerAccount(
+      targetMaker,
+      targetChain
+    );
+    for (let i = maxItem[1].length - 1; i >= 0; i--) {
+      const bridgeTx = maxItem[1][i];
+      const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
+      if (!saveRecord) {
+        maxItem[1].splice(i, 1);
+        this.logger.error(`paidManyBridgeTransaction setEnsureRecord fai ${bridgeTx.sourceId}`);
+      }
+    }
+    await account.connect(privateKey, targetMaker);
+    try {
+      if (maxItem[1].length == 1) {
+        return await this.transferService.execSingleTransfer(maxItem[1][0], account)
+      }
+      return await this.transferService.execBatchTransfer(maxItem[1], account)
+    } catch (error) {
+      if (error instanceof Errors.PaidRollbackError) {
+        this.logger.error(`execBatchTransfer error PaidRollbackError ${targetChain} - ${maxItem[1].map(row => row.sourceId).join(',')} message ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async consumptionSendingQueue(bridgeTx: BridgeTransactionModel | Array<BridgeTransactionModel>, queue: MemoryQueue) {
+    let result;
+    try {
+      if (Array.isArray(bridgeTx)) {
+
+        if (bridgeTx.length > 1) {
+          if (bridgeTx[0].version === '3-0') {
+            // result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queue)
+          } else {
+            result = await this.paidManyBridgeTransaction(bridgeTx, queue)
+          }
+        } else {
+          if (bridgeTx[0].version === '3-0') {
+            result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queue)
+          } else {
+            
+            result = await this.paidSingleBridgeTransaction(bridgeTx[0], queue)
+          }
+        }
+      } else {
+        if (bridgeTx.version === '3-0') {
+          result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx, queue)
+        } else {
+          result = await this.paidSingleBridgeTransaction(bridgeTx, queue)
+        }
+      }
+      this.logger.info(`${queue.id} consumptionSendingQueue info ${JSONStringify(result)}`);
+    } catch (error) {
+      this.logger.error(`${queue.id} consumptionSendingQueue error ${error.message}`, error);
+    }
+    console.log('consumptionSendingQueue result:', result)
+    return result;
+  }
+  async addQueue(tx: BridgeTransactionModel) {
+    console.log(`addQueue ${tx.targetChain} - ${tx.sourceChain} - ${tx.sourceId}`);
+    if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
+      this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
       return
     }
-    const store = this.stores.get(key)
-    const result = await store.addTransactions(bridgeTransaction as any);
-    this.logger.debug(
-      `${bridgeTransaction.sourceId} MQ store addTransactions ${JSON.stringify(result)}`
-    );
-    // throw new Error()
+    const checkResult = await this.validatorService.optimisticCheckTxStatus(tx.sourceId, tx.sourceChain)
+    if (!checkResult) {
+      this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} optimisticCheckTxStatus failed`)
+      return
+    }
+    if (!tx.targetMaker) {
+      this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId}  targetMaker is null`)
+      return
+    }
+    const queueKey = `${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`;
+    const batchTransferCount = this.validatorService.getPaidTransferCount(tx.targetChain);
+    if (!this.queue[queueKey]) {
+      const queue = new MemoryQueue<BridgeTransactionModel>(queueKey, {
+        consumeFunction: this.consumptionSendingQueue.bind(this),
+        batchSize: batchTransferCount,
+      })
+      this.queue[queueKey] = queue;
+    }
+    const queue = this.queue[queueKey];
+    // exist check
+    const ensureExists = await queue.ensureExists(tx.sourceId);
+    if (ensureExists) {
+      return this.logger.info(`addQueue ${tx.targetChain} ensureExists ${tx.sourceChain} - ${tx.sourceId}`);
+    }
+    const ensureQueue = await queue.ensureQueue(tx.sourceId);
+    if (ensureQueue) {
+      return this.logger.info(`addQueue ${tx.targetChain} ensureQueue ${tx.sourceChain} - ${tx.sourceId}`);
+    }
+    queue.setBatchSize(batchTransferCount)
+    queue.add(tx);
   }
 
-  @Cron("*/1 * * * * *")
-  private async checkStoreWaitSend() {
-    const storeKeys = this.stores.keys();
-    for (const k of storeKeys) {
-      const store = this.stores.get(k);
-      const isDisabledPaid = await this.validatorService.validDisabledPaid(store.chainId);
-      if (isDisabledPaid) {
-        this.logger.debug(
-          `checkStoreWaitSend ${store.chainId} Disabled Paid collection function`
-        );
-        continue;
-      }
-      if (!this.storesState[k]) {
-        this.storesState[k] = {
-          lock: new Mutex(),
-          lastSubmit: Date.now(),
-        };
-      }
-      const storesState = this.storesState[k];
-      if (storesState.lock.isLocked()) {
-        return;
-      }
-      const TransferInterval =
-        this.envConfig.get(`${store.chainId}.TransferInterval`) || 1000;
-      if (Date.now() - storesState.lastSubmit >= TransferInterval) {
-        const wthData = store.getSymbolsWithData();
-        if (wthData.length > 0) {
-          this.checkStoreReadySend(k, store);
-        }
-      }
-    }
-  }
-
-  private async checkStoreReadySend(key: string, store: StoreService) {
-    const lock: Mutex = this.storesState[key].lock;
-    if (lock.isLocked()) {
-      return;
-    }
-    const isDisabledPaid = await this.validatorService.validDisabledPaid(store.chainId);
-    if (isDisabledPaid) {
-      this.logger.debug(
-        `checkStoreReadySend ${store.chainId} Disabled Paid collection function`
-      );
-      return;
-    }
-    const batchTransferCount = this.validatorService.getPaidTransferCount(store.chainId);
-    if (batchTransferCount == -1) {
-      this.logger.info(
-        `Setting PaidTransferCount to -1 disables sending`
-      );
-      return;
-    }
-    lock.runExclusive(async () => {
-      this.logger.debug(`checkStoreReadySend ${key}`);
-      const wthData = store.getSymbolsWithData();
-      for (const row of wthData) {
-        const isBatchTransaction =
-          row.size >= batchTransferCount && batchTransferCount > 1;
-        if (isBatchTransaction) {
-          this.logger.debug(
-            `checkStoreReadySend ${key} -> batchSendTransaction`
-          );
-          await this.batchSendTransaction(row.id, store).catch((error) => {
-            this.logger.error(
-              "checkStoreReadySend -> batchSendTransaction error",
-              error
-            );
-          });
-        } else {
-          this.logger.debug(
-            `rowSize:${row.size} batchTransferCount:${batchTransferCount} checkStoreReadySend ${key} -> singleSendTransaction`
-          );
-          await this.singleSendTransaction(row.id, store).catch((error) => {
-            this.logger.error(
-              "checkStoreReadySend -> singleSendTransaction error",
-              error
-            );
-          });
-        }
-      }
-      this.storesState[key].lastSubmit = Date.now();
-    });
-  }
-
-  async batchSendTransaction(token: string, store: StoreService) {
-    const transfers = await store.getTransactionsByToken(token);
-    for (let i = transfers.length - 1; i >= 0; i--) {
-      const tx = transfers[i];
-      const hash = tx.sourceId;
-      if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
-        transfers.splice(i, 1);
-        store.removeSymbolsWithData(token, hash);
-        this.logger.warn(`[batchSendTransaction] ${hash} Exceeding the effective payment collection time failed`)
-        continue
-      }
-      if (await store.isTransfersExist(tx.sourceId)) {
-        transfers.splice(i, 1);
-        store.removeSymbolsWithData(token, hash);
-        this.logger.warn(`[batchSendTransaction] ${hash} There is a collection record`)
-        continue
-      }
-    }
-
-    if (
-      !arePropertyValuesConsistent<TransferAmountTransaction>(
-        transfers,
-        "targetToken"
-      )
-    ) {
-      throw new Error("batchSendTransaction targetToken inconsistent");
-    }
-    const { result, errors } =
-      await this.validatorService.transactionGetPrivateKeys(
-        store.chainId,
-        token,
-        transfers
-      );
-    if (isEmpty(result) && errors.length > 0) {
-      this.logger.error(
-        `${token} batchSendTransaction validatorService warn ${JSON.stringify(
-          errors || {}
-        )}`
-      );
-      this.alertService.sendMessage(`batchSendTransaction validatorService error: ${JSON.stringify(errors || {})}`, 'TG');
-      return;
-    }
-    const promiseMaps = Object.keys(result).map(async (sender) => {
-      const { account, transfers } = result[sender];
-      if (transfers.length == 1) {
-        const transfer: TransferAmountTransaction = transfers[0];
-        return await this.sequencerService.singleSendTransactionByTransfer(
-          transfer.targetToken,
-          store,
-          transfer.sourceId
-        );
-      }
-      if (transfers.length > 0) {
-        await this.sequencerService.batchSendTransactionByTransfer(
-          token,
-          store,
-          account,
-          transfers
-        );
-        return;
-      }
-      return null;
-    });
-    return await Promise.all(promiseMaps);
-  }
-
-  async singleSendTransaction(token: string, store: StoreService) {
-    const tokenTxList = await store.getTargetTokenTxIdList(token);
-    for (const hash of tokenTxList) {
-      const tx = store.getTransaction(hash);
-      if (!tx) {
-        store.removeSymbolsWithData(token, hash);
-        this.logger.warn(`[singleSendTransaction] ${hash} Transaction details do not exist`)
-        continue
-      }
-      if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
-        store.removeSymbolsWithData(token, hash);
-        this.logger.warn(`[singleSendTransaction] ${hash} Exceeding the effective payment collection time failed`)
-        continue
-      }
-      if (await store.isTransfersExist(tx.sourceId)) {
-        store.removeSymbolsWithData(token, hash);
-        this.logger.warn(`[singleSendTransaction] ${hash} There is a collection record`)
-        continue
-      }
-      this.sequencerService.singleSendTransactionByTransfer(token, store, hash);
-      store.removeSymbolsWithData(token, hash);
-    }
-  }
 }

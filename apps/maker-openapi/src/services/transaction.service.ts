@@ -71,10 +71,6 @@ export class TransactionService {
                 console.error('Transfer not found', sourceTxHash);
                 continue;
             }
-            const ruleKey: string = keccak256(solidityPack(
-                ['uint256', 'uint256', 'uint256', 'uint256'],
-                [+bridgeTx.sourceChain, +bridgeTx.targetChain, +bridgeTx.sourceToken, +bridgeTx.targetToken]
-            ));
             const arbitrationTransaction: ArbitrationTransaction = {
                 sourceChainId: Number(bridgeTx.sourceChain),
                 sourceTxHash,
@@ -82,7 +78,8 @@ export class TransactionService {
                 sourceTxBlockNum: Number(transfer.blockNumber),
                 sourceTxTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                 sourceTxIndex: Number(transfer.transactionIndex),
-                ruleKey,
+                ebcAddress: bridgeTx.ebcAddress,
+                ruleId: bridgeTx.ruleId,
                 freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(10 ** sourceToken.decimals).toFixed(0),
                 freezeToken: mainToken.address,
                 minChallengeDepositAmount: String(await this.envConfigService.getAsync("MinChallengeDepositAmount") || 0)

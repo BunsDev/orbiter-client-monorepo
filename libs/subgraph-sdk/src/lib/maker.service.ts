@@ -4,39 +4,46 @@ export class MakerService {
   }
   async getCrossChainMakerSecurityCodeInfo(owner: string, dealerIndex: number, ebcIndex: number, chainIndex: number, txTimestamp: number) {
     const queryStr = `
-        query MyQuery {
-          chainIdMappingSnapshots(
-            where: {chainIdIndex: "${chainIndex}", owner: "${owner}", enableTimestamp_lt: "${txTimestamp}"}
-            orderBy: enableTimestamp
-            orderDirection: desc
-            first: 1
-          ) {
-            id
-            chainId
-          }
-          ebcMappingSnapshots(
-            where: {ebcIndex: "${ebcIndex}", owner: "${owner}", enableTimestamp_lt: "${txTimestamp}"}
-            orderBy: enableTimestamp
-            orderDirection: desc
-            first: 1
-          ) {
-            id
-            ebcAddr
-          }
-          dealerMappingSnapshots(
-            where: {dealerIndex: "${dealerIndex}", owner: "${owner}", enableTimestamp_lt: "${txTimestamp}"}
-            orderBy: enableTimestamp
-            orderDirection: desc
-            first: 1
-          ) {
-            id
-            dealerAddr
+        {
+          mdcs (where:{owner:"${owner}"})
+            {
+            columnArraySnapshot(
+              where: {enableTimestamp_lt: "${txTimestamp}"}
+              orderBy: enableTimestamp
+              orderDirection: desc
+              first: 1
+            ) {
+              enableTimestamp
+              chainIdMappingSnapshot(
+               where: {chainIdIndex: "${chainIndex}"}
+               first: 1
+              ) {
+                id
+                chainIdIndex
+                chainId
+              }
+              ebcMappingSnapshot(
+                where: {ebcIndex: "${ebcIndex}"}
+                first: 1
+              ) {
+                id
+                ebcIndex
+                ebcAddr
+              }
+              dealerMappingSnapshot(
+                where: {dealerIndex: "${dealerIndex}"}
+                first: 1
+              ) {
+                id
+                dealerIndex
+                dealerAddr
+              }
+            }
           }
         }
           `
-    const result = await this.ctx.query(queryStr, {
-    });
-    return result;
+    const result = await this.ctx.query(queryStr);
+    return result?.mdcs?.[0]?.columnArraySnapshot?.[0];
 
   }
   async getCrossChainMakerSecurityCodeInfoRule(owner: string, ebcAddr: string, sourceChain: number, targetChain: number, sourceToken: string, targetToken: string, txTime: number) {

@@ -4,6 +4,7 @@ import {
   isError,
   keccak256,
   Network,
+  JsonRpcProvider,
   type Wallet,
 } from "ethers6";
 import { NonceManager } from './nonceManager';
@@ -30,24 +31,30 @@ export class EVMAccount extends OrbiterAccount {
     super(chainId, ctx);
   }
   getProvider() {
-    const rpc = this.chainConfig.rpc[0];
-    const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
-    if (!this.#provider) {
-      const provider = new Orbiter6Provider(rpc,
-        network, {
-        staticNetwork: network,
-      });
-      this.#provider = provider;
+    try {
+      const rpc = this.chainConfig.rpc[0];
+      return new JsonRpcProvider(rpc)
+    }catch(error) {
+      console.error('getProvider error', error);
     }
-    if (this.#provider && this.#provider.getUrl() != rpc) {
-      this.logger.info(
-        `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
-      );
-      this.#provider = new Orbiter6Provider(rpc, network, {
-        staticNetwork: network
-      });
-    }
-    return this.#provider;
+ 
+    // const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
+    // if (!this.#provider) {
+    //   const provider = new Orbiter6Provider(rpc,
+    //     network, {
+    //     staticNetwork: network,
+    //   });
+    //   this.#provider = provider;
+    // }
+    // if (this.#provider && this.#provider.getUrl() != rpc) {
+    //   this.logger.info(
+    //     `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
+    //   );
+    //   this.#provider = new Orbiter6Provider(rpc, network, {
+    //     staticNetwork: network
+    //   });
+    // }
+    // return this.#provider;
   }
 
   async connect(privateKey: string, _address?: string) {
@@ -316,7 +323,8 @@ export class EVMAccount extends OrbiterAccount {
     return receipt;
   }
 
-  async sendTransaction(
+
+  public async sendTransaction(
     to: string,
     transactionRequest: TransactionRequest = {}
   ): Promise<TransactionResponse> {
@@ -353,7 +361,52 @@ export class EVMAccount extends OrbiterAccount {
       this.logger.info(
         `${chainConfig.name} sendTransaction txHash:${txHash}`
       );
-      await this.store.saveSerialRelTxHash(serialIds, txHash);
+      //
+      submit();
+      return response;
+    } catch (error) {
+      rollback();
+      this.logger.error(
+        `broadcastTransaction tx error:${txHash} - ${error.message}`,
+        error
+      );
+      // rollback()
+      if (isError(error, "NONCE_EXPIRED")) {
+        throw new TransactionSendBeforeError(error.message);
+      }
+      throw new TransactionFailedError(error.message);
+    }
+  }
+
+  public async mintInscription(
+    transactionRequest: TransactionRequest
+  ): Promise<TransactionResponse> {
+    const chainConfig = this.chainConfig;
+    const provider = this.getProvider();
+    const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
+    let txHash;
+    try {
+      if (transactionRequest.value) {
+        transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
+      }
+      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // transactionRequest = await this.wallet.populateTransaction(transactionRequest);
+      // if (transactionRequest.type === 2) {
+
+      // } else {
+      //   transactionRequest.gasPrice = transactionRequest.gasPrice .
+      // }
+      transactionRequest.nonce = nonce;
+      this.logger.info(
+        `${chainConfig.name} sendTransaction:${JSONStringify(transactionRequest)}`
+      );
+      const signedTx = await this.wallet.signTransaction(transactionRequest);
+      txHash = keccak256(signedTx);
+      const response = await provider.broadcastTransaction(signedTx);
+      this.logger.info(
+        `${chainConfig.name} sendTransaction txHash:${txHash}`
+      );
+      //
       submit();
       return response;
     } catch (error) {
@@ -395,8 +448,6 @@ export class EVMAccount extends OrbiterAccount {
     const provider = this.getProvider();
     if (token && token != chainConfig.nativeCurrency.address) {
       // is native
-      // const chainId = await this.wallet.getChainId();
-      // const issMainToken = await chains.inValidMainToken(String(chainId), token);
       return await this.getTokenBalance(token, address);
     } else {
       return await provider.getBalance(address || this.wallet.address);
@@ -408,8 +459,12 @@ export class EVMAccount extends OrbiterAccount {
     address?: string
   ): Promise<bigint> {
     const provider = this.getProvider();
+    try {
     const erc20 = new ethers.Contract(token, ERC20Abi, provider);
     return await erc20.balanceOf(address || this.wallet.address);
+  }catch(error){
+    console.log('get balance error', error)
+  }
   }
 
 }

@@ -20,7 +20,7 @@ export class ProofController {
 
     @Post("/proofSubmission")
     async proofSubmission(@Body() data: ProofSubmissionRequest): Promise<HTTPResponse> {
-        // wj submit
+        // spv-client submit
         try {
             this.logger.info(`proofSubmission`, data);
             return HTTPResponse.success(await this.proofService.proofSubmission(data));
@@ -32,7 +32,7 @@ export class ProofController {
 
     @Get("/needProofTransactionList")
     async needMakerProofTransactionList(): Promise<HTTPResponse> {
-        // wj need
+        // spv-client need
         try {
             return HTTPResponse.success(await this.proofService.needMakerProofTransactionList());
         } catch (error) {
@@ -42,7 +42,7 @@ export class ProofController {
 
     @Post("/makerAskProof")
     async makerAskProof(@Body() data: MakerAskProofRequest): Promise<HTTPResponse> {
-        // arbitration-client submit
+        // maker arbitration-client submit
         try {
             await this.proofService.makerAskProof(data);
             return HTTPResponse.success(null);
