@@ -161,7 +161,6 @@ export default class InscriptionBuilder {
     createdData.withholdingFee = createdData.sourceAmount;
     createdData.targetAmount = targetAmount;
     createdData.targetChain = targetChain.chainId
-    createdData.targetToken = deployRecord.hash;
     createdData.targetSymbol = deployRecord.tick;
     createdData.targetMaker = transfer.receiver;
     createdData.transactionId = TransactionID(
@@ -172,6 +171,7 @@ export default class InscriptionBuilder {
       dayjs(transfer.timestamp).valueOf(),
     );
     createdData.ruleId = deployRecord.protocol;
+    createdData.ebcAddress =  deployRecord.hash;
     createdData.responseMaker = [transfer.receiver];
     return createdData
   }
