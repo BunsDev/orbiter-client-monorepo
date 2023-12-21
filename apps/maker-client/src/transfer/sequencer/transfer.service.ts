@@ -19,7 +19,8 @@ import { MemoryQueue } from '../../utils/MemoryQueue'
 import { AccountFactoryService } from "../../factory";
 import BigNumber from "bignumber.js";
 import * as Errors from "../../utils/Errors";
-import { OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
+import { EVMAccount, OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
+import { ethers } from "ethers6";
 
 @Injectable()
 export class TransferService {
@@ -37,6 +38,151 @@ export class TransferService {
     private readonly consumerService: ConsumerService) {
   }
 
+  async execSingleInscriptionTransfer(
+    transfer: TransferAmountTransaction,
+    wallet: OrbiterAccount,
+  ) {
+    const sourceChainId = transfer.sourceChain;
+    const sourceHash = transfer.sourceId;
+    const sourceChain = this.chainConfigService.getChainInfo(sourceChainId);
+    if (!sourceChain) {
+      throw new Error('sourceChain not found');
+    }
+    this.logger.info(
+      `execSingleTransfer: ${sourceChainId}-${sourceHash}, owner:${wallet.address}`
+    );
+    const transaction =
+      await this.bridgeTransactionModel.sequelize.transaction();
+    let sourceTx: BridgeTransactionModel;
+    try {
+      sourceTx = await this.bridgeTransactionModel.findOne({
+        attributes: [
+          "id",
+          "sourceChain",
+          "sourceId",
+          "status",
+          "targetChain",
+          "targetSymbol",
+          "targetAmount",
+          "targetId",
+        ],
+        where: {
+          sourceId: sourceHash,
+          sourceChain: sourceChainId,
+        },
+        transaction,
+      });
+      if (!sourceTx) {
+        throw new Errors.PaidRollbackError(
+          `${sourceChainId} - ${sourceHash} SourceTx not exist`
+        );
+      }
+      if (sourceTx.status != 0) {
+        throw new Errors.AlreadyPaid(`${sourceHash} status ${sourceTx.status}`);
+      }
+      if (!isEmpty(sourceTx.targetId)) {
+        throw new Errors.AlreadyPaid(`${sourceHash} targetId ${sourceTx.targetId}`)
+      }
+      if (!equals(sourceTx.targetChain, transfer.targetChain)) {
+        throw new Errors.PaidRollbackError(
+          `${sourceChainId} - ${sourceHash} Inconsistent target network (${sourceTx.targetChain}/${transfer.targetChain})`
+        );
+      }
+
+      if (!new BigNumber(sourceTx.targetAmount).eq(transfer.targetAmount)) {
+        throw new Errors.PaidRollbackError(
+          `${sourceChainId} - ${sourceHash} Inconsistent targetAmount (${sourceTx.targetAmount}/${transfer.targetAmount})`
+        );
+      }
+
+      if (sourceTx.targetSymbol != transfer.targetSymbol) {
+        throw new Errors.PaidRollbackError(
+          `${sourceChainId} - ${sourceHash} Inconsistent targetSymbol (${sourceTx.targetSymbol}/${transfer.targetSymbol})`
+        );
+      }
+      sourceTx.status = BridgeTransactionStatus.READY_PAID;
+      const updateRes = await sourceTx.save({
+        transaction,
+      });
+      if (!updateRes) {
+        throw new Errors.PaidRollbackError(
+          `${sourceChainId} - ${sourceHash} Change status fail`
+        );
+      }
+    } catch (error) {
+      transaction && (await transaction.rollback());
+      throw error;
+    }
+    // transfer.targetAddress = '0xEFc6089224068b20197156A91D50132b2A47b908';
+    let transferResult: TransferResponse;
+    try {
+      const account = wallet as EVMAccount;
+      const input = Buffer.from(`data:,${JSON.stringify({
+        p: transfer.ruleId,
+        op: 'mint',
+        tick: transfer.targetSymbol,
+        amt:new BigNumber(transfer.targetAmount).toFixed(0),
+        fc: (+sourceChain.internalId) + 9000,
+      })}`)
+
+      transferResult = await account.mintInscription({
+        to: transfer.targetAddress,
+        data: input as any,
+        value: transfer.sourceNonce,
+      });
+      sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
+      sourceTx.targetId = transferResult.hash;
+      const updateRes = await sourceTx.save({
+        transaction,
+      });
+      if (!updateRes) {
+        throw new TransactionSendAfterError(
+          `${sourceChainId} - ${sourceHash} Change status fail`
+        );
+      }
+      await transaction.commit();
+    } catch (error) {
+      if (error instanceof Errors.PaidRollbackError || !transferResult?.from) {
+        console.error('transferResult', transferResult);
+        await transaction.rollback();
+      } else {
+        sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
+        sourceTx.targetMaker = transferResult.from;
+        sourceTx.targetId = transferResult && transferResult.hash;
+        await sourceTx.save({
+          transaction,
+        });
+        await transaction.commit();
+      }
+      throw error;
+    }
+    if (transferResult) {
+      // success change targetId
+      wallet
+        .waitForTransactionConfirmation(transferResult.hash)
+        .then(async (tx) => {
+          await this.bridgeTransactionModel.update(
+            {
+              status: BridgeTransactionStatus.BRIDGE_SUCCESS,
+              targetMaker: tx.from,
+            },
+            {
+              where: {
+                id: sourceTx.id,
+              },
+            }
+          );
+        })
+        .catch((error) => {
+          this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transfer.targetChain} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
+          this.logger.error(
+            `${transferResult.hash} waitForTransactionConfirmation error ${transfer.targetChain}`,
+            error
+          );
+        });
+    }
+    return sourceTx.toJSON();
+  }
   async execSingleTransfer(
     transfer: TransferAmountTransaction,
     wallet: OrbiterAccount,
@@ -124,21 +270,16 @@ export class TransferService {
       const transferAmount = new BigNumber(transfer.targetAmount).times(
         10 ** transferToken.decimals
       );
-      const requestParams = await wallet.pregeneratedRequestParameters(
-        transfer
-      );
       if (transferToken.isNative) {
         transferResult = await wallet.transfer(
           transfer.targetAddress,
           BigInt(transferAmount.toFixed(0)),
-          requestParams
         );
       } else {
         transferResult = await wallet.transferToken(
           transferToken.address,
           transfer.targetAddress,
           BigInt(transferAmount.toFixed(0)),
-          requestParams
         );
       }
       sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
@@ -241,21 +382,16 @@ export class TransferService {
       throw error;
     }
     try {
-      const requestParams = await wallet.pregeneratedRequestParameters(
-        transfers
-      );
       if (transferToken.isNative) {
         transferResult = await wallet.transfers(
           toAddressList,
           toValuesList,
-          requestParams
         );
       } else {
         transferResult = await wallet.transferTokens(
           transferToken.address,
           toAddressList,
           toValuesList,
-          requestParams
         );
       }
       // CHANGE 98

@@ -55,7 +55,9 @@ export class ValidatorService {
 
     return true
   }
-
+  public async checkMakerInscriptionFluidity(chainId:string, wallet:string, token:string, amount:number) {
+    return true;
+  }
   public async checkMakerFluidity(chainId:string, wallet:string, token:string, amount:number):Promise<boolean>{
     const account = await this.accountFactoryService.createMakerAccount(
       wallet,

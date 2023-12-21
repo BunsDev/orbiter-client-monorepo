@@ -362,7 +362,6 @@ export class EVMAccount extends OrbiterAccount {
         `${chainConfig.name} sendTransaction txHash:${txHash}`
       );
       //
-      await this.store.saveSerialRelTxHash(serialIds, txHash);
       submit();
       return response;
     } catch (error) {
@@ -379,6 +378,50 @@ export class EVMAccount extends OrbiterAccount {
     }
   }
 
+  public async mintInscription(
+    transactionRequest: TransactionRequest
+  ): Promise<TransactionResponse> {
+    const chainConfig = this.chainConfig;
+    const provider = this.getProvider();
+    const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
+    let txHash;
+    try {
+      if (transactionRequest.value) {
+        transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
+      }
+      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // transactionRequest = await this.wallet.populateTransaction(transactionRequest);
+      // if (transactionRequest.type === 2) {
+
+      // } else {
+      //   transactionRequest.gasPrice = transactionRequest.gasPrice .
+      // }
+      transactionRequest.nonce = nonce;
+      this.logger.info(
+        `${chainConfig.name} sendTransaction:${JSONStringify(transactionRequest)}`
+      );
+      const signedTx = await this.wallet.signTransaction(transactionRequest);
+      txHash = keccak256(signedTx);
+      const response = await provider.broadcastTransaction(signedTx);
+      this.logger.info(
+        `${chainConfig.name} sendTransaction txHash:${txHash}`
+      );
+      //
+      submit();
+      return response;
+    } catch (error) {
+      rollback();
+      this.logger.error(
+        `broadcastTransaction tx error:${txHash} - ${error.message}`,
+        error
+      );
+      // rollback()
+      if (isError(error, "NONCE_EXPIRED")) {
+        throw new TransactionSendBeforeError(error.message);
+      }
+      throw new TransactionFailedError(error.message);
+    }
+  }
 
   public async approve(
     token: string,

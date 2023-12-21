@@ -1,3 +1,4 @@
+import { Cron } from '@nestjs/schedule';
 import { Inject, Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Mutex } from "async-mutex";
@@ -43,14 +44,10 @@ export class SequencerScheduleService {
       this.consumerService.consumeMakerWaitTransferMessage(this.addQueue.bind(this))
     }
   }
-
-  // @Cron("0 */2 * * * *")
+  @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
     const owners = this.envConfig.get("MAKERS") || [];
     for (const owner of owners) {
-      if (owner.toLocaleLowerCase() != '0x4eaf936c172b5e5511959167e8ab4f7031113ca3') {
-        continue;
-      }
       // read db history
       this.readDBTransactionRecords(owner.toLocaleLowerCase()).catch((error) => {
         this.logger.error(
@@ -66,9 +63,10 @@ export class SequencerScheduleService {
       status: 0,
       sourceMaker: owner,
       targetId: null,
-      sourceTime: {
-        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
-      },
+      version: '3-0',
+      // sourceTime: {
+      //   [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
+      // },
     }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
@@ -93,11 +91,12 @@ export class SequencerScheduleService {
         "sourceToken",
         "targetToken",
         "responseMaker",
+        'ruleId',
+        "version"
       ],
       where,
       limit: 100
     });
-    console.log(records, '=records')
     if (records.length > 0) {
       for (const tx of records) {
         try {
@@ -198,7 +197,7 @@ export class SequencerScheduleService {
       await queue.add(bridgeTx);
       throw new Errors.MakerNotPrivetKey();
     }
-    const isFluidityOK = await this.validatorService.checkMakerFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
+    const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
     if (!isFluidityOK) {
       await queue.add(bridgeTx);
       throw new Error(`${bridgeTx.sourceId}`);
@@ -219,12 +218,13 @@ export class SequencerScheduleService {
       bridgeTx.targetChain
     );
     await account.connect(wallets[0].key, bridgeTx.targetMaker);
+
     const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
     if (!saveRecord) {
       throw new Error(`${bridgeTx.sourceId}`);
     }
     try {
-      return await this.transferService.execSingleTransfer(bridgeTx, account);
+      return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
     } catch (error) {
       if (error instanceof Errors.PaidRollbackError) {
         this.logger.error(`execSingleTransfer error PaidRollbackError ${bridgeTx.sourceId} message ${error.message}`);
@@ -331,6 +331,7 @@ export class SequencerScheduleService {
           if (bridgeTx[0].version === '3-0') {
             result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queue)
           } else {
+            
             result = await this.paidSingleBridgeTransaction(bridgeTx[0], queue)
           }
         }
