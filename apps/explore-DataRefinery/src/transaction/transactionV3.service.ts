@@ -53,22 +53,95 @@ export class TransactionV3Service {
     private messageService: MessageService,
     @InjectRedis() private readonly redis: Redis,
   ) {
-    // this.matchScheduleTask()
-    //   .then((_res) => {
-    //     this.matchSenderScheduleTask();
-    //   })
-    //   .catch((error) => {
-    //     this.logger.error(
-    //       `constructor matchScheduleTask error `,
-    //       error,
-    //     );
-    //   });
+    this.matchScheduleTask()
+      .then((_res) => {
+        this.matchSenderScheduleTask();
+      })
+      .catch((error) => {
+        this.logger.error(
+          `constructor TransactionV3Service matchScheduleTask error `,
+          error,
+        );
+      });
   }
   errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
     return {
       errno: errno,
       errmsg: errmsg
+    }
+  }
+
+  @Cron('0 */5 * * * *')
+  async matchScheduleTask() {
+    const transfers = await this.transfersModel.findAll({
+      raw: true,
+      order: [['id', 'desc']],
+      limit: 500,
+      where: {
+        status: 2,
+        opStatus: 0,
+        version: '3-0',
+        timestamp: {
+          [Op.gte]: dayjs().subtract(48, 'hour').toISOString(),
+        },
+        // nonce: {
+        //   [Op.lt]: 9000
+        // }
+      },
+    });
+    for (const transfer of transfers) {
+      const result = await this.handleClaimTransfer(transfer).catch((error) => {
+        this.logger.error(
+          `TransactionV3Service matchScheduleTask handleTransferBySourceTx ${transfer.hash} error`,
+          error,
+        );
+      });
+    }
+  }
+  @Cron('*/5 * * * * *')
+  async fromCacheMatch() {
+    for (const transfer of this.inscriptionMemoryMatchingService.transfers) {
+      if (transfer.version === '3-1') {
+        const callData = transfer.calldata as any;
+        const { fc } = callData
+        const fromChainInternalId = +fc - 9000
+        const sourceChainInfo = this.chainConfigService.getChainInfo(+fromChainInternalId);
+        const matchTx = this.inscriptionMemoryMatchingService.matchV3GetBridgeTransactions(transfer, sourceChainInfo);
+        if (matchTx) {
+          this.handleMintTransfer(transfer as any)
+        }
+      }
+    }
+  }
+  @Cron('0 */10 * * * *')
+  async matchSenderScheduleTask() {
+    const transfers = await this.transfersModel.findAll({
+      raw: true,
+      order: [['id', 'desc']],
+      limit: 1000,
+      where: {
+        status: 2,
+        opStatus: 0,
+        version: '3-1',
+        timestamp: {
+          [Op.gte]: dayjs().subtract(48, 'hour').toISOString(),
+        },
+      },
+    });
+    console.log(transfers);
+    for (const transfer of transfers) {
+      const result = await this.handleMintTransfer(transfer).then(result => {
+        if (result && result.errno != 0) {
+          this.inscriptionMemoryMatchingService.addTransferMatchCache(transfer);
+        }
+        return result;
+      }).catch((error) => {
+        this.logger.error(
+          `matchSenderScheduleTask handleTransferByDestTx ${transfer.hash} error`,
+          error,
+        );
+      });
     }
   }
   public async handleClaimTransfer(transfer: TransfersModel): Promise<handleTransferReturn>{
@@ -174,7 +247,7 @@ export class TransactionV3Service {
       if (transfer.opStatus != 1) {
         await this.transfersModel.update(
           {
-            opStatus: 1,
+            opStatus: TransferOpStatus.VALID,
           },
           {
             where: {
