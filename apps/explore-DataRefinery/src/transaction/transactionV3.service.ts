@@ -26,6 +26,8 @@ import { ValidSourceTxError, decodeV1SwapData, addressPadStart } from '../utils'
 import { MessageService } from '@orbiter-finance/rabbit-mq'
 import { parseTragetTxSecurityCode } from './bridgeTransaction.builder'
 import BigNumber from 'bignumber.js';
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import { Redis } from 'ioredis';
 export interface handleTransferReturn {
   errno: number;
   errmsg?: string;
@@ -49,6 +51,7 @@ export class TransactionV3Service {
     protected makerV1RuleService: MakerV1RuleService,
     protected inscriptionBuilder: InscriptionBuilder,
     private messageService: MessageService,
+    @InjectRedis() private readonly redis: Redis,
   ) {
     // this.matchScheduleTask()
     //   .then((_res) => {
@@ -414,6 +417,11 @@ export class TransactionV3Service {
       from: transfer.sender,
       to: transfer.receiver,
       value: transfer.value,
+    }
+    if (await this.redis.hexists('protocol', p.toLocaleLowerCase())) {
+      createData.deletedAt = new Date();
+    } else {
+      await this.redis.hmset('protocol',p.toLocaleLowerCase(), JSON.stringify(createData))
     }
     const t = await this.sequelize.transaction()
     try {

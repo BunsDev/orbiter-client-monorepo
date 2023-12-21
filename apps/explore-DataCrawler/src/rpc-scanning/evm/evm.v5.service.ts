@@ -141,34 +141,36 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           receipt as any,
         );
       } else {
-        const decodeData = EVMV5Utils.deCodeMintCallData(transaction.data);
-        if (decodeData) {
-          const value = transaction.value.toString();
-          transfers.push({
-            chainId: String(chainId),
-            hash: transaction.hash,
-            blockNumber: transaction.blockNumber,
-            transactionIndex: receipt.transactionIndex,
-            sender: transaction.from,
-            receiver: transaction.to,
-            amount: new BigNumber(value)
-              .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-              .toString(),
-            value,
-            token: chainConfig.nativeCurrency.address,
-            symbol: chainConfig.nativeCurrency.symbol,
-            fee: fee.toString(),
-            feeToken: chainConfig.nativeCurrency.symbol,
-            feeAmount: new BigNumber(fee.toString())
-              .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-              .toString(),
-            timestamp: 0,
-            selector: decodeData.op,
-            status,
-            nonce,
-            version: '3',
-            receipt
-          });
+        if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {
+          const decodeData = EVMV5Utils.deCodeMintCallData(transaction.data);
+          if (decodeData) {
+            const value = transaction.value.toString();
+            transfers.push({
+              chainId: String(chainId),
+              hash: transaction.hash,
+              blockNumber: transaction.blockNumber,
+              transactionIndex: receipt.transactionIndex,
+              sender: transaction.from,
+              receiver: transaction.to,
+              amount: new BigNumber(value)
+                .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+                .toString(),
+              value,
+              token: chainConfig.nativeCurrency.address,
+              symbol: chainConfig.nativeCurrency.symbol,
+              fee: fee.toString(),
+              feeToken: chainConfig.nativeCurrency.symbol,
+              feeAmount: new BigNumber(fee.toString())
+                .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+                .toString(),
+              timestamp: 0,
+              selector: decodeData.op,
+              status,
+              nonce,
+              version: '3',
+              receipt
+            });
+          }
         } else if (transaction.data === '0x' || await provider.getCode(transaction.to) === '0x') {
           // tag:
           const value = transaction.value.toString();

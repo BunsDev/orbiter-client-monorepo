@@ -21,6 +21,7 @@ export interface IDeployRecord {
   from: string;
   to: string;
   value: string;
+  deletedAt?:Date
 }
 
 @Table({ tableName: 'deploy_record', timestamps: true })
@@ -73,8 +74,13 @@ export class DeployRecord
 
   @Column({type: DataType.DECIMAL })
   value: string;
+
   @Column({type: DataType.DATE })
   @Index({ name: 'timestamp', using: 'btree',})
   timestamp: Date;
+
+  @Column({type: DataType.DATE })
+  @Index({ name: 'deletedAt'})
+  deletedAt: Date;
 }
 
