@@ -98,7 +98,7 @@ export class InscriptionStandardBuilder {
     }
     const callData = transfer.calldata as any
     const { amt } = callData
-    result.targetAmount = amt;
+    result.targetAmount = new BigNumber(amt).toString();
     result.targetToken = targetToken
     result.targetAddress = transfer.sender;
     return result
@@ -147,17 +147,34 @@ export default class InscriptionBuilder {
     if (!sourceChain) {
       throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `${transfer.token} sourceChain not found`)
     }
+
+    const callData = transfer.calldata as any
+    const { p } = callData;
+    if (p !== deployRecord.protocol) {
+      throw new ValidSourceTxError(TransferOpStatus.INCORRECT_PROTOCOL, `incorrect protocol`)
+    }
     const builderData = await this.standardBuilder.build(transfer);
-    const { targetAddress: builderDataTargetAddress, targetChain, targetToken, targetAmount } = builderData
+    const { targetAddress, targetChain, targetAmount } = builderData
     if (!targetChain) {
       throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetChain not found`)
     }
 
-    if (builderDataTargetAddress) {
-      createdData.targetAddress = builderDataTargetAddress.toLowerCase()
-    } else {
-      throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, 'no targetAddress')
+    if (+targetAmount > +deployRecord.limit) {
+      throw new ValidSourceTxError(TransferOpStatus.CLAIM_AMOUNT_EXCEED_LIMIT, `targetChain not found`)
     }
+
+    if (new BigNumber(targetAmount).decimalPlaces() > 0 || new BigNumber(targetAmount).isLessThan(1)) {
+      throw new ValidSourceTxError(TransferOpStatus.AMOUNT_MUST_BE_INTEGER, `claim amount must be integer and large than 0`)
+    }
+
+    const ruleMap = await this.envConfigService.getAsync('INSCRIPTION_CHARGINT_RULES')
+    if (!ruleMap[targetChain.chainId] || !ruleMap[targetChain.chainId][p]) {
+      throw new ValidSourceTxError(TransferOpStatus.CHARING_RULE_NOT_FOUND, `CHARING_RULE_NOT_FOUND`)
+    }
+    if (new BigNumber(ruleMap[targetChain.chainId][p]).isGreaterThan(new BigNumber(transfer.amount))) {
+      throw new ValidSourceTxError(TransferOpStatus.CHARING_TOO_LOW, `CHARING_TOO_LOW`)
+    }
+    createdData.targetAddress = targetAddress
     createdData.withholdingFee = createdData.sourceAmount;
     createdData.targetAmount = targetAmount;
     createdData.targetChain = targetChain.chainId

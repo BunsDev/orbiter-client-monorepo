@@ -215,7 +215,10 @@ export class TransactionService {
           this.messageService.sendMessageToPointsSystemGray(result.data)
         }
       } else if (payload.version === '3-0') {
-        result = this.transactionV3Service.handleClaimTransfer(payload)
+        result = await this.transactionV3Service.handleClaimTransfer(payload)
+        if (result && result.errno === 0) {
+          this.messageService.sendClaimTransferToMakerClient(result.data)
+        }
       } else if (payload.version === '3-1') {
         result = this.transactionV3Service.handleMintTransfer(payload);
       } else if (payload.version === '3-2') {

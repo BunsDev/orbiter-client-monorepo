@@ -129,7 +129,6 @@ export class TransactionV3Service {
         },
       },
     });
-    console.log(transfers);
     for (const transfer of transfers) {
       const result = await this.handleMintTransfer(transfer).then(result => {
         if (result && result.errno != 0) {
@@ -154,13 +153,29 @@ export class TransactionV3Service {
     const callData = transfer.calldata as any;
     const { tick, op, p, amt } = callData;
     if (op !== InscriptionOpType.Claim) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Claim}`)
     }
-    if (
-      !p ||
-      !tick ||
-      (!amt || !/^[1-9]\d*(\.\d+)?$/.test(amt))
-    ) {
+    if (!p || !tick) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP_PARAMS,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} Incorrect params : ${JSON.stringify(callData)}`)
     }
 
@@ -173,9 +188,29 @@ export class TransactionV3Service {
       }
     })
     if (!deployTick) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.DEPLOY_RECORD_NOT_FOUND,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} deployTick nof found`)
     }
     if (deployTick.chainId === transfer.chainId) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.CLAIM_MUST_CROSS_CHAIN,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} must cross chain claim`)
     }
     const sourceBT = await this.bridgeTransactionModel.findOne({
