@@ -491,10 +491,11 @@ export class TransactionV3Service {
       to: transfer.receiver,
       value: transfer.value,
     }
-    if (await this.redis.hexists('protocol', p.toLocaleLowerCase())) {
+    const id = `${createData.protocol}-${createData.tick}`.toLocaleLowerCase();
+    if (await this.redis.hexists('protocol',id )) {
       createData.deletedAt = new Date();
     } else {
-      await this.redis.hmset('protocol',p.toLocaleLowerCase(), JSON.stringify(createData))
+      await this.redis.hmset('protocol',id, JSON.stringify(createData))
     }
     const t = await this.sequelize.transaction()
     try {
