@@ -242,6 +242,8 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
                 .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
                 .toString(),
               timestamp: 0,
+              selector: decodeData.op,
+              version: '3',
               status,
               nonce,
               receipt

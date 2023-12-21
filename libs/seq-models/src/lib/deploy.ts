@@ -14,6 +14,10 @@ export interface IDeployRecord {
   chainId: string;
   timestamp: Date;
   callData: object;
+  protocol: string;
+  tick: string;
+  max: string;
+  limit: string;
   from: string;
   to: string;
   value: string;
@@ -54,6 +58,18 @@ export class DeployRecord
   @Column({type: DataType.STRING(255) })
   @Index({ name: 'to', using: 'btree',})
   to: string;
+
+  @Column({type: DataType.STRING(255) })
+  tick: string;
+
+  @Column({type: DataType.STRING(55) })
+  protocol: string;
+
+  @Column({type: DataType.DECIMAL })
+  max: string;
+
+  @Column({type: DataType.DECIMAL })
+  limit: string;
 
   @Column({type: DataType.DECIMAL })
   value: string;

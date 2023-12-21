@@ -35,7 +35,7 @@ export class TransactionService {
         // if (+v1Exists == 1) {
         //     return true;
         // }
-        const MintMakers = await this.envConfigService.getAsync('MINT_MAKERS');
+        const MintMakers = await this.envConfigService.getAsync('INSCRIPTION_MAKERS');
         if (MintMakers && Array.isArray(MintMakers)) {
           if (MintMakers.find(item => addressPadStart(item, 66).toLowerCase() === addressPadStart(address, 66).toLowerCase())) {
             return true;
