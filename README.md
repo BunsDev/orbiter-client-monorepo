@@ -4,55 +4,57 @@
 
 > A decentralized cross-chain bridge for transferring assets and data between different blockchain networks.
 
-## Overview
+## Inscriptions Cross-Rollup Protocol
 
-This project aims to provide a decentralized solution for making interoperability between different blockchain networks easy. Through this cross-chain bridge, users can transfer digital assets, tokens, or data across various blockchain protocols and networks, enabling a more interconnected blockchain ecosystem.
+Building upon the existing cross-rollup communication, we've extended functionalities to encompass inscriptions minting and crossing.
 
-## Key Features
+The fundamental principle involves users submitting transactions containing basic inscriptions information and the identification code for the target network to the Maker Protocol. These transactions are processed by the Orbiter Bridge Protocol. On the target network, the Maker Protocol utilizes mint and cross functions to send inscriptions to the user's address, completing the entire inscriptions cross-rollup process.
 
-- **Multi-Blockchain Support**: Integrates with multiple blockchain protocols and networks, including but not limited to Ethereum, Binance Smart Chain, Polygon, and more.
-- **Decentralized Operation**: The cross-chain bridge operates on a decentralized network, ensuring security and reliability.
-- **User-Friendly**: A user-friendly interface and documentation to facilitate user-friendly cross-chain interactions.
-- **Smart Contract Integration**: Smart contracts automate cross-chain transactions and asset locking/unlocking.
-- **Open Source**: The project is fully open source, and contributions from developers and the community are welcome.
+Currently, this protocol supports networks including Arbitrum One, Optimism, zksyncEra, Base, Linea, Scroll, and PolygonZKEVM. The Orbiter Bridge Protocol collects a certain fee on the source network as the Inscriptions Cross-rollup Protocol fee.
 
-## Getting Started
 
-To start using this cross-chain bridge, follow these steps:
+	
+### Inscriptions Minting
 
-1. **Install Dependencies**: Ensure you have installed the project's required dependencies.
+#### claim
+|  Field   | Required  | Remark  |
+|  ----  | ----  | ---- |
+| p  | YES | Ex:xxx-20 Supported Protocol |
+| op  | YES | claim Initiate Cross-rollup Mint Action |
+| tick  | YES | EX:xxx-20 Inscriptions' Name |
+| amt  | YES | Ex:1000 Mint Amount |
 
-   ```shell
-   npm install
-   ```
-   // Some
-   ```shell
-   yarn install
-   ```
+#### mint
+|  Field   | Required  | Remark  |
+|  ----  | ----  | ---- |
+| p  | YES | Ex:xxx-20 Supported Protocol |
+| op  | YES | mint Complete Cross-rollup Mint Action |
+| tick  | YES | EX:xxx-20 Inscriptions' Name |
+| amt  | YES | Ex:1000 Mint Amount |
+| fc  | YES | Ex:1 InternalID of the Source Network|
 
-2. **Environment Variables**: Create a .env environment variable file, refer to .env.example
-   ```
-    CONSUL_HOST="127.0.0.1"
-    CONSUL_PORT=15008
-    CONSUL_TOKEN="xxxx"
-   ```
-3. **Run Project**: Create a .env environment variable file, refer to .env.example
 
-    - Explore Server
-    ```
-        npm run dev:explore-DataCrawler
-    ```
-    - Maker Client
-    ```
-        npm run dev:maker-client
-    ```
 
-## Build Docker
-  - Explore Server
-    ```
-        npm run build-docker:explore-DataCrawler
-    ```
-  - Maker Client
-    ```
-        npm run build-docker:maker-client
-    ```
+### Inscriptions Crossing
+
+#### cross
+
+|  Field   | Required  | Remark  |
+|  ----  | ----  | ---- |
+| p  | YES | Ex:xxx-20 Supported Protocol |
+| op  | YES | cross Initiate Cross Action |
+| tick  | YES | EX:xxx-20 Inscriptions Name |
+| amt  | YES | Ex:1000 Cross Amount |
+
+#### crossover
+
+|  Field   | Required  | Remark  |
+|  ----  | ----  | ---- |
+| p  | YES | Ex:xxx-20 Supported Protocol |
+| op  | YES | crossover Complete Cross Action |
+| tick  | YES | EX:xxx-20 Inscriptions' Name|
+| amt  | YES | Ex:1000 Cross Amount |
+| fc  | YES | Ex:1 InternalID of the Source Network |
+
+### Supported Rollups
+	Arbitrum One, Optimism, zksyncEra, Base, Linea, Scroll and PolygonZKEVM

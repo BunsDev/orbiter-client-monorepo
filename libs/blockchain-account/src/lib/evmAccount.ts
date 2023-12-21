@@ -323,7 +323,8 @@ export class EVMAccount extends OrbiterAccount {
     return receipt;
   }
 
-  async sendTransaction(
+
+  public async sendTransaction(
     to: string,
     transactionRequest: TransactionRequest = {}
   ): Promise<TransactionResponse> {
@@ -377,6 +378,7 @@ export class EVMAccount extends OrbiterAccount {
       throw new TransactionFailedError(error.message);
     }
   }
+
 
   public async approve(
     token: string,
