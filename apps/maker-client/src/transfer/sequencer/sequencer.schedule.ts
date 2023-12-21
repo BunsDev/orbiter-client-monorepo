@@ -46,7 +46,7 @@ export class SequencerScheduleService {
         this.consumerService.consumeMakerWaitTransferMessage(this.addQueue.bind(this), key)
       }
     } else {
-      // this.consumerService.consumeMakerWaitTransferMessage(this.addQueue.bind(this))
+      this.consumerService.consumeMakerWaitTransferMessage(this.addQueue.bind(this))
     }
   }
 
@@ -72,10 +72,9 @@ export class SequencerScheduleService {
       status: 0,
       sourceMaker: owner,
       targetId: null,
-      sourceId:"0x730a63ad5354d9657cf74b9484e3a659885c4fd096acbab5c35c6fac1e4ee8a4",
-      // sourceTime: {
-      //   [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
-      // },
+      sourceTime: {
+        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
+      },
     }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
@@ -108,13 +107,6 @@ export class SequencerScheduleService {
     if (records.length > 0) {
       for (const tx of records) {
         try {
-          // const batchTransferCount = this.validatorService.getPaidTransferCount(tx.targetChain);
-          // if (batchTransferCount == -1) {
-          //   this.logger.info(
-          //     `${tx.sourceId} To ${tx.targetChain} Setting PaidTransferCount to -1 disables sending`
-          //   );
-          //   continue;
-          // }
           this.addQueue(tx);
         } catch (error) {
           this.logger.error(
@@ -168,10 +160,10 @@ export class SequencerScheduleService {
     }
     // start paid
     const account = await this.accountFactoryService.createMakerAccount(
-      bridgeTx.targetAddress,
+      bridgeTx.targetMaker,
       bridgeTx.targetChain
     );
-    await account.connect(wallets[0].key);
+    await account.connect(wallets[0].key,bridgeTx.targetMaker);
     const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
     if (!saveRecord) {
       throw new Error(`${bridgeTx.sourceId}`);
@@ -521,7 +513,6 @@ export class SequencerScheduleService {
         delete groupData[tokenAddr];
       }
     }
-    console.log(maxItem, '==批量回款')
     const totalValue = sumBy(maxItem[1], item => +item.targetAmount);
     const isFluidityOK = await this.validatorService.checkMakerFluidity(targetChain, targetMaker, maxItem[0], totalValue)
     if (!isFluidityOK) {
@@ -541,7 +532,7 @@ export class SequencerScheduleService {
         this.logger.error(`paidManyBridgeTransaction setEnsureRecord fai ${bridgeTx.sourceId}`);
       }
     }
-    await account.connect(privateKey);
+    await account.connect(privateKey,targetMaker);
     try {
       return await this.execBatchTransfer(maxItem[1], account)
     } catch (error) {
@@ -554,7 +545,6 @@ export class SequencerScheduleService {
   async consumptionSendingQueue(bridgeTx: BridgeTransactionModel | Array<BridgeTransactionModel>, queue: MemoryQueue) {
     let result;
     try {
-      console.log('开始消费')
       if (Array.isArray(bridgeTx)) {
         if (bridgeTx.length>1) {
           result = await this.paidManyBridgeTransaction(bridgeTx, queue);
@@ -568,7 +558,7 @@ export class SequencerScheduleService {
     } catch (error) {
       this.logger.error(`${queue.id} consumptionSendingQueue error ${error.message}`, error);
     }
-    console.log('消费结果：', result)
+    console.log('consumptionSendingQueue result:', result)
     return result;
   }
   async addQueue(tx: BridgeTransactionModel) {

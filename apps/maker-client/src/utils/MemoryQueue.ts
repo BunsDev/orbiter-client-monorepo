@@ -88,18 +88,20 @@ export class MemoryQueue<T = any> {
             if (!this.store) {
                 return console.error(`${this.id} store not initialized`);
             }
-            const messagesToConsume = this.queue.splice(0, this.batchSize);
-            console.log(messagesToConsume, '=messagesToConsume', this.id)
             this.processingLock = true;
+            let messagesToConsume = [];
+            if (this.batchSize > 1 && this.queue.length > this.batchSize) {
+                // mu
+                messagesToConsume = this.queue.splice(0, this.batchSize);
+            } else {
+                // single
+                messagesToConsume = this.queue.splice(0, 1);
+            }
             if (messagesToConsume.length > 0) {
-                console.log('准备消费');
+                console.log(`ready to consume ${messagesToConsume.map(row => row['sourceId'])}`)
                 await this.consumeFunction(messagesToConsume.length === 1 ? messagesToConsume[0] : messagesToConsume, this);
-                if (messagesToConsume.length === 1) {
-                    this.setEnsureRecord(messagesToConsume[0]['sourceId'], true);
-                } else {
-                    for (const row of messagesToConsume) {
-                        this.setEnsureRecord(row['sourceId'], true);
-                    }
+                for (const row of messagesToConsume) {
+                    this.setEnsureRecord(row['sourceId'], true);
                 }
             }
             // Continue processing if there are remaining messages
@@ -109,7 +111,7 @@ export class MemoryQueue<T = any> {
         } catch (error) {
             console.error(error, 'processQueue error');
         } finally {
-            console.log('解锁--', this.id)
+            console.log('Consumption processing is completed and unlocked');
             this.processingLock = false;
         }
     }

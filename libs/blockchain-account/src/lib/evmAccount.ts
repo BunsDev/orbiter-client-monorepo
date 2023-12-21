@@ -31,9 +31,14 @@ export class EVMAccount extends OrbiterAccount {
     super(chainId, ctx);
   }
   getProvider() {
-    console.log('获取provider-----');
-    const rpc = this.chainConfig.rpc[0];
-    const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
+    try {
+      const rpc = this.chainConfig.rpc[0];
+      return new JsonRpcProvider(rpc)
+    }catch(error) {
+      console.error('getProvider error', error);
+    }
+ 
+    // const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
     // if (!this.#provider) {
     //   const provider = new Orbiter6Provider(rpc,
     //     network, {
@@ -49,15 +54,7 @@ export class EVMAccount extends OrbiterAccount {
     //     staticNetwork: network
     //   });
     // }
-    // console.log(network, '==network', this.chainConfig.chainId, this.chainConfig.rpc[0])
     // return this.#provider;
-    const provider= new JsonRpcProvider(this.chainConfig.rpc[0], network, {
-      staticNetwork: network
-    });
-    provider.getBalance("0x4eaf936c172b5e5511959167e8ab4f7031113ca3").then((res) => {
-      console.log('res----', res);
-    })
-    return provider;
   }
 
   async connect(privateKey: string, _address?: string) {
