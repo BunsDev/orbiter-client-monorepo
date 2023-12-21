@@ -8,7 +8,7 @@ import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 
 @Injectable()
 export class AccountFactoryService {
-  constructor(private readonly chainConfigService: ChainConfigService, private readonly envConfigService:ENVConfigService) {
+  constructor(private readonly chainConfigService: ChainConfigService, private readonly envConfigService: ENVConfigService) {
   }
 
   private static wallets: Record<string, OrbiterAccount> = {}; // key = pk + chainId
@@ -83,7 +83,9 @@ export class AccountFactoryService {
       case 523:
       case 524:
       case 525:
-      case 528:
+      case 526:
+      case 529:
+      case 530:
         wallet = new EVMAccount(toChainId, ctx);
         break;
       case 512:
@@ -93,11 +95,16 @@ export class AccountFactoryService {
         );
         break;
       default:
-        throw new Error(`${toChain} Chain Not implemented`);
+        if (chainConfig.service && chainConfig.service['rpc'] && chainConfig.service['rpc'].includes('EVMRpcScanning')) {
+          wallet = new EVMAccount(toChainId, ctx);
+        }
         break;
+    }
+    if (!wallet) {
+      throw new Error(`${toChainId}-${chainConfig.internalId} Chain Not implemented`);
     }
     AccountFactoryService.wallets[walletId] = wallet;
     return wallet as T;
   }
-  
+
 }

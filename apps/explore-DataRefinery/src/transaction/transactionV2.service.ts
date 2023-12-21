@@ -143,6 +143,7 @@ export class TransactionV2Service {
       ebcAddress: null,
       targetChain: null,
       ruleId: null,
+      status:BridgeTransactionStatus.PENDING_PAID,
       targetAmount: null,
       sourceMaker: transfer.receiver,
       sourceAddress: transfer.sender,

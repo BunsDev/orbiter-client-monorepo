@@ -6103,10 +6103,10 @@ ethereumjs-wallet@^1.0.0, ethereumjs-wallet@^1.0.2:
     utf8 "^3.0.0"
     uuid "^8.3.2"
 
-"ethers6@npm:ethers@^6.8.0":
-  version "6.8.1"
-  resolved "https://registry.npmjs.org/ethers/-/ethers-6.8.1.tgz#ee2a1a39b5f62a13678f90ccd879175391d0a2b4"
-  integrity sha512-iEKm6zox5h1lDn6scuRWdIdFJUCGg3+/aQWu0F4K0GVyEZiktFkqrJbRjTn1FlYEPz7RKA707D6g5Kdk6j7Ljg==
+"ethers6@npm:ethers@^6.9.0":
+  version "6.9.1"
+  resolved "https://registry.npmjs.org/ethers/-/ethers-6.9.1.tgz#4d50c77b46b6661e00f5cc6292e6bcd933fe4cba"
+  integrity sha512-kuV8fGd4/8Gj7wkurbsuUsm1DCG6N5gKGYdw3fnWG/7QGknhy1xtHD7kbkCWQAcbAYmzLCLqCPedS3FYncFkKQ==
   dependencies:
     "@adraffy/ens-normalize" "1.10.0"
     "@noble/curves" "1.2.0"
@@ -6334,6 +6334,13 @@ fast-safe-stringify@2.1.1, fast-safe-stringify@^2.0.6, fast-safe-stringify@^2.1.
   version "2.1.1"
   resolved "https://registry.npmjs.org/fast-safe-stringify/-/fast-safe-stringify-2.1.1.tgz#c406a83b6e70d9e35ce3b30a81141df30aeba884"
   integrity sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA==
+
+fastq@^1.16.0:
+  version "1.16.0"
+  resolved "https://registry.npmjs.org/fastq/-/fastq-1.16.0.tgz#83b9a9375692db77a822df081edb6a9cf6839320"
+  integrity sha512-ifCoaXsDrsdkWTtiNJX5uzHDsrck5TzfKKDcuFFTIrrc/BS076qgEIfoIy1VeZqViznfKiysPYTh/QeHtnIsYA==
+  dependencies:
+    reusify "^1.0.4"
 
 fastq@^1.6.0:
   version "1.15.0"
