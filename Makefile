@@ -58,7 +58,7 @@ bd-data-synchronization: ## Build the data-synchronization Docker image
 bd-refinery: ## Build the Explore Data Refinery Docker image
 	docker build -f apps/explore-DataRefinery/Dockerfile.clients . -t $(REFINERY_IMAGE)
 
-bd-explore: build-docker-crawler build-docker-refinery ## Build Explore Docker images
+bd-explore: bd-crawler bd-refiner ## Build Explore Docker images
 	# Build success
 
 bd-maker: ## Build the Maker Client Docker image
