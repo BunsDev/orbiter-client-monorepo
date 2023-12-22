@@ -28,3 +28,4 @@ services:
     volumes:
       - './runtime:/app/runtime'
       - './logs:/app/logs'
+      - './db:/app/db'
