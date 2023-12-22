@@ -95,7 +95,7 @@ export class ProofService {
                 raw: true
             });
             if (!proofDataList || !proofDataList.length) {
-                console.error('none of source proofData');
+                console.error(`${hash} none of source proofData`);
                 return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
@@ -106,7 +106,7 @@ export class ProofService {
                 }
             });
             if (!bridgeTx) {
-                console.error('none of bridgeTx');
+                console.error(`${hash} none of bridgeTx`);
                 return [];
             }
 
@@ -260,7 +260,7 @@ export class ProofService {
                     attributes: ['createdAt'],
                     where: { hash: data.hash }
                 });
-                list.push([data.hash, String(data.sourceChain), String(data.targetChain), String(Math.floor(new Date(transfer.createdAt).valueOf() / 1000))]);
+                list.push([data.hash, String(data.sourceChain), String(data.targetChain), String(Math.floor(data.createTime / 1000))]);
             }
         }
         return list;
