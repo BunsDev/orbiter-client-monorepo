@@ -167,12 +167,14 @@ export default class InscriptionBuilder {
       throw new ValidSourceTxError(TransferOpStatus.AMOUNT_MUST_BE_INTEGER, `claim amount must be integer and large than 0`)
     }
 
-    const ruleMap = await this.envConfigService.getAsync('INSCRIPTION_CHARGINT_RULES')
-    if (!ruleMap[targetChain.chainId] || !ruleMap[targetChain.chainId][p]) {
+    const fee = await this.envConfigService.getAsync('INSCRIPTION_CHARGING_RULES')
+
+    if (!fee) {
       throw new ValidSourceTxError(TransferOpStatus.CHARING_RULE_NOT_FOUND, `CHARING_RULE_NOT_FOUND`)
     }
+
     // TAG: fee
-    if (new BigNumber(ruleMap[targetChain.chainId][p]).isGreaterThan(new BigNumber(transfer.amount))) {
+    if (new BigNumber(fee).isGreaterThan(new BigNumber(transfer.amount))) {
       throw new ValidSourceTxError(TransferOpStatus.CHARING_TOO_LOW, `CHARING_TOO_LOW`)
     }
     createdData.targetAddress = targetAddress
