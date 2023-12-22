@@ -34,10 +34,10 @@ export class EVMAccount extends OrbiterAccount {
     try {
       const rpc = this.chainConfig.rpc[0];
       return new JsonRpcProvider(rpc)
-    }catch(error) {
+    } catch (error) {
       console.error('getProvider error', error);
     }
- 
+
     // const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
     // if (!this.#provider) {
     //   const provider = new Orbiter6Provider(rpc,
@@ -389,13 +389,15 @@ export class EVMAccount extends OrbiterAccount {
       if (transactionRequest.value) {
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
       }
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
-      // transactionRequest = await this.wallet.populateTransaction(transactionRequest);
-      // if (transactionRequest.type === 2) {
-
-      // } else {
-      //   transactionRequest.gasPrice = transactionRequest.gasPrice .
-      // }
+      transactionRequest.from = this.wallet.address;
+      transactionRequest.chainId = chainConfig.chainId;
+      try {
+        await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      } catch (error) {
+        transactionRequest = await this.wallet.populateTransaction(transactionRequest);
+        console.error(error);
+        this.logger.error('mintInscription getGasPrice error change populateTransaction')
+      }
       transactionRequest.nonce = nonce;
       this.logger.info(
         `${chainConfig.name} sendTransaction:${JSONStringify(transactionRequest)}`
@@ -460,11 +462,11 @@ export class EVMAccount extends OrbiterAccount {
   ): Promise<bigint> {
     const provider = this.getProvider();
     try {
-    const erc20 = new ethers.Contract(token, ERC20Abi, provider);
-    return await erc20.balanceOf(address || this.wallet.address);
-  }catch(error){
-    console.log('get balance error', error)
-  }
+      const erc20 = new ethers.Contract(token, ERC20Abi, provider);
+      return await erc20.balanceOf(address || this.wallet.address);
+    } catch (error) {
+      console.log('get balance error', error)
+    }
   }
 
 }

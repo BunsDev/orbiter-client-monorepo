@@ -10,7 +10,7 @@ import {
   type MonitorState,
   type TransferAmountTransaction,
 } from "./sequencer.interface";
-import { LoggerDecorator, arePropertyValuesConsistent, isEmpty, OrbiterLogger, sleep, equals, JSONStringify } from "@orbiter-finance/utils";
+import { LoggerDecorator, arePropertyValuesConsistent, isEmpty, OrbiterLogger, sleep, equals, JSONStringify, getObjKeyByValue } from "@orbiter-finance/utils";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
@@ -20,7 +20,8 @@ import { AccountFactoryService } from "../../factory";
 import BigNumber from "bignumber.js";
 import * as Errors from "../../utils/Errors";
 import { EVMAccount, OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
-import { ethers } from "ethers6";
+import { Interface, ethers } from "ethers6";
+import * as abis from '@orbiter-finance/abi'
 
 @Injectable()
 export class TransferService {
@@ -121,13 +122,12 @@ export class TransferService {
         p: transfer.ruleId,
         op: 'mint',
         tick: transfer.targetSymbol,
-        amt:new BigNumber(transfer.targetAmount).toFixed(0),
+        amt: new BigNumber(transfer.targetAmount).toFixed(0),
         fc: (+sourceChain.internalId) + 9000,
       })}`)
-
       transferResult = await account.mintInscription({
         to: transfer.targetAddress,
-        data: input as any,
+        data: ethers.hexlify(input),
         value: transfer.sourceNonce,
       });
       sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
@@ -461,5 +461,141 @@ export class TransferService {
     }
     return transferResult;
   }
-
+  async execBatchInscriptionTransfer(
+    transfers: TransferAmountTransaction[],
+    wallet: OrbiterAccount
+  ) {
+    const targetChainId = transfers[0].targetChain;
+    let transferResult: TransferResponse;
+    const sourecIds = transfers.map((tx) => tx.sourceId);
+    const toAddressList = transfers.map((tx) => tx.targetAddress);
+    const toValuesList = transfers.map((tx) => BigInt(tx.sourceNonce));
+    const toDataList = transfers.map(tx=> {
+      const sourceChain = this.chainConfigService.getChainInfo(tx.sourceChain);
+      const input = Buffer.from(`data:,${JSON.stringify({
+        p: tx.ruleId,
+        op: 'mint',
+        tick: tx.targetSymbol,
+        amt: new BigNumber(tx.targetAmount).toFixed(0),
+        fc: (+sourceChain.internalId) + 9000,
+      })}`)
+      return input;
+    });
+    // lock
+    const transaction =
+      await this.bridgeTransactionModel.sequelize.transaction();
+    let contractAddress;
+    try {
+      const result = await this.bridgeTransactionModel.update(
+        {
+          targetMaker: wallet.address,
+          status: BridgeTransactionStatus.READY_PAID,
+        },
+        {
+          where: {
+            sourceId: sourecIds,
+            status: 0,
+          },
+          transaction,
+        }
+      );
+      if (result[0] != sourecIds.length) {
+        throw new Error(
+          `The number of successful modifications is inconsistent ${sourecIds.join(',')}`
+        );
+      }
+      const targetChain  = this.chainConfigService.getChainInfo(targetChainId);
+      if (!targetChain) {
+        throw new Errors.PaidBeforeCheck('The target chain information does not exist')
+      }
+      contractAddress = getObjKeyByValue(targetChain.contract, 'OBBatchTransfer');
+      if (!contractAddress) {
+        throw new Errors.PaidBeforeCheck('Sending the inscription did not obtain the contract address')
+      }
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+    try {
+      const account = wallet as EVMAccount;
+      const ifa = new Interface(abis.OBBatchTransfer);
+      const data = ifa.encodeFunctionData("transfers", [toAddressList, toValuesList,toDataList]);
+      const totalValue = toValuesList.reduce(
+        (accumulator, currentValue) => accumulator + currentValue,
+        0n
+      );
+      console.log(contractAddress, '==批量合约')
+      transferResult = await account.mintInscription({
+        to: contractAddress,
+        data: data,
+        value: totalValue,
+      });
+      
+      // CHANGE 98
+      for (let i = 0; i < transfers.length; i++) {
+        await this.bridgeTransactionModel.update(
+          {
+            status: BridgeTransactionStatus.PAID_SUCCESS,
+            targetMaker: wallet.address,
+            targetId: transferResult && `${transferResult.hash}#${i}`
+          },
+          {
+            where: {
+              sourceId: transfers[i].sourceId,
+            },
+            transaction,
+          }
+        );
+      }
+      await transaction.commit();
+    } catch (error) {
+      if (error instanceof Errors.PaidRollbackError) {
+        console.error('transferResult', transferResult);
+        await transaction.rollback();
+      } else {
+        for (let i = 0; i < transfers.length; i++) {
+          await this.bridgeTransactionModel.update(
+            {
+              status: BridgeTransactionStatus.PAID_CRASH,
+              targetId: transferResult && `${transferResult.hash}#${i}`
+            },
+            {
+              where: {
+                sourceId: transfers[i].sourceId,
+              },
+              transaction,
+            }
+          );
+        }
+        await transaction.commit();
+      }
+      throw error;
+    }
+    if (transferResult) {
+      // success change targetId
+      wallet
+        .waitForTransactionConfirmation(transferResult.hash)
+        .then(async (tx) => {
+          await this.bridgeTransactionModel.update(
+            {
+              status: BridgeTransactionStatus.BRIDGE_SUCCESS,
+              targetMaker: tx.from,
+            },
+            {
+              where: {
+                sourceId: sourecIds,
+              },
+            }
+          );
+        })
+        .catch((error) => {
+          this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${targetChainId} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
+          this.logger.error(
+            `${transferResult.hash} waitForTransactionConfirmation error ${targetChainId}`,
+            error
+          );
+        });
+    }
+    return transferResult;
+  }
 }

@@ -7,7 +7,7 @@ import { Transfers as TransfersModel, BridgeTransaction as BridgeTransactionMode
 import { ValidatorService } from "../validator/validator.service";
 import { AlertService } from "@orbiter-finance/alert";
 import { groupBy, maxBy, sumBy } from 'lodash';
-import { LoggerDecorator, isEmpty, OrbiterLogger, sleep, equals, JSONStringify } from "@orbiter-finance/utils";
+import { LoggerDecorator, isEmpty, OrbiterLogger, sleep, equals, JSONStringify, getObjKeyByValue } from "@orbiter-finance/utils";
 import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';
@@ -97,6 +97,7 @@ export class SequencerScheduleService {
       where,
       limit: 100
     });
+    console.log(records, '==records')
     if (records.length > 0) {
       for (const tx of records) {
         try {
@@ -175,6 +176,10 @@ export class SequencerScheduleService {
     // if (dayjs(bridgeTx.sourceTime).valueOf() <= this.applicationStartupTime) {
     //   throw new Errors.PaidSourceTimeLessStartupTime()
     // }
+    const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
+    if (!sourceChain) {
+      throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
+    }
     const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
     if (transactionTimeValid) {
       throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
@@ -197,20 +202,9 @@ export class SequencerScheduleService {
       await queue.add(bridgeTx);
       throw new Errors.MakerNotPrivetKey();
     }
-    const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
+    const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.ruleId, bridgeTx.targetSymbol, +bridgeTx.targetAmount);
     if (!isFluidityOK) {
-      await queue.add(bridgeTx);
-      throw new Error(`${bridgeTx.sourceId}`);
-    }
-
-    const success = await this.validatorService.validatingValueMatches(
-      bridgeTx.sourceSymbol,
-      bridgeTx.sourceAmount,
-      bridgeTx.targetSymbol,
-      bridgeTx.targetAmount
-    )
-    if (!success) {
-      throw new Errors.AmountRiskControlError(`${bridgeTx.sourceId}`)
+      throw new Error(`${bridgeTx.sourceId} Inscription lacks liquidity`);
     }
     // start paid
     const account = await this.accountFactoryService.createMakerAccount(
@@ -231,6 +225,83 @@ export class SequencerScheduleService {
       }
       throw error;
     }
+  }
+  async paidManyBridgeInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queue: MemoryQueue) {
+    const legalTransaction: BridgeTransactionModel[] = [];
+    const [targetChain, targetMaker] = queue.id.split('-');
+    // 
+    const privateKey = await this.validatorService.getSenderPrivateKey(targetMaker);
+    if (!privateKey) {
+      throw new Errors.MakerNotPrivetKey(`${targetMaker} privateKey ${bridgeTxs.map(row => row.sourceId).join(',')}`);
+    }
+    for (const bridgeTx of bridgeTxs) {
+      try {
+        // if (dayjs(bridgeTx.sourceTime).valueOf() <= this.applicationStartupTime) {
+        //   throw new Errors.PaidSourceTimeLessStartupTime()
+        // }
+        if (bridgeTx.version != bridgeTxs[0].version) {
+          throw new Error('The versions of batch refunds are inconsistent')
+        }
+        const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
+        if (!sourceChain) {
+          throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
+        }
+        const isConsume = await queue.store.has(bridgeTx.sourceId);
+        if (isConsume) {
+          throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+        }
+        if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
+          throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+        }
+        const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
+        if (transactionTimeValid) {
+          throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
+        }
+        const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
+        if (validDisabledPaid) {
+          await queue.add(bridgeTx);
+          throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
+        }
+        if (targetMaker != bridgeTx.targetMaker.toLocaleLowerCase()) {
+          throw new Errors.BatchPaidSameMaker(`${bridgeTx.sourceId} expect ${targetMaker} get ${bridgeTx.targetMaker}`);
+        }
+        const totalValue = sumBy(legalTransaction, item => +item.targetAmount);
+        const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.ruleId, bridgeTx.targetSymbol, totalValue);
+        if (!isFluidityOK) {
+          throw new Error(`${bridgeTx.ruleId}-${bridgeTx.targetSymbol} Inscription lacks liquidity`);
+        }
+        legalTransaction.push(bridgeTx);
+      } catch (error) {
+        this.logger.error(`paidManyBridgeInscriptionTransaction for error ${error.message}`, error);
+      }
+    }
+
+    // send
+    const account = await this.accountFactoryService.createMakerAccount(
+      targetMaker,
+      targetChain
+    );
+    for (let i = legalTransaction.length - 1; i >= 0; i--) {
+      const bridgeTx = legalTransaction[i];
+      const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
+      if (!saveRecord) {
+        legalTransaction.splice(i, 1);
+        this.logger.error(`paidManyBridgeInscriptionTransaction setEnsureRecord fai ${bridgeTx.sourceId}`);
+      }
+    }
+    await account.connect(privateKey, targetMaker);
+    try {
+      if (legalTransaction.length == 1) {
+        return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
+      }
+      return await this.transferService.execBatchInscriptionTransfer(legalTransaction, account)
+    } catch (error) {
+      if (error instanceof Errors.PaidRollbackError) {
+        this.logger.error(`execBatchTransfer error PaidRollbackError ${targetChain} - ${legalTransaction.map(row => row.sourceId).join(',')} message ${error.message}`);
+      }
+      throw error;
+    }
+
   }
   async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queue: MemoryQueue) {
     const legalTransaction = [];
@@ -320,10 +391,9 @@ export class SequencerScheduleService {
     let result;
     try {
       if (Array.isArray(bridgeTx)) {
-
         if (bridgeTx.length > 1) {
           if (bridgeTx[0].version === '3-0') {
-            // result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queue)
+            result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queue)
           } else {
             result = await this.paidManyBridgeTransaction(bridgeTx, queue)
           }
@@ -331,7 +401,7 @@ export class SequencerScheduleService {
           if (bridgeTx[0].version === '3-0') {
             result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queue)
           } else {
-            
+
             result = await this.paidSingleBridgeTransaction(bridgeTx[0], queue)
           }
         }
@@ -383,7 +453,29 @@ export class SequencerScheduleService {
     if (ensureQueue) {
       return this.logger.info(`addQueue ${tx.targetChain} ensureQueue ${tx.sourceChain} - ${tx.sourceId}`);
     }
-    queue.setBatchSize(batchTransferCount)
+    if (batchTransferCount > 1) {
+      const targetChain = await this.chainConfigService.getChainInfo(tx.targetChain);
+      if (tx.version==='3-0') {
+        if (targetChain && getObjKeyByValue(targetChain.contract, 'OBBatchTransfer')) {
+          queue.setBatchSize(batchTransferCount)
+        } else {
+          queue.setBatchSize(1)
+          return this.logger.info(`${tx.targetChain} OBBatchTransfer does not support batch sending instead of single sending`);
+        }
+      } else {
+        if (targetChain && getObjKeyByValue(targetChain.contract, 'OrbiterRouterV3')) {
+          queue.setBatchSize(batchTransferCount)
+        } else {
+          queue.setBatchSize(1)
+          return this.logger.info(`${tx.targetChain} OrbiterRouterV3 does not support batch sending instead of single sending`);
+        }
+      }
+    } else {
+      queue.setBatchSize(batchTransferCount)
+    }
+    const transferInterval = this.envConfig.get(`${tx.targetChain}.TransferInterval`);
+    console.log(transferInterval, '===2TransferInterval')
+    queue.setSleep(transferInterval);
     queue.add(tx);
   }
 

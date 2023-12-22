@@ -171,6 +171,7 @@ export default class InscriptionBuilder {
     if (!ruleMap[targetChain.chainId] || !ruleMap[targetChain.chainId][p]) {
       throw new ValidSourceTxError(TransferOpStatus.CHARING_RULE_NOT_FOUND, `CHARING_RULE_NOT_FOUND`)
     }
+    // TAG: fee
     if (new BigNumber(ruleMap[targetChain.chainId][p]).isGreaterThan(new BigNumber(transfer.amount))) {
       throw new ValidSourceTxError(TransferOpStatus.CHARING_TOO_LOW, `CHARING_TOO_LOW`)
     }

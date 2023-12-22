@@ -292,7 +292,6 @@ export class TransactionV1Service {
             targetMaker: transfer.sender
           },
           {
-            limit: 1,
             where: {
               id: memoryBT.id,
               status: [0, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],

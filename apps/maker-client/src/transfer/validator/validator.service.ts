@@ -55,7 +55,7 @@ export class ValidatorService {
 
     return true
   }
-  public async checkMakerInscriptionFluidity(chainId:string, wallet:string, token:string, amount:number) {
+  public async checkMakerInscriptionFluidity(protocol:string,tick:string, total:number) {
     return true;
   }
   public async checkMakerFluidity(chainId:string, wallet:string, token:string, amount:number):Promise<boolean>{

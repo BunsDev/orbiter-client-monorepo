@@ -61,4 +61,10 @@ export class PaidSourceTimeLessStartupTime extends Error {
         this.name = 'PaidSourceTimeLessStartupTime';
     }
 }
+export class PaidBeforeCheck extends Error {
+    constructor(message: string = 'Error checking information before sending') {
+        super(message);
+        this.name = 'PaidBeforeCheck';
+    }
+}
 
