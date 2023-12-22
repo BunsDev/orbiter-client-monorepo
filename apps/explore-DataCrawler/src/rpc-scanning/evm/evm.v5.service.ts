@@ -173,6 +173,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
                 .toString(),
               timestamp: 0,
               selector: decodeData.op,
+              calldata: decodeData,
               status,
               nonce,
               version: '3',
