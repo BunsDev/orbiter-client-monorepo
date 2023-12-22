@@ -94,7 +94,7 @@ export class ProofService {
                 order: [['status', 'DESC'], ['createTime', 'DESC']],
                 raw: true
             });
-            if (!proofDataList || !!proofDataList.length) {
+            if (!proofDataList || !proofDataList.length) {
                 console.error('none of source proofData');
                 return [];
             }
@@ -162,6 +162,7 @@ export class ProofService {
                 raw: true
             });
             if (!proofDataList || !proofDataList.length) {
+                console.error(`${bridgeTx.targetId} none of dest proofData`);
                 return [];
             }
             if (!bridgeTx.targetId) {
