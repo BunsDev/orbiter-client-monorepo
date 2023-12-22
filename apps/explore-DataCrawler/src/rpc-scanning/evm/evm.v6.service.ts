@@ -54,6 +54,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         const toAddrLower = (row['to'] || "").toLocaleLowerCase();
         const fromAddrLower = (row['from'] || "").toLocaleLowerCase();
         // is to contract addr
+  
         if (contractList.includes(toAddrLower)) {
           rows.push(row);
           continue;
@@ -211,12 +212,20 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           );
         }
       } else if (contractInfo) {
-        transfers = EVMV6Utils.evmContract(
-          chainConfig,
-          contractInfo,
-          transaction,
-          receipt,
-        );
+        if (contractInfo.name === 'CrossInscriptions') {
+          transfers = EVMV6Utils.crossInscriptions(
+            chainConfig,
+            transaction,
+            receipt,
+          );
+        } else {
+          transfers = EVMV6Utils.evmContract(
+            chainConfig,
+            contractInfo,
+            transaction,
+            receipt,
+          );
+        }
       } else {
         // 0x646174613a2c
         if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {

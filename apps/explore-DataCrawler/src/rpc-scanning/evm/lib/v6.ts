@@ -153,6 +153,72 @@ export default class EVMVUtils {
     }
     return transfers;
   }
+  public static crossInscriptions(
+    chainInfo: IChainConfig,
+    transaction: TransactionResponse,
+    receipt: TransactionReceipt,
+  ): TransferAmountTransaction[] {
+    const transfers: TransferAmountTransaction[] = [];
+    const { nonce } = transaction;
+    const contractInterface = new Interface2(abis.CrossInscriptions);
+    const parsedData = contractInterface.parseTransaction({
+      data: transaction.data,
+    });
+    if (!parsedData) {
+      return transfers;
+    }
+    const txData: TransferAmountTransaction = {
+      chainId: chainInfo.chainId,
+      hash: transaction.hash,
+      blockNumber: transaction.blockNumber,
+      transactionIndex: transaction.index,
+      sender: transaction.from,
+      receiver: parsedData.args[0],
+      amount: null,
+      value: null,
+      token: null,
+      symbol: '',
+      fee: null,
+      feeAmount: null,
+      feeToken: chainInfo.nativeCurrency.symbol,
+      timestamp: 0,
+      status: +receipt.status
+        ? TransferAmountTransactionStatus.confirmed
+        : TransferAmountTransactionStatus.failed,
+      nonce,
+      calldata: parsedData.args.toArray(),
+      contract: transaction.to,
+      selector: parsedData.selector,
+      signature: parsedData.signature,
+      receipt,
+    };
+    const logs = receipt.logs;
+    if (parsedData.signature === 'transfers(address[],uint256[],bytes[])') {
+      for (const log of logs) {
+        const parsedLogData = contractInterface.parseLog(log as any);
+        console.log(parsedLogData, '=parsedLogData')
+        if (
+          parsedLogData &&
+          parsedLogData.signature === 'Transfer(address,uint256)' &&
+          parsedLogData.topic ===
+          '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
+        ) {
+          const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
+          const copyTxData = clone(txData);
+          copyTxData.hash = `${txData.hash}#${transfers.length}`;
+          copyTxData.token = chainInfo.nativeCurrency.address;
+          copyTxData.symbol = chainInfo.nativeCurrency.symbol;
+          copyTxData.receiver = parsedLogData.args[0];
+          copyTxData.value = value;
+          copyTxData.amount = new BigNumber(value)
+            .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
+            .toString();
+          transfers.push(copyTxData);
+        }
+      }
+    }
+    return transfers;
+  }
   public static evmOBSource(
     chainInfo: IChainConfig,
     transaction: TransactionResponse,

@@ -456,11 +456,11 @@ export class SequencerScheduleService {
     if (batchTransferCount > 1) {
       const targetChain = await this.chainConfigService.getChainInfo(tx.targetChain);
       if (tx.version==='3-0') {
-        if (targetChain && getObjKeyByValue(targetChain.contract, 'OBBatchTransfer')) {
+        if (targetChain && getObjKeyByValue(targetChain.contract, 'CrossInscriptions')) {
           queue.setBatchSize(batchTransferCount)
         } else {
           queue.setBatchSize(1)
-          return this.logger.info(`${tx.targetChain} OBBatchTransfer does not support batch sending instead of single sending`);
+          return this.logger.info(`${tx.targetChain} CrossInscriptions does not support batch sending instead of single sending`);
         }
       } else {
         if (targetChain && getObjKeyByValue(targetChain.contract, 'OrbiterRouterV3')) {

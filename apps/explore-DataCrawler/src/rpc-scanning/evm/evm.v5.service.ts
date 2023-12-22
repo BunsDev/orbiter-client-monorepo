@@ -134,12 +134,20 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           receipt as any,
         );
       } else if (contractInfo) {
-        transfers = EVMV5Utils.evmContract(
-          chainConfig,
-          contractInfo,
-          transaction as any,
-          receipt as any,
-        );
+        if (contractInfo.name === 'CrossInscriptions') {
+          transfers = EVMV5Utils.crossInscriptions(
+            chainConfig,
+            transaction as any,
+            receipt as any,
+          );
+        } else {
+          transfers = EVMV5Utils.evmContract(
+            chainConfig,
+            contractInfo,
+            transaction as any,
+            receipt as any,
+          );
+        }
       } else {
         if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {
           const decodeData = EVMV5Utils.deCodeMintCallData(transaction.data);

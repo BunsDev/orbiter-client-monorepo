@@ -508,7 +508,7 @@ export class TransferService {
       if (!targetChain) {
         throw new Errors.PaidBeforeCheck('The target chain information does not exist')
       }
-      contractAddress = getObjKeyByValue(targetChain.contract, 'OBBatchTransfer');
+      contractAddress = getObjKeyByValue(targetChain.contract, 'CrossInscriptions');
       if (!contractAddress) {
         throw new Errors.PaidBeforeCheck('Sending the inscription did not obtain the contract address')
       }
@@ -518,13 +518,12 @@ export class TransferService {
     }
     try {
       const account = wallet as EVMAccount;
-      const ifa = new Interface(abis.OBBatchTransfer);
+      const ifa = new Interface(abis.CrossInscriptions);
       const data = ifa.encodeFunctionData("transfers", [toAddressList, toValuesList,toDataList]);
       const totalValue = toValuesList.reduce(
         (accumulator, currentValue) => accumulator + currentValue,
         0n
       );
-      console.log(contractAddress, '==批量合约')
       transferResult = await account.mintInscription({
         to: contractAddress,
         data: data,
