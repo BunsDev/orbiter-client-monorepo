@@ -121,7 +121,7 @@ export class MemoryQueue<T = any> {
         } catch (error) {
             console.error(error, 'processQueue error');
         } finally {
-            console.log('Consumption processing is completed and unlocked');
+            // console.log('Consumption processing is completed and unlocked');
             this.processingLock = false;
         }
     }
