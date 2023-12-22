@@ -26,7 +26,7 @@ export interface IDeployRecord {
   deletedAt?:Date;
 }
 
-@Table({ tableName: 'deploy_record', timestamps: true })
+@Table({ tableName: 'deploy_records', timestamps: true })
 export class DeployRecord
   extends Model<IDeployRecord, IDeployRecord>
   implements IDeployRecord
