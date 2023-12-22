@@ -123,7 +123,7 @@ export class TransferService {
         op: 'mint',
         tick: transfer.targetSymbol,
         amt: new BigNumber(transfer.targetAmount).toFixed(0),
-        fc: String((+sourceChain.internalId) + 9000),
+        fc: String((+sourceChain.internalId)),
       })}`)
       transferResult = await account.mintInscription({
         to: transfer.targetAddress,
@@ -477,7 +477,7 @@ export class TransferService {
         op: 'mint',
         tick: tx.targetSymbol,
         amt: new BigNumber(tx.targetAmount).toFixed(0),
-        fc: String((+sourceChain.internalId) + 9000),
+        fc: String((+sourceChain.internalId)),
       })}`)
       return input;
     });
@@ -529,7 +529,7 @@ export class TransferService {
         data: data,
         value: totalValue,
       });
-      
+
       // CHANGE 98
       for (let i = 0; i < transfers.length; i++) {
         await this.bridgeTransactionModel.update(

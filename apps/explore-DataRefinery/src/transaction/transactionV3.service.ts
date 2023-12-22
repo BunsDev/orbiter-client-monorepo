@@ -105,7 +105,7 @@ export class TransactionV3Service {
       if (transfer.version === '3-1') {
         const callData = transfer.calldata as any;
         const { fc } = callData
-        const fromChainInternalId = +fc - 9000
+        const fromChainInternalId = +fc
         const sourceChainInfo = this.chainConfigService.getChainInfo(+fromChainInternalId);
         const matchTx = this.inscriptionMemoryMatchingService.matchV3GetBridgeTransactions(transfer, sourceChainInfo);
         if (matchTx) {
@@ -322,7 +322,7 @@ export class TransactionV3Service {
     ) {
       return this.errorBreakResult(`handleMintTransfer fail ${transfer.hash} Incorrect params : ${JSON.stringify(callData)}`)
     }
-    const fromChainInternalId = +fc - 9000
+    const fromChainInternalId = +fc
     const chainInfo = this.chainConfigService.getChainInfo(fromChainInternalId);
     if (!chainInfo) {
       return this.errorBreakResult(`handleMintTransfer fail ${transfer.hash} Incorrect from chain : ${JSON.stringify(callData)}`)
