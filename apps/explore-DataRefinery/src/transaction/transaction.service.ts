@@ -86,12 +86,12 @@ export class TransactionService {
         console.log(transfer.hash, transfer.version)
         if (transfer.version == '3') {
           upsertData.opStatus = TransferOpStatus.INIT_STATUS;
-          const op = upsertData.calldata.op
-          if (op && op === InscriptionOpType.Deploy) {
+          const calldata = upsertData.calldata
+          if (calldata && calldata.op && calldata.op === InscriptionOpType.Deploy) {
             versionStr = '3-2';
-          } else if (op && op === InscriptionOpType.Claim) {
+          } else if (calldata && calldata.op && calldata.op === InscriptionOpType.Claim) {
             versionStr = '3-0';
-          } else if (op && op === InscriptionOpType.Mint) {
+          } else if (calldata &&calldata.op && calldata.op === InscriptionOpType.Mint) {
             versionStr = '3-1';
           }
         } else if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
