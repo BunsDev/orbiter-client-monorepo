@@ -63,10 +63,11 @@ export class SequencerScheduleService {
       status: 0,
       sourceMaker: owner,
       targetId: null,
+      targetChain: this.envConfig.get("INSCRIPTION_SUPPORT_CHAINS"),
       version: '3-0',
-      sourceTime: {
-        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
-      },
+      // sourceTime: {
+      //   [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
+      // },
     }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
