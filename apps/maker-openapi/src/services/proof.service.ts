@@ -257,10 +257,16 @@ export class ProofService {
                 });
                 if (proofRecordCount) continue;
                 const transfer = await this.transfersModel.findOne(<any>{
-                    attributes: ['createdAt'],
+                    attributes: ['timestamp'],
                     where: { hash: data.hash }
                 });
-                list.push([data.hash, String(data.sourceChain), String(data.targetChain), String(Math.floor(data.createTime / 1000))]);
+                list.push([
+                    data.hash,
+                    String(data.sourceChain),
+                    String(data.targetChain),
+                    String(Math.floor(new Date(transfer.timestamp).valueOf() / 1000)),
+                    String(Math.floor(data.createTime / 1000))
+                ]);
             }
         }
         return list;
