@@ -523,8 +523,7 @@ export default class EVMVUtils {
     let decodeData = null;
     try {
       const jsonData = Buffer.from(data.slice(2), 'hex').toString('utf-8');
-      console.log(jsonData)
-      if (jsonData.startsWith('data:,')) {
+      if (jsonData && jsonData.startsWith('data:,')) {
         decodeData = JSON.parse(jsonData.slice(6));
       }
     } catch (error) {
