@@ -59,6 +59,8 @@ export enum TransferOpStatus {
   INCORRECT_PROTOCOL = 47,
   CHARING_RULE_NOT_FOUND = 48,
   CHARING_TOO_LOW = 49,
+  CLAIM_EXCEED_MAXIMUM = 50,
+  INCORRECT_FC = 51,
 }
 
 export enum InscriptionOpType {

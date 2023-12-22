@@ -153,6 +153,11 @@ export default class InscriptionBuilder {
     if (p !== deployRecord.protocol) {
       throw new ValidSourceTxError(TransferOpStatus.INCORRECT_PROTOCOL, `incorrect protocol`)
     }
+
+    if (new BigNumber(deployRecord.currentMintedAmount).isGreaterThanOrEqualTo(new BigNumber(deployRecord.max))) {
+      throw new ValidSourceTxError(TransferOpStatus.CLAIM_EXCEED_MAXIMUM, `CLAIM_EXCEED_MAXIMUM`)
+    }
+
     const builderData = await this.standardBuilder.build(transfer);
     const { targetAddress, targetChain, targetAmount } = builderData
     if (!targetChain) {
@@ -162,6 +167,8 @@ export default class InscriptionBuilder {
     if (targetChain.chainId === sourceChain.chainId) {
       throw new ValidSourceTxError(TransferOpStatus.CLAIM_MUST_CROSS_CHAIN, `targetChain not found`)
     }
+
+
     if (+targetAmount > +deployRecord.limit) {
       throw new ValidSourceTxError(TransferOpStatus.CLAIM_AMOUNT_EXCEED_LIMIT, `targetChain not found`)
     }

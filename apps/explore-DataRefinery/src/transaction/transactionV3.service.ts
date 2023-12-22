@@ -104,9 +104,15 @@ export class TransactionV3Service {
     for (const transfer of this.inscriptionMemoryMatchingService.transfers) {
       if (transfer.version === '3-1') {
         const callData = transfer.calldata as any;
+        if (!callData || !callData.fc) {
+          continue;
+        }
         const { fc } = callData
         const fromChainInternalId = +fc
         const sourceChainInfo = this.chainConfigService.getChainInfo(+fromChainInternalId);
+        if (!sourceChainInfo) {
+          continue;
+        }
         const matchTx = this.inscriptionMemoryMatchingService.matchV3GetBridgeTransactions(transfer, sourceChainInfo);
         if (matchTx) {
           this.handleMintTransfer(transfer as any)
@@ -165,7 +171,7 @@ export class TransactionV3Service {
       );
       return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Claim}`)
     }
-    if (!p || !tick) {
+    if (!p || !tick || !amt || new BigNumber(amt).decimalPlaces() !== 0) {
       await this.transfersModel.update(
         {
           opStatus: TransferOpStatus.INVALID_OP_PARAMS,
@@ -266,7 +272,6 @@ export class TransactionV3Service {
           },
           transaction: t,
         })
-        console.log('----dr', dr)
         // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.inscriptionMemoryMatchingService
           .addBridgeTransaction(createRow.toJSON())
@@ -296,7 +301,7 @@ export class TransactionV3Service {
       return { errno: 0, data: createdData }
     } catch (error) {
       this.logger.error(
-        `handleTransferBySourceTx ${transfer.hash} error`,
+        `handleClaimTransfer ${transfer.hash} error`,
         error,
       );
       t && (await t.rollback());
@@ -320,11 +325,31 @@ export class TransactionV3Service {
       (!amt || !/^[1-9]\d*(\.\d+)?$/.test(amt)) ||
       !fc
     ) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP_PARAMS,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return this.errorBreakResult(`handleMintTransfer fail ${transfer.hash} Incorrect params : ${JSON.stringify(callData)}`)
     }
     const fromChainInternalId = +fc
     const chainInfo = this.chainConfigService.getChainInfo(fromChainInternalId);
     if (!chainInfo) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INCORRECT_FC,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return this.errorBreakResult(`handleMintTransfer fail ${transfer.hash} Incorrect from chain : ${JSON.stringify(callData)}`)
     }
     let t1;
