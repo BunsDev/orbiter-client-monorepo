@@ -123,7 +123,7 @@ export class TransferService {
         op: 'mint',
         tick: transfer.targetSymbol,
         amt: new BigNumber(transfer.targetAmount).toFixed(0),
-        fc: (+sourceChain.internalId) + 9000,
+        fc: String((+sourceChain.internalId) + 9000),
       })}`)
       transferResult = await account.mintInscription({
         to: transfer.targetAddress,
@@ -477,7 +477,7 @@ export class TransferService {
         op: 'mint',
         tick: tx.targetSymbol,
         amt: new BigNumber(tx.targetAmount).toFixed(0),
-        fc: (+sourceChain.internalId) + 9000,
+        fc: String((+sourceChain.internalId) + 9000),
       })}`)
       return input;
     });
