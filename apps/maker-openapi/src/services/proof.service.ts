@@ -94,8 +94,8 @@ export class ProofService {
                 order: [['status', 'DESC'], ['createTime', 'DESC']],
                 raw: true
             });
-            if (!proofDataList) {
-                console.error('none of proofData');
+            if (!proofDataList || !!proofDataList.length) {
+                console.error('none of source proofData');
                 return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
@@ -155,7 +155,8 @@ export class ProofService {
             const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
                 where: {
                     hash: bridgeTx.targetId.toLowerCase(),
-                    isSource: 0
+                    isSource: 0,
+                    message: ""
                 },
                 order: [['status', 'DESC'], ['createTime', 'DESC']],
                 raw: true
@@ -250,6 +251,10 @@ export class ProofService {
         const list = [];
         for (const data of dataList) {
             if (data?.hash) {
+                const proofRecordCount = await this.arbitrationProof.count(<any>{
+                    where: { hash: data.hash }
+                });
+                if (proofRecordCount) continue;
                 const transfer = await this.transfersModel.findOne(<any>{
                     attributes: ['createdAt'],
                     where: { hash: data.hash }
