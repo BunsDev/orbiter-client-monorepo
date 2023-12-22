@@ -4,8 +4,7 @@ import {
     ProofSubmissionRequest,
 } from '../common/interfaces/Proof.interface';
 import { InjectModel } from "@nestjs/sequelize";
-import { BridgeTransaction } from "@orbiter-finance/seq-models";
-import { keccak256, solidityPack } from "ethers/lib/utils";
+import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
 import { getDecimalBySymbol } from "@orbiter-finance/utils";
 import { ethers, utils } from "ethers";
 import BigNumber from "bignumber.js";
@@ -22,6 +21,7 @@ import {
 export class ProofService {
     constructor(
         protected envConfigService: ENVConfigService,
+        @InjectModel(Transfers) private transfersModel: typeof Transfers,
         @InjectModel(BridgeTransaction) private bridgeTransactionModel: typeof BridgeTransaction,
         @InjectModel(ArbitrationProof) private arbitrationProof: typeof ArbitrationProof,
         @InjectModel(ArbitrationMakerTransaction) private arbitrationMakerTransaction: typeof ArbitrationMakerTransaction) {
@@ -37,6 +37,9 @@ export class ProofService {
 
     async proofSubmission(data: ProofSubmissionRequest) {
         try {
+            if (!data?.transaction) {
+                return { status: 0 };
+            }
             const hash = data.transaction.toLowerCase();
             const proofData = {
                 hash, status: data.status,
@@ -189,27 +192,28 @@ export class ProofService {
                 console.error('Invalid parameters');
                 return [];
             }
+            const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
+                attributes: [
+                    'sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime', 'sourceNonce', 'sourceAddress',
+                    'targetId', 'targetChain', 'targetToken', 'targetSymbol', 'targetNonce', 'targetAddress', 'targetMaker',
+                    'sourceSymbol','sourceAmount','targetAmount', 'ruleId', 'ebcAddress'],
+                where: {
+                    sourceId: hash.toLowerCase()
+                }
+            });
+            if (!bridgeTx?.targetId) {
+                console.error('none of targetId');
+                return [];
+            }
             const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
                 where: {
-                    hash: hash.toLowerCase(),
+                    hash: bridgeTx.targetId.toLowerCase(),
                     isSource: 0
                 },
                 order: [['status', 'DESC'], ['createTime', 'DESC']],
                 raw: true
             });
             if (!proofDataList || !proofDataList.length) {
-                return [];
-            }
-            const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
-                attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime',
-                    'targetId', 'targetChain', 'targetToken', 'targetSymbol', 'targetNonce', 'targetAddress', 'targetMaker',
-                    'targetAmount', 'ruleId', 'ebcAddress'],
-                where: {
-                    sourceId: hash.toLowerCase()
-                }
-            });
-            if (!bridgeTx) {
-                console.error('none of bridgeTx');
                 return [];
             }
             if (!bridgeTx.targetId) {
@@ -223,12 +227,9 @@ export class ProofService {
             }
             const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
             const targetAmount = new BigNumber(bridgeTx.targetAmount).multipliedBy(10 ** targetDecimal).toFixed(0);
+            const sourceDecimal = getDecimalBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
+            const sourceAmount = new BigNumber(bridgeTx.sourceAmount).multipliedBy(10 ** sourceDecimal).toFixed(0);
 
-            const chain0 = toHex(bridgeTx.sourceChain);
-            const chain1 = toHex(bridgeTx.targetChain);
-            const token0 = bridgeTx.sourceToken;
-            const token1 = bridgeTx.targetToken;
-            const ruleKey: string = keccak256(solidityPack(['uint256', 'uint256', 'uint256', 'uint256'], [chain0, chain1, token0, token1]));
             const eraNetWorkId = await this.envConfigService.getAsync('IS_TEST_NET') ? 280 : 324;
             const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
             const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
@@ -236,17 +237,19 @@ export class ProofService {
             const list = [];
             for (const proofData of proofDataList) {
                 list.push({
+                    sourceNonce: bridgeTx.sourceNonce,
                     targetNonce: bridgeTx.targetNonce,
                     targetChain: bridgeTx.targetChain,
-                    targetAddress: bridgeTx.targetAddress,
+                    sourceAddress: bridgeTx.sourceAddress,
                     targetToken: bridgeTx.targetToken,
                     targetAmount,
-
+                    sourceAmount,
+                    ruleId: bridgeTx.ruleId,
+                    ebcAddress: bridgeTx.ebcAddress,
                     sourceId: bridgeTx.sourceId,
                     sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                     sourceMaker: bridgeTx.sourceMaker,
                     sourceChain: bridgeTx.sourceChain,
-                    ruleKey,
                     isSource: 0,
                     spvAddress,
                     ...proofData
@@ -299,7 +302,13 @@ export class ProofService {
         });
         const list = [];
         for (const data of dataList) {
-            if (data?.hash) list.push([data.hash, data.sourceChain, data.targetChain]);
+            if (data?.hash) {
+                const transfer = await this.transfersModel.findOne(<any>{
+                    attributes: ['createdAt'],
+                    where: { hash: data.hash }
+                });
+                list.push([data.hash, String(data.sourceChain), String(data.targetChain), String(Math.floor(new Date(transfer.createdAt).valueOf() / 1000))]);
+            }
         }
         return list;
     }

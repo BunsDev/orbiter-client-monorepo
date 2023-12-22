@@ -140,8 +140,8 @@ export class ConsumerService {
 
   }
 
-  async consumeMakerWaitClaimTransferMessage(callback: (data: any) => Promise<any>) {
-    const queue = 'makerWaitTransfer1_0_1c8';
+  async consumeMakerWaitTransferMessage(callback: (data: any) => Promise<any>, afterPrefix:string= "") {
+    const queue = `makerWaitTransfer${afterPrefix}`;
     try {
       if (!this.connectionManager.getChannel()) {
         await sleep(500);
@@ -183,47 +183,5 @@ export class ConsumerService {
       Logger.error(`${queue} consumeMakerWaitTransferMessage error ${error.message}`, error);
     }
   }
-  async consumeMakerWaitTransferMessage(callback: (data: any) => Promise<any>) {
-    const queue = 'makerWaitClaimTransfer';
-    try {
-      if (!this.connectionManager.getChannel()) {
-        await sleep(500);
-        this.consumeMakerWaitTransferMessage(callback);
-        return;
-      }
-      const channel = await this.connectionManager.createChannel();
-      await channel.assertQueue(queue);
-      channel.on('close', () => {
-        Logger.error(`${queue} Channel closed`);
-        this.alertService.sendMessage(`${queue} Channel closed`, 'TG');
-        this.consumeMakerWaitTransferMessage(callback)
-      });
-
-      channel.on('error', (err) => {
-        Logger.error(`Channel error:${err.message}`, err.stack);
-        this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
-      });
-      channel.prefetch(10);
-      channel.consume(queue, async (msg: Message | null) => {
-        if (msg) {
-          try {
-            const messageContent = msg.content.toString();
-            const data = JSON.parse(messageContent);
-            await callback(data);
-            channel.ack(msg);
-          } catch (error: any) {
-            console.error(
-              `${queue} consumeTransferWaitMessages Error processing message: ${error.message}`,
-              error,
-            );
-            channel.reject(msg);
-          }
-        }
-      });
-    } catch (error: any) {
-      await sleep(500);
-      this.consumeMakerWaitTransferMessage(callback);
-      Logger.error(`${queue} consumeMakerWaitTransferMessage error ${error.message}`, error);
-    }
-  }
+  
 }

@@ -2,18 +2,15 @@ import IAccount, {
   Context,
 } from "./IAccount";
 import { TransferResponse,TransactionRequest } from "./IAccount.interface";
-import { StoreService } from "./store.service";
 import { IChainConfig } from "@orbiter-finance/config";
 import { OrbiterLogger,logger } from "@orbiter-finance/utils";
 
 export class OrbiterAccount extends IAccount {
   public address: string;
   public logger!: OrbiterLogger;
-  public store: StoreService;
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
     this.logger = logger.createLoggerByName(`account-${chainId}`);
-    this.store = new StoreService(chainId);
   }
 
   get chainConfig(): IChainConfig {
@@ -74,18 +71,4 @@ export class OrbiterAccount extends IAccount {
     throw new Error("waitForTransactionConfirmation Method not implemented.");
   }
 
-  public async pregeneratedRequestParameters(
-    orders: any[] | any,
-    transactionRequest: TransactionRequest = {}
-  ) {
-    if (Array.isArray(orders)) {
-      transactionRequest.serialId = [];
-      for (const order of orders) {
-        transactionRequest.serialId.push(order.sourceId);
-      }
-    } else {
-      transactionRequest.serialId = orders['sourceId'];
-    }
-    return transactionRequest;
-  }
 }
