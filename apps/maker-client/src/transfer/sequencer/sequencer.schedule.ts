@@ -64,9 +64,9 @@ export class SequencerScheduleService {
       sourceMaker: owner,
       targetId: null,
       version: '3-0',
-      // sourceTime: {
-      //   [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
-      // },
+      sourceTime: {
+        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
+      },
     }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
@@ -97,7 +97,6 @@ export class SequencerScheduleService {
       where,
       limit: 100
     });
-    console.log(records, '==records')
     if (records.length > 0) {
       for (const tx of records) {
         try {
@@ -474,7 +473,6 @@ export class SequencerScheduleService {
       queue.setBatchSize(batchTransferCount)
     }
     const transferInterval = this.envConfig.get(`${tx.targetChain}.TransferInterval`);
-    console.log(transferInterval, '===2TransferInterval')
     queue.setSleep(transferInterval);
     queue.add(tx);
   }
