@@ -159,6 +159,9 @@ export default class InscriptionBuilder {
       throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetChain not found`)
     }
 
+    if (targetChain.chainId === sourceChain.chainId) {
+      throw new ValidSourceTxError(TransferOpStatus.CLAIM_MUST_CROSS_CHAIN, `targetChain not found`)
+    }
     if (+targetAmount > +deployRecord.limit) {
       throw new ValidSourceTxError(TransferOpStatus.CLAIM_AMOUNT_EXCEED_LIMIT, `targetChain not found`)
     }

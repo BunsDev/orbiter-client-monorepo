@@ -193,26 +193,37 @@ export default class EVMVUtils {
       receipt,
     };
     const logs = receipt.logs;
+    console.log('parsedLogData----', parsedData.args[2])
     if (parsedData.signature === 'transfers(address[],uint256[],bytes[])') {
       for (const log of logs) {
         const parsedLogData = contractInterface.parseLog(log as any);
-        console.log(parsedLogData, '=parsedLogData')
+        // console.log(parsedLogData, '=parsedLogData')
         if (
           parsedLogData &&
           parsedLogData.signature === 'Transfer(address,uint256)' &&
           parsedLogData.topic ===
           '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
         ) {
+          if (!parsedData.args[2]) {
+            continue
+          }
+          const decodeData = this.decodeInscriptionCallData(parsedData.args[2][log.index])
+          if (!decodeData) {
+            continue;
+          }
           const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           const copyTxData = clone(txData);
           copyTxData.hash = `${txData.hash}#${transfers.length}`;
           copyTxData.token = chainInfo.nativeCurrency.address;
           copyTxData.symbol = chainInfo.nativeCurrency.symbol;
+          copyTxData.calldata = decodeData;
           copyTxData.receiver = parsedLogData.args[0];
           copyTxData.value = value;
           copyTxData.amount = new BigNumber(value)
             .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
             .toString();
+          copyTxData.version = '3'
+          copyTxData.selector = decodeData.op
           transfers.push(copyTxData);
         }
       }
@@ -508,7 +519,7 @@ export default class EVMVUtils {
       }
     }
   }
-  static deCodeMintCallData(data: string) {
+  static decodeInscriptionCallData(data: string) {
     let decodeData = null;
     try {
       const jsonData = Buffer.from(data.slice(2), 'hex').toString('utf-8');
@@ -517,7 +528,7 @@ export default class EVMVUtils {
         decodeData = JSON.parse(jsonData.slice(6));
       }
     } catch (error) {
-      console.log('deCodeMintCallData error', error)
+      console.log('deCodeInscriptionCallData error', error)
       return decodeData
     }
     return decodeData

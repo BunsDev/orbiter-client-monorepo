@@ -83,6 +83,7 @@ export class TransactionService {
         }
         let versionStr = null;
         const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');
+        console.log(transfer.hash, transfer.version)
         if (transfer.version == '3') {
           upsertData.opStatus = TransferOpStatus.INIT_STATUS;
           const op = upsertData.calldata.op
@@ -112,7 +113,7 @@ export class TransactionService {
               versionStr = '1-1';
             }
           }
-          if (!transfer.version.startsWith('3-') && transfer.sender === transfer.receiver) {
+          if (!transfer.version && transfer.sender === transfer.receiver) {
             upsertData.opStatus = TransferOpStatus.VALID;
           }
         }

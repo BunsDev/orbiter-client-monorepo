@@ -54,7 +54,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         const toAddrLower = (row['to'] || "").toLocaleLowerCase();
         const fromAddrLower = (row['from'] || "").toLocaleLowerCase();
         // is to contract addr
-  
         if (contractList.includes(toAddrLower)) {
           rows.push(row);
           continue;
@@ -229,7 +228,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       } else {
         // 0x646174613a2c
         if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {
-          const decodeData = EVMV6Utils.deCodeMintCallData(transaction.data)
+          const decodeData = EVMV6Utils.decodeInscriptionCallData(transaction.data)
           if (decodeData) {
             const value = transaction.value.toString();
             transfers.push({

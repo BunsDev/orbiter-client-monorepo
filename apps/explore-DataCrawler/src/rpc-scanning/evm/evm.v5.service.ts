@@ -150,7 +150,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         }
       } else {
         if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {
-          const decodeData = EVMV5Utils.deCodeMintCallData(transaction.data);
+          const decodeData = EVMV5Utils.decodeInscriptionCallData(transaction.data);
           if (decodeData) {
             const value = transaction.value.toString();
             transfers.push({

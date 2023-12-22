@@ -200,19 +200,6 @@ export class TransactionV3Service {
       );
       return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} deployTick nof found`)
     }
-    if (deployTick.chainId === transfer.chainId) {
-      await this.transfersModel.update(
-        {
-          opStatus: TransferOpStatus.CLAIM_MUST_CROSS_CHAIN,
-        },
-        {
-          where: {
-            id: transfer.id,
-          },
-        },
-      );
-      return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} must cross chain claim`)
-    }
     const sourceBT = await this.bridgeTransactionModel.findOne({
       attributes: ['id', 'status', 'targetChain'],
       where: {
@@ -266,9 +253,20 @@ export class TransactionV3Service {
           },
         );
         if (!createRow || !createRow.id) {
-          throw new Error(`${transfer.hash} Create Bridge Transaction Fail`);
+          throw new Error(`${transfer.hash} Create Inscription Bridge Transaction Fail`);
         }
         createdData.id = createRow.id
+        const dr = await this.deployRecordModel.update({
+          currentMintedAmount: Sequelize.literal(`"currentMintedAmount" + ${createdData.targetAmount}`),
+          currentMintedTx: Sequelize.literal(`"currentMintedTx" + 1`)
+        }, {
+          where: {
+            tick: tick,
+            protocol: p
+          },
+          transaction: t,
+        })
+        console.log('----dr', dr)
         // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.inscriptionMemoryMatchingService
           .addBridgeTransaction(createRow.toJSON())
@@ -278,6 +276,7 @@ export class TransactionV3Service {
               error,
             );
           });
+
       }
       if (transfer.opStatus != 1) {
         await this.transfersModel.update(
@@ -518,6 +517,8 @@ export class TransactionV3Service {
       timestamp: transfer.timestamp,
       callData: transfer.calldata,
       protocol: p,
+      currentMintedAmount: '0',
+      currentMintedTx: '0',
       tick: tick,
       max: max,
       limit: lim,
@@ -533,7 +534,7 @@ export class TransactionV3Service {
     }
     const t = await this.sequelize.transaction()
     try {
-      const result = await this.deployRecordModel.upsert(createData, { transaction: t, conflictFields: ['hash', 'chainId'], returning: true });
+      const result = await this.deployRecordModel.upsert(createData, { transaction: t, conflictFields: ['protocol', 'tick'], returning: true });
       const updateR = await this.transfersModel.update(
         { opStatus: TransferOpStatus.DEPLOY_SUCCESS  },
         {
@@ -544,14 +545,14 @@ export class TransactionV3Service {
           transaction: t
         }
       );
-      t.commit()
+      await t.commit()
       return { errno: 0, data: result[0] }
     } catch (error) {
       this.logger.error(
         `handleDeployTransfer ${transfer.hash} error`,
         error,
       );
-      t.rollback()
+      await t.rollback()
       throw error;
     }
   }

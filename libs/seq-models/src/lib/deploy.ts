@@ -15,13 +15,15 @@ export interface IDeployRecord {
   timestamp: Date;
   callData: object;
   protocol: string;
+  currentMintedAmount: string;
+  currentMintedTx: string;
   tick: string;
   max: string;
   limit: string;
   from: string;
   to: string;
   value: string;
-  deletedAt?:Date
+  deletedAt?:Date;
 }
 
 @Table({ tableName: 'deploy_record', timestamps: true })
@@ -60,11 +62,20 @@ export class DeployRecord
   @Index({ name: 'to', using: 'btree',})
   to: string;
 
+  @Column({type: DataType.STRING(55) })
+  @Index({ name: 'protocol_tick', using: 'btree', unique: true })
+  protocol: string;
+
   @Column({type: DataType.STRING(255) })
+  @Index({ name: 'protocol_tick', using: 'btree', unique: true })
   tick: string;
 
-  @Column({type: DataType.STRING(55) })
-  protocol: string;
+  @Column({type: DataType.DECIMAL })
+  currentMintedAmount: string;
+
+  @Column({type: DataType.INTEGER })
+  currentMintedTx: string;
+
 
   @Column({type: DataType.DECIMAL })
   max: string;
