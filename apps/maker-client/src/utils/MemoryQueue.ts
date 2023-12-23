@@ -82,10 +82,10 @@ export class MemoryQueue<T = any> {
     private async processQueue(): Promise<void> {
         try {
             if(Date.now() %1000 * 60) {
-                console.log(`Heartbeat detection ${this.id}`);
+                console.log(`Heartbeat detection ${this.id} Count: ${this.queue.length}`);
             }
             if (Date.now() - this.prevTime < this.sleep) {
-                console.log(`Not reaching the consumption interval time ${this.sleep}/ms`);
+                console.log(`Not reaching the consumption interval time ${this.sleep}/ms, Queue Data Count: ${this.queue.length}`);
                 return;
             }
           
@@ -93,13 +93,13 @@ export class MemoryQueue<T = any> {
                 this.pause();
             }
             if (this.consuming) {
-                return console.log(`${this.id} Pause consuming`);
+                return console.log(`${this.id} Pause consuming, Queue Data Count: ${this.queue.length}`);
             }
             if (this.processingLock) {
-                return console.log(`${this.id} processingLock consuming`);
+                return console.log(`${this.id} processingLock consuming, Queue Data Count: ${this.queue.length}`);
             }
             if (!this.store) {
-                return console.error(`${this.id} store not initialized`);
+                return console.error(`${this.id} store not initialized, Queue Data Count: ${this.queue.length}`);
             }
             this.processingLock = true;
             let messagesToConsume = [];
