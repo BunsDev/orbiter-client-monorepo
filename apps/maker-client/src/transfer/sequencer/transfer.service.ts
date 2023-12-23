@@ -132,6 +132,7 @@ export class TransferService {
       });
       sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
       sourceTx.targetId = transferResult.hash;
+      sourceTx.targetNonce = String(transferResult.nonce);
       const updateRes = await sourceTx.save({
         transaction,
       });
@@ -146,8 +147,9 @@ export class TransferService {
         console.error('transferResult', transferResult);
         await transaction.rollback();
       } else {
+        sourceTx.targetNonce = String(transferResult && transferResult.nonce);
         sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
-        sourceTx.targetMaker = transferResult.from;
+        sourceTx.targetMaker = transferResult && transferResult.from;
         sourceTx.targetId = transferResult && transferResult.hash;
         await sourceTx.save({
           transaction,
@@ -282,6 +284,7 @@ export class TransferService {
           BigInt(transferAmount.toFixed(0)),
         );
       }
+      sourceTx.targetNonce = String(transferResult && transferResult.nonce);
       sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
       sourceTx.targetId = transferResult.hash;
       const updateRes = await sourceTx.save({
@@ -298,8 +301,9 @@ export class TransferService {
         console.error('transferResult', transferResult);
         await transaction.rollback();
       } else {
+        sourceTx.targetNonce = String(transferResult && transferResult.nonce);
         sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
-        sourceTx.targetMaker = transferResult.from;
+        sourceTx.targetMaker = transferResult && transferResult.from;
         sourceTx.targetId = transferResult && transferResult.hash;
         await sourceTx.save({
           transaction,
@@ -400,7 +404,8 @@ export class TransferService {
           {
             status: BridgeTransactionStatus.PAID_SUCCESS,
             targetMaker: wallet.address,
-            targetId: transferResult && `${transferResult.hash}#${i}`
+            targetId: transferResult && `${transferResult.hash}#${i}`,
+            targetNonce: String(transferResult && transferResult.nonce)
           },
           {
             where: {
@@ -420,7 +425,8 @@ export class TransferService {
           await this.bridgeTransactionModel.update(
             {
               status: BridgeTransactionStatus.PAID_CRASH,
-              targetId: transferResult && `${transferResult.hash}#${i}`
+              targetId: transferResult && `${transferResult.hash}#${i}`,
+              targetNonce: String(transferResult && transferResult.nonce)
             },
             {
               where: {
@@ -536,7 +542,8 @@ export class TransferService {
           {
             status: BridgeTransactionStatus.PAID_SUCCESS,
             targetMaker: wallet.address,
-            targetId: transferResult && `${transferResult.hash}#${i}`
+            targetId: transferResult && `${transferResult.hash}#${i}`,
+            targetNonce: String(transferResult.nonce)
           },
           {
             where: {
@@ -556,7 +563,8 @@ export class TransferService {
           await this.bridgeTransactionModel.update(
             {
               status: BridgeTransactionStatus.PAID_CRASH,
-              targetId: transferResult && `${transferResult.hash}#${i}`
+              targetId: transferResult && `${transferResult.hash}#${i}`,
+              targetNonce: String(transferResult && transferResult.nonce)
             },
             {
               where: {

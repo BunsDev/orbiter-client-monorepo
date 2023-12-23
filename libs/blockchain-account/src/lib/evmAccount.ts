@@ -125,9 +125,6 @@ export class EVMAccount extends OrbiterAccount {
           value: transactionRequest.value,
         });
         const gasLimitRedouble = Number(chainCustomConfig.gasLimitRedouble || 1);
-        if (!transactionRequest.gasLimit) {
-          throw new Error('gasLimit Fee fail')
-        }
         if (gasLimit) {
           transactionRequest.gasLimit =  new BigNumber(String(gasLimit)).times(gasLimitRedouble).toFixed(0);
         }
@@ -145,9 +142,9 @@ export class EVMAccount extends OrbiterAccount {
       }
      
     }
+    console.log(chainCustomConfig, '=chainCustomConfig')
     const isEIP1559 = chainCustomConfig['EIP1559'];
     const feeData = await provider.getFeeData();
-    console.log(feeData, '===feeData');
     // calc gas
     const feePerGasRedouble = Number(chainCustomConfig.FeePerGasRedouble || 1);
     if (isEIP1559) {
