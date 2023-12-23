@@ -1,4 +1,4 @@
-import { Cron } from '@nestjs/schedule';
+import { Cron, Interval } from '@nestjs/schedule';
 import { Inject, Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Mutex } from "async-mutex";
@@ -17,14 +17,16 @@ import BigNumber from "bignumber.js";
 import * as Errors from "../../utils/Errors";
 import { TransferService } from "./transfer.service";
 import Keyv from 'keyv';
-
+import { InjectRedis } from '@liaoliaots/nestjs-redis';
+import { Redis } from 'ioredis';
+const Lock: any = {}
 @Injectable()
 export class SequencerScheduleService {
   @LoggerDecorator()
   private readonly logger: OrbiterLogger;
   private readonly applicationStartupTime: number = Date.now();
   private queue: { [key: string]: MemoryQueue<BridgeTransactionModel> } = {};
-  private recordMaxId:number = 0;
+  private recordMaxId: number = 0;
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
@@ -34,8 +36,8 @@ export class SequencerScheduleService {
     private alertService: AlertService,
     private accountFactoryService: AccountFactoryService,
     private transferService: TransferService,
+    @InjectRedis() private readonly redis: Redis,
     private readonly consumerService: ConsumerService) {
-
     this.checkDBTransactionRecords();
     const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER", []);
     if (subMakers && subMakers.length > 0) {
@@ -67,9 +69,9 @@ export class SequencerScheduleService {
       targetId: null,
       targetChain: this.envConfig.get("INSCRIPTION_SUPPORT_CHAINS"),
       version: '3-0',
-      id: {
-        [Op.gte]: this.recordMaxId
-      },
+      // id: {
+      //   [Op.gte]: this.recordMaxId
+      // },
       sourceTime: {
         [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
       },
@@ -117,12 +119,97 @@ export class SequencerScheduleService {
     }
     const maxItem = maxBy(records, 'id');
     console.log(`owner: ${owner}, recordMaxId:${this.recordMaxId}, maxItem:${maxItem && maxItem.id}, recordsLength: ${records.length}`);
-    if (maxItem && +maxItem.id>this.recordMaxId) {
+    if (maxItem && +maxItem.id > this.recordMaxId) {
       this.recordMaxId = +maxItem.id;
       console.log('maxId:', this.recordMaxId);
     }
   }
-  async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel, queue: MemoryQueue) {
+  @Interval(1000)
+  private readCacheQueue() {
+    const chainIds = this.envConfig.get("INSCRIPTION_SUPPORT_CHAINS") || [];
+    const owners = this.envConfig.get("MAKERS") || [];
+    for (const chainId of chainIds) {
+      for (const owner of owners) {
+        // read db history
+        this.readQueueExecByKey(`${chainId}-${owner.toLocaleLowerCase()}`);
+      }
+    }
+  }
+  private async readQueueExecByKey(queueKey: string) {
+    if (Lock[queueKey] === true) {
+      return;
+    }
+    Lock[queueKey] = true;
+    try {
+      const [targetChain, targetMaker] = queueKey.split('-');
+      const batchSize = this.validatorService.getPaidTransferCount(targetChain);
+      const hashList = await this.redis.lrange(queueKey, 0, batchSize - 1);
+      await this.redis.ltrim(queueKey, hashList.length, -1);
+      for (let i=hashList.length-1;i>=0;i--) {
+        const isConsumed = await this.isConsumed(targetChain, hashList[i]);
+        if (isConsumed) {
+          hashList.splice(i, 1);
+        }
+      }
+      if (hashList.length<=0) {
+        return;
+      }
+      await this.redis.srem(`CurrentQueue:${queueKey}:list`,hashList)
+      const records = await this.bridgeTransactionModel.findAll({
+        raw: true,
+        attributes: [
+          "id",
+          "transactionId",
+          'status',
+          "sourceId",
+          "targetId",
+          'sourceTime',
+          "sourceChain",
+          "targetChain",
+          "sourceAmount",
+          "targetAmount",
+          "sourceMaker",
+          "targetMaker",
+          "sourceAddress",
+          "targetAddress",
+          "sourceSymbol",
+          "targetSymbol",
+          "sourceNonce",
+          "sourceToken",
+          "targetToken",
+          "responseMaker",
+          'ruleId',
+          "version"
+        ],
+        where: {
+          sourceId: hashList
+        },
+      });
+      await this.consumptionSendingQueue(records, queueKey)
+    } catch (error) {
+      this.logger.error(`readQueueExecByKey error: message ${error.message}`);
+    } finally {
+      Lock[queueKey] = false;
+    }
+  }
+  
+  async saveConsumeStatus(targetChainId:string, hashList:string | Array<string>) {
+    // const data = Array.isArray(hashList) ? ...hashList : hashList;
+    if (hashList.length<=0) {
+        return;
+    }
+    if (Array.isArray(hashList)) {
+      return await this.redis.sadd(`Consume:${targetChainId}`,...hashList);
+    } else {
+      return await this.redis.sadd(`Consume:${targetChainId}`,hashList);
+    }
+  }
+  async isConsumed(targetChainId:string, hash:string) {
+    const isMemberExist = await this.redis.sismember(`Consume:${targetChainId}`, hash);
+    return isMemberExist>0;
+  }
+
+  async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel) {
     // is exist
     // if (dayjs(bridgeTx.sourceTime).valueOf() <= this.applicationStartupTime) {
     //   throw new Errors.PaidSourceTimeLessStartupTime()
@@ -131,27 +218,24 @@ export class SequencerScheduleService {
     if (transactionTimeValid) {
       throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
     }
-    const isConsume = await queue.store.has(bridgeTx.sourceId);
-    if (isConsume) {
-      throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
-    }
+    // const isConsume = await queue.store.has(bridgeTx.sourceId);
+    // if (isConsume) {
+    //   throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+    // }
     if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
       throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
     }
 
     const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
     if (validDisabledPaid) {
-      await queue.add(bridgeTx);
       throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
     }
     const wallets = await this.validatorService.checkMakerPrivateKey(bridgeTx);
     if (!wallets || wallets.length <= 0) {
-      await queue.add(bridgeTx);
       throw new Errors.MakerNotPrivetKey();
     }
     const isFluidityOK = await this.validatorService.checkMakerFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
     if (!isFluidityOK) {
-      await queue.add(bridgeTx);
       throw new Error(`${bridgeTx.sourceId}`);
     }
 
@@ -170,10 +254,7 @@ export class SequencerScheduleService {
       bridgeTx.targetChain
     );
     await account.connect(wallets[0].key, bridgeTx.targetMaker);
-    const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
-    if (!saveRecord) {
-      throw new Error(`${bridgeTx.sourceId}`);
-    }
+    await this.saveConsumeStatus(bridgeTx.targetChain,bridgeTx.sourceId);
     try {
       return await this.transferService.execSingleTransfer(bridgeTx, account);
     } catch (error) {
@@ -183,7 +264,7 @@ export class SequencerScheduleService {
       throw error;
     }
   }
-  async paidSingleBridgeInscriptionTransaction(bridgeTx: BridgeTransactionModel, queue: MemoryQueue) {
+  async paidSingleBridgeInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey:string) {
     // is exist
     // if (dayjs(bridgeTx.sourceTime).valueOf() <= this.applicationStartupTime) {
     //   throw new Errors.PaidSourceTimeLessStartupTime()
@@ -196,7 +277,7 @@ export class SequencerScheduleService {
     if (transactionTimeValid) {
       throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
     }
-    const isConsume = await queue.store.has(bridgeTx.sourceId);
+    const isConsume = await this.isConsumed(bridgeTx.targetChain,bridgeTx.sourceId);
     if (isConsume) {
       throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
     }
@@ -206,12 +287,10 @@ export class SequencerScheduleService {
 
     const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
     if (validDisabledPaid) {
-      await queue.add(bridgeTx);
       throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
     }
     const wallets = await this.validatorService.checkMakerPrivateKey(bridgeTx);
     if (!wallets || wallets.length <= 0) {
-      await queue.add(bridgeTx);
       throw new Errors.MakerNotPrivetKey();
     }
     const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.ruleId, bridgeTx.targetSymbol, +bridgeTx.targetAmount);
@@ -224,23 +303,20 @@ export class SequencerScheduleService {
       bridgeTx.targetChain
     );
     await account.connect(wallets[0].key, bridgeTx.targetMaker);
-
-    const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
-    if (!saveRecord) {
-      throw new Error(`${bridgeTx.sourceId}`);
-    }
+    await this.saveConsumeStatus(bridgeTx.targetChain,bridgeTx.sourceId);
     try {
       return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
     } catch (error) {
       if (error instanceof Errors.PaidRollbackError) {
-        this.logger.error(`execSingleTransfer error PaidRollbackError ${bridgeTx.sourceId} message ${error.message}`);
+        await this.redis.rpush(queueKey, bridgeTx.sourceId);
       }
+      this.logger.error(`execSingleTransfer error ${bridgeTx.sourceId} message ${error.message}`);
       throw error;
     }
   }
-  async paidManyBridgeInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queue: MemoryQueue) {
+  async paidManyBridgeInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queueKey:string) {
     const legalTransaction: BridgeTransactionModel[] = [];
-    const [targetChain, targetMaker] = queue.id.split('-');
+    const [targetChain, targetMaker] = queueKey.split('-');
     //
     const privateKey = await this.validatorService.getSenderPrivateKey(targetMaker);
     if (!privateKey) {
@@ -258,10 +334,10 @@ export class SequencerScheduleService {
         if (!sourceChain) {
           throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
         }
-        const isConsume = await queue.store.has(bridgeTx.sourceId);
+        const isConsume = await this.isConsumed(bridgeTx.targetChain,bridgeTx.sourceId);
         if (isConsume) {
           throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
-        }
+      }
         if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
           throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
         }
@@ -271,7 +347,6 @@ export class SequencerScheduleService {
         }
         const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
         if (validDisabledPaid) {
-          await queue.add(bridgeTx);
           throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
         }
         if (targetMaker != bridgeTx.targetMaker.toLocaleLowerCase()) {
@@ -287,37 +362,36 @@ export class SequencerScheduleService {
         this.logger.error(`paidManyBridgeInscriptionTransaction for error ${error.message}`, error);
       }
     }
-
+    if (legalTransaction.length===0) {
+      throw new Error('not data');
+    }
     // send
     const account = await this.accountFactoryService.createMakerAccount(
       targetMaker,
       targetChain
     );
-    for (let i = legalTransaction.length - 1; i >= 0; i--) {
-      const bridgeTx = legalTransaction[i];
-      const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
-      if (!saveRecord) {
-        legalTransaction.splice(i, 1);
-        this.logger.error(`paidManyBridgeInscriptionTransaction setEnsureRecord fai ${bridgeTx.sourceId}`);
-      }
-    }
+   
     await account.connect(privateKey, targetMaker);
+    await this.saveConsumeStatus(targetChain,legalTransaction.map(tx=> tx.sourceId));
     try {
+      console.log('发送前', legalTransaction);
       if (legalTransaction.length == 1) {
         return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
       }
       return await this.transferService.execBatchInscriptionTransfer(legalTransaction, account)
     } catch (error) {
       if (error instanceof Errors.PaidRollbackError) {
+        for (const tx of legalTransaction) {
+          await this.redis.rpush(queueKey, tx.sourceId);
+        }
         this.logger.error(`execBatchTransfer error PaidRollbackError ${targetChain} - ${legalTransaction.map(row => row.sourceId).join(',')} message ${error.message}`);
       }
       throw error;
     }
-
   }
-  async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queue: MemoryQueue) {
+  async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
     const legalTransaction = [];
-    const [targetChain, targetMaker] = queue.id.split('-');
+    const [targetChain, targetMaker] = queueKey.split('-');
     //
     const privateKey = await this.validatorService.getSenderPrivateKey(targetMaker);
     if (!privateKey) {
@@ -331,10 +405,10 @@ export class SequencerScheduleService {
         if (bridgeTx.version != bridgeTxs[0].version) {
           throw new Error('The versions of batch refunds are inconsistent')
         }
-        const isConsume = await queue.store.has(bridgeTx.sourceId);
-        if (isConsume) {
-          throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
-        }
+        // const isConsume = await queue.store.has(bridgeTx.sourceId);
+        // if (isConsume) {
+        //   throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+        // }
         if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
           throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
         }
@@ -344,7 +418,7 @@ export class SequencerScheduleService {
         }
         const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
         if (validDisabledPaid) {
-          await queue.add(bridgeTx);
+          // await queue.add(bridgeTx);
           throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
         }
         if (targetMaker != bridgeTx.targetMaker.toLocaleLowerCase()) {
@@ -362,14 +436,12 @@ export class SequencerScheduleService {
     // cancel
     for (const tokenAddr in groupData) {
       if (tokenAddr != maxItem[0]) {
-        queue.addBatch(groupData[tokenAddr])
         delete groupData[tokenAddr];
       }
     }
     const totalValue = sumBy(maxItem[1], item => +item.targetAmount);
     const isFluidityOK = await this.validatorService.checkMakerFluidity(targetChain, targetMaker, maxItem[0], totalValue)
     if (!isFluidityOK) {
-      await queue.addBatch(maxItem[1]);
       throw new Error(`${maxItem[1].map(row => row.sourceId).join(',')}`);
     }
     // send
@@ -377,14 +449,7 @@ export class SequencerScheduleService {
       targetMaker,
       targetChain
     );
-    for (let i = maxItem[1].length - 1; i >= 0; i--) {
-      const bridgeTx = maxItem[1][i];
-      const saveRecord = await queue.setEnsureRecord(bridgeTx.sourceId, true);
-      if (!saveRecord) {
-        maxItem[1].splice(i, 1);
-        this.logger.error(`paidManyBridgeTransaction setEnsureRecord fai ${bridgeTx.sourceId}`);
-      }
-    }
+
     await account.connect(privateKey, targetMaker);
     try {
       if (maxItem[1].length == 1) {
@@ -399,36 +464,36 @@ export class SequencerScheduleService {
     }
   }
 
-  async consumptionSendingQueue(bridgeTx: BridgeTransactionModel | Array<BridgeTransactionModel>, queue: MemoryQueue) {
+  async consumptionSendingQueue(bridgeTx: BridgeTransactionModel | Array<BridgeTransactionModel>, queueKey:string) {
     let result;
     try {
       if (Array.isArray(bridgeTx)) {
         if (bridgeTx.length > 1) {
           if (bridgeTx[0].version === '3-0') {
-            result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queue)
+            result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey)
           } else {
-            result = await this.paidManyBridgeTransaction(bridgeTx, queue)
+            result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
           }
         } else {
           if (bridgeTx[0].version === '3-0') {
-            result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queue)
+            result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
           } else {
 
-            result = await this.paidSingleBridgeTransaction(bridgeTx[0], queue)
+            result = await this.paidSingleBridgeTransaction(bridgeTx[0])
           }
         }
       } else {
         if (bridgeTx.version === '3-0') {
-          result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx, queue)
+          result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx, queueKey)
         } else {
-          result = await this.paidSingleBridgeTransaction(bridgeTx, queue)
+          result = await this.paidSingleBridgeTransaction(bridgeTx)
         }
       }
     } catch (error) {
-      const sourceIds = Array.isArray(bridgeTx) ? bridgeTx.map(row=> row.sourceId).join(',') : bridgeTx.sourceId;
-      this.logger.error(`${queue.id} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, error);
+      const sourceIds = Array.isArray(bridgeTx) ? bridgeTx.map(row => row.sourceId).join(',') : bridgeTx.sourceId;
+      this.logger.error(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, error);
     }
-    this.logger.info(`${queue.id} consumptionSendingQueue info ${JSONStringify(result)}`);
+    this.logger.info(`${queueKey} consumptionSendingQueue info ${JSONStringify(result)}`);
     return result;
   }
   async addQueue(tx: BridgeTransactionModel) {
@@ -445,56 +510,18 @@ export class SequencerScheduleService {
       this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId}  targetMaker is null`)
       return
     }
+    if (tx.status!=0) {
+      this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId}  status not 0`)
+      return;
+    }
     const queueKey = `${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`;
-    const batchTransferCount = this.validatorService.getPaidTransferCount(tx.targetChain);
-    if (!this.queue[queueKey]) {
-      const REDIS_URL = await this.envConfig.getAsync('REDIS_URL');
-      if (!REDIS_URL) {
-        throw new Error('REDIS_URL NOT Config');
-      }
-      const store = new Keyv(REDIS_URL, { namespace: queueKey })
-      const queue = new MemoryQueue<BridgeTransactionModel>(queueKey, {
-        consumeFunction: this.consumptionSendingQueue.bind(this),
-        batchSize: batchTransferCount,
-      }, store)
-      this.queue[queueKey] = queue;
+    const isMemberExist = await this.redis.sismember(`CurrentQueue:${queueKey}:list`, tx.sourceId);
+    if (isMemberExist>=1) {
+      return;
     }
-    const queue = this.queue[queueKey];
-    // exist check
-    const ensureExists = await queue.ensureExists(tx.sourceId);
-    if (ensureExists) {
-      this.logger.info(`addQueue ${tx.targetChain} ensureExists ${tx.sourceChain} - ${tx.sourceId}`);
-      return 
-    }
-    const ensureQueue = await queue.ensureQueue(tx.sourceId);
-    if (ensureQueue) {
-      this.logger.info(`addQueue ${tx.targetChain} ensureQueue ${tx.sourceChain} - ${tx.sourceId}`);
-      return
-    }
-    if (batchTransferCount > 1) {
-      const targetChain = await this.chainConfigService.getChainInfo(tx.targetChain);
-      if (tx.version==='3-0') {
-        if (targetChain && getObjKeyByValue(targetChain.contract, 'CrossInscriptions')) {
-          queue.setBatchSize(batchTransferCount)
-        } else {
-          queue.setBatchSize(1)
-          this.logger.info(`${tx.targetChain} CrossInscriptions does not support batch sending instead of single sending`);
-        }
-      } else {
-        if (targetChain && getObjKeyByValue(targetChain.contract, 'OrbiterRouterV3')) {
-          queue.setBatchSize(batchTransferCount)
-        } else {
-          queue.setBatchSize(1)
-          this.logger.info(`${tx.targetChain} OrbiterRouterV3 does not support batch sending instead of single sending`);
-        }
-      }
-    } else {
-      queue.setBatchSize(batchTransferCount)
-    }
-    const transferInterval = this.envConfig.get(`${tx.targetChain}.TransferInterval`);
-    queue.setSleep(transferInterval);
-    // console.log(`addQueue ${tx.targetChain} - ${tx.sourceChain} - ${tx.sourceId}`);
-    queue.add(tx);
+    await this.redis.rpush(queueKey, tx.sourceId);
+    await this.redis.sadd(`CurrentQueue:${queueKey}:list`, tx.sourceId);
+  
   }
 
 }

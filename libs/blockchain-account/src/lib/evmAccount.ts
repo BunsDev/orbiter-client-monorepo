@@ -323,7 +323,6 @@ export class EVMAccount extends OrbiterAccount {
     return receipt;
   }
 
-
   public async sendTransaction(
     to: string,
     transactionRequest: TransactionRequest = {}

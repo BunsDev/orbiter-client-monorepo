@@ -1,3 +1,4 @@
+import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { TransferModule } from "./transfer/transfer.module";
 import { Module } from '@nestjs/common';
 import { ConsulModule } from '@orbiter-finance/consul';
@@ -28,6 +29,17 @@ import { MetricModule } from './metric/metric.module'
     OrbiterConfigModule.forRoot({
       chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "maker-client/chains.json",
       envConfigPath: process.env['ENV_VAR_PATH'] || "maker-client/config.yaml",
+    }),
+    RedisModule.forRootAsync({
+      inject: [ENVConfigService],
+      useFactory: async(configService: ENVConfigService) => {
+        const REDIS_URL = await configService.getAsync("REDIS_URL");
+        return {
+          config: {
+            url: REDIS_URL
+          }
+        }
+      },
     }),
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],

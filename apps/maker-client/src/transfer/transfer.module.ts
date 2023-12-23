@@ -7,8 +7,10 @@ import { SequencerScheduleService } from "./sequencer/sequencer.schedule";
 import { ChainLinkService } from '../service/chainlink.service'
 import { PrivateKeyService } from "../service/privatekey.service";
 import { TransferService } from "./sequencer/transfer.service";
+import { ScheduleModule } from "@nestjs/schedule";
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     SequelizeModule.forFeature([Transfers, BridgeTransaction]),
   ],
   providers: [

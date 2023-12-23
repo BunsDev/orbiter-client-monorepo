@@ -59,6 +59,9 @@ export class MemoryQueue<T = any> {
     setEnsureRecord(id: string, value: any) {
         return this.store.set(id, value);
     }
+    delEnsureRecord(id: string) {
+        return this.store.delete(id);
+    }
     ensureExists<T>(id: string) {
         return this.store.has(id);
     }
@@ -105,6 +108,7 @@ export class MemoryQueue<T = any> {
                 // single
                 messagesToConsume = this.queue.splice(0, 1);
             }
+            console.log(messagesToConsume, '===messagesToConsume')
             if (messagesToConsume.length > 0) {
                 console.log(`ready to consume ${messagesToConsume.map(row => row['sourceId'])}`)
                 this.prevTime = Date.now();
