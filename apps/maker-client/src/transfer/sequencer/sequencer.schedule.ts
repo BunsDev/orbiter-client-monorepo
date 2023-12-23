@@ -374,7 +374,6 @@ export class SequencerScheduleService {
     await account.connect(privateKey, targetMaker);
     await this.saveConsumeStatus(targetChain,legalTransaction.map(tx=> tx.sourceId));
     try {
-      console.log('发送前', legalTransaction);
       if (legalTransaction.length == 1) {
         return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
       }
