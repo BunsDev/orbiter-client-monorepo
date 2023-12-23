@@ -124,8 +124,9 @@ export class EVMAccount extends OrbiterAccount {
         value: transactionRequest.value,
       });
       const gasLimitRedouble = Number(chainCustomConfig.gasLimitRedouble || 1);
-      transactionRequest.gasLimit =  new BigNumber(String(gasLimit)).times(gasLimitRedouble).toFixed(0);
-
+      if (gasLimit) {
+        transactionRequest.gasLimit =  new BigNumber(String(gasLimit)).times(gasLimitRedouble).toFixed(0);
+      }
       if (!transactionRequest.gasLimit) {
         throw new Error('gasLimit Fee fail')
       }
@@ -147,38 +148,41 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.type = 2;
       const priorityFeePerGasRedouble = Number(chainCustomConfig.PriorityFeePerGasRedouble || 1);
       // maxFeePerGas
-      let gasPrice = new BigNumber(feeData.maxFeePerGas.toString()).times(feePerGasRedouble);;
+      let gasPrice = new BigNumber(String(feeData.maxFeePerGas)).times(feePerGasRedouble);;
       if (chainCustomConfig.MaxFeePerGas && gasPrice.gte(chainCustomConfig.MaxFeePerGas)) {
         gasPrice = new BigNumber(chainCustomConfig.MaxFeePerGas);
       } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
         gasPrice = new BigNumber(chainCustomConfig.MinFeePerGas);
       }
-      transactionRequest.maxFeePerGas =new BigNumber(gasPrice.toString()).toFixed(0) ;
+      console.log('gasPrice:', gasPrice);
+      transactionRequest.maxFeePerGas =new BigNumber(String(gasPrice)).toFixed(0) ;
       // maxPriorityFeePerGas
-      let maxPriorityFeePerGas = new BigNumber(feeData.maxPriorityFeePerGas.toString()).times(priorityFeePerGasRedouble);
+      let maxPriorityFeePerGas = new BigNumber(String(feeData.maxPriorityFeePerGas)).times(priorityFeePerGasRedouble);
       if (chainCustomConfig.MaxPriorityFeePerGas && maxPriorityFeePerGas.gte(chainCustomConfig.MaxPriorityFeePerGas)) {
         maxPriorityFeePerGas = new BigNumber(chainCustomConfig.MaxPriorityFeePerGas);
       }
-      transactionRequest.maxPriorityFeePerGas = new BigNumber(maxPriorityFeePerGas.toString()).toFixed(0) ;
+      console.log('maxPriorityFeePerGas:', maxPriorityFeePerGas);
+      transactionRequest.maxPriorityFeePerGas = new BigNumber(String(maxPriorityFeePerGas)).toFixed(0) ;
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
         throw new Error(`EIP1559 Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     } else {
       transactionRequest.type = 0;
       if (!transactionRequest.gasPrice) {
-        let gasPrice = new BigNumber(feeData.gasPrice.toString()).times(feePerGasRedouble);;
+        let gasPrice = new BigNumber(String(feeData.gasPrice)).times(feePerGasRedouble);
         if (chainCustomConfig.MaxFeePerGas && gasPrice.gte(chainCustomConfig.MaxFeePerGas)) {
           transactionRequest.gasPrice = chainCustomConfig.MaxFeePerGas;
         } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
           transactionRequest.gasPrice = chainCustomConfig.MinFeePerGas;
         }
+        console.log('transactionRequest.gasPrice:', transactionRequest.gasPrice);
         transactionRequest.gasPrice =new BigNumber(String(transactionRequest.gasPrice)).toFixed(0) ;
       }
       if (!transactionRequest.gasPrice) {
         throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     }
-
+    console.log('transactionRequest :', transactionRequest);
     return transactionRequest;
   }
 
