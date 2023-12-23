@@ -38,10 +38,10 @@ export class SequencerScheduleService {
     const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER", []);
     if (subMakers && subMakers.length > 0) {
       for (const key of subMakers) {
-        this.consumerService.consumeMakerWaitTransferMessage(this.addQueue.bind(this), key)
+        this.consumerService.consumeMakerWaitClaimTransferMessage(this.addQueue.bind(this), key)
       }
     } else {
-      this.consumerService.consumeMakerWaitTransferMessage(this.addQueue.bind(this))
+      this.consumerService.consumeMakerWaitClaimTransferMessage(this.addQueue.bind(this))
     }
   }
   @Cron("0 */2 * * * *")
@@ -229,7 +229,7 @@ export class SequencerScheduleService {
   async paidManyBridgeInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queue: MemoryQueue) {
     const legalTransaction: BridgeTransactionModel[] = [];
     const [targetChain, targetMaker] = queue.id.split('-');
-    // 
+    //
     const privateKey = await this.validatorService.getSenderPrivateKey(targetMaker);
     if (!privateKey) {
       throw new Errors.MakerNotPrivetKey(`${targetMaker} privateKey ${bridgeTxs.map(row => row.sourceId).join(',')}`);
@@ -306,7 +306,7 @@ export class SequencerScheduleService {
   async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queue: MemoryQueue) {
     const legalTransaction = [];
     const [targetChain, targetMaker] = queue.id.split('-');
-    // 
+    //
     const privateKey = await this.validatorService.getSenderPrivateKey(targetMaker);
     if (!privateKey) {
       throw new Errors.MakerNotPrivetKey(`${targetMaker} privateKey ${bridgeTxs.map(row => row.sourceId).join(',')}`);
