@@ -463,11 +463,13 @@ export class SequencerScheduleService {
     // exist check
     const ensureExists = await queue.ensureExists(tx.sourceId);
     if (ensureExists) {
-      return this.logger.info(`addQueue ${tx.targetChain} ensureExists ${tx.sourceChain} - ${tx.sourceId}`);
+      this.logger.info(`addQueue ${tx.targetChain} ensureExists ${tx.sourceChain} - ${tx.sourceId}`);
+      return 
     }
     const ensureQueue = await queue.ensureQueue(tx.sourceId);
     if (ensureQueue) {
-      return this.logger.info(`addQueue ${tx.targetChain} ensureQueue ${tx.sourceChain} - ${tx.sourceId}`);
+      this.logger.info(`addQueue ${tx.targetChain} ensureQueue ${tx.sourceChain} - ${tx.sourceId}`);
+      return
     }
     if (batchTransferCount > 1) {
       const targetChain = await this.chainConfigService.getChainInfo(tx.targetChain);
@@ -491,7 +493,7 @@ export class SequencerScheduleService {
     }
     const transferInterval = this.envConfig.get(`${tx.targetChain}.TransferInterval`);
     queue.setSleep(transferInterval);
-    console.log(`addQueue ${tx.targetChain} - ${tx.sourceChain} - ${tx.sourceId}`);
+    // console.log(`addQueue ${tx.targetChain} - ${tx.sourceChain} - ${tx.sourceId}`);
     queue.add(tx);
   }
 

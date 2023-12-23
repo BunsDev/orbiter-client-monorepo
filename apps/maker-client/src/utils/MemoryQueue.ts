@@ -17,7 +17,7 @@ export class MemoryQueue<T = any> {
     public sleep: number = 1000;
     private prevTime: number = Date.now();
 
-    constructor(public readonly id: string, private options: QueueOptions<T>, public readonly store:Keyv) {
+    constructor(public readonly id: string, private options: QueueOptions<T>, public readonly store: Keyv) {
         this.consumeFunction = options.consumeFunction;
         this.batchSize = options.batchSize;
         this.time();
@@ -72,17 +72,21 @@ export class MemoryQueue<T = any> {
     }
     private async processQueue(): Promise<void> {
         try {
-            if(Date.now() %1000 * 60 ==0) {
+            if (Date.now() % 1000 * 60 == 0) {
                 console.log(`Heartbeat detection ${this.id} Count: ${this.queue.length} date:${new Date()}`);
             }
             if (Date.now() - this.prevTime < this.sleep) {
-                console.log(`Not reaching the consumption interval time ${this.sleep}/ms, Queue Data Count: ${this.queue.length}`);
+                if (Date.now() % 1000 * 60 == 0) {
+                    console.log(`Not reaching the consumption interval time ${this.sleep}/ms, Queue Data Count: ${this.queue.length}`);
+                }
                 return;
             }
-          
-            if (this.batchSize == -1) {
-                this.pause();
+            if (this.queue.length==0) {
+                return;
             }
+            // if (this.batchSize == -1) {
+            //     this.pause();
+            // }
             if (this.consuming) {
                 return console.log(`${this.id} Pause consuming, Queue Data Count: ${this.queue.length}`);
             }
@@ -106,9 +110,6 @@ export class MemoryQueue<T = any> {
                 this.prevTime = Date.now();
                 await this.consumeFunction(messagesToConsume.length === 1 ? messagesToConsume[0] : messagesToConsume, this);
                 this.prevTime = Date.now();
-                for (const row of messagesToConsume) {
-                    this.setEnsureRecord(row['sourceId'], true);
-                }
             }
             // Continue processing if there are remaining messages
             if (this.queue.length > 0) {
