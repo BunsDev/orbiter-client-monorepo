@@ -117,19 +117,33 @@ export class EVMAccount extends OrbiterAccount {
     const chainCustomConfig = await this.ctx.envConfigService.getAsync(chainConfig.chainId) || {};
     const provider = this.getProvider();
     if (!transactionRequest.gasLimit) {
-      const gasLimit = await provider.estimateGas({
-        from: transactionRequest.from,
-        to: transactionRequest.to,
-        data: transactionRequest.data,
-        value: transactionRequest.value,
-      });
-      const gasLimitRedouble = Number(chainCustomConfig.gasLimitRedouble || 1);
-      if (gasLimit) {
-        transactionRequest.gasLimit =  new BigNumber(String(gasLimit)).times(gasLimitRedouble).toFixed(0);
+      try {
+        const gasLimit = await provider.estimateGas({
+          from: transactionRequest.from,
+          to: transactionRequest.to,
+          data: transactionRequest.data,
+          value: transactionRequest.value,
+        });
+        const gasLimitRedouble = Number(chainCustomConfig.gasLimitRedouble || 1);
+        if (!transactionRequest.gasLimit) {
+          throw new Error('gasLimit Fee fail')
+        }
+        if (gasLimit) {
+          transactionRequest.gasLimit =  new BigNumber(String(gasLimit)).times(gasLimitRedouble).toFixed(0);
+        }
+      }catch(error) {
+        this.logger.info(`estimateGas error ${error.message}`);
       }
       if (!transactionRequest.gasLimit) {
-        throw new Error('gasLimit Fee fail')
+        if (transactionRequest.data.length>=500 && chainCustomConfig.defaultManyMintLimit) {
+          transactionRequest.gasLimit = new BigNumber(chainCustomConfig.defaultManyMintLimit).toFixed(0);
+        } else {
+          if (chainCustomConfig.defaultSingleMintLimit) {
+            transactionRequest.gasLimit = new BigNumber(chainCustomConfig.defaultSingleMintLimit).toFixed(0);
+          }
+        }
       }
+     
     }
     let isEIP1559 = false;
     const feeData = await provider.getFeeData();
@@ -407,6 +421,18 @@ export class EVMAccount extends OrbiterAccount {
         const populateTransaction = await this.wallet.populateTransaction(transactionRequest);
         if (populateTransaction.nonce>transactionRequest.nonce) {
           transactionRequest.nonce = populateTransaction.nonce;
+        }
+        if(!transactionRequest.gasLimit) {
+          transactionRequest.gasLimit = populateTransaction.gasLimit;
+        }
+        if(!transactionRequest.gasPrice) {
+          transactionRequest.gasPrice = populateTransaction.gasPrice;
+        }
+        if(!transactionRequest.maxFeePerGas) {
+          transactionRequest.maxFeePerGas = populateTransaction.maxFeePerGas;
+        }
+        if(!transactionRequest.maxPriorityFeePerGas) {
+          transactionRequest.maxPriorityFeePerGas = populateTransaction.maxPriorityFeePerGas;
         }
       } catch (error) {
         console.error(error);
