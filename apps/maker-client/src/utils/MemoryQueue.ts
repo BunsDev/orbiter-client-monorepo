@@ -17,21 +17,12 @@ export class MemoryQueue<T = any> {
     public sleep: number = 1000;
     private prevTime: number = Date.now();
 
-    constructor(public readonly id: string, private options: QueueOptions<T>) {
+    constructor(public readonly id: string, private options: QueueOptions<T>, public readonly store:Keyv) {
         this.consumeFunction = options.consumeFunction;
         this.batchSize = options.batchSize;
         this.time();
     }
-    get store(): Keyv {
-        if (this.db) {
-            return this.db;
-        }
-        this.db = new Keyv(`sqlite://./db/${this.id}.sqlite`);
-        this.db.on('error', (error) => {
-            console.error('Failed to initialize cache：', error);
-        });
-        return this.db;
-    }
+
     setBatchSize(num: number) {
         this.options.batchSize = num;
     }

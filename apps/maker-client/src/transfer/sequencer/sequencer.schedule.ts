@@ -16,6 +16,7 @@ import { AccountFactoryService } from "../../factory";
 import BigNumber from "bignumber.js";
 import * as Errors from "../../utils/Errors";
 import { TransferService } from "./transfer.service";
+import Keyv from 'keyv';
 
 @Injectable()
 export class SequencerScheduleService {
@@ -431,7 +432,6 @@ export class SequencerScheduleService {
     return result;
   }
   async addQueue(tx: BridgeTransactionModel) {
-    console.log(`addQueue ${tx.targetChain} - ${tx.sourceChain} - ${tx.sourceId}`);
     if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
       this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
       return
@@ -448,10 +448,15 @@ export class SequencerScheduleService {
     const queueKey = `${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`;
     const batchTransferCount = this.validatorService.getPaidTransferCount(tx.targetChain);
     if (!this.queue[queueKey]) {
+      const REDIS_URL = await this.envConfig.getAsync('REDIS_URL');
+      if (!REDIS_URL) {
+        throw new Error('REDIS_URL NOT Config');
+      }
+      const store = new Keyv(REDIS_URL)
       const queue = new MemoryQueue<BridgeTransactionModel>(queueKey, {
         consumeFunction: this.consumptionSendingQueue.bind(this),
         batchSize: batchTransferCount,
-      })
+      }, store)
       this.queue[queueKey] = queue;
     }
     const queue = this.queue[queueKey];
@@ -486,6 +491,7 @@ export class SequencerScheduleService {
     }
     const transferInterval = this.envConfig.get(`${tx.targetChain}.TransferInterval`);
     queue.setSleep(transferInterval);
+    console.log(`addQueue ${tx.targetChain} - ${tx.sourceChain} - ${tx.sourceId}`);
     queue.add(tx);
   }
 

@@ -21,6 +21,7 @@
     "@ethersproject/providers": "5.7.2",
     "@ethersproject/wallet": "5.7.0",
     "@imtbl/core-sdk": "^2.2.0",
+    "@keyv/redis": "^2.8.1",
     "@keyv/sqlite": "^3.6.6",
     "@liaoliaots/nestjs-redis": "^9.0.5",
     "@loopring-web/loopring-sdk": "2.1.14",
