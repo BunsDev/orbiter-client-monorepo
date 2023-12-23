@@ -89,17 +89,17 @@ export class InscriptionStandardBuilder {
     }
     result.targetChain = targetChain
     //
-    const targetToken = this.chainConfigService.getTokenBySymbol(
-      targetChain.chainId,
-      transfer.symbol,
-    );
-    if (!targetToken) {
-      return result
-    }
+    // const targetToken = this.chainConfigService.getTokenBySymbol(
+    //   targetChain.chainId,
+    //   transfer.symbol,
+    // );
+    // if (!targetToken) {
+    //   return result
+    // }
     const callData = transfer.calldata as any
     const { amt } = callData
     result.targetAmount = new BigNumber(amt).toString();
-    result.targetToken = targetToken
+    // result.targetToken = targetToken
     result.targetAddress = transfer.sender;
     return result
   }
