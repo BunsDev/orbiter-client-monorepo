@@ -412,11 +412,11 @@ export class SequencerScheduleService {
           result = await this.paidSingleBridgeTransaction(bridgeTx, queue)
         }
       }
-      this.logger.info(`${queue.id} consumptionSendingQueue info ${JSONStringify(result)}`);
     } catch (error) {
-      this.logger.error(`${queue.id} consumptionSendingQueue error ${error.message}`, error);
+      const sourceIds = Array.isArray(bridgeTx) ? bridgeTx.map(row=> row.sourceId).join(',') : bridgeTx.sourceId;
+      this.logger.error(`${queue.id} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, error);
     }
-    console.log('consumptionSendingQueue result:', result)
+    this.logger.info(`${queue.id} consumptionSendingQueue info ${JSONStringify(result)}`);
     return result;
   }
   async addQueue(tx: BridgeTransactionModel) {
