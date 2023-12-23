@@ -101,7 +101,7 @@ export class SequencerScheduleService {
         "version"
       ],
       where,
-      limit: 1000
+      limit: 500
     });
     if (records.length > 0) {
       for (const tx of records) {
@@ -113,9 +113,12 @@ export class SequencerScheduleService {
           );
         }
       }
+    }else {
+      this.recordMaxId  = 0;
     }
     const maxItem = maxBy(records, 'id');
-    if (maxItem) {
+    console.log(`owner: ${owner}, recordMaxId:${this.recordMaxId}, maxItem:${maxItem && maxItem.id}, recordsLength: ${records.length}`);
+    if (maxItem && +maxItem.id>this.recordMaxId) {
       this.recordMaxId = +maxItem.id;
       console.log('maxId:', this.recordMaxId);
     }

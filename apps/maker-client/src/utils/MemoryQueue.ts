@@ -81,8 +81,8 @@ export class MemoryQueue<T = any> {
     }
     private async processQueue(): Promise<void> {
         try {
-            if(Date.now() %1000 * 60) {
-                console.log(`Heartbeat detection ${this.id} Count: ${this.queue.length}`);
+            if(Date.now() %1000 * 60 ==0) {
+                console.log(`Heartbeat detection ${this.id} Count: ${this.queue.length} date:${new Date()}`);
             }
             if (Date.now() - this.prevTime < this.sleep) {
                 console.log(`Not reaching the consumption interval time ${this.sleep}/ms, Queue Data Count: ${this.queue.length}`);
