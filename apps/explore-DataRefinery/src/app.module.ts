@@ -51,7 +51,7 @@ import { BridgeTransaction, Transfers, DeployRecord } from "@orbiter-finance/seq
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
-        return { ...config, autoLoadModels: true, models: [Transfers, BridgeTransaction, DeployRecord] };
+        return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction, DeployRecord] };
       },
     }),
     AlertModule.registerAsync({
