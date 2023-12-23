@@ -74,6 +74,7 @@ export class TransactionV3Service {
 
   @Cron('0 */5 * * * *')
   async matchScheduleTask() {
+    this.logger.info('matchScheduleTask start')
     const transfers = await this.transfersModel.findAll({
       raw: true,
       order: [['id', 'desc']],
@@ -90,6 +91,7 @@ export class TransactionV3Service {
         // }
       },
     });
+    this.logger.info(`matchScheduleTask transfers.length: ${transfers.length}`)
     for (const transfer of transfers) {
       const result = await this.handleClaimTransfer(transfer).catch((error) => {
         this.logger.error(
