@@ -68,14 +68,14 @@ export class SequencerScheduleService {
       version: '3-0',
       id: {
         [Op.gte]: this.recordMaxId
-      }
-      // sourceTime: {
-      //   [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
-      // },
+      },
+      sourceTime: {
+        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
+      },
     }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
-      order: [['id', 'asc']],
+      order: [['id', 'asc'], ['sourceTime', 'asc']],
       attributes: [
         "id",
         "transactionId",
@@ -113,8 +113,6 @@ export class SequencerScheduleService {
           );
         }
       }
-    }else {
-      this.recordMaxId  = 0;
     }
     const maxItem = maxBy(records, 'id');
     console.log(`owner: ${owner}, recordMaxId:${this.recordMaxId}, maxItem:${maxItem && maxItem.id}, recordsLength: ${records.length}`);
