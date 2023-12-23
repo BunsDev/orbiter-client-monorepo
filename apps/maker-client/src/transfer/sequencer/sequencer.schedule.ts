@@ -460,14 +460,14 @@ export class SequencerScheduleService {
           queue.setBatchSize(batchTransferCount)
         } else {
           queue.setBatchSize(1)
-          return this.logger.info(`${tx.targetChain} CrossInscriptions does not support batch sending instead of single sending`);
+          this.logger.info(`${tx.targetChain} CrossInscriptions does not support batch sending instead of single sending`);
         }
       } else {
         if (targetChain && getObjKeyByValue(targetChain.contract, 'OrbiterRouterV3')) {
           queue.setBatchSize(batchTransferCount)
         } else {
           queue.setBatchSize(1)
-          return this.logger.info(`${tx.targetChain} OrbiterRouterV3 does not support batch sending instead of single sending`);
+          this.logger.info(`${tx.targetChain} OrbiterRouterV3 does not support batch sending instead of single sending`);
         }
       }
     } else {
