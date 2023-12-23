@@ -165,12 +165,12 @@ export default class InscriptionBuilder {
     }
 
     if (targetChain.chainId === sourceChain.chainId) {
-      throw new ValidSourceTxError(TransferOpStatus.CLAIM_MUST_CROSS_CHAIN, `targetChain not found`)
+      throw new ValidSourceTxError(TransferOpStatus.CLAIM_MUST_CROSS_CHAIN, `CLAIM_MUST_CROSS_CHAIN`)
     }
 
 
     if (+targetAmount > +deployRecord.limit) {
-      throw new ValidSourceTxError(TransferOpStatus.CLAIM_AMOUNT_EXCEED_LIMIT, `targetChain not found`)
+      throw new ValidSourceTxError(TransferOpStatus.CLAIM_AMOUNT_EXCEED_LIMIT, `CLAIM_AMOUNT_EXCEED_LIMIT`)
     }
 
     if (new BigNumber(targetAmount).decimalPlaces() > 0 || new BigNumber(targetAmount).isLessThan(1)) {
