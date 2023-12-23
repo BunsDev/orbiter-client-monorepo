@@ -190,7 +190,7 @@ export class ConsumerService {
     try {
       if (!this.connectionManager.getChannel()) {
         await sleep(500);
-        this.consumeMakerWaitTransferMessage(callback);
+        this.consumeMakerWaitClaimTransferMessage(callback);
         return;
       }
       const channel = await this.connectionManager.createChannel();
@@ -198,7 +198,7 @@ export class ConsumerService {
       channel.on('close', () => {
         Logger.error(`${queue} Channel closed`);
         this.alertService.sendMessage(`${queue} Channel closed`, 'TG');
-        this.consumeMakerWaitTransferMessage(callback)
+        this.consumeMakerWaitClaimTransferMessage(callback)
       });
 
       channel.on('error', (err) => {
@@ -224,7 +224,7 @@ export class ConsumerService {
       });
     } catch (error: any) {
       await sleep(500);
-      this.consumeMakerWaitTransferMessage(callback);
+      this.consumeMakerWaitClaimTransferMessage(callback);
       Logger.error(`${queue} consumeMakerWaitTransferMessage error ${error.message}`, error);
     }
   }
