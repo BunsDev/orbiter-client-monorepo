@@ -23,6 +23,7 @@ export class SequencerScheduleService {
   private readonly logger: OrbiterLogger;
   private readonly applicationStartupTime: number = Date.now();
   private queue: { [key: string]: MemoryQueue<BridgeTransactionModel> } = {};
+  private recordMaxId:number = 0;
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
@@ -65,12 +66,16 @@ export class SequencerScheduleService {
       targetId: null,
       targetChain: this.envConfig.get("INSCRIPTION_SUPPORT_CHAINS"),
       version: '3-0',
+      id: {
+        [Op.gte]: this.recordMaxId
+      }
       // sourceTime: {
       //   [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
       // },
     }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
+      order: [['id', 'asc']],
       attributes: [
         "id",
         "transactionId",
@@ -108,6 +113,11 @@ export class SequencerScheduleService {
           );
         }
       }
+    }
+    const maxItem = maxBy(records, 'id');
+    if (maxItem) {
+      this.recordMaxId = +maxItem.id;
+      console.log('maxId:', this.recordMaxId);
     }
   }
   async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel, queue: MemoryQueue) {
