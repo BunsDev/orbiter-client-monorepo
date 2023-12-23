@@ -193,9 +193,8 @@ export default class EVMVUtils {
       receipt,
     };
     const logs = receipt.logs;
-    console.log('parsedLogData----', parsedData.args[2])
     if (parsedData.signature === 'transfers(address[],uint256[],bytes[])') {
-      for (const log of logs) {
+      logs.forEach((log, index) => {
         const parsedLogData = contractInterface.parseLog(log as any);
         // console.log(parsedLogData, '=parsedLogData')
         if (
@@ -205,15 +204,15 @@ export default class EVMVUtils {
           '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
         ) {
           if (!parsedData.args[2]) {
-            continue
+            return
           }
-          const decodeData = this.decodeInscriptionCallData(parsedData.args[2][log.index])
+          const decodeData = this.decodeInscriptionCallData(parsedData.args[2][index])
           if (!decodeData) {
-            continue;
+            return;
           }
           const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           const copyTxData = clone(txData);
-          copyTxData.hash = `${txData.hash}#${transfers.length}`;
+          copyTxData.hash = `${txData.hash}#${log.index}`;
           copyTxData.token = chainInfo.nativeCurrency.address;
           copyTxData.symbol = chainInfo.nativeCurrency.symbol;
           copyTxData.calldata = decodeData;
@@ -226,7 +225,7 @@ export default class EVMVUtils {
           copyTxData.selector = decodeData.op
           transfers.push(copyTxData);
         }
-      }
+      })
     }
     return transfers;
   }
