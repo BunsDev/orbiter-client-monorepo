@@ -504,8 +504,8 @@ export class SequencerScheduleService {
         }
       }
     } catch (error) {
-      this.alertService.sendMessage(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, "TG")
       const sourceIds = Array.isArray(bridgeTx) ? bridgeTx.map(row => row.sourceId).join(',') : bridgeTx.sourceId;
+      this.alertService.sendMessage(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, "TG")
       this.logger.error(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, error);
     }
     this.logger.info(`${queueKey} consumptionSendingQueue info ${JSONStringify(result)}`);
