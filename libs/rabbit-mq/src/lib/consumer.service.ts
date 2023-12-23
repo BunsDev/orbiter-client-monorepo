@@ -218,7 +218,7 @@ export class ConsumerService {
               `${queue} consumeTransferWaitMessages Error processing message: ${error.message}`,
               error,
             );
-            channel.reject(msg);
+            channel.nack(msg,true,false);
           }
         }
       });

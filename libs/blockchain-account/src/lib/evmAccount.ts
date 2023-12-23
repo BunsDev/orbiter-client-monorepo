@@ -394,11 +394,19 @@ export class EVMAccount extends OrbiterAccount {
       try {
         await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
       } catch (error) {
-        transactionRequest = await this.wallet.populateTransaction(transactionRequest);
         console.error(error);
         this.logger.error('mintInscription getGasPrice error change populateTransaction')
       }
       transactionRequest.nonce = nonce;
+      try {
+        const populateTransaction = await this.wallet.populateTransaction(transactionRequest);
+        if (populateTransaction.nonce>transactionRequest.nonce) {
+          transactionRequest.nonce = populateTransaction.nonce;
+        }
+      } catch (error) {
+        console.error(error);
+        this.logger.error(`populateTransaction error ${error.message}`, error)
+      }
       this.logger.info(
         `${chainConfig.name} sendTransaction:${JSONStringify(transactionRequest)}`
       );
