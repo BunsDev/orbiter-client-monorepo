@@ -128,7 +128,7 @@ export class ConsumerService {
             channel.ack(msg);
           } catch (error: any) {
             Logger.error(`${queue} consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
-            channel.reject(msg);
+            channel.nack(msg,true,false);
           }
         }
       });
@@ -173,7 +173,8 @@ export class ConsumerService {
               `${queue} consumeTransferWaitMessages Error processing message: ${error.message}`,
               error,
             );
-            channel.reject(msg);
+            channel.nack(msg,true,false);
+            // channel.reject(msg);
           }
         }
       });
