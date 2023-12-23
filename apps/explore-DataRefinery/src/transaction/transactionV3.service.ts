@@ -591,7 +591,7 @@ export class TransactionV3Service {
       to: transfer.receiver,
       value: transfer.value,
     }
-    const id = `${createData.protocol}-${createData.tick}`.toLocaleLowerCase();
+    const id = `${createData.protocol}-${createData.tick}`
     if (await this.redis.hexists('protocol',id )) {
       createData.deletedAt = new Date();
     } else {
