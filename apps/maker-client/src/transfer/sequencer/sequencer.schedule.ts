@@ -452,7 +452,7 @@ export class SequencerScheduleService {
       if (!REDIS_URL) {
         throw new Error('REDIS_URL NOT Config');
       }
-      const store = new Keyv(REDIS_URL)
+      const store = new Keyv(REDIS_URL, { namespace: queueKey })
       const queue = new MemoryQueue<BridgeTransactionModel>(queueKey, {
         consumeFunction: this.consumptionSendingQueue.bind(this),
         batchSize: batchTransferCount,
