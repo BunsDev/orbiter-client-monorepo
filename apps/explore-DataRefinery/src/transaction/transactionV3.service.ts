@@ -591,13 +591,6 @@ export class TransactionV3Service {
       to: transfer.receiver,
       value: transfer.value,
     }
-    const id = `${createData.protocol}-${createData.tick}`
-    if (await this.redis.hexists('protocol',id )) {
-      createData.deletedAt = new Date();
-    } else {
-      await this.redis.hmset('protocol',id, JSON.stringify(createData))
-    }
-
     const deployRecord = await this.deployRecordModel.findOne({ where: { tick: tick, protocol: p } });
     if (deployRecord) {
       return this.errorBreakResult(`handleDeployTransfer fail ${transfer.hash} already deploy : ${JSON.stringify(callData)}`)
