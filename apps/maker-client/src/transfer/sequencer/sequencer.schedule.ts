@@ -201,6 +201,7 @@ export class SequencerScheduleService {
       });
       await this.consumptionSendingQueue(records, queueKey)
     } catch (error) {
+      this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
       this.logger.error(`readQueueExecByKey error: message ${error.message}`);
     } finally {
       Lock[queueKey] = false;
@@ -503,6 +504,7 @@ export class SequencerScheduleService {
         }
       }
     } catch (error) {
+      this.alertService.sendMessage(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, "TG")
       const sourceIds = Array.isArray(bridgeTx) ? bridgeTx.map(row => row.sourceId).join(',') : bridgeTx.sourceId;
       this.logger.error(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, error);
     }
