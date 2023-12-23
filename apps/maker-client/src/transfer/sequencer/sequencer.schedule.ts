@@ -96,7 +96,7 @@ export class SequencerScheduleService {
         "version"
       ],
       where,
-      limit: 100
+      limit: 1000
     });
     if (records.length > 0) {
       for (const tx of records) {
