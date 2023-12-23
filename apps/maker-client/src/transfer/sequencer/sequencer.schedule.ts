@@ -143,24 +143,30 @@ export class SequencerScheduleService {
     try {
       const [targetChain, targetMaker] = queueKey.split('-');
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
-      if (batchSize<=0) {
+      if (batchSize <= 0) {
         return;
       }
-      const hashList = await this.redis.lrange(queueKey, 0, batchSize - 1);
+      let hashList = [];
+      const queueLength = await this.redis.llen(queueKey);
+      if (queueLength >= batchSize) {
+        hashList = await this.redis.lrange(queueKey, 0, batchSize - 1);
+      } else {
+        hashList = await this.redis.lrange(queueKey, 0, 0);
+      }
       await this.redis.ltrim(queueKey, hashList.length, -1);
-      if(hashList.length<=0) {
+      if (hashList.length <= 0) {
         await this.redis.del(`CurrentQueue:${queueKey}:list`)
       }
-      for (let i=hashList.length-1;i>=0;i--) {
+      for (let i = hashList.length - 1; i >= 0; i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
         if (isConsumed) {
           hashList.splice(i, 1);
         }
       }
-      if (hashList.length>0) {
-        await this.redis.srem(`CurrentQueue:${queueKey}:list`,hashList)
+      if (hashList.length > 0) {
+        await this.redis.srem(`CurrentQueue:${queueKey}:list`, hashList)
       }
-      if (hashList.length<=0) {
+      if (hashList.length <= 0) {
         return;
       }
       const records = await this.bridgeTransactionModel.findAll({
@@ -200,21 +206,21 @@ export class SequencerScheduleService {
       Lock[queueKey] = false;
     }
   }
-  
-  async saveConsumeStatus(targetChainId:string, hashList:string | Array<string>) {
+
+  async saveConsumeStatus(targetChainId: string, hashList: string | Array<string>) {
     // const data = Array.isArray(hashList) ? ...hashList : hashList;
-    if (hashList.length<=0) {
-        return;
+    if (hashList.length <= 0) {
+      return;
     }
     if (Array.isArray(hashList)) {
-      return await this.redis.sadd(`Consume:${targetChainId}`,...hashList);
+      return await this.redis.sadd(`Consume:${targetChainId}`, ...hashList);
     } else {
-      return await this.redis.sadd(`Consume:${targetChainId}`,hashList);
+      return await this.redis.sadd(`Consume:${targetChainId}`, hashList);
     }
   }
-  async isConsumed(targetChainId:string, hash:string) {
+  async isConsumed(targetChainId: string, hash: string) {
     const isMemberExist = await this.redis.sismember(`Consume:${targetChainId}`, hash);
-    return isMemberExist>0;
+    return isMemberExist > 0;
   }
 
   async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel) {
@@ -262,7 +268,7 @@ export class SequencerScheduleService {
       bridgeTx.targetChain
     );
     await account.connect(wallets[0].key, bridgeTx.targetMaker);
-    await this.saveConsumeStatus(bridgeTx.targetChain,bridgeTx.sourceId);
+    await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
     try {
       return await this.transferService.execSingleTransfer(bridgeTx, account);
     } catch (error) {
@@ -272,7 +278,7 @@ export class SequencerScheduleService {
       throw error;
     }
   }
-  async paidSingleBridgeInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey:string) {
+  async paidSingleBridgeInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
     // is exist
     // if (dayjs(bridgeTx.sourceTime).valueOf() <= this.applicationStartupTime) {
     //   throw new Errors.PaidSourceTimeLessStartupTime()
@@ -285,7 +291,7 @@ export class SequencerScheduleService {
     if (transactionTimeValid) {
       throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
     }
-    const isConsume = await this.isConsumed(bridgeTx.targetChain,bridgeTx.sourceId);
+    const isConsume = await this.isConsumed(bridgeTx.targetChain, bridgeTx.sourceId);
     if (isConsume) {
       throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
     }
@@ -311,7 +317,7 @@ export class SequencerScheduleService {
       bridgeTx.targetChain
     );
     await account.connect(wallets[0].key, bridgeTx.targetMaker);
-    await this.saveConsumeStatus(bridgeTx.targetChain,bridgeTx.sourceId);
+    await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
     try {
       return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
     } catch (error) {
@@ -322,7 +328,7 @@ export class SequencerScheduleService {
       throw error;
     }
   }
-  async paidManyBridgeInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queueKey:string) {
+  async paidManyBridgeInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
     const legalTransaction: BridgeTransactionModel[] = [];
     const [targetChain, targetMaker] = queueKey.split('-');
     //
@@ -342,10 +348,10 @@ export class SequencerScheduleService {
         if (!sourceChain) {
           throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
         }
-        const isConsume = await this.isConsumed(bridgeTx.targetChain,bridgeTx.sourceId);
+        const isConsume = await this.isConsumed(bridgeTx.targetChain, bridgeTx.sourceId);
         if (isConsume) {
           throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
-      }
+        }
         if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
           throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
         }
@@ -370,7 +376,7 @@ export class SequencerScheduleService {
         this.logger.error(`paidManyBridgeInscriptionTransaction for error ${error.message}`, error);
       }
     }
-    if (legalTransaction.length===0) {
+    if (legalTransaction.length === 0) {
       throw new Error('not data');
     }
     // send
@@ -378,9 +384,9 @@ export class SequencerScheduleService {
       targetMaker,
       targetChain
     );
-   
+
     await account.connect(privateKey, targetMaker);
-    await this.saveConsumeStatus(targetChain,legalTransaction.map(tx=> tx.sourceId));
+    await this.saveConsumeStatus(targetChain, legalTransaction.map(tx => tx.sourceId));
     try {
       if (legalTransaction.length == 1) {
         return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
@@ -471,7 +477,7 @@ export class SequencerScheduleService {
     }
   }
 
-  async consumptionSendingQueue(bridgeTx: BridgeTransactionModel | Array<BridgeTransactionModel>, queueKey:string) {
+  async consumptionSendingQueue(bridgeTx: BridgeTransactionModel | Array<BridgeTransactionModel>, queueKey: string) {
     let result;
     try {
       if (Array.isArray(bridgeTx)) {
@@ -517,18 +523,18 @@ export class SequencerScheduleService {
       this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId}  targetMaker is null`)
       return
     }
-    if (tx.status!=0) {
+    if (tx.status != 0) {
       this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId}  status not 0`)
       return;
     }
     const queueKey = `${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`;
     const isMemberExist = await this.redis.sismember(`CurrentQueue:${queueKey}:list`, tx.sourceId);
-    if (isMemberExist>=1) {
+    if (isMemberExist >= 1) {
       return;
     }
     await this.redis.rpush(queueKey, tx.sourceId);
     await this.redis.sadd(`CurrentQueue:${queueKey}:list`, tx.sourceId);
-  
+
   }
 
 }
