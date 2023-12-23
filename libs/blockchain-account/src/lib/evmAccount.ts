@@ -133,6 +133,7 @@ export class EVMAccount extends OrbiterAccount {
     }
     let isEIP1559 = false;
     const feeData = await provider.getFeeData();
+    console.log(feeData, '===feeData');
     if (transactionRequest.type === 0) {
       isEIP1559 = false;
     } else if (transactionRequest.type === 2) {
