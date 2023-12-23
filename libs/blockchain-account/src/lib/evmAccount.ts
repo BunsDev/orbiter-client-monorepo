@@ -124,7 +124,7 @@ export class EVMAccount extends OrbiterAccount {
         value: transactionRequest.value,
       });
       const gasLimitRedouble = Number(chainCustomConfig.gasLimitRedouble || 1);
-      transactionRequest.gasLimit =  new BigNumber(gasLimit.toString()).times(gasLimitRedouble).toFixed(0);
+      transactionRequest.gasLimit =  new BigNumber(String(gasLimit)).times(gasLimitRedouble).toFixed(0);
 
       if (!transactionRequest.gasLimit) {
         throw new Error('gasLimit Fee fail')
@@ -159,7 +159,7 @@ export class EVMAccount extends OrbiterAccount {
       if (chainCustomConfig.MaxPriorityFeePerGas && maxPriorityFeePerGas.gte(chainCustomConfig.MaxPriorityFeePerGas)) {
         maxPriorityFeePerGas = new BigNumber(chainCustomConfig.MaxPriorityFeePerGas);
       }
-      transactionRequest.maxPriorityFeePerGas =new BigNumber(maxPriorityFeePerGas.toString()).toFixed(0) ;
+      transactionRequest.maxPriorityFeePerGas = new BigNumber(maxPriorityFeePerGas.toString()).toFixed(0) ;
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
         throw new Error(`EIP1559 Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
@@ -172,7 +172,7 @@ export class EVMAccount extends OrbiterAccount {
         } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
           transactionRequest.gasPrice = chainCustomConfig.MinFeePerGas;
         }
-        transactionRequest.gasPrice =new BigNumber(transactionRequest.gasPrice.toString()).toFixed(0) ;
+        transactionRequest.gasPrice =new BigNumber(String(transactionRequest.gasPrice)).toFixed(0) ;
       }
       if (!transactionRequest.gasPrice) {
         throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
@@ -395,7 +395,7 @@ export class EVMAccount extends OrbiterAccount {
         await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
       } catch (error) {
         console.error(error);
-        this.logger.error('mintInscription getGasPrice error change populateTransaction')
+        this.logger.error(`mintInscription getGasPrice error change populateTransaction ${error.stack}`)
       }
       transactionRequest.nonce = nonce;
       try {
@@ -405,7 +405,7 @@ export class EVMAccount extends OrbiterAccount {
         }
       } catch (error) {
         console.error(error);
-        this.logger.error(`populateTransaction error ${error.message}`, error)
+        this.logger.error(`populateTransaction error ${error.message} - ${error.stack}`, error)
       }
       this.logger.info(
         `${chainConfig.name} sendTransaction:${JSONStringify(transactionRequest)}`
