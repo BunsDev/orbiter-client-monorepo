@@ -157,7 +157,27 @@ export class TransactionV3Service {
       return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} Incorrect version ${transfer.version}`)
     }
     const callData = transfer.calldata as any;
-    const { tick, op, p, amt } = callData;
+    if (
+      !callData ||
+      !callData.op ||
+      !callData.p ||
+      !callData.tick ||
+      !callData.amt ||
+      new BigNumber(callData.amt).decimalPlaces() !== 0
+    ) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP_PARAMS,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(`handleDeployTransfer fail ${transfer.hash} Incorrect params : ${JSON.stringify(callData)}`)
+    }
+    const { tick, op, p } = callData;
     if (op !== InscriptionOpType.Claim) {
       await this.transfersModel.update(
         {
@@ -171,20 +191,6 @@ export class TransactionV3Service {
       );
       return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Claim}`)
     }
-    if (!p || !tick || !amt || new BigNumber(amt).decimalPlaces() !== 0) {
-      await this.transfersModel.update(
-        {
-          opStatus: TransferOpStatus.INVALID_OP_PARAMS,
-        },
-        {
-          where: {
-            id: transfer.id,
-          },
-        },
-      );
-      return this.errorBreakResult(`handleClaimTransfer fail ${transfer.hash} Incorrect params : ${JSON.stringify(callData)}`)
-    }
-
     const deployTick = await this.deployRecordModel.findOne({
       raw: true,
       where: {
@@ -524,15 +530,49 @@ export class TransactionV3Service {
       return this.errorBreakResult(`handleDeployTransfer fail ${transfer.hash} Incorrect status ${transfer.status}`)
     }
     const callData = transfer.calldata as any;
+    if (
+      !callData ||
+      !callData.op ||
+      !callData.p ||
+      (!callData.lim || !/^[1-9]\d*$/.test(callData.lim)) ||
+      (!callData.max || !/^[1-9]\d*$/.test(callData.max)) ||
+      callData.op !== InscriptionOpType.Deploy
+    ) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP_PARAMS,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(`handleDeployTransfer fail ${transfer.hash} Incorrect params : ${JSON.stringify(callData)}`)
+    }
     const { lim, max, tick, op, p } = callData;
     if (op !== InscriptionOpType.Deploy) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
       return this.errorBreakResult(`handleDeployTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Deploy}`)
     }
-    if (
-      !p ||
-      (!lim || !/^[1-9]\d*$/.test(lim)) ||
-      (!max || !/^[1-9]\d*$/.test(max))
-    ) {
+    const makers = await this.envConfigService.getAsync('MAKERS');
+    if (!makers.includes(transfer.sender)) {
+      await this.transfersModel.update({
+        opStatus: TransferOpStatus.INVALID_DEPLOY_MAKER
+      }, {
+        where: {
+          id: transfer.id
+        }
+      })
       return this.errorBreakResult(`handleDeployTransfer fail ${transfer.hash} Incorrect params : ${JSON.stringify(callData)}`)
     }
     const createData: IDeployRecord = {
@@ -557,9 +597,14 @@ export class TransactionV3Service {
     } else {
       await this.redis.hmset('protocol',id, JSON.stringify(createData))
     }
+
+    const deployRecord = await this.deployRecordModel.findOne({ where: { tick: tick, protocol: p } });
+    if (deployRecord) {
+      return this.errorBreakResult(`handleDeployTransfer fail ${transfer.hash} already deploy : ${JSON.stringify(callData)}`)
+    }
     const t = await this.sequelize.transaction()
     try {
-      const result = await this.deployRecordModel.upsert(createData, { transaction: t, conflictFields: ['protocol', 'tick'], returning: true });
+      const result = await this.deployRecordModel.create(createData, { transaction: t});
       const updateR = await this.transfersModel.update(
         { opStatus: TransferOpStatus.DEPLOY_SUCCESS  },
         {
@@ -571,7 +616,7 @@ export class TransactionV3Service {
         }
       );
       await t.commit()
-      return { errno: 0, data: result[0] }
+      return { errno: 0, data: result }
     } catch (error) {
       this.logger.error(
         `handleDeployTransfer ${transfer.hash} error`,
