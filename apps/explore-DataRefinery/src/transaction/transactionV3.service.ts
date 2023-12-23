@@ -565,7 +565,7 @@ export class TransactionV3Service {
       return this.errorBreakResult(`handleDeployTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Deploy}`)
     }
     const makers = await this.envConfigService.getAsync('MAKERS');
-    if (!makers.includes(transfer.sender)) {
+    if (!makers.map(e => e.toLocaleLowerCase()).includes(transfer.sender)) {
       await this.transfersModel.update({
         opStatus: TransferOpStatus.INVALID_DEPLOY_MAKER
       }, {
