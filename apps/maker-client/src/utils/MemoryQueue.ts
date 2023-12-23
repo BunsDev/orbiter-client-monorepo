@@ -16,7 +16,7 @@ export class MemoryQueue<T = any> {
     private db: Keyv;
     public sleep: number = 1000;
     private prevTime: number = Date.now();
-    
+
     constructor(public readonly id: string, private options: QueueOptions<T>) {
         this.consumeFunction = options.consumeFunction;
         this.batchSize = options.batchSize;
@@ -82,7 +82,8 @@ export class MemoryQueue<T = any> {
     private async processQueue(): Promise<void> {
         try {
             if (Date.now() - this.prevTime < this.sleep) {
-                return console.log(`Not reaching the consumption interval time ${this.sleep}/ms`);
+                Date.now() % 60000 === 0 && console.log(`Not reaching the consumption interval time ${this.sleep}/ms`);
+                return;
             }
             if (this.batchSize == -1) {
                 this.pause();
