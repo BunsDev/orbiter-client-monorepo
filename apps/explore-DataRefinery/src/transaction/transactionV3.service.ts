@@ -257,6 +257,7 @@ export class TransactionV3Service {
           where: { id: sourceBT.id },
           transaction: t,
         })
+        createdData = sourceBT.toJSON()
       } else {
         const createRow = await this.bridgeTransactionModel.create(
           createdData,
@@ -267,7 +268,7 @@ export class TransactionV3Service {
         if (!createRow || !createRow.id) {
           throw new Error(`${transfer.hash} Create Inscription Bridge Transaction Fail`);
         }
-        createdData.id = createRow.id
+        createdData = createRow.toJSON()
         const dr = await this.deployRecordModel.update({
           currentMintedAmount: Sequelize.literal(`"currentMintedAmount" + ${createdData.targetAmount}`),
           currentMintedTx: Sequelize.literal(`"currentMintedTx" + 1`)
