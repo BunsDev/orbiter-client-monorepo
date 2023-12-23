@@ -143,6 +143,9 @@ export class SequencerScheduleService {
     try {
       const [targetChain, targetMaker] = queueKey.split('-');
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
+      if (batchSize<=0) {
+        return;
+      }
       const hashList = await this.redis.lrange(queueKey, 0, batchSize - 1);
       await this.redis.ltrim(queueKey, hashList.length, -1);
       if(hashList.length<=0) {
