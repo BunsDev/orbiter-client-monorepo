@@ -56,6 +56,7 @@ export class AccountFactoryService {
       case 2:
       case 21:
       case 22:
+      case 23:
       case 5:
       case 599:
       case 6:
