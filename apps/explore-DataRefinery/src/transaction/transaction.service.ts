@@ -83,9 +83,8 @@ export class TransactionService {
         }
         let versionStr = null;
         const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');
-        console.log(transfer.hash, transfer.version)
         if (transfer.version == '3') {
-          upsertData.opStatus = TransferOpStatus.INIT_STATUS;
+          // upsertData.opStatus = TransferOpStatus.INIT_STATUS;
           const calldata = upsertData.calldata
           if (calldata && calldata.op && calldata.op === InscriptionOpType.Deploy) {
             versionStr = '3-2';
