@@ -7,5 +7,5 @@ services:
     ports:
       - '15008:15008'
     volumes:
-    - './cunsul/conf:/opt/bitnami/consul/conf'
+    - './conf:/opt/bitnami/consul/conf'
     - './consul/data:/bitnami/consul'
