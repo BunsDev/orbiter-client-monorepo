@@ -42,12 +42,12 @@ export class ValidatorService {
     return false;
   }
   public transactionTimeValid(chainId: string, timestamp: Date) {
-    // const timeoutMin = Math.floor((Date.now() - dayjs(timestamp).valueOf()) / 1000 / 60);
-    // const defaultTimeout = this.getTransferGlobalTimeout();
-    // const transferTimeout = +(this.envConfig.get<Number>(`${chainId}.TransferTimeout`, defaultTimeout));
-    // if (timeoutMin >= transferTimeout) {
-    //   return true;
-    // }
+    const timeoutMin = Math.floor((Date.now() - dayjs(timestamp).valueOf()) / 1000 / 60);
+    const defaultTimeout = this.getTransferGlobalTimeout();
+    const transferTimeout = +(this.envConfig.get<Number>(`${chainId}.TransferTimeout`, defaultTimeout));
+    if (timeoutMin >= transferTimeout) {
+      return true;
+    }
     return false;
   }
 
