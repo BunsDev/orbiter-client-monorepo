@@ -25,7 +25,7 @@ export class OrbiterAccount extends IAccount {
     value: bigint,
     transactionRequest?: TransactionRequest | any
   ): Promise<TransferResponse | undefined> {
-    throw new Error("Method not implemented.");
+    throw new Error("transfer Method not implemented.");
   }
 
   public async transfers(
@@ -33,7 +33,7 @@ export class OrbiterAccount extends IAccount {
     value: bigint[],
     transactionRequest?: TransactionRequest | any
   ): Promise<TransferResponse | undefined> {
-    throw new Error("Method not implemented.");
+    throw new Error("transfers Method not implemented.");
   }
 
   public async transferTokens(
@@ -42,18 +42,18 @@ export class OrbiterAccount extends IAccount {
     value: bigint[],
     transactionRequest?: TransactionRequest | any
   ): Promise<TransferResponse | undefined> {
-    throw new Error("Method not implemented.");
+    throw new Error("transferTokens Method not implemented.");
   }
 
   public async getBalance(
     to?: string | undefined,
     token?: string | undefined
   ): Promise<bigint> {
-    throw new Error("Method not implemented.");
+    throw new Error("getBalance Method not implemented.");
   }
 
   public async getTokenBalance(token: string, to: string): Promise<bigint> {
-    throw new Error("Method not implemented.");
+    throw new Error("getTokenBalance Method not implemented.");
   }
 
   public async transferToken(
@@ -62,7 +62,7 @@ export class OrbiterAccount extends IAccount {
     value: bigint,
     transactionRequest?: TransactionRequest | any
   ): Promise<TransferResponse | undefined> {
-    throw new Error("Method not implemented.");
+    throw new Error("transferToken Method not implemented.");
   }
 
   public async waitForTransactionConfirmation(
