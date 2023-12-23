@@ -145,16 +145,21 @@ export class SequencerScheduleService {
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       const hashList = await this.redis.lrange(queueKey, 0, batchSize - 1);
       await this.redis.ltrim(queueKey, hashList.length, -1);
+      if(hashList.length<=0) {
+        await this.redis.del(`CurrentQueue:${queueKey}:list`)
+      }
       for (let i=hashList.length-1;i>=0;i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
         if (isConsumed) {
           hashList.splice(i, 1);
         }
       }
+      if (hashList.length>0) {
+        await this.redis.srem(`CurrentQueue:${queueKey}:list`,hashList)
+      }
       if (hashList.length<=0) {
         return;
       }
-      await this.redis.srem(`CurrentQueue:${queueKey}:list`,hashList)
       const records = await this.bridgeTransactionModel.findAll({
         raw: true,
         attributes: [
