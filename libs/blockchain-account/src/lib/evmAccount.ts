@@ -123,7 +123,8 @@ export class EVMAccount extends OrbiterAccount {
         data: transactionRequest.data,
         value: transactionRequest.value,
       });
-      transactionRequest.gasLimit = gasLimit;
+      const gasLimitRedouble = Number(chainCustomConfig.gasLimitRedouble || 1);
+      transactionRequest.gasLimit =  new BigNumber(gasLimit.toString()).times(gasLimitRedouble).toFixed(0);
 
       if (!transactionRequest.gasLimit) {
         throw new Error('gasLimit Fee fail')
