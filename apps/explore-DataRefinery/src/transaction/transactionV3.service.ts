@@ -599,7 +599,7 @@ export class TransactionV3Service {
     try {
       const result = await this.deployRecordModel.create(createData, { transaction: t});
       const updateR = await this.transfersModel.update(
-        { opStatus: TransferOpStatus.DEPLOY_SUCCESS  },
+        { opStatus: TransferOpStatus.MATCHED  },
         {
           where: {
             hash: transfer.hash,

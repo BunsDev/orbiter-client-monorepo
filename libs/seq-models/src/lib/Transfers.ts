@@ -49,7 +49,6 @@ export enum TransferOpStatus {
   MATCHED = 99,
 
   // inscription Op Status
-  DEPLOY_SUCCESS = 40,
   INVALID_OP = 41,
   INVALID_OP_PARAMS = 42,
   CLAIM_AMOUNT_EXCEED_LIMIT = 43,
