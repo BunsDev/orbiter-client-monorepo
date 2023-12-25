@@ -19,7 +19,7 @@ import { MemoryQueue } from '../../utils/MemoryQueue'
 import { AccountFactoryService } from "../../factory";
 import BigNumber from "bignumber.js";
 import * as Errors from "../../utils/Errors";
-import { EVMAccount, OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
+import { EVMAccount, OrbiterAccount, StoreService, TransactionSendAfterError, TransactionSendConfirmFail, TransactionSendIgError, TransferResponse } from "@orbiter-finance/blockchain-account";
 import { Interface, ethers } from "ethers6";
 import * as abis from '@orbiter-finance/abi'
 
@@ -129,6 +129,11 @@ export class TransferService {
         to: transfer.targetAddress,
         data: ethers.hexlify(input),
         value: transfer.sourceNonce,
+      }).catch(error=> {
+        if (error instanceof TransactionSendConfirmFail) {
+          throw new Errors.PaidRollbackError(`execSingleInscriptionTransfer TransactionSendConfirmFail ${error.message}`);
+        }
+        throw error;
       });
       sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
       sourceTx.targetId = transferResult.hash;
@@ -143,7 +148,7 @@ export class TransferService {
       }
       await transaction.commit();
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError || !transferResult?.from) {
+      if (error instanceof Errors.PaidRollbackError) {
         console.error('transferResult', transferResult);
         await transaction.rollback();
       } else {
@@ -534,8 +539,12 @@ export class TransferService {
         to: contractAddress,
         data: data,
         value: totalValue,
+      }).catch(error=> {
+        if (error instanceof TransactionSendConfirmFail) {
+          throw new Errors.PaidRollbackError(`execSingleInscriptionTransfer TransactionSendConfirmFail ${error.message}`);
+        }
+        throw error;
       });
-
       // CHANGE 98
       for (let i = 0; i < transfers.length; i++) {
         await this.bridgeTransactionModel.update(

@@ -19,6 +19,8 @@ import { TransferService } from "./transfer.service";
 import Keyv from 'keyv';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
+import { TransactionSendConfirmFail } from "@orbiter-finance/blockchain-account";
+
 const Lock: any = {}
 @Injectable()
 export class SequencerScheduleService {
@@ -140,8 +142,9 @@ export class SequencerScheduleService {
       return;
     }
     Lock[queueKey] = true;
+    let records;
+    const [targetChain, targetMaker] = queueKey.split('-');
     try {
-      const [targetChain, targetMaker] = queueKey.split('-');
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       if (batchSize <= 0) {
         return;
@@ -169,7 +172,7 @@ export class SequencerScheduleService {
       if (hashList.length <= 0) {
         return;
       }
-      const records = await this.bridgeTransactionModel.findAll({
+       records = await this.bridgeTransactionModel.findAll({
         raw: true,
         attributes: [
           "id",
@@ -203,6 +206,14 @@ export class SequencerScheduleService {
     } catch (error) {
       this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
       this.logger.error(`readQueueExecByKey error: message ${error.message}`);
+      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
+        for (const tx of records) {
+          await this.redis.rpush(queueKey, tx.sourceId);
+          //
+          await this.redis.srem(`Consume:${targetChain}`, tx.sourceId);
+        }
+        this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
+      }
     } finally {
       Lock[queueKey] = false;
     }
@@ -322,9 +333,6 @@ export class SequencerScheduleService {
     try {
       return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
-        await this.redis.rpush(queueKey, bridgeTx.sourceId);
-      }
       this.logger.error(`execSingleTransfer error ${bridgeTx.sourceId} message ${error.message}`);
       throw error;
     }
@@ -394,12 +402,7 @@ export class SequencerScheduleService {
       }
       return await this.transferService.execBatchInscriptionTransfer(legalTransaction, account)
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
-        for (const tx of legalTransaction) {
-          await this.redis.rpush(queueKey, tx.sourceId);
-        }
-        this.logger.error(`execBatchTransfer error PaidRollbackError ${targetChain} - ${legalTransaction.map(row => row.sourceId).join(',')} message ${error.message}`);
-      }
+
       throw error;
     }
   }
