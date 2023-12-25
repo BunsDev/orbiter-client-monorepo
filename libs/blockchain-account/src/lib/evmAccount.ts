@@ -440,7 +440,8 @@ export class EVMAccount extends OrbiterAccount {
       const signedTx = await this.wallet.signTransaction(transactionRequest);
       txHash = keccak256(signedTx);
       let response;
-      for (let i = 0; i <= 3; i++) {
+      let error;
+      for (let i = 0; i < 3; i++) {
         try {
           response = await provider.broadcastTransaction(signedTx);
           this.logger.info(
@@ -448,10 +449,14 @@ export class EVMAccount extends OrbiterAccount {
           );
           break;
         } catch (error) {
+          error = error;
           this.logger.info(
             `${chainConfig.name} sendTransaction broadcastTransaction error:${txHash}, message:${error.message}`
           );
         }
+      }
+      if (!response && error) {
+        throw error;
       }
       return response;
     } catch (error) {
