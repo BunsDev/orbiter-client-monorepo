@@ -142,7 +142,6 @@ export class EVMAccount extends OrbiterAccount {
       }
 
     }
-    console.log(chainCustomConfig, '=chainCustomConfig')
     const isEIP1559 = chainCustomConfig['EIP1559'];
     const feeData = await provider.getFeeData();
     // calc gas
@@ -458,9 +457,10 @@ export class EVMAccount extends OrbiterAccount {
       if (!response && error) {
         throw error;
       }
+      nonceResult && nonceResult.submit();
       return response;
     } catch (error) {
-      // nonceResult && nonceResult.rollback();
+      nonceResult && nonceResult.rollback();
       this.logger.error(
         `broadcastTransaction tx error:${txHash} - ${error.message}`,
         error

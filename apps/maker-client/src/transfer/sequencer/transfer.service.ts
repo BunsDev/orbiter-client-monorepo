@@ -50,145 +50,149 @@ export class TransferService {
       throw new Error('sourceChain not found');
     }
     this.logger.info(
-      `execSingleTransfer: ${sourceChainId}-${sourceHash}, owner:${wallet.address}`
+      `execSingleInscriptionTransfer: ${sourceChainId}-${sourceHash}, owner:${wallet.address}`
     );
     const transaction =
       await this.bridgeTransactionModel.sequelize.transaction();
     let sourceTx: BridgeTransactionModel;
     try {
-      sourceTx = await this.bridgeTransactionModel.findOne({
-        attributes: [
-          "id",
-          "sourceChain",
-          "sourceId",
-          "status",
-          "targetChain",
-          "targetSymbol",
-          "targetAmount",
-          "targetId",
-        ],
-        where: {
-          sourceId: sourceHash,
-          sourceChain: sourceChainId,
-        },
-        transaction,
-      });
-      if (!sourceTx) {
-        throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} SourceTx not exist`
-        );
-      }
-      if (sourceTx.status != 0) {
-        throw new Errors.AlreadyPaid(`${sourceHash} status ${sourceTx.status}`);
-      }
-      if (!isEmpty(sourceTx.targetId)) {
-        throw new Errors.AlreadyPaid(`${sourceHash} targetId ${sourceTx.targetId}`)
-      }
-      if (!equals(sourceTx.targetChain, transfer.targetChain)) {
-        throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Inconsistent target network (${sourceTx.targetChain}/${transfer.targetChain})`
-        );
-      }
-
-      if (!new BigNumber(sourceTx.targetAmount).eq(transfer.targetAmount)) {
-        throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Inconsistent targetAmount (${sourceTx.targetAmount}/${transfer.targetAmount})`
-        );
-      }
-
-      if (sourceTx.targetSymbol != transfer.targetSymbol) {
-        throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Inconsistent targetSymbol (${sourceTx.targetSymbol}/${transfer.targetSymbol})`
-        );
-      }
-      sourceTx.status = BridgeTransactionStatus.READY_PAID;
-      const updateRes = await sourceTx.save({
-        transaction,
-      });
-      if (!updateRes) {
-        throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Change status fail`
-        );
-      }
-    } catch (error) {
-      transaction && (await transaction.rollback());
-      throw error;
-    }
-    // transfer.targetAddress = '0xEFc6089224068b20197156A91D50132b2A47b908';
-    let transferResult: TransferResponse;
-    try {
-      const account = wallet as EVMAccount;
-      const input = Buffer.from(`data:,${JSON.stringify({
-        p: transfer.ruleId,
-        op: 'mint',
-        tick: transfer.targetSymbol,
-        amt: new BigNumber(transfer.targetAmount).toFixed(0),
-        fc: String((+sourceChain.internalId)),
-      })}`)
-      transferResult = await account.mintInscription({
-        to: transfer.targetAddress,
-        data: ethers.hexlify(input),
-        value: transfer.sourceNonce,
-      }).catch(error=> {
-        if (error instanceof TransactionSendConfirmFail) {
-          throw new Errors.PaidRollbackError(`execSingleInscriptionTransfer TransactionSendConfirmFail ${error.message}`);
-        }
-        throw error;
-      });
-      sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
-      sourceTx.targetId = transferResult.hash;
-      sourceTx.targetNonce = String(transferResult.nonce);
-      const updateRes = await sourceTx.save({
-        transaction,
-      });
-      if (!updateRes) {
-        throw new TransactionSendAfterError(
-          `${sourceChainId} - ${sourceHash} Change status fail`
-        );
-      }
-      await transaction.commit();
-    } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
-        console.error('transferResult', transferResult);
-        await transaction.rollback();
-      } else {
-        sourceTx.targetNonce = String(transferResult && transferResult.nonce);
-        sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
-        sourceTx.targetMaker = transferResult && transferResult.from;
-        sourceTx.targetId = transferResult && transferResult.hash;
-        await sourceTx.save({
+      try {
+        sourceTx = await this.bridgeTransactionModel.findOne({
+          attributes: [
+            "id",
+            "sourceChain",
+            "sourceId",
+            "status",
+            "targetChain",
+            "targetSymbol",
+            "targetAmount",
+            "targetId",
+          ],
+          where: {
+            sourceId: sourceHash,
+            sourceChain: sourceChainId,
+          },
           transaction,
         });
-        await transaction.commit();
-      }
-      throw error;
-    }
-    if (transferResult) {
-      // success change targetId
-      wallet
-        .waitForTransactionConfirmation(transferResult.hash)
-        .then(async (tx) => {
-          await this.bridgeTransactionModel.update(
-            {
-              status: BridgeTransactionStatus.BRIDGE_SUCCESS,
-              targetMaker: tx.from,
-            },
-            {
-              where: {
-                id: sourceTx.id,
-              },
-            }
+        if (!sourceTx) {
+          throw new Errors.PaidRollbackError(
+            `${sourceChainId} - ${sourceHash} SourceTx not exist`
           );
-        })
-        .catch((error) => {
-          this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transfer.targetChain} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
-          this.logger.error(
-            `${transferResult.hash} waitForTransactionConfirmation error ${transfer.targetChain}`,
-            error
+        }
+        if (sourceTx.status != 0) {
+          throw new Errors.AlreadyPaid(`${sourceHash} status ${sourceTx.status}`);
+        }
+        if (!isEmpty(sourceTx.targetId)) {
+          throw new Errors.AlreadyPaid(`${sourceHash} targetId ${sourceTx.targetId}`)
+        }
+        if (!equals(sourceTx.targetChain, transfer.targetChain)) {
+          throw new Errors.PaidRollbackError(
+            `${sourceChainId} - ${sourceHash} Inconsistent target network (${sourceTx.targetChain}/${transfer.targetChain})`
           );
+        }
+
+        if (!new BigNumber(sourceTx.targetAmount).eq(transfer.targetAmount)) {
+          throw new Errors.PaidRollbackError(
+            `${sourceChainId} - ${sourceHash} Inconsistent targetAmount (${sourceTx.targetAmount}/${transfer.targetAmount})`
+          );
+        }
+
+        if (sourceTx.targetSymbol != transfer.targetSymbol) {
+          throw new Errors.PaidRollbackError(
+            `${sourceChainId} - ${sourceHash} Inconsistent targetSymbol (${sourceTx.targetSymbol}/${transfer.targetSymbol})`
+          );
+        }
+        sourceTx.status = BridgeTransactionStatus.READY_PAID;
+        const updateRes = await sourceTx.save({
+          transaction,
         });
+        if (!updateRes) {
+          throw new Errors.PaidRollbackError(
+            `${sourceChainId} - ${sourceHash} Change status fail`
+          );
+        }
+      } catch (error) {
+        transaction && (await transaction.rollback());
+        throw error;
+      }
+      // transfer.targetAddress = '0xEFc6089224068b20197156A91D50132b2A47b908';
+      let transferResult: TransferResponse;
+      try {
+        const account = wallet as EVMAccount;
+        const input = Buffer.from(`data:,${JSON.stringify({
+          p: transfer.ruleId,
+          op: 'mint',
+          tick: transfer.targetSymbol,
+          amt: new BigNumber(transfer.targetAmount).toFixed(0),
+          fc: String((+sourceChain.internalId)),
+        })}`)
+        transferResult = await account.mintInscription({
+          to: transfer.targetAddress,
+          data: ethers.hexlify(input),
+          value: transfer.sourceNonce,
+        }).catch(error => {
+          if (error instanceof TransactionSendConfirmFail) {
+            throw new Errors.PaidRollbackError(`execSingleInscriptionTransfer TransactionSendConfirmFail ${error.message}`);
+          }
+          throw error;
+        });
+        sourceTx.status = BridgeTransactionStatus.PAID_SUCCESS;
+        sourceTx.targetId = transferResult.hash;
+        sourceTx.targetNonce = String(transferResult.nonce);
+        const updateRes = await sourceTx.save({
+          transaction,
+        });
+        if (!updateRes) {
+          throw new TransactionSendAfterError(
+            `${sourceChainId} - ${sourceHash} Change status fail`
+          );
+        }
+        await transaction.commit();
+      } catch (error) {
+        if (error instanceof Errors.PaidRollbackError) {
+          console.error('transferResult', transferResult);
+          await transaction.rollback();
+        } else {
+          sourceTx.targetNonce = String(transferResult && transferResult.nonce);
+          sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
+          sourceTx.targetMaker = transferResult && transferResult.from;
+          sourceTx.targetId = transferResult && transferResult.hash;
+          await sourceTx.save({
+            transaction,
+          });
+          await transaction.commit();
+        }
+        throw error;
+      }
+      if (transferResult) {
+        // success change targetId
+        wallet
+          .waitForTransactionConfirmation(transferResult.hash)
+          .then(async (tx) => {
+            await this.bridgeTransactionModel.update(
+              {
+                status: BridgeTransactionStatus.BRIDGE_SUCCESS,
+                targetMaker: tx.from,
+              },
+              {
+                where: {
+                  id: sourceTx.id,
+                },
+              }
+            );
+          })
+          .catch((error) => {
+            this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transfer.targetChain} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
+            this.logger.error(
+              `${transferResult.hash} waitForTransactionConfirmation error ${transfer.targetChain}`,
+              error
+            );
+          });
+      }
+      return sourceTx.toJSON();
+    } catch (error) {
+      console.error('execSingleInscriptionTransfer error', error);
     }
-    return sourceTx.toJSON();
   }
   async execSingleTransfer(
     transfer: TransferAmountTransaction,
@@ -481,7 +485,7 @@ export class TransferService {
     const sourecIds = transfers.map((tx) => tx.sourceId);
     const toAddressList = transfers.map((tx) => tx.targetAddress);
     const toValuesList = transfers.map((tx) => BigInt(tx.sourceNonce));
-    const toDataList = transfers.map(tx=> {
+    const toDataList = transfers.map(tx => {
       const sourceChain = this.chainConfigService.getChainInfo(tx.sourceChain);
       const input = Buffer.from(`data:,${JSON.stringify({
         p: tx.ruleId,
@@ -515,7 +519,7 @@ export class TransferService {
           `The number of successful modifications is inconsistent ${sourecIds.join(',')}`
         );
       }
-      const targetChain  = this.chainConfigService.getChainInfo(targetChainId);
+      const targetChain = this.chainConfigService.getChainInfo(targetChainId);
       if (!targetChain) {
         throw new Errors.PaidBeforeCheck('The target chain information does not exist')
       }
@@ -530,7 +534,7 @@ export class TransferService {
     try {
       const account = wallet as EVMAccount;
       const ifa = new Interface(abis.CrossInscriptions);
-      const data = ifa.encodeFunctionData("transfers", [toAddressList, toValuesList,toDataList]);
+      const data = ifa.encodeFunctionData("transfers", [toAddressList, toValuesList, toDataList]);
       const totalValue = toValuesList.reduce(
         (accumulator, currentValue) => accumulator + currentValue,
         0n
@@ -539,7 +543,7 @@ export class TransferService {
         to: contractAddress,
         data: data,
         value: totalValue,
-      }).catch(error=> {
+      }).catch(error => {
         if (error instanceof TransactionSendConfirmFail) {
           throw new Errors.PaidRollbackError(`execSingleInscriptionTransfer TransactionSendConfirmFail ${error.message}`);
         }

@@ -20,8 +20,9 @@ import Keyv from 'keyv';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
 import { TransactionSendConfirmFail } from "@orbiter-finance/blockchain-account";
+import { LockData } from './sequencer.interface';
 
-const Lock: any = {}
+const Lock: { [key: string]: LockData } = {}
 @Injectable()
 export class SequencerScheduleService {
   @LoggerDecorator()
@@ -138,13 +139,24 @@ export class SequencerScheduleService {
     }
   }
   private async readQueueExecByKey(queueKey: string) {
-    if (Lock[queueKey] === true) {
-      return;
-    }
-    Lock[queueKey] = true;
     let records;
     const [targetChain, targetMaker] = queueKey.split('-');
     try {
+      if (!Lock[queueKey]) {
+        Lock[queueKey] = {
+          locked: false,
+          prevTime: Date.now()
+        }
+      }
+      if (Lock[queueKey].locked === true) {
+        return;
+      }
+      const globalPaidInterval = this.envConfig.get(`PaidInterval`, 1000);
+      const paidInterval = this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval)
+      if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
+        return;
+      }
+      Lock[queueKey].locked = true;
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       if (batchSize <= 0) {
         return;
@@ -172,7 +184,7 @@ export class SequencerScheduleService {
       if (hashList.length <= 0) {
         return;
       }
-       records = await this.bridgeTransactionModel.findAll({
+      records = await this.bridgeTransactionModel.findAll({
         raw: true,
         attributes: [
           "id",
@@ -202,7 +214,9 @@ export class SequencerScheduleService {
           sourceId: hashList
         },
       });
-      await this.consumptionSendingQueue(records, queueKey)
+      Lock[queueKey].prevTime = Date.now();
+      const result = await this.consumptionSendingQueue(records, queueKey)
+      Lock[queueKey].prevTime = Date.now();
     } catch (error) {
       this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
       this.logger.error(`readQueueExecByKey error: message ${error.message}`);
@@ -215,7 +229,7 @@ export class SequencerScheduleService {
         this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
       }
     } finally {
-      Lock[queueKey] = false;
+      Lock[queueKey].locked = false;
     }
   }
 
