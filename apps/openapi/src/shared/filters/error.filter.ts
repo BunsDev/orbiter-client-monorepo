@@ -14,9 +14,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const response = host.switchToHttp().getResponse()
         let exceptionStatus = HttpStatus.INTERNAL_SERVER_ERROR;
         let errorResponse:ExceptionInfo;
-        if (exception) {
+        if (exception?.getStatus) {
              exceptionStatus = exception.getStatus();
              errorResponse = exception.getResponse() as ExceptionInfo
+        } else {
+            console.log("exception",exception)
         }
         const errorMessage = lodash.isString(errorResponse) ? errorResponse : errorResponse.message
         const errorInfo = lodash.isString(errorResponse) ? null : errorResponse.error
