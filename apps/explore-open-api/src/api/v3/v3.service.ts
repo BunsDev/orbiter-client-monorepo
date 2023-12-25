@@ -27,7 +27,7 @@ export class V3Service {
     if (!params || !(params instanceof Array) || params.length < 1 || !params[0]) {
       throw new Error('Invalid params');
     }
-    const hash = String(params[0]);
+    const hash = String(params[0]).toLowerCase();
     const txRes = await keyv.get(`${hash}_tx`);
     if (txRes) return txRes;
     const bridgeTransaction: BridgeTransactionAttributes = <any>await this.BridgeTransactionModel.findOne(<any>{
@@ -84,7 +84,7 @@ export class V3Service {
     if (!params || !(params instanceof Array) || params.length < 1) {
       throw new Error('Invalid params');
     }
-    const address = params[0];
+    const address: string = String(params[0]).toLowerCase();
     if (!new RegExp(/^0x[a-fA-F0-9]{40}$/).test(address)) {
       throw new Error('Invalid address');
     }
