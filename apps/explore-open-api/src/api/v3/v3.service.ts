@@ -108,10 +108,10 @@ export class V3Service {
       raw: true,
       where,
       order: [['sourceTime', 'DESC']],
-      // offset,
-      // limit
+      offset,
+      limit
     });
-    // const count: number = <any>await this.BridgeTransactionModel.count(<any>{ where });
+    const count: number = <any>await this.BridgeTransactionModel.count(<any>{ where });
 
     let list = [];
     for (const data of dataList) {
@@ -128,16 +128,16 @@ export class V3Service {
         status: data.status,
       });
     }
-    const v2TxList = await this.v2Service.getTransactionByAddress(address);
-    for (const tx of v2TxList) {
-      if (list.find(item => item.fromHash.toLowerCase() === tx.fromHash.toLowerCase())) continue;
-      list.push(tx);
-    }
-    list = list.sort(function (a, b) {
-      return new Date(b.fromTimestamp).valueOf() - new Date(a.fromTimestamp).valueOf();
-    });
-    const count = list.length;
-    return { list: list.splice(offset, limit), count };
+    // const v2TxList = await this.v2Service.getTransactionByAddress(address);
+    // for (const tx of v2TxList) {
+    //   if (list.find(item => item.fromHash.toLowerCase() === tx.fromHash.toLowerCase())) continue;
+    //   list.push(tx);
+    // }
+    // list = list.sort(function (a, b) {
+    //   return new Date(b.fromTimestamp).valueOf() - new Date(a.fromTimestamp).valueOf();
+    // });
+    // const count = list.length;
+    return { list, count };
   }
 
   async getTxList(params: any[]) {
