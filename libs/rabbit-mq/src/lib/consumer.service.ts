@@ -134,6 +134,7 @@ export class ConsumerService {
       });
     } catch (error: any) {
       await sleep(500);
+      console.error(error)
       this.consumeScanTransferSaveDBAfterMessages(callback);
       Logger.error(`${queue} consumeScanTransferSaveDBAfterMessages error ${error.message}`, error);
     }
