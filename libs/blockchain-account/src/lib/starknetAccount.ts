@@ -1,6 +1,6 @@
 import { Account, Contract, cairo, RpcProvider } from 'starknet';
 import { equals, sleep, addressPadStart } from '@orbiter-finance/utils';
-import { TransactionRequest, TransactionSendConfirmFail, TransferResponse } from "./IAccount.interface";
+import { TransactionRequest, TransactionSendBeforeError, TransferResponse } from "./IAccount.interface";
 import { OrbiterAccount } from "./orbiterAccount";
 import {NonceManager} from './nonceManager';
 import {StarknetERC20} from '@orbiter-finance/abi'
@@ -93,11 +93,11 @@ export class StarknetAccount extends OrbiterAccount {
       invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
     }
     if (!invocationList.length) {
-      throw new TransactionSendConfirmFail('Not Invocation Length');
+      throw new TransactionSendBeforeError('Not Invocation Length');
     }
     const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
     if (!nonce && nonce != 0) {
-      throw new TransactionSendConfirmFail('Not Find Nonce Params');
+      throw new TransactionSendBeforeError('Not Find Nonce Params');
     }
     const transactionDetail = {
       nonce: nonce,

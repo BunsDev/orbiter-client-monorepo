@@ -18,7 +18,7 @@ import {
   TransactionFailedError,
   TransactionRequest,
   TransactionResponse,
-  TransactionSendConfirmFail,
+  TransactionSendBeforeError,
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
@@ -85,7 +85,7 @@ export class EVMAccount extends OrbiterAccount {
     try {
       const balance = await this.getTokenBalance(token);
       if (balance < value) {
-        throw new TransactionSendConfirmFail(
+        throw new TransactionSendBeforeError(
           `The sender ${token} has insufficient balance`
         );
       }
@@ -98,7 +98,7 @@ export class EVMAccount extends OrbiterAccount {
       // get erc20 getLimit
       await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
-      throw new TransactionSendConfirmFail(error.message);
+      throw new TransactionSendBeforeError(error.message);
     }
     const tx = await this.sendTransaction(token, transactionRequest);
     return {
@@ -126,13 +126,13 @@ export class EVMAccount extends OrbiterAccount {
         });
         const gasLimitRedouble = Number(chainCustomConfig.gasLimitRedouble || 1);
         if (gasLimit) {
-          transactionRequest.gasLimit = new BigNumber(String(gasLimit)).times(gasLimitRedouble).toFixed(0);
+          transactionRequest.gasLimit =  new BigNumber(String(gasLimit)).times(gasLimitRedouble).toFixed(0);
         }
-      } catch (error) {
+      }catch(error) {
         this.logger.info(`estimateGas error ${error.message}`);
       }
       if (!transactionRequest.gasLimit) {
-        if (transactionRequest.data.length >= 500 && chainCustomConfig.defaultManyMintLimit) {
+        if (transactionRequest.data.length>=500 && chainCustomConfig.defaultManyMintLimit) {
           transactionRequest.gasLimit = new BigNumber(chainCustomConfig.defaultManyMintLimit).toFixed(0);
         } else {
           if (chainCustomConfig.defaultSingleMintLimit) {
@@ -140,7 +140,7 @@ export class EVMAccount extends OrbiterAccount {
           }
         }
       }
-
+     
     }
     console.log(chainCustomConfig, '=chainCustomConfig')
     const isEIP1559 = chainCustomConfig['EIP1559'];
@@ -158,14 +158,14 @@ export class EVMAccount extends OrbiterAccount {
         gasPrice = new BigNumber(chainCustomConfig.MinFeePerGas || 0);
       }
       console.log('gasPrice:', gasPrice);
-      transactionRequest.maxFeePerGas = new BigNumber(String(gasPrice || 0)).toFixed(0);
+      transactionRequest.maxFeePerGas =new BigNumber(String(gasPrice || 0)).toFixed(0) ;
       // maxPriorityFeePerGas
       let maxPriorityFeePerGas = new BigNumber(String(feeData.maxPriorityFeePerGas || 0)).times(priorityFeePerGasRedouble);
       if (chainCustomConfig.MaxPriorityFeePerGas && maxPriorityFeePerGas.gte(chainCustomConfig.MaxPriorityFeePerGas)) {
         maxPriorityFeePerGas = new BigNumber(chainCustomConfig.MaxPriorityFeePerGas || 0);
       }
       console.log('maxPriorityFeePerGas:', maxPriorityFeePerGas);
-      transactionRequest.maxPriorityFeePerGas = new BigNumber(String(maxPriorityFeePerGas || 0)).toFixed(0);
+      transactionRequest.maxPriorityFeePerGas = new BigNumber(String(maxPriorityFeePerGas || 0)).toFixed(0) ;
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
         throw new Error(`EIP1559 Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
@@ -173,11 +173,11 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.type = 0;
       if (!transactionRequest.gasPrice && feeData.gasPrice) {
         let gasPrice = new BigNumber(String(feeData.gasPrice || 0)).times(feePerGasRedouble);
-        if (chainCustomConfig.MaxFeePerGas && gasPrice.gte(chainCustomConfig.MaxFeePerGas)) {
-          transactionRequest.gasPrice = chainCustomConfig.MaxFeePerGas;
-        } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
-          transactionRequest.gasPrice = chainCustomConfig.MinFeePerGas;
-        }
+        // if (chainCustomConfig.MaxFeePerGas && gasPrice.gte(chainCustomConfig.MaxFeePerGas)) {
+        //   transactionRequest.gasPrice = chainCustomConfig.MaxFeePerGas;
+        // } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
+        //   transactionRequest.gasPrice = chainCustomConfig.MinFeePerGas;
+        // }
         console.log('transactionRequest.gasPrice:', transactionRequest.gasPrice);
         // transactionRequest.gasPrice =new BigNumber(String(transactionRequest.gasPrice)).toFixed(0) ;
         transactionRequest.gasPrice = gasPrice.toFixed(0);
@@ -186,7 +186,7 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     }
-    // console.log('transactionRequest :', transactionRequest);
+    console.log('transactionRequest :', transactionRequest);
     return transactionRequest;
   }
 
@@ -198,7 +198,7 @@ export class EVMAccount extends OrbiterAccount {
     try {
       const balance = await this.getBalance();
       if (balance < value) {
-        throw new TransactionSendConfirmFail(
+        throw new TransactionSendBeforeError(
           "The sender has insufficient balance"
         );
       }
@@ -208,7 +208,7 @@ export class EVMAccount extends OrbiterAccount {
       // get getLimit
       await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
-      throw new TransactionSendConfirmFail(error.message);
+      throw new TransactionSendBeforeError(error.message);
     }
     const response = await this.sendTransaction(to, transactionRequest);
     return response;
@@ -223,7 +223,7 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     try {
       if (tos.length !== values.length) {
-        throw new TransactionSendConfirmFail(
+        throw new TransactionSendBeforeError(
           "to and values are inconsistent in length"
         );
       }
@@ -231,7 +231,7 @@ export class EVMAccount extends OrbiterAccount {
         (addr) => chainConfig.contract[addr] === "OrbiterRouterV3"
       );
       if (!router) {
-        throw new TransactionSendConfirmFail(
+        throw new TransactionSendBeforeError(
           "transferTokens router not config"
         );
       }
@@ -242,12 +242,12 @@ export class EVMAccount extends OrbiterAccount {
       //
       const balance = await this.getBalance();
       if (balance < totalValue) {
-        throw new TransactionSendConfirmFail(
+        throw new TransactionSendBeforeError(
           "The sender has insufficient balance"
         );
       }
       if (!OrbiterRouterV3) {
-        throw new TransactionSendConfirmFail("OrbiterRouterV3 ABI Not Found");
+        throw new TransactionSendBeforeError("OrbiterRouterV3 ABI Not Found");
       }
       const ifa = new Interface(OrbiterRouterV3);
       transactionRequest.value = totalValue;
@@ -258,7 +258,7 @@ export class EVMAccount extends OrbiterAccount {
       ]);
       await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
-      throw new TransactionSendConfirmFail(error.message);
+      throw new TransactionSendBeforeError(error.message);
     }
     const response = await this.sendTransaction(router, transactionRequest);
     return response;
@@ -274,7 +274,7 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     try {
       if (tos.length !== values.length) {
-        throw new TransactionSendConfirmFail(
+        throw new TransactionSendBeforeError(
           "to and values are inconsistent in length"
         );
       }
@@ -282,7 +282,7 @@ export class EVMAccount extends OrbiterAccount {
         (addr) => chainConfig.contract[addr] === "OrbiterRouterV3"
       );
       if (!router) {
-        throw new TransactionSendConfirmFail(
+        throw new TransactionSendBeforeError(
           "transferTokens router not config"
         );
       }
@@ -300,12 +300,12 @@ export class EVMAccount extends OrbiterAccount {
       }
       const balance = await this.getTokenBalance(token);
       if (balance < totalValue) {
-        throw new TransactionSendConfirmFail(
+        throw new TransactionSendBeforeError(
           `The sender ${token} has insufficient balance`
         );
       }
       if (!OrbiterRouterV3) {
-        throw new TransactionSendConfirmFail("OrbiterRouterV3 ABI Not Found");
+        throw new TransactionSendBeforeError("OrbiterRouterV3 ABI Not Found");
       }
       const ifa = new Interface(OrbiterRouterV3);
       const data = ifa.encodeFunctionData("transferTokens", [
@@ -320,7 +320,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.chainId = Number(this.chainConfig.networkId);
       await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
-      throw new TransactionSendConfirmFail(error.message);
+      throw new TransactionSendBeforeError(error.message);
     }
     const response = await this.sendTransaction(router, transactionRequest);
     return response;
@@ -380,7 +380,7 @@ export class EVMAccount extends OrbiterAccount {
       );
       // rollback()
       if (isError(error, "NONCE_EXPIRED")) {
-        throw new TransactionSendConfirmFail(error.message);
+        throw new TransactionSendBeforeError(error.message);
       }
       throw new TransactionFailedError(error.message);
     }
@@ -391,82 +391,63 @@ export class EVMAccount extends OrbiterAccount {
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
     const provider = this.getProvider();
-    let nonceResult;
+    const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
+    let txHash;
     try {
-      nonceResult = await this.nonceManager.getNextNonce();
-      // const { nonce, submit, rollback } =nonceResult;
-      if (transactionRequest.value)
+      if (transactionRequest.value) {
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
+      }
       transactionRequest.from = this.wallet.address;
       transactionRequest.chainId = chainConfig.chainId;
-      transactionRequest.nonce = nonceResult.nonce;
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      try {
+        await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      } catch (error) {
+        console.error(error);
+        this.logger.error(`mintInscription getGasPrice error change populateTransaction ${error.stack}`)
+      }
+      transactionRequest.nonce = nonce;
       try {
         const populateTransaction = await this.wallet.populateTransaction(transactionRequest);
-        if (populateTransaction.nonce > transactionRequest.nonce) {
+        if (populateTransaction.nonce>transactionRequest.nonce) {
           transactionRequest.nonce = populateTransaction.nonce;
         }
-        if (!transactionRequest.gasLimit) {
+        if(!transactionRequest.gasLimit) {
           transactionRequest.gasLimit = populateTransaction.gasLimit;
         }
-        if (!transactionRequest.gasPrice) {
+        if(!transactionRequest.gasPrice) {
           transactionRequest.gasPrice = populateTransaction.gasPrice;
         }
-        if (!transactionRequest.maxFeePerGas) {
+        if(!transactionRequest.maxFeePerGas) {
           transactionRequest.maxFeePerGas = populateTransaction.maxFeePerGas;
         }
-        if (!transactionRequest.maxPriorityFeePerGas) {
+        if(!transactionRequest.maxPriorityFeePerGas) {
           transactionRequest.maxPriorityFeePerGas = populateTransaction.maxPriorityFeePerGas;
         }
       } catch (error) {
         console.error(error);
-        this.logger.error(
-          `${chainConfig.name} sendTransaction before populateTransaction error:${JSONStringify(transactionRequest)}, message: ${error.message}`
-        );
+        this.logger.error(`populateTransaction error ${error.message} - ${error.stack}`, error)
       }
       this.logger.info(
-        `${chainConfig.name} sendTransaction before:${JSONStringify(transactionRequest)}`
+        `${chainConfig.name} sendTransaction:${JSONStringify(transactionRequest)}`
       );
-    } catch (error) {
-      console.error(error);
-      nonceResult && nonceResult.rollback();
-      this.logger.error(
-        `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)}, message: ${error.message}`
-      );
-      throw new TransactionSendConfirmFail(error.message);
-    }
-    let txHash;
-    try {
       const signedTx = await this.wallet.signTransaction(transactionRequest);
       txHash = keccak256(signedTx);
-      let response;
-      let error;
-      for (let i = 0; i < 3; i++) {
-        try {
-          response = await provider.broadcastTransaction(signedTx);
-          this.logger.info(
-            `${chainConfig.name} sendTransaction txHash:${txHash}`
-          );
-          break;
-        } catch (error) {
-          error = error;
-          this.logger.info(
-            `${chainConfig.name} sendTransaction broadcastTransaction error:${txHash}, message:${error.message}`
-          );
-        }
-      }
-      if (!response && error) {
-        throw error;
-      }
+      const response = await provider.broadcastTransaction(signedTx);
+      this.logger.info(
+        `${chainConfig.name} sendTransaction txHash:${txHash}`
+      );
+      //
+      submit();
       return response;
     } catch (error) {
-      // nonceResult && nonceResult.rollback();
+      rollback();
       this.logger.error(
         `broadcastTransaction tx error:${txHash} - ${error.message}`,
         error
       );
+      // rollback()
       if (isError(error, "NONCE_EXPIRED")) {
-        throw new TransactionSendConfirmFail(error.message);
+        throw new TransactionSendBeforeError(error.message);
       }
       throw new TransactionFailedError(error.message);
     }

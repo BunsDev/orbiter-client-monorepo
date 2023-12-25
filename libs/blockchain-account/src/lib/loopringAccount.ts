@@ -11,7 +11,7 @@ import Web3 from 'web3';
 import PrivateKeyProvider from 'truffle-privatekey-provider';
 import { HTTPGet } from "@orbiter-finance/request";
 import { sleep } from '@orbiter-finance/utils';
-import { LoopringSendTokenRequest, TransactionSendConfirmFail, TransferResponse } from './IAccount.interface';
+import { LoopringSendTokenRequest, TransactionSendBeforeError, TransferResponse } from './IAccount.interface';
 import { NonceManager } from "./nonceManager";
 
 export class LoopringAccount extends OrbiterAccount {
@@ -80,7 +80,7 @@ export class LoopringAccount extends OrbiterAccount {
     const tokenInfo = [...this.chainConfig.tokens, this.chainConfig.nativeCurrency]
       .find(item => item.address.toLowerCase() === token.toLowerCase());
     if (!tokenInfo) {
-      throw new TransactionSendConfirmFail(`${token} token not found`);
+      throw new TransactionSendBeforeError(`${token} token not found`);
     }
     const userApi = new UserAPI({
       chainId: Number(this.chainConfig.networkId)
@@ -89,7 +89,7 @@ export class LoopringAccount extends OrbiterAccount {
     const accInfo = this.accountInfo;
     const providerChain = this.chainConfig;
     if (!providerChain || !providerChain.rpc || providerChain.rpc.length <= 0) {
-      throw new TransactionSendConfirmFail('LoopringAccount not config rpc');
+      throw new TransactionSendBeforeError('LoopringAccount not config rpc');
     }
     const provider = new PrivateKeyProvider(this.privateKey, providerChain?.rpc[0]);
     const web3 = new Web3(provider);
@@ -108,7 +108,7 @@ export class LoopringAccount extends OrbiterAccount {
       eddsaKey.sk
     );
     if (!apiKey) {
-      throw new TransactionSendConfirmFail('Get Loopring ApiKey Error');
+      throw new TransactionSendBeforeError('Get Loopring ApiKey Error');
     }
     // step 3 get storageId
     const storageId = await userApi.getNextStorageId(
