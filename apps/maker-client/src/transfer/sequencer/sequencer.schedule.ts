@@ -49,7 +49,7 @@ export class SequencerScheduleService {
     }
   }
   @Cron("0 */2 * * * *")
-  private asynx checkDBTransactionRecords() {
+  private async checkDBTransactionRecords() {
     const owners = this.envConfig.get("MAKERS") || [];
     for (const owner of owners) {
       // read db history
