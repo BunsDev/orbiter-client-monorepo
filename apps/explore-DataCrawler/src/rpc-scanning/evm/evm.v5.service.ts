@@ -236,8 +236,9 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   }
   async handleTransactionAfter(transfers: TransferAmountTransaction[]): Promise<TransferAmountTransaction[]> {
     return transfers.map(transfer => {
+      
       if (transfer.status === TransferAmountTransactionStatus.confirmed) {
-        if (this.ctx.chainConfigService.inValidMainToken(transfer.chainId, transfer.token)) {
+        if (!this.ctx.chainConfigService.inValidMainToken(transfer.chainId, transfer.token)) {
           // erc20
           // TAG: event
           if (!transfer.receipt) {
@@ -255,6 +256,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         }
       } else {
         // main token
+
       }
       return transfer;
     });
