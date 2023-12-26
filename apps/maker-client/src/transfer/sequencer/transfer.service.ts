@@ -164,31 +164,31 @@ export class TransferService {
         }
         throw error;
       }
-      if (transferResult) {
-        // success change targetId
-        wallet
-          .waitForTransactionConfirmation(transferResult.hash)
-          .then(async (tx) => {
-            await this.bridgeTransactionModel.update(
-              {
-                status: BridgeTransactionStatus.BRIDGE_SUCCESS,
-                targetMaker: tx.from,
-              },
-              {
-                where: {
-                  id: sourceTx.id,
-                },
-              }
-            );
-          })
-          .catch((error) => {
-            this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transfer.targetChain} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
-            this.logger.error(
-              `${transferResult.hash} waitForTransactionConfirmation error ${transfer.targetChain}`,
-              error
-            );
-          });
-      }
+      // if (transferResult) {
+      //   // success change targetId
+      //   wallet
+      //     .waitForTransactionConfirmation(transferResult.hash)
+      //     .then(async (tx) => {
+      //       await this.bridgeTransactionModel.update(
+      //         {
+      //           status: BridgeTransactionStatus.BRIDGE_SUCCESS,
+      //           targetMaker: tx.from,
+      //         },
+      //         {
+      //           where: {
+      //             id: sourceTx.id,
+      //           },
+      //         }
+      //       );
+      //     })
+      //     .catch((error) => {
+      //       this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transfer.targetChain} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
+      //       this.logger.error(
+      //         `${transferResult.hash} waitForTransactionConfirmation error ${transfer.targetChain}`,
+      //         error
+      //       );
+      //     });
+      // }
       return sourceTx.toJSON();
     } catch (error) {
       console.error('execSingleInscriptionTransfer error', error);
@@ -572,50 +572,51 @@ export class TransferService {
         console.error('transferResult', transferResult);
         await transaction.rollback();
       } else {
-        for (let i = 0; i < transfers.length; i++) {
-          await this.bridgeTransactionModel.update(
-            {
-              status: BridgeTransactionStatus.PAID_CRASH,
-              targetId: transferResult && `${transferResult.hash}#${i}`,
-              targetNonce: String(transferResult && transferResult.nonce)
-            },
-            {
-              where: {
-                sourceId: transfers[i].sourceId,
-              },
-              transaction,
-            }
-          );
-        }
+        // for (let i = 0; i < transfers.length; i++) {
+        //   await this.bridgeTransactionModel.update(
+        //     {
+        //       status: BridgeTransactionStatus.PAID_CRASH,
+        //       targetId: transferResult && `${transferResult.hash}#${i}`,
+        //       targetNonce: String(transferResult && transferResult.nonce)
+        //     },
+        //     {
+        //       where: {
+        //         sourceId: transfers[i].sourceId,
+        //       },
+        //       transaction,
+        //     }
+        //   );
+        // }
         await transaction.commit();
       }
+      this.logger.error(`execBatchInscriptionTransfer error ${error.message}`);
       throw error;
     }
-    if (transferResult) {
-      // success change targetId
-      wallet
-        .waitForTransactionConfirmation(transferResult.hash)
-        .then(async (tx) => {
-          await this.bridgeTransactionModel.update(
-            {
-              status: BridgeTransactionStatus.BRIDGE_SUCCESS,
-              targetMaker: tx.from,
-            },
-            {
-              where: {
-                sourceId: sourecIds,
-              },
-            }
-          );
-        })
-        .catch((error) => {
-          this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${targetChainId} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
-          this.logger.error(
-            `${transferResult.hash} waitForTransactionConfirmation error ${targetChainId}`,
-            error
-          );
-        });
-    }
+    // if (transferResult) {
+    //   // success change targetId
+    //   wallet
+    //     .waitForTransactionConfirmation(transferResult.hash)
+    //     .then(async (tx) => {
+    //       await this.bridgeTransactionModel.update(
+    //         {
+    //           status: BridgeTransactionStatus.BRIDGE_SUCCESS,
+    //           targetMaker: tx.from,
+    //         },
+    //         {
+    //           where: {
+    //             sourceId: sourecIds,
+    //           },
+    //         }
+    //       );
+    //     })
+    //     .catch((error) => {
+    //       this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${targetChainId} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
+    //       this.logger.error(
+    //         `${transferResult.hash} waitForTransactionConfirmation error ${targetChainId}`,
+    //         error
+    //       );
+    //     });
+    // }
     return transferResult;
   }
 }
