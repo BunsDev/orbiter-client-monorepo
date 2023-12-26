@@ -2,7 +2,10 @@ import { Mutex } from "async-mutex";
 import { BridgeTransaction } from "@orbiter-finance/seq-models";
 
 export interface Sequencer {}
-
+export interface LockData {
+  prevTime:number,
+  locked: boolean
+}
 export interface submitResponse {
   chainId: number;
   error?: Error | string;

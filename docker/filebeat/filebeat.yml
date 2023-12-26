@@ -21,7 +21,7 @@ setup.kibana:
   username: '${ELASTIC_USERNAME}'
   password: '${ELASTIC_PASSWORD}'
 
-# 可选的 Filebeat 配置选项
+#  Filebeat 
 filebeat.config:
   inputs:
     enabled: true
