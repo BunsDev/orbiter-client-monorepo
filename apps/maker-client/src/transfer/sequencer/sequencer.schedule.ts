@@ -29,7 +29,6 @@ export class SequencerScheduleService {
   private readonly logger: OrbiterLogger;
   private readonly applicationStartupTime: number = Date.now();
   private queue: { [key: string]: MemoryQueue<BridgeTransactionModel> } = {};
-  private recordMaxId: number = 0;
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
@@ -107,7 +106,6 @@ export class SequencerScheduleService {
         "version"
       ],
       where,
-      limit: 500
     });
     if (records.length > 0) {
       for (const tx of records) {
@@ -119,12 +117,6 @@ export class SequencerScheduleService {
           );
         }
       }
-    }
-    const maxItem = maxBy(records, 'id');
-    console.log(`owner: ${owner}, recordMaxId:${this.recordMaxId}, maxItem:${maxItem && maxItem.id}, recordsLength: ${records.length}`);
-    if (maxItem && +maxItem.id > this.recordMaxId) {
-      this.recordMaxId = +maxItem.id;
-      console.log('maxId:', this.recordMaxId);
     }
   }
   @Interval(1000)
