@@ -35,7 +35,14 @@ export class SequencerScheduleService {
     private alertService: AlertService,
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
-    this.consumerService.consumeMakerWaitTransferMessage(this.consumeMQTransactionRecords.bind(this))
+    const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER",[]);
+    if (subMakers && subMakers.length>0) {
+      for (const key of subMakers) {
+        this.consumerService.consumeMakerWaitTransferMessage(this.consumeMQTransactionRecords.bind(this), key)
+      }
+    } else {
+      this.consumerService.consumeMakerWaitTransferMessage(this.consumeMQTransactionRecords.bind(this))
+    }
     // this.validatorService.validatingValueMatches("ETH", "1", "ETH", "2")
   }
 

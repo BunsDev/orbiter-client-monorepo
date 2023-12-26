@@ -289,13 +289,14 @@ export default class EVMVUtils {
         }
       }
     } else if (
-      parsedData.signature === 'transferTokens(address, address[],uint256[])'
+      parsedData.signature === 'transferTokens(address,address[],uint256[])'
     ) {
+      const tokenContractInterface = new Interface2(abis.ERC20Abi);
       for (const log of logs) {
-        const parsedLogData = contractInterface.parseLog(log as any);
+        const parsedLogData = tokenContractInterface.parseLog(log as any);
         if (
           parsedLogData &&
-          parsedLogData.signature === 'Transfer(address,uint256)' &&
+          parsedLogData.signature === 'Transfer(address,address,uint256)' &&
           parsedLogData.topic ===
           '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
         ) {
@@ -318,18 +319,11 @@ export default class EVMVUtils {
           transfers.push(copyTxData);
         }
       }
-    } else if (parsedData.signature === 'transfer(address,bytes)' || parsedData.signature === 'transferToken(address,address,uint256,bytes)') {
+    } else if (parsedData.signature === 'transfer(address,bytes)') {
       const parsedLogData = contractInterface.parseLog(logs[0] as any);
       const copyTxData = clone(txData);
-      let value;
-      if (parsedData.signature === 'transferToken(address,address,uint256,bytes)') {
-        value = new BigNumber(parsedLogData.args[2]).toFixed(0);
-        copyTxData.sender = parsedLogData.args[0];
-        copyTxData.receiver = parsedLogData.args[1];
-      } else {
-        value = new BigNumber(parsedLogData.args[1]).toFixed(0);
+      const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
         copyTxData.receiver = parsedLogData.args[0];
-      }
       copyTxData.hash = txData.hash;
       copyTxData.token = chainInfo.nativeCurrency.address;
       copyTxData.symbol = chainInfo.nativeCurrency.symbol;
@@ -337,6 +331,26 @@ export default class EVMVUtils {
       copyTxData.amount = new BigNumber(value)
         .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
         .toString();
+      transfers.push(copyTxData);
+    } else if(parsedData.signature === 'transferToken(address,address,uint256,bytes)') {
+      const tokenContractInterface = new Interface2(abis.ERC20Abi);
+      const parsedLogData = tokenContractInterface.parseLog(logs[0] as any);
+      const copyTxData = clone(txData);
+      const value = new BigNumber(parsedLogData.args[2]).toFixed(0);
+      copyTxData.hash = txData.hash;
+      copyTxData.token = parsedData.args[0];
+      copyTxData.sender = parsedLogData.args[0];
+      copyTxData.receiver = parsedLogData.args[1];
+      copyTxData.value = value;
+      const tokenInfo = chainInfo.tokens.find((t) =>
+        equals(t.address, copyTxData.token),
+      );
+      if (tokenInfo) {
+        copyTxData.symbol = tokenInfo.symbol;
+        copyTxData.amount = new BigNumber(value)
+          .div(Math.pow(10, tokenInfo.decimals))
+          .toString();
+      }
       transfers.push(copyTxData);
     }
 
