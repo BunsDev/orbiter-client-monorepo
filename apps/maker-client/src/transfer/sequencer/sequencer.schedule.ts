@@ -138,6 +138,18 @@ export class SequencerScheduleService {
       }
     }
   }
+  private async dequeueMessages(queueName:string, count:number):Promise<string[]> {
+    const messages = await this.redis.lrange(queueName, -count, -1);
+    if (messages.length > 0) {
+        await this.redis.ltrim(queueName, 0, -count - 1);
+        console.log(`Dequeued: ${messages.join(', ')}`);
+        return messages;
+    } else {
+        console.log('Queue is empty.');
+        return [];
+    }
+}
+
   private async readQueueExecByKey(queueKey: string) {
     let records;
     const [targetChain, targetMaker] = queueKey.split('-');
@@ -161,19 +173,20 @@ export class SequencerScheduleService {
       if (batchSize <= 0) {
         return;
       }
-      let hashList = [];
+      // let hashList = [];
       const queueLength = await this.redis.llen(queueKey);
-      if (queueLength >= batchSize) {
-        hashList = await this.redis.lrange(queueKey, 0, batchSize - 1);
-        await this.redis.ltrim(queueKey, hashList.length, -1);
-      } else {
-        const hash = await this.redis.lpop(queueKey)
-        if (hash) {
-          hashList.push(hash);
-        }
-        // hashList = await this.redis.lrange(queueKey, 0, 0);
-        // await this.redis.ltrim(queueKey, 0, 0);
-       }
+      console.log(`${queueKey} queueLength = ${queueLength}, isBatch:${queueLength >= batchSize}`);
+      // if (queueLength >= batchSize) {
+      //   hashList = await this.redis.lrange(queueKey, 0, batchSize - 1);
+      //   await this.redis.ltrim(queueKey, hashList.length, -1);
+      // } else {
+      //   hashList = await this.redis.lrange(queueKey, 0, 0);
+      //   await this.redis.ltrim(queueKey, 0, 0);
+      //  }
+      const hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? batchSize: 1);
+      if (!hashList) {
+        return console.log(queueKey, 'isEmpty');
+      }
       if (hashList.length <= 0) {
         await this.redis.del(`CurrentQueue:${queueKey}:list`)
       }
@@ -556,7 +569,7 @@ export class SequencerScheduleService {
     if (isMemberExist >= 1) {
       return;
     }
-    await this.redis.rpush(queueKey, tx.sourceId);
+    await this.redis.lpush(queueKey, tx.sourceId);
     await this.redis.sadd(`CurrentQueue:${queueKey}:list`, tx.sourceId);
 
   }
