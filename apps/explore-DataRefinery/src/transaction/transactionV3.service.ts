@@ -279,7 +279,7 @@ export class TransactionV3Service {
             tick: tick,
             protocol: p
           },
-          // transaction: t,
+          transaction: t,
         })
         // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.inscriptionMemoryMatchingService
