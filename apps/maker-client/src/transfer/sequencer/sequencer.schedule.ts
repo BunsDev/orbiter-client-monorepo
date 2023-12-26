@@ -165,10 +165,15 @@ export class SequencerScheduleService {
       const queueLength = await this.redis.llen(queueKey);
       if (queueLength >= batchSize) {
         hashList = await this.redis.lrange(queueKey, 0, batchSize - 1);
+        await this.redis.ltrim(queueKey, hashList.length, -1);
       } else {
-        hashList = await this.redis.lrange(queueKey, 0, 0);
-      }
-      await this.redis.ltrim(queueKey, hashList.length, -1);
+        const hash = await this.redis.lpop(queueKey)
+        if (hash) {
+          hashList.push(hash);
+        }
+        // hashList = await this.redis.lrange(queueKey, 0, 0);
+        // await this.redis.ltrim(queueKey, 0, 0);
+       }
       if (hashList.length <= 0) {
         await this.redis.del(`CurrentQueue:${queueKey}:list`)
       }
