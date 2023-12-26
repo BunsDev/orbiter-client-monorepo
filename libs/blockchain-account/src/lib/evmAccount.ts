@@ -18,6 +18,7 @@ import {
   TransactionFailedError,
   TransactionRequest,
   TransactionResponse,
+  TransactionSendConfirmFail,
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
