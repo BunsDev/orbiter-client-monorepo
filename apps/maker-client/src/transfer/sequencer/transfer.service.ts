@@ -584,7 +584,7 @@ export class TransferService {
           await transaction.commit();
         }
       } catch (error) {
-        this.logger.error(`execBatchInscriptionTransfer error catch handle error ${error.message}`);
+        this.logger.error(`execBatchInscriptionTransfer error catch handle error ${error.message}`, error);
       }
       this.logger.error(`execBatchInscriptionTransfer error ${error.message}`);
       throw error;

@@ -199,13 +199,11 @@ export class SequencerScheduleService {
         },
       });
       Lock[queueKey].prevTime = Date.now();
-      await sleep(1000 * 60);
-      // const result = await this.consumptionSendingQueue(records, queueKey)
+      const result = await this.consumptionSendingQueue(records, queueKey)
       Lock[queueKey].prevTime = Date.now();
     } catch (error) {
-      console.log(error, '===error');
       this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
-      this.logger.error(`readQueueExecByKey error: message ${error.message}`);
+      this.logger.error(`readQueueExecByKey error: message ${error.message}`, error);
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         for (const tx of records) {
           this.enqueueMessage(queueKey, tx.sourceId);
