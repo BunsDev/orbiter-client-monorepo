@@ -75,7 +75,7 @@ export class NonceManager {
         try {
           const networkNonce = await this.refreshNonceFun();
           let nonce = await this.store.get("nonce");
-          const localNonce=  nonce;
+          const localNonce= nonce;
           if (networkNonce > nonce) {
             nonce = networkNonce;
             await this.store.set("nonce", nonce);

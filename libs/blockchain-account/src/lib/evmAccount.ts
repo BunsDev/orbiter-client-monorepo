@@ -401,7 +401,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.from = this.wallet.address;
       transactionRequest.chainId = chainConfig.chainId;
       transactionRequest.nonce = nonceResult.nonce;
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      await promiseWithTimeout(this.getGasPrice(transactionRequest), 2000 * 60);
       try {
         const populateTransaction = await this.wallet.populateTransaction(transactionRequest);
         if (populateTransaction.nonce > transactionRequest.nonce) {
@@ -430,43 +430,26 @@ export class EVMAccount extends OrbiterAccount {
       );
     } catch (error) {
       console.error(error);
-      nonceResult && nonceResult.rollback();
+      await nonceResult.rollback();
       this.logger.error(
-        `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)}, message: ${error.message}`, error
+        `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)},Nonce: ${transactionRequest.nonce}, message: ${error.message}`, error
       );
       throw new TransactionSendConfirmFail(error.message);
     }
-    let txHash;
     try {
       // const signedTx = await this.wallet.signTransaction(transactionRequest);
       // txHash = keccak256(signedTx);
-      let response;
-      let error;
-      for (let i = 0; i < 3; i++) {
-        try {
-          response = await this.wallet.sendTransaction(transactionRequest);
-          txHash = response.hash;
-          // response = await provider.broadcastTransaction(signedTx);
-          this.logger.info(
-            `${chainConfig.name} sendTransaction txHash:${txHash}`
-          );
-          break;
-        } catch (error) {
-          error = error;
-          this.logger.info(
-            `${chainConfig.name} sendTransaction broadcastTransaction error:${txHash}, message:${error.message}`
-          );
-        }
-      }
-      if (!response && error) {
-        throw error;
-      }
-      nonceResult && nonceResult.submit();
+      // response = await provider.broadcastTransaction(signedTx);
+      const response = await this.wallet.sendTransaction(transactionRequest);
+      this.logger.info(
+        `${chainConfig.name} - [${transactionRequest.nonce}] - sendTransaction txHash: ${response.hash}`
+      );
+      await nonceResult.submit();
       return response;
     } catch (error) {
-      nonceResult && nonceResult.rollback();
+      await nonceResult.rollback();
       this.logger.error(
-        `broadcastTransaction tx error:${txHash} - ${error.message}`,
+        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}`,
         error
       );
       if (isError(error, "NONCE_EXPIRED")) {
