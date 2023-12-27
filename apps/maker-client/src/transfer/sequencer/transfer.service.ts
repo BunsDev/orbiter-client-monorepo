@@ -590,34 +590,34 @@ export class TransferService {
       throw error;
     }
     // if (transferResult && transferResult.hash) {
-      // success change targetId
-      // wallet
-      //   .waitForTransactionConfirmation(transferResult.hash)
-      //   .then((tx) => {
-      //     this.bridgeTransactionModel.update(
-      //       {
-      //         status: BridgeTransactionStatus.BRIDGE_SUCCESS,
-      //         targetMaker: tx.from,
-      //       },
-      //       {
-      //         where: {
-      //           sourceId: calldata[0],
-      //         },
-      //       }
-      //     ).catch((error) => {
-      //       this.logger.error(
-      //         `${calldata[0].join(',')} - ${transferResult.hash} waitForTransactionConfirmation update error ${targetChainId} ${error.message}`,
-      //         error
-      //       );
-      //     })
-      //   })
-      //   .catch((error) => {
-      //     // this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${targetChainId} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
-      //     this.logger.error(
-      //       `${calldata[0].join(',')} - ${transferResult.hash} waitForTransactionConfirmation error ${targetChainId} ${error.message}`,
-      //       error
-      //     );
-      //   });
+    // success change targetId
+    // wallet
+    //   .waitForTransactionConfirmation(transferResult.hash)
+    //   .then((tx) => {
+    //     this.bridgeTransactionModel.update(
+    //       {
+    //         status: BridgeTransactionStatus.BRIDGE_SUCCESS,
+    //         targetMaker: tx.from,
+    //       },
+    //       {
+    //         where: {
+    //           sourceId: calldata[0],
+    //         },
+    //       }
+    //     ).catch((error) => {
+    //       this.logger.error(
+    //         `${calldata[0].join(',')} - ${transferResult.hash} waitForTransactionConfirmation update error ${targetChainId} ${error.message}`,
+    //         error
+    //       );
+    //     })
+    //   })
+    //   .catch((error) => {
+    //     // this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${targetChainId} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
+    //     this.logger.error(
+    //       `${calldata[0].join(',')} - ${transferResult.hash} waitForTransactionConfirmation error ${targetChainId} ${error.message}`,
+    //       error
+    //     );
+    //   });
     // }
     return transferResult;
   }
