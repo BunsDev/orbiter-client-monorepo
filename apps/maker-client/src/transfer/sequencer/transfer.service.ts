@@ -591,7 +591,6 @@ export class TransferService {
     }
     if (transferResult && transferResult.hash) {
       // success change targetId
-      
       wallet
         .waitForTransactionConfirmation(transferResult.hash)
         .then((tx) => {

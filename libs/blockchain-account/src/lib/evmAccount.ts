@@ -389,7 +389,7 @@ export class EVMAccount extends OrbiterAccount {
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
-    const provider = this.getProvider();
+    // const provider = this.getProvider();
     let nonceResult;
     try {
       nonceResult = await this.nonceManager.getNextNonce();
@@ -438,13 +438,15 @@ export class EVMAccount extends OrbiterAccount {
     }
     let txHash;
     try {
-      const signedTx = await this.wallet.signTransaction(transactionRequest);
-      txHash = keccak256(signedTx);
+      // const signedTx = await this.wallet.signTransaction(transactionRequest);
+      // txHash = keccak256(signedTx);
       let response;
       let error;
       for (let i = 0; i < 3; i++) {
         try {
-          response = await provider.broadcastTransaction(signedTx);
+          response = await this.wallet.sendTransaction(transactionRequest);
+          txHash = response.hash;
+          // response = await provider.broadcastTransaction(signedTx);
           this.logger.info(
             `${chainConfig.name} sendTransaction txHash:${txHash}`
           );
