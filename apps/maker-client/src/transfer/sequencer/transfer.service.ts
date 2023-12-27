@@ -488,7 +488,7 @@ export class TransferService {
         if (sourceChain) {
           calldata[0].push(tx.sourceId);
           calldata[1].push(tx.targetAddress);
-          calldata[2].push(tx.sourceNonce);
+          calldata[2].push(BigInt(tx.sourceNonce));
           const input = Buffer.from(`data:,${JSON.stringify({
             p: tx.ruleId,
             op: 'mint',
