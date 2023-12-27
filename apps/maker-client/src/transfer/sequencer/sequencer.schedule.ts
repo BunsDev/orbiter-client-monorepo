@@ -12,7 +12,6 @@ import { Op } from "sequelize";
 import dayjs from "dayjs";
 import { ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { AccountFactoryService } from "../../factory";
-import BigNumber from "bignumber.js";
 import * as Errors from "../../utils/Errors";
 import { TransferService } from "./transfer.service";
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
@@ -47,7 +46,7 @@ export class SequencerScheduleService {
       this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
     }
   }
-  // @Cron("0 */2 * * * *")
+  @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
     const owners = this.envConfig.get("MAKERS") || [];
     for (const owner of owners) {
@@ -81,7 +80,6 @@ export class SequencerScheduleService {
         },
       },
     });
-    console.log(records, '==records')
     if (records.length > 0) {
       for (const tx of records) {
         this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId).catch(error => {
