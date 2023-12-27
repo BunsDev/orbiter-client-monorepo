@@ -30,14 +30,17 @@ export class EVMAccount extends OrbiterAccount {
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
+  get provider(): Orbiter6Provider {
+    const rpc = this.chainConfig.rpc[0];
+    return new Orbiter6Provider(rpc)
+  }
   getProvider() {
     try {
       const rpc = this.chainConfig.rpc[0];
       return new JsonRpcProvider(rpc)
     } catch (error) {
-      console.error('getProvider error', error);
+      this.logger.error(`${this.chainConfig.chainId} - ${this.chainConfig.name} ${this.chainConfig.rpc[0]} getProvider error`, error)
     }
-
     // const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
     // if (!this.#provider) {
     //   const provider = new Orbiter6Provider(rpc,
@@ -156,14 +159,12 @@ export class EVMAccount extends OrbiterAccount {
       } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
         gasPrice = new BigNumber(chainCustomConfig.MinFeePerGas || 0);
       }
-      console.log('gasPrice:', gasPrice);
       transactionRequest.maxFeePerGas = new BigNumber(String(gasPrice || 0)).toFixed(0);
       // maxPriorityFeePerGas
       let maxPriorityFeePerGas = new BigNumber(String(feeData.maxPriorityFeePerGas || 0)).times(priorityFeePerGasRedouble);
       if (chainCustomConfig.MaxPriorityFeePerGas && maxPriorityFeePerGas.gte(chainCustomConfig.MaxPriorityFeePerGas)) {
         maxPriorityFeePerGas = new BigNumber(chainCustomConfig.MaxPriorityFeePerGas || 0);
       }
-      console.log('maxPriorityFeePerGas:', maxPriorityFeePerGas);
       transactionRequest.maxPriorityFeePerGas = new BigNumber(String(maxPriorityFeePerGas || 0)).toFixed(0);
       if (!transactionRequest.maxFeePerGas || !transactionRequest.maxPriorityFeePerGas) {
         throw new Error(`EIP1559 Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
@@ -177,7 +178,6 @@ export class EVMAccount extends OrbiterAccount {
         } else if (chainCustomConfig.MinFeePerGas && gasPrice.lte(chainCustomConfig.MinFeePerGas)) {
           transactionRequest.gasPrice = chainCustomConfig.MinFeePerGas;
         }
-        console.log('transactionRequest.gasPrice:', transactionRequest.gasPrice);
         // transactionRequest.gasPrice =new BigNumber(String(transactionRequest.gasPrice)).toFixed(0) ;
         transactionRequest.gasPrice = gasPrice.toFixed(0);
       }
@@ -327,7 +327,7 @@ export class EVMAccount extends OrbiterAccount {
 
   async waitForTransactionConfirmation(transactionHash) {
     const provider = this.getProvider();
-    const receipt = await provider.waitForTransaction(transactionHash);
+    const receipt = await provider.waitForTransaction(transactionHash, 2, 60 * 3);
     return receipt;
   }
 
@@ -393,7 +393,9 @@ export class EVMAccount extends OrbiterAccount {
     let nonceResult;
     try {
       nonceResult = await this.nonceManager.getNextNonce();
-      // const { nonce, submit, rollback } =nonceResult;
+      if (nonceResult.localNonce > nonceResult.networkNonce + 20) {
+        throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+      }
       if (transactionRequest.value)
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
       transactionRequest.from = this.wallet.address;
@@ -420,7 +422,7 @@ export class EVMAccount extends OrbiterAccount {
       } catch (error) {
         console.error(error);
         this.logger.error(
-          `${chainConfig.name} sendTransaction before populateTransaction error:${JSONStringify(transactionRequest)}, message: ${error.message}`
+          `${chainConfig.name} sendTransaction before populateTransaction error:${JSONStringify(transactionRequest)}, message: ${error.message}`, error
         );
       }
       this.logger.info(
@@ -430,7 +432,7 @@ export class EVMAccount extends OrbiterAccount {
       console.error(error);
       nonceResult && nonceResult.rollback();
       this.logger.error(
-        `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)}, message: ${error.message}`
+        `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)}, message: ${error.message}`, error
       );
       throw new TransactionSendConfirmFail(error.message);
     }
