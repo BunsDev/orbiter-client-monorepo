@@ -562,10 +562,10 @@ export class TransferService {
       await transaction.commit();
     } catch (error) {
       console.error('execBatchInscriptionTransfer error', transferResult);
-      try {
-        if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
-          await transaction.rollback();
-        } else {
+      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
+        await transaction.rollback();
+      } else {
+        try {
           for (let i = 0; i < transfers.length; i++) {
             await this.bridgeTransactionModel.update(
               {
@@ -581,10 +581,10 @@ export class TransferService {
               }
             );
           }
-          await transaction.commit();
+        } catch (error) {
+          this.logger.error(`execBatchInscriptionTransfer error update status PAID_CRASH error ${error.message}`, error);
         }
-      } catch (error) {
-        this.logger.error(`execBatchInscriptionTransfer error catch handle error ${error.message}`, error);
+        await transaction.commit();
       }
       this.logger.error(`execBatchInscriptionTransfer error ${error.message}`);
       throw error;

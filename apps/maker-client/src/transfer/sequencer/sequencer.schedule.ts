@@ -331,13 +331,20 @@ export class SequencerScheduleService {
       await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
       return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
-        await this.removeConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId)
-      }
-      this.logger.error(`paidSingleBridgeInscriptionTransaction error ${bridgeTx.sourceId} message ${error.message}`, error);
-      throw error;
+      await this.handleTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
     }
   }
+  async handleTransactionError(error, sourceIds: string[], targetChain: string) {
+    try {
+      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
+        await this.removeConsumeStatus(targetChain, sourceIds);
+      }
+    } catch (cleanupError) {
+      this.logger.error(`handleTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
+    }
+    throw error;
+  }
+
   async paidManyBridgeInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
     const legalTransaction: BridgeTransactionModel[] = [];
     const [targetChain, targetMaker] = queueKey.split('-');
@@ -393,19 +400,15 @@ export class SequencerScheduleService {
     );
 
     await account.connect(privateKey, targetMaker);
-    const sourcrIds = legalTransaction.map(tx => tx.sourceId);
+    const sourceIds = legalTransaction.map(tx => tx.sourceId);
     try {
-      await this.saveConsumeStatus(targetChain, sourcrIds);
+      await this.saveConsumeStatus(targetChain, sourceIds);
       if (legalTransaction.length == 1) {
         return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
       }
       return await this.transferService.execBatchInscriptionTransfer(legalTransaction, account)
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
-        await this.removeConsumeStatus(targetChain, sourcrIds)
-      }
-      this.logger.error(`paidManyBridgeInscriptionTransaction error PaidRollbackError ${sourcrIds} message ${error.message}`, error);
-      throw error;
+      await this.handleTransactionError(error, sourceIds, targetChain);
     }
   }
   // async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {

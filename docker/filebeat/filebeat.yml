@@ -16,10 +16,10 @@ output.logstash:
 processors: 
   - add_host_metadata: ~
 
-setup.kibana:
-  host: '${KIBANA_HOST_PORT}'
-  username: '${ELASTIC_USERNAME}'
-  password: '${ELASTIC_PASSWORD}'
+# setup.kibana:
+#   host: '${KIBANA_HOST_PORT}'
+#   username: '${ELASTIC_USERNAME}'
+#   password: '${ELASTIC_PASSWORD}'
 
 #  Filebeat 
 filebeat.config:
