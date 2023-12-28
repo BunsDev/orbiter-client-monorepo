@@ -199,9 +199,10 @@ export function promiseWithTimeout<T>(
   }
 
 export function getDecimalBySymbol(chainId: string, symbol: string) {
-    if (String(chainId) === "56") {
+    if (String(chainId) === "56" || String(chainId) === "38") {
         return 18;
     }
+    if (!symbol) return 18;
     return ['USDC', 'USDT'].includes(symbol.toUpperCase()) ? 6 : 18;
 }
 
