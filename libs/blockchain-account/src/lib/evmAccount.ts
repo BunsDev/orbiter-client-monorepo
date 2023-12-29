@@ -430,11 +430,14 @@ export class EVMAccount extends OrbiterAccount {
       );
     } catch (error) {
       console.error(error);
-      await nonceResult.rollback();
+      nonceResult && await nonceResult.rollback();
       this.logger.error(
         `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)},Nonce: ${transactionRequest.nonce}, message: ${error.message}`, error
       );
       throw new TransactionSendConfirmFail(error.message);
+    }
+    if (!nonceResult) {
+      throw new TransactionSendConfirmFail(`Nonce not obtained`);
     }
     try {
       // const signedTx = await this.wallet.signTransaction(transactionRequest);

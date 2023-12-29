@@ -143,22 +143,22 @@ export class TransferService {
         }
         await transaction.commit();
       } catch (error) {
-        if (transferResult) {
-          sourceTx.targetNonce = String(transferResult.nonce);
-          sourceTx.targetMaker = transferResult.from;
-          sourceTx.targetId = transferResult.hash;
-        }
         if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
-          // 
           await transaction.rollback();
         } else {
           try {
+            if (transferResult) {
+              sourceTx.targetNonce = String(transferResult.nonce);
+              sourceTx.targetMaker = transferResult.from;
+              sourceTx.targetId = transferResult.hash;
+            }
             sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
             await sourceTx.save({
               transaction,
             });
           } catch (error) {
-            this.logger.error(`execBatchInscriptionTransfer error ${sourceHash} update status PAID_CRASH error ${error.message}`, error);
+            this.logger.error(`execSingleInscriptionTransfer error ${sourceHash} update status PAID_CRASH error ${error.message}`, error);
+            this.alertService.sendMessage(`execSingleInscriptionTransfer error update status error ${error.message}`, error)
           }
           await transaction.commit();
         }

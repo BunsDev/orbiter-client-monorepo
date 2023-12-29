@@ -145,18 +145,34 @@ export class SequencerScheduleService {
       }
       const globalPaidInterval = this.envConfig.get(`PaidInterval`, 1000);
       const paidInterval = this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval)
-      if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
-        return;
-      }
+
+
       Lock[queueKey].locked = true;
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       if (batchSize <= 0) {
         return;
       }
-      // let hashList = [];
       const queueLength = await this.redis.llen(queueKey);
-      // console.log(`${queueKey} queueLength = ${queueLength}, isBatch:${queueLength >= batchSize}`);
-      const hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? batchSize : 1);
+      // 1. If the number of transactions is reached, use aggregation, if not, use single transaction
+      // 2. If aggregation is not reached within the specified time, send all, otherwise continue to wait.
+      const paidType = this.envConfig.get(`${targetChain}.PaidType`, 1);
+      let hashList: string[] = [];
+      if (+paidType === 2) {
+        if (queueLength >= batchSize) {
+          hashList = await this.dequeueMessages(queueKey, queueLength);
+        } else {
+          // is timeout
+          if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
+            return;
+          }
+          hashList = await this.dequeueMessages(queueKey, queueLength);
+        }
+      } else {
+        if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
+          return;
+        }
+        hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? batchSize : 1);
+      }
       for (let i = hashList.length - 1; i >= 0; i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
         if (isConsumed) {
