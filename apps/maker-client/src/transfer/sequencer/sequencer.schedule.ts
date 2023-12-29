@@ -145,8 +145,6 @@ export class SequencerScheduleService {
       }
       const globalPaidInterval = this.envConfig.get(`PaidInterval`, 1000);
       const paidInterval = this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval)
-
-
       Lock[queueKey].locked = true;
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       if (batchSize <= 0) {
@@ -158,8 +156,9 @@ export class SequencerScheduleService {
       const paidType = this.envConfig.get(`${targetChain}.PaidType`, 1);
       let hashList: string[] = [];
       if (+paidType === 2) {
+        const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
         if (queueLength >= batchSize) {
-          hashList = await this.dequeueMessages(queueKey, queueLength);
+          hashList = await this.dequeueMessages(queueKey, maxPaidTransferCount);
         } else {
           // is timeout
           if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
@@ -171,7 +170,8 @@ export class SequencerScheduleService {
         if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
           return;
         }
-        hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? batchSize : 1);
+        const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
+        hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? maxPaidTransferCount : 1);
       }
       for (let i = hashList.length - 1; i >= 0; i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
