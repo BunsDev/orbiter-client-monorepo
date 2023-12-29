@@ -50,7 +50,7 @@ export class TransferService {
       throw new Error('sourceChain not found');
     }
     this.logger.info(
-      `execSingleInscriptionTransfer: ${sourceChainId}-${sourceHash}, owner:${wallet.address}`
+      `execSingleInscriptionTransfer: ${sourceChainId}-${transfer.targetChain} sourceHash:${sourceHash}, owner:${wallet.address}`
     );
     const transaction =
       await this.bridgeTransactionModel.sequelize.transaction();
@@ -143,7 +143,6 @@ export class TransferService {
         }
         await transaction.commit();
       } catch (error) {
-        console.error('execSingleInscriptionTransfer error', transferResult);
         if (transferResult) {
           sourceTx.targetNonce = String(transferResult.nonce);
           sourceTx.targetMaker = transferResult.from;
@@ -153,10 +152,14 @@ export class TransferService {
           // 
           await transaction.rollback();
         } else {
-          sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
-          await sourceTx.save({
-            transaction,
-          });
+          try {
+            sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
+            await sourceTx.save({
+              transaction,
+            });
+          } catch (error) {
+            this.logger.error(`execBatchInscriptionTransfer error ${sourceHash} update status PAID_CRASH error ${error.message}`, error);
+          }
           await transaction.commit();
         }
         throw error;
@@ -188,7 +191,8 @@ export class TransferService {
       // }
       return sourceTx.toJSON();
     } catch (error) {
-      console.error('execSingleInscriptionTransfer error', error);
+      this.logger.error(`execSingleInscriptionTransfer ${sourceHash} error ${error.message}`, error)
+      throw error;
     }
   }
   async execSingleTransfer(
