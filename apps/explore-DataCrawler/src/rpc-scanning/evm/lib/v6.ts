@@ -277,7 +277,7 @@ export default class EVMVUtils {
         ) {
           const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           const copyTxData = clone(txData);
-          copyTxData.hash = `${txData.hash}#${transfers.length}`;
+          copyTxData.hash = `${txData.hash}#${log.index}`;
           copyTxData.token = chainInfo.nativeCurrency.address;
           copyTxData.symbol = chainInfo.nativeCurrency.symbol;
           copyTxData.receiver = parsedLogData.args[0];
@@ -302,7 +302,7 @@ export default class EVMVUtils {
         ) {
           const copyTxData = clone(txData);
           const value = new BigNumber(parsedLogData.args[2]).toFixed(0);
-          copyTxData.hash = `${txData.hash}#${transfers.length}`;
+          copyTxData.hash = `${txData.hash}#${log.index}`;
           copyTxData.token = parsedData.args[0];
           copyTxData.sender = parsedLogData.args[0];
           copyTxData.receiver = parsedLogData.args[1];
