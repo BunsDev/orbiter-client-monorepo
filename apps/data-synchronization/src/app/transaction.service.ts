@@ -431,7 +431,9 @@ export class TransactionService {
         sourceId,
       }
     });
-    //
+    if (!bridgeTx) {
+      return console.log(`${sourceId} v3 bridgeTx not found`);
+    }
     const where = {
       hash: [bridgeTx.sourceId]
     }
