@@ -199,7 +199,7 @@ export class TransactionService {
         }
         transfer.syncStatus = 9;
         await transfer.save();
-        return transfer;
+        return transfer.toJSON();
       }
     } catch (error) {
       console.error(`sync transfer error ${hash}`, error);
