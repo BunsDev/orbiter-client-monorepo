@@ -199,13 +199,7 @@ export class TransactionService {
         }
         transfer.syncStatus = 9;
         await transfer.save();
-        if (transfer.opStatus == 99) {
-          this.syncBTTransfer(transfer.hash).catch(error => {
-            console.error('syncBTTransfer erorr1', error);
-          }).then(result => {
-            console.log(`sync result ${transfer.hash}`, result);
-          })
-        }
+        return transfer;
       }
     } catch (error) {
       console.error(`sync transfer error ${hash}`, error);
