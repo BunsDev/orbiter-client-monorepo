@@ -208,7 +208,7 @@ export class TransactionService {
         }
       }
     } catch (error) {
-      console.error('sync transfer error', error);
+      console.error(`sync transfer error ${hash}`, error);
       throw error;
     }
   }
@@ -618,7 +618,7 @@ export class TransactionService {
   @Cron("*/30 * * * * *")
   private async readV1NotMatchTx() {
     const rows = await this.makerTransactionModel.findAll({
-      attributes: ['inId'],
+      attributes: ['inId', 'transcationId'],
       raw: true,
       where: {
         outId: null,
@@ -650,18 +650,18 @@ export class TransactionService {
         if (transfer && +transfer.opStatus == 99) {
           index++;
           const result = await this.syncBTTransfer(tx.hash).catch(error => {
-            this.logger.error('syncV3V1FromDatabase error', error)
+            this.logger.error(`${row.transcationId} syncV3V1FromDatabase error`, error)
           });
-          console.log(`readV1NotMatchTx  ${index}/${rows.length} hash: ${tx.hash}`, result);
+          console.log(`${row.transcationId} readV1NotMatchTx  ${index}/${rows.length} hash: ${tx.hash}`, result);
         }
       }
     }
   }
 
-  @Cron("* */5 * * * *")
+  @Cron("* */10 * * * *")
   private async readV1NotMatchTx2() {
     const rows = await this.makerTransactionModel.findAll({
-      attributes: ['inId'],
+      attributes: ['inId', 'transcationId'],
       raw: true,
       where: {
         outId: null,
@@ -683,19 +683,19 @@ export class TransactionService {
         }
       });
       if (tx.status != 99) {
-        // const transfer = await this.transfersModel.findOne({
-        //   attributes:['hash'],
-        //   where: {
-        //     hash: tx.hash
-        //   }
-        // })
-        // if (transfer) {
-        index++;
-        const result = await this.syncBTTransfer(tx.hash).catch(error => {
-          this.logger.error('syncV3V1FromDatabase error', error)
-        });
-        // }
-        console.log(`readV1NotMatchTx2  ${index}/${rows.length} hash: ${tx.hash}`, result);
+        const transfer = await this.transfersModel.findOne({
+          attributes: ['hash', 'opStatus'],
+          where: {
+            hash: tx.hash
+          }
+        })
+        if (transfer && +transfer.opStatus == 99) {
+          index++;
+          const result = await this.syncBTTransfer(tx.hash).catch(error => {
+            this.logger.error(`${row.transcationId} syncV3V1FromDatabase error`, error)
+          });
+          console.log(`${row.transcationId} readV1NotMatchTx  ${index}/${rows.length} hash: ${tx.hash}`, result);
+        }
       }
     }
   }
