@@ -35,9 +35,9 @@ export class TransactionService {
     private chainConfigService: ChainConfigService
   ) {
     this.mutex = new Mutex()
-    this.syncV3ToV1FromDatabase()
+    // this.syncV3ToV1FromDatabase()
     this.readV1NotMatchTx()
-    this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
+    // this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
   }
   async syncTransferByHash(hash: string) {
     try {
@@ -227,12 +227,12 @@ export class TransactionService {
           errmsg: 'v1 transfer not found'
         }
       }
-      // if (v1Transfer.status == 99) {
-      //   return {
-      //     errno: 0,
-      //     errmsg: 'Exception transfer'
-      //   }
-      // }
+      if (v1Transfer.status == 99) {
+        return {
+          errno: 0,
+          errmsg: 'Exception transfer'
+        }
+      }
       const v3Transfer = await this.transfersModel.findOne({
         where: {
           hash
@@ -358,9 +358,9 @@ export class TransactionService {
               }
             }, transaction: t
           });
-          // if (updateTransferRows2 != 2) {
-          //   throw new Error('updateTransferRows row error !=2');
-          // }
+          if (updateTransferRows2 != 2) {
+            throw new Error('updateTransferRows row error !=2');
+          }
           await t.commit();
           return {
             errno: 0,
@@ -632,6 +632,7 @@ export class TransactionService {
     let index = 0;
     console.log(`ready match ${index}/${rows.length} `);
     for (const row of rows) {
+      // 
       const tx = await this.transactionModel.findOne({
         raw: true,
         attributes: ['hash', 'status'],
@@ -640,19 +641,19 @@ export class TransactionService {
         }
       });
       if (tx.status != 99) {
-        // const transfer = await this.transfersModel.findOne({
-        //   attributes:['hash'],
-        //   where: {
-        //     hash: tx.hash
-        //   }
-        // })
-        // if (transfer) {
-        index++;
-        const result = await this.syncBTTransfer(tx.hash).catch(error => {
-          this.logger.error('syncV3V1FromDatabase error', error)
-        });
-        // }
-        console.log(`readV1NotMatchTx  ${index}/${rows.length} hash: ${tx.hash}`, result);
+        const transfer = await this.transfersModel.findOne({
+          attributes: ['hash', 'opStatus'],
+          where: {
+            hash: tx.hash
+          }
+        })
+        if (transfer && +transfer.opStatus == 99) {
+          index++;
+          const result = await this.syncBTTransfer(tx.hash).catch(error => {
+            this.logger.error('syncV3V1FromDatabase error', error)
+          });
+          console.log(`readV1NotMatchTx  ${index}/${rows.length} hash: ${tx.hash}`, result);
+        }
       }
     }
   }
