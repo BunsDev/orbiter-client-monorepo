@@ -577,7 +577,7 @@ export class TransactionService {
     return
   }
 
-  @Cron("* */5 * * * *")
+  // @Cron("* */5 * * * *")
   private async syncV3ToV1FromDatabase() {
     if (this.mutex.isLocked()) {
       return
