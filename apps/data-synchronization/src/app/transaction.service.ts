@@ -75,7 +75,7 @@ export class TransactionService {
       //     errmsg: 'v1 Transfer'
       //   }
       // }
-      if (!v1Transfer || transfer.syncStatus != 99) {
+      if (!v1Transfer) {
         const chainInfo = this.chainConfigService.getChainInfo(transfer.chainId);
         const result = getPTextFromTAmount(
           Number(chainInfo.internalId),
