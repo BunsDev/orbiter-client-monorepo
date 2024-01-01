@@ -91,7 +91,7 @@ export class TransactionService {
           to: transfer.receiver,
           value: transfer.value,
           symbol: transfer.symbol,
-          status: 1,
+          // status: 1,
           tokenAddress: transfer.token,
           timestamp: transfer.timestamp,
           fee: transfer.fee,
@@ -111,10 +111,6 @@ export class TransactionService {
             // toAddress: ""
           }
         };
-        if (transfer.chainId === 'SN_MAIN' && transfer.hash.includes("#0")) {
-          transaction.hash = transfer.hash.replace('#0', '');
-          console.log('replace hash:', transaction.hash, transfer.hash)
-        }
         if (transfer.version == '1-0') {
           const v3BTX = await this.bridgeTransactionModel.findOne({
             where: {
