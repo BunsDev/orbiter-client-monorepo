@@ -379,13 +379,13 @@ export class TransactionService {
     return
   }
 
-  @Cron("*/30 * * * * *")
+  @Cron("*/60 * * * * *")
   private async syncV3BridgeTraxToV1() {
     if (this.mutex.isLocked()) {
       return
     }
     this.logger.info('syncV3V1FromDatabase start')
-    this.mutex.runExclusive(async () => {
+    // this.mutex.runExclusive(async () => {
       let index = 1;
       const list2 = await this.transfersModel.findAll({
         order: [['id', 'asc']],
@@ -422,7 +422,7 @@ export class TransactionService {
         })
         index++;
       }
-    })
+    // })
   }
   async syncV3BridgeTraxToV1ByHash(sourceId: string) {
     const bridgeTx = await this.bridgeTransactionModel.findOne({
