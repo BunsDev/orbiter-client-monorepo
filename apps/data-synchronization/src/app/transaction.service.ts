@@ -35,7 +35,7 @@ export class TransactionService {
     private chainConfigService: ChainConfigService
   ) {
     this.mutex = new Mutex()
-    this.syncV3BridgeTraxToV1()
+    // this.syncV3BridgeTraxToV1()
     this.readV1NotMatchTx2()
     // this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
   }
@@ -99,8 +99,8 @@ export class TransactionService {
           expectValue: '',
           replyAccount: '',
           replySender: '',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          // createdAt: new Date(),
+          // updatedAt: new Date(),
           extra: {
             // toSymbol: "".,
             // toAddress: ""
@@ -299,7 +299,7 @@ export class TransactionService {
         if (!targetChain) {
           throw new Error('targetChain not found');
         }
-        const mtCreateData: MakerTransactionAttributes = {
+        const mtCreateData: any = {
           transcationId: bridgeTransaction.transactionId,
           inId: sourceTx.id,
           outId: targetTx.id,
@@ -308,8 +308,6 @@ export class TransactionService {
           toAmount: targetTx.value,
           replySender: bridgeTransaction.targetMaker,
           replyAccount: bridgeTransaction.targetAddress,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         }
         const v1MtTx = await this.makerTransactionModel.findOne({
           attributes: ['id'],
@@ -390,6 +388,7 @@ export class TransactionService {
     this.mutex.runExclusive(async () => {
       let index = 1;
       const list2 = await this.transfersModel.findAll({
+        order: [['id', 'asc']],
         where: {
           version: ['1-0'],
           opStatus: {
@@ -407,7 +406,7 @@ export class TransactionService {
       })
       console.log('syncV3BridgeTraxToV1 TOTAL:', list2.length, new Date());
       for (const row of list2) {
-        console.log(`syncV3BridgeTraxToV1 ${index}/${list2.length} sync = ${row.hash}`);
+        // console.log(`syncV3BridgeTraxToV1 ${index}/${list2.length} sync = ${row.hash}`);
         await this.syncV3BridgeTraxToV1ByHash(row.hash).then(res => {
           if (res) {
             if (res.inId && res.outId) {
@@ -516,17 +515,18 @@ export class TransactionService {
     const rows = await this.makerTransactionModel.findAll({
       attributes: ['inId', 'transcationId'],
       raw: true,
+      order: [['id', 'asc']],
       where: {
         outId: null,
         createdAt: {
-          [Op.gte]: dayjs().subtract(10, 'minutes').toISOString(),
-          [Op.lte]: dayjs().subtract(2, 'minutes').toISOString(),
+          [Op.gte]: dayjs().subtract(20, 'minutes').toISOString(),
+          [Op.lte]: dayjs().subtract(1, 'minutes').toISOString(),
         },
       },
       limit: 500
     });
     let index = 0;
-    console.log(`ready match ${index}/${rows.length} `);
+    // console.log(`ready match ${index}/${rows.length} `);
     for (const row of rows) {
       // 
       const tx = await this.transactionModel.findOne({
@@ -548,7 +548,7 @@ export class TransactionService {
           const result = await this.syncBTTransfer(tx.hash).catch(error => {
             this.logger.error(`${row.transcationId} syncV3V1FromDatabase error`, error)
           });
-          console.log(`${row.transcationId} readV1NotMatchTx  ${index}/${rows.length} hash: ${tx.hash}`, result);
+          // console.log(`${row.transcationId} readV1NotMatchTx  ${index}/${rows.length} hash: ${tx.hash}`, result);
         }
       }
     }
@@ -559,17 +559,18 @@ export class TransactionService {
     const rows = await this.makerTransactionModel.findAll({
       attributes: ['inId', 'transcationId'],
       raw: true,
+      order: [['id', 'desc']],
       where: {
         outId: null,
         createdAt: {
           [Op.gte]: dayjs().subtract(60 * 24, 'minutes').toISOString(),
-          [Op.lte]: dayjs().subtract(5, 'minutes').toISOString(),
+          [Op.lte]: dayjs().subtract(1, 'minutes').toISOString(),
         },
       },
       limit: 1000
     });
     let index = 0;
-    console.log(`readV1NotMatchTx2 ready match ${index}/${rows.length} `);
+    // console.log(`readV1NotMatchTx2 ready match ${index}/${rows.length} `);
     for (const row of rows) {
       const tx = await this.transactionModel.findOne({
         raw: true,
@@ -590,7 +591,7 @@ export class TransactionService {
           const result = await this.syncBTTransfer(tx.hash).catch(error => {
             this.logger.error(`${row.transcationId} readV1NotMatchTx2 error`, error)
           });
-          console.log(`${row.transcationId} readV1NotMatchTx2  ${index}/${rows.length} hash: ${tx.hash}`, result);
+          // console.log(`${row.transcationId} readV1NotMatchTx2  ${index}/${rows.length} hash: ${tx.hash}`, result);
         }
       }
     }
