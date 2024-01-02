@@ -6,9 +6,7 @@ import {
 import { InjectModel } from "@nestjs/sequelize";
 import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
 import { getDecimalBySymbol } from "@orbiter-finance/utils";
-import { ethers, utils } from "ethers";
 import BigNumber from "bignumber.js";
-import { SubgraphClient } from "@orbiter-finance/subgraph-sdk";
 import { ENVConfigService } from "@orbiter-finance/config";
 import {
     ArbitrationProof,

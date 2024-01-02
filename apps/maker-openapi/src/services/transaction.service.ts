@@ -6,6 +6,8 @@ import { Op } from 'sequelize';
 import { ArbitrationTransaction } from "../common/interfaces/Proof.interface";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import BigNumber from "bignumber.js";
+import Keyv from "keyv";
+const keyv = new Keyv();
 
 @Injectable()
 export class TransactionService {
@@ -85,5 +87,13 @@ export class TransactionService {
             }
         });
         return bridgeTransaction?.status ?? -1;
+    }
+
+    async submitChallenge(data: any) {
+        await keyv.set(`${data.sourceTxHash.toLowerCase()}_challenge`, data, 60000);
+    }
+
+    async getChallenge(hash: string) {
+        return await keyv.get(`${hash.toLowerCase()}_challenge`) || null;
     }
 }

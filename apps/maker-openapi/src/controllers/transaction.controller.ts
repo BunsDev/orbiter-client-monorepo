@@ -1,6 +1,6 @@
 import { TransactionService } from '../services/transaction.service';
 import { HTTPResponse } from '../utils/Response';
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 @Controller('transaction')
 export class TransactionController {
     constructor(private readonly transactionService: TransactionService) {
@@ -34,5 +34,27 @@ export class TransactionController {
         }
         const data = await this.transactionService.getSourceIdStatus(hash);
         return HTTPResponse.success(data);
+    }
+
+    @Post("/challenge")
+    async submitChallenge(@Body() data: {
+        sourceTxHash: string,
+        challenger: string,
+        fromChainId: string,
+        submitSourceTxHash: string
+    }) {
+        if (!data?.sourceTxHash) {
+            return HTTPResponse.fail(1000, "Invalid parameters");
+        }
+        await this.transactionService.submitChallenge(data);
+        return HTTPResponse.success({ message: 'success' });
+    }
+
+    @Get("/challenge/:hash")
+    async getChallenge(@Param("hash") hash: string) {
+        if (!hash) {
+            return HTTPResponse.fail(1000, "Invalid parameters");
+        }
+        return HTTPResponse.success(await this.transactionService.getChallenge(hash));
     }
 }
