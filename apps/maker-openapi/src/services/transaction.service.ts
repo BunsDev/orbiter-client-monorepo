@@ -20,7 +20,8 @@ export class TransactionService {
 
     async getUnreimbursedTransactions(startTime: number, endTime: number): Promise<ArbitrationTransaction[]> {
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
-            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
+            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
+                'sourceAddress', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
                 'targetChain', 'targetToken', 'ebcAddress'],
             where: {
                 status: 0,
@@ -61,6 +62,7 @@ export class TransactionService {
                 sourceChainId: Number(bridgeTx.sourceChain),
                 sourceTxHash,
                 sourceMaker: bridgeTx.sourceMaker,
+                sourceAddress: bridgeTx.sourceAddress,
                 sourceTxBlockNum: Number(transfer.blockNumber),
                 sourceTxTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
                 sourceTxIndex: Number(transfer.transactionIndex),
