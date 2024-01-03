@@ -39,9 +39,7 @@ export class TransactionController {
     @Post("/challenge")
     async submitChallenge(@Body() data: {
         sourceTxHash: string,
-        challenger: string,
-        fromChainId: string,
-        submitSourceTxHash: string
+        challenger: string
     }) {
         if (!data?.sourceTxHash) {
             return HTTPResponse.fail(1000, "Invalid parameters");
