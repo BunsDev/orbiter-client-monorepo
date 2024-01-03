@@ -39,7 +39,7 @@ export class ValidatorService {
     return false;
   }
   public async validDisabledSourceAddress(sourceAddress: string) {
-    const disabledSourceAddress: string = await this.envConfig.getAsync('disabledSourceAddress') || '';
+    const disabledSourceAddress: string = await this.envConfig.getAsync('DisabledSourceAddress') || '';
     const disabledAddressList = disabledSourceAddress.replace(/' '/g, '').split(',');
     return !!disabledAddressList.find(item => item.toLowerCase() === sourceAddress.toLowerCase());
   }
