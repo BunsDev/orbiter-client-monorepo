@@ -7,6 +7,8 @@ import { ArbitrationTransaction } from "../common/interfaces/Proof.interface";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import BigNumber from "bignumber.js";
 import Keyv from "keyv";
+import { ArbitrationRecord, IArbitrationRecord } from "@orbiter-finance/maker-api-seq-models";
+import { providers } from 'ethers';
 const keyv = new Keyv();
 
 @Injectable()
@@ -18,6 +20,8 @@ export class TransactionService {
         private transfersModel: typeof Transfers,
         @InjectModel(BridgeTransaction)
         private bridgeTransactionModel: typeof BridgeTransaction,
+        @InjectModel(ArbitrationRecord)
+        private arbitrationRecord: typeof ArbitrationRecord,
     ) {}
 
     async getUnreimbursedTransactions(startTime: number, endTime: number): Promise<ArbitrationTransaction[]> {
@@ -95,5 +99,57 @@ export class TransactionService {
 
     async getChallenge(hash: string) {
         return await keyv.get(`${hash.toLowerCase()}_challenge`) || null;
+    }
+
+
+    async recordTransaction(data: {
+        sourceId: string,
+        hash: string,
+        type: number
+    }) {
+        const count: number = <any>await this.bridgeTransactionModel.count(<any>{
+            where: {
+                sourceId: data.sourceId
+            }
+        });
+        if (!count) {
+            console.error('recordTransaction none of sourceId count', JSON.stringify(data));
+            return;
+        }
+        const mainNetwork = await this.envConfigService.getAsync('MAIN_NETWORK')
+        const chainInfo: any = await this.chainConfigService.getChainInfo(String(mainNetwork));
+        if (!chainInfo?.rpc || !chainInfo.rpc.length) {
+            console.error('recordTransaction none of chainInfo', `mainnetwork: ${mainNetwork}`);
+            return;
+        }
+        let transferFee = "0";
+        let fromAddress = '';
+        let status = 0;
+        try {
+            const provider = new providers.JsonRpcProvider({
+                url: chainInfo.rpc[0],
+            });
+            const receipt = await provider.getTransactionReceipt(data.hash);
+            if (!receipt) {
+                console.error('recordTransaction none of receipt', `hash: ${data.hash}`);
+                return;
+            }
+            transferFee = new BigNumber(String(receipt.effectiveGasPrice)).multipliedBy(String(receipt.gasUsed)).toFixed(8);
+            fromAddress = receipt.from;
+            status = receipt.status;
+        } catch (e) {
+            console.error('recordTransaction error', e);
+            return;
+        }
+        const iArbitrationRecord: IArbitrationRecord = {
+            hash: data.hash,
+            fromAddress: fromAddress.toLowerCase(),
+            sourceId: data.sourceId,
+            transferFee,
+            status,
+            type: +data.type,
+            createTime: new Date().valueOf()
+        };
+        await this.arbitrationRecord.create(iArbitrationRecord);
     }
 }

@@ -291,7 +291,3 @@ export class ProofService {
         });
     }
 }
-
-function toHex(num: string | number) {
-    return '0x' + Number(num).toString(16);
-}

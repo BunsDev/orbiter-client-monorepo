@@ -55,4 +55,17 @@ export class TransactionController {
         }
         return HTTPResponse.success(await this.transactionService.getChallenge(hash));
     }
+
+    @Post("/record")
+    async record(@Body() data: {
+        sourceId: string,
+        hash: string,
+        type: number
+    }) {
+        if (!data?.sourceId || !data.hash || !data.type) {
+            return HTTPResponse.fail(1000, "Invalid parameters");
+        }
+        await this.transactionService.recordTransaction(data);
+        return HTTPResponse.success({ message: 'success' });
+    }
 }
