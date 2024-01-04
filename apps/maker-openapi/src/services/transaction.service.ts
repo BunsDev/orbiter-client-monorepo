@@ -9,6 +9,8 @@ import BigNumber from "bignumber.js";
 import Keyv from "keyv";
 import { ArbitrationRecord, IArbitrationRecord } from "@orbiter-finance/maker-api-seq-models";
 import { providers } from 'ethers';
+import { Interface } from 'ethers6';
+import { MDCAbi } from '@orbiter-finance/abi';
 const keyv = new Keyv();
 
 @Injectable()
@@ -104,8 +106,7 @@ export class TransactionService {
 
     async recordTransaction(data: {
         sourceId: string,
-        hash: string,
-        type: number
+        hash: string
     }) {
         const count: number = <any>await this.bridgeTransactionModel.count(<any>{
             where: {
@@ -116,7 +117,7 @@ export class TransactionService {
             console.error('recordTransaction none of sourceId count', JSON.stringify(data));
             return;
         }
-        const mainNetwork = await this.envConfigService.getAsync('MAIN_NETWORK')
+        const mainNetwork = await this.envConfigService.getAsync('MAIN_NETWORK');
         const chainInfo: any = await this.chainConfigService.getChainInfo(String(mainNetwork));
         if (!chainInfo?.rpc || !chainInfo.rpc.length) {
             console.error('recordTransaction none of chainInfo', `mainnetwork: ${mainNetwork}`);
@@ -125,6 +126,8 @@ export class TransactionService {
         let transferFee = "0";
         let fromAddress = '';
         let status = 0;
+        let type = 0;
+        let calldata = [];
         try {
             const provider = new providers.JsonRpcProvider({
                 url: chainInfo.rpc[0],
@@ -134,6 +137,30 @@ export class TransactionService {
                 console.error('recordTransaction none of receipt', `hash: ${data.hash}`);
                 return;
             }
+            const transaction: any = await provider.getTransaction(data.hash);
+            if (!transaction) {
+                console.error('recordTransaction none of transaction', `hash: ${data.hash}`);
+                return;
+            }
+            const contractInterface = new Interface(MDCAbi);
+            const parsedData = contractInterface.parseTransaction({
+                data: transaction.input,
+            });
+            switch (parsedData.name) {
+                case "challenge": {
+                    type = 11;
+                    break;
+                }
+                case "verifyChallengeSource": {
+                    type = 12;
+                    break;
+                }
+                case "verifyChallengeDest": {
+                    type = 21;
+                    break;
+                }
+            }
+            calldata = parsedData.args.toArray();
             transferFee = new BigNumber(String(receipt.effectiveGasPrice)).multipliedBy(String(receipt.gasUsed)).dividedBy(10 ** 18).toFixed(8);
             fromAddress = receipt.from;
             status = receipt.status;
@@ -147,7 +174,8 @@ export class TransactionService {
             sourceId: data.sourceId,
             transferFee,
             status,
-            type: +data.type,
+            type,
+            calldata,
             createTime: new Date().valueOf()
         };
         await this.arbitrationRecord.create(iArbitrationRecord);

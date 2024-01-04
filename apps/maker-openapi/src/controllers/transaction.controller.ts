@@ -59,10 +59,9 @@ export class TransactionController {
     @Post("/record")
     async record(@Body() data: {
         sourceId: string,
-        hash: string,
-        type: number
+        hash: string
     }) {
-        if (!data?.sourceId || !data.hash || !data.type) {
+        if (!data?.sourceId || !data.hash) {
             return HTTPResponse.fail(1000, "Invalid parameters");
         }
         await this.transactionService.recordTransaction(data);

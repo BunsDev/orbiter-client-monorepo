@@ -8,6 +8,7 @@ export interface IArbitrationRecord {
     transferFee?: string;
     status?: number;
     type?: number;
+    calldata?: object;
     createTime?: number;
 }
 
@@ -44,6 +45,9 @@ export class ArbitrationRecord extends Model<IArbitrationRecord, IArbitrationRec
 
     @Column({ type: DataType.TINYINT, comment: 'type:11=challenge,12=verifyChallengeDest,21=verifyChallengeDest' })
     type!: number;
+
+    @Column({ allowNull: true, type: DataType.JSONB })
+    calldata?: object;
 
     @Column({ type: DataType.BIGINT, comment: "create time" })
     createTime!: number;
