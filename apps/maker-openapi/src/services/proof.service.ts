@@ -84,6 +84,16 @@ export class ProofService {
                 console.error('Invalid parameters');
                 return [];
             }
+            const proofDataCount: number = <any>await this.arbitrationProof.count(<any>{
+                where: {
+                    hash: hash.toLowerCase(),
+                    isSource: 1
+                }
+            });
+            if (!proofDataCount) {
+                console.error('none of source proofData count', `hash: ${hash}`);
+                return [];
+            }
             const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
                 where: {
                     hash: hash.toLowerCase(),
@@ -93,7 +103,7 @@ export class ProofService {
                 raw: true
             });
             if (!proofDataList || !proofDataList.length) {
-                console.error(`${hash} none of source proofData`);
+                console.error('none of source proofData', `hash: ${hash}`);
                 return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
@@ -104,7 +114,7 @@ export class ProofService {
                 }
             });
             if (!bridgeTx) {
-                console.error(`${hash} none of bridgeTx`);
+                console.error('none of bridgeTx', `hash: ${hash}`);
                 return [];
             }
 
@@ -126,7 +136,7 @@ export class ProofService {
             }
             return list;
         } catch (e) {
-            console.error('getVerifyChallengeSourceParams error', hash, e);
+            console.error('getVerifyChallengeSourceParams error', `hash: ${hash}`, e);
             return [];
         }
     }
@@ -134,7 +144,16 @@ export class ProofService {
     async getVerifyChallengeDestParams(hash: string) {
         try {
             if (!hash) {
-                console.error('Invalid parameters', `hash: ${hash}`);
+                console.error('Invalid parameters');
+                return [];
+            }
+            const bridgeCount: number = <any>await this.bridgeTransactionModel.count(<any>{
+                where: {
+                    sourceId: hash.toLowerCase()
+                }
+            });
+            if (!bridgeCount) {
+                console.error('none of bridgeTx count', `hash: ${hash}`);
                 return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
@@ -215,7 +234,6 @@ export class ProofService {
         if (!bridgeTransaction?.ruleId) {
             throw new Error(`Not the Dealer version of the deal: ${data.hash}`);
         }
-
         if (!bridgeTransaction?.sourceChain) {
             throw new Error(`Unable to locate transaction: ${data.hash}`);
         }
