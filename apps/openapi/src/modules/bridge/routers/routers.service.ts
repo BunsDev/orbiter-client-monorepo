@@ -36,7 +36,7 @@ export class RoutersService {
                     continue;
                 }
                 if (!sourceChain || !sourceChain.tokens) {
-                    console.log(`v1Rule not find sourceChain`, v1Rule.srcChain);
+                    console.log(`v1Rule not find sourceChain`, v1Rule.chain);
                     continue;
                 }
                 if (!targetChain) {
