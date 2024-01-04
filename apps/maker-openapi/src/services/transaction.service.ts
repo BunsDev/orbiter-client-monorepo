@@ -27,12 +27,14 @@ export class TransactionService {
     ) {}
 
     async getUnreimbursedTransactions(startTime: number, endTime: number): Promise<ArbitrationTransaction[]> {
+        const isMainNetwork = +(await this.envConfigService.getAsync('MAIN_NETWORK')) === 1;
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
                 'sourceAddress', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
                 'targetChain', 'targetToken', 'ebcAddress'],
             where: {
                 status: 0,
+                sourceChain: isMainNetwork ? ["1", "324"] : ["11155111", "300"],
                 sourceTime: {
                     [Op.gte]: dayjs(startTime).toISOString(),
                     [Op.lte]: dayjs(endTime).toISOString()
