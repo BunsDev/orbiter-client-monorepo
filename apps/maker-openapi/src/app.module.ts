@@ -31,7 +31,7 @@ import { isEmpty } from "../../../libs/utils/src";
             },
         }),
         OrbiterConfigModule.forRoot({
-            chainConfigPath: "maker-open-api/chains.json",
+            chainConfigPath: "explore-server/chains.json",
             envConfigPath: "maker-open-api/config.yaml",
         }),
         SequelizeModule.forRootAsync({
