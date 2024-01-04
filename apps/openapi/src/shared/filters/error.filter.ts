@@ -14,24 +14,25 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const response = host.switchToHttp().getResponse()
         let exceptionStatus = HttpStatus.INTERNAL_SERVER_ERROR;
         let errorResponse:ExceptionInfo;
-        if (exception) {
-             exceptionStatus = exception.getStatus();
-             errorResponse = exception.getResponse() as ExceptionInfo
-        }
-        const errorMessage = lodash.isString(errorResponse) ? errorResponse : errorResponse.message
-        const errorInfo = lodash.isString(errorResponse) ? null : errorResponse.error
+        // if (exception && exception.getStatus) {
+        //      exceptionStatus = exception.getStatus();
+        //      errorResponse = exception.getResponse() as ExceptionInfo
+        // }
+        // const errorMessage = lodash.isString(errorResponse) ? errorResponse : errorResponse.message
+        // const errorInfo = lodash.isString(errorResponse) ? null : errorResponse.error
+        const errMessage = exception.message;
         const data: HttpResponseError = {
             status: ResponseStatus.Error,
-            message: errorMessage,
-            error: errorInfo?.message || (lodash.isString(errorInfo) ? errorInfo : JSON.stringify(errorInfo)),
-            debug: isDevEnv ? errorInfo?.stack || exception.stack : UNDEFINED
+            message: errMessage,
+            // error: errorInfo?.message || (lodash.isString(errorInfo) ? errorInfo : JSON.stringify(errorInfo)),
+            // debug: isDevEnv ? errorInfo?.stack || exception.stack : UNDEFINED
         }
-        // default 404
-        if (exceptionStatus === HttpStatus.NOT_FOUND) {
-            data.error = data.error || `Not found`
-            data.message = data.message || `Invalid API: ${request.method} > ${request.url}`
-        } 
+        // // default 404
+        // if (exceptionStatus === HttpStatus.NOT_FOUND) {
+        //     data.error = data.error || `Not found`
+        //     data.message = data.message || `Invalid API: ${request.method} > ${request.url}`
+        // } 
 
-        return response.status(errorInfo?.status || exceptionStatus).jsonp(data)
+        return response.status(HttpStatus.OK).jsonp(data)
     }
 }
