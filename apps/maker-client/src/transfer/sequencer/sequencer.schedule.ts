@@ -73,8 +73,8 @@ export class SequencerScheduleService {
         status: 0,
         sourceMaker: owner,
         targetId: null,
-        targetChain: this.envConfig.get("INSCRIPTION_SUPPORT_CHAINS"),
-        version: '3-0',
+        targetChain: this.envConfig.get("ENABLE_PAID_CHAINS"),
+        version: this.envConfig.get("ENABLE_PAID_VERSION"),
         sourceTime: {
           [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
         },
@@ -92,7 +92,7 @@ export class SequencerScheduleService {
   }
   @Interval(1000)
   private readCacheQueue() {
-    const chainIds = this.envConfig.get("INSCRIPTION_SUPPORT_CHAINS") || [];
+    const chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
     const owners = this.envConfig.get("MAKERS") || [];
     for (const chainId of chainIds) {
       for (const owner of owners) {
