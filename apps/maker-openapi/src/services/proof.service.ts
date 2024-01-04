@@ -134,7 +134,7 @@ export class ProofService {
     async getVerifyChallengeDestParams(hash: string) {
         try {
             if (!hash) {
-                console.error('Invalid parameters');
+                console.error('Invalid parameters', `hash: ${hash}`);
                 return [];
             }
             const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
@@ -147,7 +147,7 @@ export class ProofService {
                 }
             });
             if (!bridgeTx?.targetId) {
-                console.error('none of targetId');
+                console.error('none of targetId', `hash: ${hash}`);
                 return [];
             }
             const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
@@ -159,17 +159,8 @@ export class ProofService {
                 order: [['status', 'DESC'], ['createTime', 'DESC']],
                 raw: true
             });
-            if (!proofDataList || !proofDataList.length) {
-                console.error(`${bridgeTx.targetId} none of dest proofData`);
-                return [];
-            }
-            if (!bridgeTx.targetId) {
-                console.error('none of targetId');
-                return [];
-            }
-            const responseMaker = bridgeTx?.targetMaker;
-            if (!responseMaker) {
-                console.error('none of responseMaker', bridgeTx.sourceId, bridgeTx.targetId);
+          if (!proofDataList || !proofDataList.length) {
+                console.error('none of dest proofData', `targetId: ${bridgeTx.targetId}`);
                 return [];
             }
             const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
@@ -204,7 +195,7 @@ export class ProofService {
             }
             return list;
         } catch (e) {
-            console.error('getVerifyChallengeDestParams error', hash, e);
+            console.error('getVerifyChallengeDestParams error', `hash: ${hash}`, e);
             return [];
         }
     }
