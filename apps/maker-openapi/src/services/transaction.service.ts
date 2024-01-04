@@ -134,7 +134,7 @@ export class TransactionService {
                 console.error('recordTransaction none of receipt', `hash: ${data.hash}`);
                 return;
             }
-            transferFee = new BigNumber(String(receipt.effectiveGasPrice)).multipliedBy(String(receipt.gasUsed)).toFixed(8);
+            transferFee = new BigNumber(String(receipt.effectiveGasPrice)).multipliedBy(String(receipt.gasUsed)).dividedBy(10 ** 18).toFixed(8);
             fromAddress = receipt.from;
             status = receipt.status;
         } catch (e) {
