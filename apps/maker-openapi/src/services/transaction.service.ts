@@ -144,7 +144,7 @@ export class TransactionService {
             }
             const contractInterface = new Interface(MDCAbi);
             const parsedData = contractInterface.parseTransaction({
-                data: transaction.input,
+                data: transaction.data,
             });
             switch (parsedData.name) {
                 case "challenge": {
