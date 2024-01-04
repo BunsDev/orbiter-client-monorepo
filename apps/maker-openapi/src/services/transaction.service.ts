@@ -160,7 +160,7 @@ export class TransactionService {
                     break;
                 }
             }
-            calldata = parsedData.args.toArray();
+            calldata = (parsedData.args.toArray()).map(item => String(item));
             transferFee = new BigNumber(String(receipt.effectiveGasPrice)).multipliedBy(String(receipt.gasUsed)).dividedBy(10 ** 18).toFixed(8);
             fromAddress = receipt.from;
             status = receipt.status;
