@@ -347,16 +347,16 @@ export class SequencerScheduleService {
       await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
       return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
     } catch (error) {
-      await this.handleTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
+      await this.handlePaidTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
     }
   }
-  async handleTransactionError(error, sourceIds: string[], targetChain: string) {
+  async handlePaidTransactionError(error, sourceIds: string[], targetChain: string) {
     try {
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         await this.removeConsumeStatus(targetChain, sourceIds);
       }
     } catch (cleanupError) {
-      this.logger.error(`handleTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
+      this.logger.error(`handlePaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
     }
     throw error;
   }
@@ -424,7 +424,7 @@ export class SequencerScheduleService {
       }
       return await this.transferService.execBatchInscriptionTransfer(legalTransaction, account)
     } catch (error) {
-      await this.handleTransactionError(error, sourceIds, targetChain);
+      await this.handlePaidTransactionError(error, sourceIds, targetChain);
     }
   }
   // async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
