@@ -37,9 +37,6 @@ export class ArbitrationRecord extends Model<IArbitrationRecord, IArbitrationRec
     @Column({ type: DataType.STRING(32), comment: 'sourceId' })
     transferFee?: string;
 
-    @Column({ allowNull: true, type: DataType.TEXT, comment: 'proof' })
-    message?: string;
-
     @Column({ type: DataType.TINYINT, comment: 'status:0=fail,1=success' })
     status!: number;
 
