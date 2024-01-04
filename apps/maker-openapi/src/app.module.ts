@@ -56,7 +56,7 @@ import { isEmpty } from "../../../libs/utils/src";
                 return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
             },
         }),
-        SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction])
+        SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction, ArbitrationRecord])
     ],
     controllers: [AppController, ProofController, TransactionController],
     providers: [ProofService, TransactionService],
