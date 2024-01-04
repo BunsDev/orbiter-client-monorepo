@@ -50,7 +50,7 @@ export class TransferService {
       throw new Error('sourceChain not found');
     }
     this.logger.info(
-      `execSingleInscriptionTransfer: ${sourceChainId}-${sourceHash}, owner:${wallet.address}`
+      `execSingleInscriptionTransfer: ${sourceChainId}-${transfer.targetChain} sourceHash:${sourceHash}, owner:${wallet.address}`
     );
     const transaction =
       await this.bridgeTransactionModel.sequelize.transaction();
@@ -143,20 +143,23 @@ export class TransferService {
         }
         await transaction.commit();
       } catch (error) {
-        console.error('execSingleInscriptionTransfer error', transferResult);
-        if (transferResult) {
-          sourceTx.targetNonce = String(transferResult.nonce);
-          sourceTx.targetMaker = transferResult.from;
-          sourceTx.targetId = transferResult.hash;
-        }
         if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
-          // 
           await transaction.rollback();
         } else {
-          sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
-          await sourceTx.save({
-            transaction,
-          });
+          try {
+            if (transferResult) {
+              sourceTx.targetNonce = String(transferResult.nonce);
+              sourceTx.targetMaker = transferResult.from;
+              sourceTx.targetId = transferResult.hash;
+            }
+            sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
+            await sourceTx.save({
+              transaction,
+            });
+          } catch (error) {
+            this.logger.error(`execSingleInscriptionTransfer error ${sourceHash} update status PAID_CRASH error ${error.message}`, error);
+            this.alertService.sendMessage(`execSingleInscriptionTransfer error update status error ${error.message}`, error)
+          }
           await transaction.commit();
         }
         throw error;
@@ -188,7 +191,8 @@ export class TransferService {
       // }
       return sourceTx.toJSON();
     } catch (error) {
-      console.error('execSingleInscriptionTransfer error', error);
+      this.logger.error(`execSingleInscriptionTransfer ${sourceHash} error ${error.message}`, error)
+      throw error;
     }
   }
   async execSingleTransfer(
@@ -488,7 +492,7 @@ export class TransferService {
         if (sourceChain) {
           calldata[0].push(tx.sourceId);
           calldata[1].push(tx.targetAddress);
-          calldata[2].push(tx.sourceNonce);
+          calldata[2].push(BigInt(tx.sourceNonce));
           const input = Buffer.from(`data:,${JSON.stringify({
             p: tx.ruleId,
             op: 'mint',
@@ -562,10 +566,10 @@ export class TransferService {
       await transaction.commit();
     } catch (error) {
       console.error('execBatchInscriptionTransfer error', transferResult);
-      try {
-        if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
-          await transaction.rollback();
-        } else {
+      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
+        await transaction.rollback();
+      } else {
+        try {
           for (let i = 0; i < transfers.length; i++) {
             await this.bridgeTransactionModel.update(
               {
@@ -581,10 +585,10 @@ export class TransferService {
               }
             );
           }
-          await transaction.commit();
+        } catch (error) {
+          this.logger.error(`execBatchInscriptionTransfer error update status PAID_CRASH error ${error.message}`, error);
         }
-      } catch (error) {
-        this.logger.error(`execBatchInscriptionTransfer error catch handle error ${error.message}`, error);
+        await transaction.commit();
       }
       this.logger.error(`execBatchInscriptionTransfer error ${error.message}`);
       throw error;

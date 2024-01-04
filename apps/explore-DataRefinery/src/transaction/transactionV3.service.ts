@@ -418,9 +418,9 @@ export class TransactionV3Service {
         await t1.commit();
         this.inscriptionMemoryMatchingService.removeTransferMatchCache(memoryBT.sourceId);
         this.inscriptionMemoryMatchingService.removeTransferMatchCache(transfer.hash);
-        // this.logger.info(
-        //   `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
-        // );
+        this.logger.info(
+          `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
+        );
         return {
           errno: 0,
           data: memoryBT,
@@ -504,6 +504,9 @@ export class TransactionV3Service {
         );
         this.inscriptionMemoryMatchingService.removeTransferMatchCache(btTx.sourceId);
         this.inscriptionMemoryMatchingService.removeTransferMatchCache(btTx.targetId);
+        this.logger.info(
+          `match success from db ${btTx.sourceId}  /  ${btTx.targetId}`,
+        );
         result.errno = 0;
         result.errmsg = 'success';
       } else {

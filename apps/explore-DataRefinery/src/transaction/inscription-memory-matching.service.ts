@@ -6,6 +6,7 @@ import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
 import { equals } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService, Token, IChainConfig } from '@orbiter-finance/config';
+import BigNumber from 'bignumber.js';
 @Injectable()
 export class InscriptionMemoryMatchingService {
   @LoggerDecorator()
@@ -57,7 +58,7 @@ export class InscriptionMemoryMatchingService {
       return (
         equals(bt.sourceChain, sourceChainInfo.chainId) &&
         equals(bt.targetAddress, transfer.receiver) &&
-        equals(bt.targetAmount, amt) &&
+        equals(new BigNumber(bt.targetAmount).toFixed(0), new BigNumber(amt).toFixed(0)) &&
         equals(bt.targetChain, transfer.chainId) &&
         equals(bt.targetSymbol, tick) &&
         equals(bt.sourceNonce, transfer.value) &&

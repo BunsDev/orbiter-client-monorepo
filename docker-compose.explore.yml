@@ -28,6 +28,7 @@ services:
     command: ["node", 'main.js']
     environment:
       CONSUL_URL: '${CONSUL_URL}'
+      application: '${application}-crawler'
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     ports:
       - '3000:3000'
@@ -53,6 +54,7 @@ services:
     restart: always
     environment:
       CONSUL_URL: '${CONSUL_URL}'
+      application: '${application}-refinery'
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     depends_on:
       - redis

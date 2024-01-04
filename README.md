@@ -45,9 +45,9 @@ Currently, this protocol early supports networks including Arbitrum One, Optimis
 | tick  | YES | EX:xxx-20 Inscriptions' Name |
 | amt  | YES | Ex:1000 Mint Amount |
 - Casting fee and Identification Code
-  - The casting fee is a fixed value, currently 0.0009ETH (or equivalent amount)
+  - The casting fee is a fixed value, currently 0.00023ETH (or equivalent amount)
   - The identification code is determined internally by the protocol, and each network has a unique identification code identifier. The identification code identifier is consistent with the Orbiter cross-rollup protocol. For details, see: https://docs.orbiter.finance/orbiterfinancesbridgeprotocol
-- Then the casting fee is 0.0009 + the identification code is 9001, then the value amount of the sent transaction should be set to: 0.000900000000009001. As long as the casting fee is higher than the protocol casting fee and the last 4 digits of the protocol identification code are guaranteed, then the casting will go smoothly at the target network execution.
+- Then the casting fee is 0.00023 + the identification code is 9001, then the value amount of the sent transaction should be set to: 0.0002300000000009001. As long as the casting fee is higher than the protocol casting fee and the last 4 digits of the protocol identification code are guaranteed, then the casting will go smoothly at the target network execution.
 
 
 #### Mint
