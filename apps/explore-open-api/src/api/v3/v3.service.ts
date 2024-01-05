@@ -246,7 +246,7 @@ export class V3Service {
     list = list.sort(function (a, b) {
       return new Date(b.fromTimestamp).valueOf() - new Date(a.fromTimestamp).valueOf();
     });
-    const count: number = 10000;
+    const count: number = 30000;
     return { list, count };
   }
 
