@@ -43,8 +43,13 @@ export class MakerService {
         }
           `
     const result = await this.ctx.query(queryStr);
-    return result?.mdcs?.[0]?.columnArraySnapshot?.[0];
-
+      if (!result?.mdcs) return null;
+      for (const mdc of result?.mdcs) {
+          if (mdc?.columnArraySnapshot && mdc.columnArraySnapshot.length) {
+              return mdc.columnArraySnapshot[0];
+          }
+      }
+      return null;
   }
   async getCrossChainMakerSecurityCodeInfoRule(owner: string, ebcAddr: string, sourceChain: number, targetChain: number, sourceToken: string, targetToken: string, txTime: number) {
     let chain0 = null;
