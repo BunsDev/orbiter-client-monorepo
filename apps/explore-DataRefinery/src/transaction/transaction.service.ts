@@ -140,13 +140,14 @@ export class TransactionService {
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
         if (result && result.errno == 0) {
-          let isPush = false;
           const sendTransferToMakerClientChainsV1 = this.envConfig.get("SendTransferToMakerClientChainsV1", "").split(',');
           if (sendTransferToMakerClientChainsV1[0] == '*' || sendTransferToMakerClientChainsV1.includes(payload.chainId)) {
+            let isPush = false;
             const sendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
             if (sendTransferToMakerClientQueue) {
               for (const queue in sendTransferToMakerClientQueue) {
                 const addressList = sendTransferToMakerClientQueue[queue].split(",");
+                console.log(addressList, '==', payload.receiver, '=-', addressList.includes(payload.receiver))
                 if (addressList.includes(payload.receiver)) {
                   this.messageService.sendTransferToMakerClient(result.data, `1_0_${queue}`)
                   isPush = true;
@@ -154,11 +155,12 @@ export class TransactionService {
                 }
               }
             }
+            if (!isPush) {
+              console.log('push:', result);
+              this.messageService.sendTransferToMakerClient(result.data)
+            }
+          }
 
-          }
-          if (!isPush) {
-            this.messageService.sendTransferToMakerClient(result.data)
-          }
         }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
@@ -172,26 +174,15 @@ export class TransactionService {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
         if (result && result.errno == 0) {
-          let isPush = false;
-          const sendTransferToMakerClientChains = this.envConfig.get("SendTransferToMakerClientChains", "").split(',');
-          if (sendTransferToMakerClientChains.includes(payload.chainId)) {
-            if (sendTransferToMakerClientChains[0] == '*' || sendTransferToMakerClientChains.includes(payload.chainId)) {
-              const SendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
-              if (SendTransferToMakerClientQueue) {
-                for (const queue in SendTransferToMakerClientQueue) {
-                  const addressList = SendTransferToMakerClientQueue[queue].split(",");
-                  if (addressList.includes(payload.receiver)) {
-                    this.messageService.sendTransferToMakerClient(result.data, `2_0_${queue}`)
-                    isPush = true;
-                    break;
-                  }
-                }
+          const SendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
+          if (SendTransferToMakerClientQueue) {
+            for (const queue in SendTransferToMakerClientQueue) {
+              const addressList = SendTransferToMakerClientQueue[queue].split(",");
+              if (addressList.includes(payload.receiver)) {
+                this.messageService.sendTransferToMakerClient(result.data, `2_0_${queue}`)
+                break;
               }
             }
-          }
-          // 
-          if (!isPush) {
-            this.messageService.sendTransferToMakerClient(result.data)
           }
         }
       } else if (payload.version === '2-1') {
