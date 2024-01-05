@@ -13,7 +13,7 @@ import { MakerService } from '../maker/maker.service';
 import { V3RuleInterface, V3TokenInterface } from './transaction.interface'
 import { ethers } from 'ethers6';
 import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
-import { padStart } from 'lodash';
+import { padStart, uniq } from 'lodash';
 import { TransactionID } from '../utils';
 export interface handleTransferReturn {
   errno: number;
@@ -187,6 +187,7 @@ export class TransactionV2Service {
     if (!configCenterTargetToken) {
       return this.errorBreakResult(`${transfer.hash} configCenterTargetToken ${targetToken.chainId} - ${targetTokenAddrSub} not found`)
     }
+    createdData.targetMaker = createdData.sourceMaker;
     createdData.sourceChain = transfer.chainId;
     createdData.sourceToken = transfer.token;
     createdData.targetToken = targetTokenAddrSub;
@@ -196,15 +197,17 @@ export class TransactionV2Service {
     createdData.targetChain = targetToken.chainId;
     createdData.ruleId = rule.id;
     createdData.targetAddress = transfer.sender;
-    createdData.responseMaker = [transfer.receiver];
+    createdData.responseMaker = [createdData.sourceMaker];
 
-    const v3ResponseMaker = this.envConfigService.get("v3ResponseMaker");
-    console.log('v3ResponseMaker:', v3ResponseMaker);
-    if (v3ResponseMaker) {
-      const addrList = v3ResponseMaker[transfer.receiver] || [];
-      createdData.responseMaker.push(...addrList);
-      console.log('createdData.responseMaker:', createdData.responseMaker);
+    const responseMaker = this.envConfigService.get("PAID_RESPONSE_MAKER");
+    if (responseMaker) {
+      for (const fakeAddr in responseMaker) {
+        if (responseMaker[fakeAddr].includes(createdData.sourceMaker)) {
+          createdData.responseMaker.push(fakeAddr.toLocaleLowerCase());
+        }
+      }
     }
+    createdData.responseMaker = uniq(createdData.responseMaker);
     createdData.transactionId = TransactionID(
       transfer.sender,
       `-${transfer.chainId}`,

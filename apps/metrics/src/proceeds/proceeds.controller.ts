@@ -12,7 +12,7 @@ export class ProceedsController extends PrometheusController {
     }
     @Get('/metrics')
     async index(@Res({ passthrough: false }) response: Response) {
-        const symbols = ['ETH'];
+        const symbols = ['ETH', 'USDC', 'USDT', 'DAI'];
         for (const symbol of symbols) {
             const result = await this.proceedsService.getTodayProceeds(symbol);
             for (const row of result) {

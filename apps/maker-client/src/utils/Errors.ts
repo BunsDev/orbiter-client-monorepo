@@ -1,7 +1,7 @@
-export class IlliquidityError extends Error {
+export class InsufficientLiquidity extends Error {
     constructor(message?: string) {
         super(message);
-        this.name = 'IlliquidityError';
+        this.name = 'InsufficientLiquidity';
     }
 }
 
