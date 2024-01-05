@@ -147,7 +147,6 @@ export class TransactionService {
             if (sendTransferToMakerClientQueue) {
               for (const queue in sendTransferToMakerClientQueue) {
                 const addressList = sendTransferToMakerClientQueue[queue].split(",");
-                console.log(addressList, '==', payload.receiver, '=-', addressList.includes(payload.receiver))
                 if (addressList.includes(payload.receiver)) {
                   this.messageService.sendTransferToMakerClient(result.data, `1_0_${queue}`)
                   isPush = true;
