@@ -246,7 +246,7 @@ export class V3Service {
     list = list.sort(function (a, b) {
       return new Date(b.fromTimestamp).valueOf() - new Date(a.fromTimestamp).valueOf();
     });
-    const count: number = <any>await this.BridgeTransactionModel.count(<any>{ where });
+    const count: number = 10000;
     return { list, count };
   }
 
