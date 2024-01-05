@@ -1,11 +1,13 @@
 export interface ArbitrationTransaction {
+    ebcAddress: string;
+    ruleId: string;
     sourceMaker: string;
+    sourceAddress: string;
     sourceTxTime: number;
     sourceChainId: number;
     sourceTxBlockNum: number;
     sourceTxIndex: number;
     sourceTxHash: string;
-    ruleKey: string;
     freezeToken: string;
     freezeAmount1: string;
     minChallengeDepositAmount: string;

@@ -117,6 +117,10 @@ export class SequencerScheduleService {
             );
             continue;
           }
+          if (await this.validatorService.validDisabledSourceAddress(tx.sourceAddress)) {
+            this.logger.warn(`[readDBTransactionRecords] ${tx.sourceAddress} In the disabled source chain address`);
+            continue;
+          }
           if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
             this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
             continue
@@ -239,7 +243,7 @@ export class SequencerScheduleService {
           );
           await this.batchSendTransaction(row.id, store).catch((error) => {
             this.logger.error(
-              "checkStoreReadySend -> batchSendTransaction error",
+              `checkStoreReadySend ${key} -> batchSendTransaction error`,
               error
             );
           });
@@ -249,7 +253,7 @@ export class SequencerScheduleService {
           );
           await this.singleSendTransaction(row.id, store).catch((error) => {
             this.logger.error(
-              "checkStoreReadySend -> singleSendTransaction error",
+              `checkStoreReadySend ${key} -> singleSendTransaction error`,
               error
             );
           });
@@ -264,6 +268,12 @@ export class SequencerScheduleService {
     for (let i = transfers.length - 1; i >= 0; i--) {
       const tx = transfers[i];
       const hash = tx.sourceId;
+      if (await this.validatorService.validDisabledSourceAddress(tx.sourceAddress)) {
+        transfers.splice(i, 1);
+        store.removeSymbolsWithData(token, hash);
+        this.logger.warn(`[batchSendTransaction] ${tx.sourceAddress} In the disabled source chain address`);
+        continue;
+      }
       if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
         transfers.splice(i, 1);
         store.removeSymbolsWithData(token, hash);
@@ -333,6 +343,11 @@ export class SequencerScheduleService {
         store.removeSymbolsWithData(token, hash);
         this.logger.warn(`[singleSendTransaction] ${hash} Transaction details do not exist`)
         continue
+      }
+      if (await this.validatorService.validDisabledSourceAddress(tx.sourceAddress)) {
+        store.removeSymbolsWithData(token, hash);
+        this.logger.warn(`[readDBTransactionRecords] ${tx.sourceAddress} In the disabled source chain address`);
+        continue;
       }
       if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
         store.removeSymbolsWithData(token, hash);

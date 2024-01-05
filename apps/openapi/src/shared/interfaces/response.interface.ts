@@ -29,7 +29,7 @@ export interface HttpPaginateResult<T> {
 
 // HTTP error
 export type HttpResponseError = HttpResponseBase & {
-  error: any
+  // error: any
   debug?: string
 }
 

@@ -38,11 +38,16 @@ export class ValidatorService {
     }
     return false;
   }
+  public async validDisabledSourceAddress(sourceAddress: string) {
+    const disabledSourceAddress: string = await this.envConfig.getAsync('DisabledSourceAddress') || '';
+    const disabledAddressList = disabledSourceAddress.replace(/' '/g, '').split(',');
+    return !!disabledAddressList.find(item => item.toLowerCase() === sourceAddress.toLowerCase());
+  }
   public transactionTimeValid(chainId: string, timestamp: Date) {
-    const timeout = Date.now() - dayjs(timestamp).valueOf();
+    const timeoutMin = Math.floor((Date.now() - dayjs(timestamp).valueOf()) / 1000 / 60);
     const defaultTimeout = this.getTransferGlobalTimeout();
     const transferTimeout = +(this.envConfig.get<Number>(`${chainId}.TransferTimeout`, defaultTimeout));
-    if (timeout >= transferTimeout) {
+    if (timeoutMin >= transferTimeout) {
       return true;
     }
     return false;
