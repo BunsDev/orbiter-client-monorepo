@@ -38,7 +38,7 @@ export class TransactionService {
         return HTTPPost(subgraphEndpoint, { query });
     }
 
-    async getChainRels(){
+    async getChainRels() {
         let chainRels = await keyv.get('ChainRels');
         if (!chainRels) {
             const queryStr = `
@@ -59,7 +59,7 @@ export class TransactionService {
             }
       }
           `;
-            const result = await this.querySubgraph(queryStr) || {};
+            const result: any = await this.querySubgraph(queryStr) || {};
             chainRels = result?.data?.chainRels || [];
             await keyv.set('ChainRels', chainRels, 1000 * 5);
         }
