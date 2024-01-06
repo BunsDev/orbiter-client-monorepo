@@ -1,7 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { HTTPResponse } from '../utils/Response';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
+import { AppService } from "../services/app.service";
 @Controller()
 export class AppController {
   @LoggerDecorator()
@@ -9,6 +10,7 @@ export class AppController {
   constructor(
     private chainConfig: ChainConfigService,
     private envConfig: ENVConfigService,
+    private readonly appService: AppService,
   ) { }
 
   @Get("/config/arbitration-client")
@@ -24,4 +26,10 @@ export class AppController {
       return HTTPResponse.fail(1000, error.message);
     }
   }
+
+    @Get("/record")
+    async getRecord(@Query("type") type: string | number, @Query("page") page: string | number,
+                    @Query("pageSize") pageSize: string | number, @Query("hash") hash: string) {
+        return HTTPResponse.success(await this.appService.getArbitrationInfo(+type, page, pageSize, hash));
+    }
 }

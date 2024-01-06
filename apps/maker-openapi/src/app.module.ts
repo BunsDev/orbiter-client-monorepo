@@ -15,6 +15,7 @@ import {
 } from '@orbiter-finance/maker-api-seq-models';
 import { TransactionService } from './services/transaction.service';
 import { isEmpty } from "../../../libs/utils/src";
+import { AppService } from "./services/app.service";
 
 @Module({
     imports: [
@@ -59,7 +60,7 @@ import { isEmpty } from "../../../libs/utils/src";
         SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction, ArbitrationRecord])
     ],
     controllers: [AppController, ProofController, TransactionController],
-    providers: [ProofService, TransactionService],
+    providers: [AppService, ProofService, TransactionService],
 })
 export class AppModule {
 }
