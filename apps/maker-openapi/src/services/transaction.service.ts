@@ -71,8 +71,10 @@ export class TransactionService {
         let startTime = new Date().valueOf();
         let endTime = 0;
         for (const chain of chainRels) {
-            startTime = Math.min(new Date().valueOf() - (+chain.maxVerifyChallengeSourceTxSecond) * 1000, startTime);
-            endTime = Math.max(new Date().valueOf() - (+chain.minVerifyChallengeSourceTxSecond) * 1000, endTime);
+            if ([1, 11155111, 300, 324].includes(+chain.id)) {
+                startTime = Math.min(new Date().valueOf() - (+chain.maxVerifyChallengeSourceTxSecond) * 1000, startTime);
+                endTime = Math.max(new Date().valueOf() - (+chain.minVerifyChallengeSourceTxSecond) * 1000, endTime);
+            }
         }
         return { list: await this.getUnreimbursedTransactions(startTime, endTime), startTime, endTime };
     }
