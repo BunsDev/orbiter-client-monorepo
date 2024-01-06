@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-
 import { AppController } from './controllers/app.controller';
 import { ProofService } from './services/proof.service';
 import { ConsulModule } from '@orbiter-finance/consul';
@@ -17,6 +16,8 @@ import { TransactionService } from './services/transaction.service';
 import { isEmpty } from "../../../libs/utils/src";
 import { AppService } from "./services/app.service";
 import { GlobalMiddleware } from "./middleware/globalMiddleware";
+import { HttpExceptionFilter } from "./middleware/httpExceptionFilter";
+import { APP_FILTER } from "@nestjs/core";
 
 @Module({
     imports: [
@@ -61,7 +62,10 @@ import { GlobalMiddleware } from "./middleware/globalMiddleware";
         SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction, ArbitrationRecord])
     ],
     controllers: [AppController, ProofController, TransactionController],
-    providers: [AppService, ProofService, TransactionService],
+    providers: [AppService, ProofService, TransactionService, {
+        provide: APP_FILTER,
+        useClass: HttpExceptionFilter,
+    }],
 })
 export class AppModule {
     configure(consumer) {
