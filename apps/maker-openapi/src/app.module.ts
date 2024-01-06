@@ -16,6 +16,7 @@ import {
 import { TransactionService } from './services/transaction.service';
 import { isEmpty } from "../../../libs/utils/src";
 import { AppService } from "./services/app.service";
+import { GlobalMiddleware } from "./middleware/globalMiddleware";
 
 @Module({
     imports: [
@@ -63,4 +64,9 @@ import { AppService } from "./services/app.service";
     providers: [AppService, ProofService, TransactionService],
 })
 export class AppModule {
+    configure(consumer) {
+        consumer
+            .apply(GlobalMiddleware)
+            .forRoutes('/');
+    }
 }
