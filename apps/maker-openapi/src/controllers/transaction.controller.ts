@@ -27,6 +27,12 @@ export class TransactionController {
         return HTTPResponse.success(data)
     }
 
+    @Get("/pendingArbitration")
+    async getPendingArbitration() {
+        // user arbitration-client need
+        return HTTPResponse.success(await this.transactionService.getPendingArbitration());
+    }
+
     @Get("/status/:hash")
     async status(@Param("hash") hash: string) {
         if (!hash) {
