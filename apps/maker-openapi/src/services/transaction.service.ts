@@ -10,6 +10,7 @@ import Keyv from "keyv";
 import { ArbitrationRecord, IArbitrationRecord } from "@orbiter-finance/maker-api-seq-models";
 import { providers } from 'ethers';
 import { Interface } from 'ethers6';
+import axios from 'axios';
 import { MDCAbi } from '@orbiter-finance/abi';
 const keyv = new Keyv();
 
@@ -161,11 +162,27 @@ export class TransactionService {
                     type = 21;
                     break;
                 }
+                case "checkChallenge": {
+                    type = 31;
+                    break;
+                }
             }
             calldata = (parsedData.args.toArray()).map(item => String(item));
             transferFee = new BigNumber(String(receipt.effectiveGasPrice)).multipliedBy(String(receipt.gasUsed)).dividedBy(10 ** 18).toFixed(8);
             fromAddress = receipt.from;
             status = receipt.status;
+            if (+status === 0) {
+                const telegramToken = await this.envConfigService.getAsync('TelegramToken');
+                const telegramChatId = await this.envConfigService.getAsync('TelegramChatId');
+                if (telegramToken && telegramChatId) {
+                    await axios.post(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                        chat_id: telegramChatId,
+                        text: `${chainInfo?.infoURL}/tx/${data.hash} ${parsedData.name} ${calldata.join(',')}`,
+                        disable_notification: false,
+                        parse_mode: '',
+                    });
+                }
+            }
         } catch (e) {
             console.error('recordTransaction error', e);
             return;
