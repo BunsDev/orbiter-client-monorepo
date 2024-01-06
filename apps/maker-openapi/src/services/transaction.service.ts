@@ -12,11 +12,13 @@ import { providers } from 'ethers';
 import { Interface } from 'ethers6';
 import axios from 'axios';
 import { MDCAbi } from '@orbiter-finance/abi';
+import { HTTPPost } from "@orbiter-finance/request";
 const keyv = new Keyv();
 
 @Injectable()
 export class TransactionService {
     constructor(
+        private envConfig: ENVConfigService,
         protected envConfigService: ENVConfigService,
         private readonly chainConfigService: ChainConfigService,
         @InjectModel(Transfers)
@@ -27,7 +29,57 @@ export class TransactionService {
         private arbitrationRecord: typeof ArbitrationRecord,
     ) {}
 
-    async getUnreimbursedTransactions(startTime: number, endTime: number): Promise<ArbitrationTransaction[]> {
+    async querySubgraph(query: string) {
+        const subgraphEndpoint = await this.envConfig.getAsync("SubgraphEndpoint");
+        if (!subgraphEndpoint) {
+            console.error('SubgraphEndpoint not found');
+            return null;
+        }
+        return HTTPPost(subgraphEndpoint, { query });
+    }
+
+    async getChainRels() {
+        let chainRels = await keyv.get('ChainRels');
+        if (!chainRels) {
+            const queryStr = `
+        query  {
+            chainRels {
+            id
+            nativeToken
+            minVerifyChallengeSourceTxSecond
+            minVerifyChallengeDestTxSecond
+            maxVerifyChallengeSourceTxSecond
+            maxVerifyChallengeDestTxSecond
+            batchLimit
+            enableTimestamp
+            latestUpdateHash
+            latestUpdateBlockNumber
+            latestUpdateTimestamp
+            spvs
+            }
+      }
+          `;
+            const result: any = await this.querySubgraph(queryStr) || {};
+            chainRels = result?.data?.chainRels || [];
+            await keyv.set('ChainRels', chainRels, 1000 * 5);
+        }
+        return chainRels;
+    }
+
+    async getPendingArbitration() {
+        const chainRels = await this.getChainRels();
+        let startTime = new Date().valueOf();
+        let endTime = 0;
+        for (const chain of chainRels) {
+            if ([1, 11155111, 300, 324].includes(+chain.id)) {
+                startTime = Math.min(new Date().valueOf() - (+chain.maxVerifyChallengeSourceTxSecond) * 1000, startTime);
+                endTime = Math.max(new Date().valueOf() - (+chain.minVerifyChallengeSourceTxSecond) * 1000, endTime);
+            }
+        }
+        return { list: await this.getUnreimbursedTransactions(startTime, endTime), startTime, endTime };
+    }
+
+    async getUnreimbursedTransactions(startTime: number | string, endTime: number | string): Promise<ArbitrationTransaction[]> {
         const isMainNetwork = +(await this.envConfigService.getAsync('MAIN_NETWORK')) === 1;
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
