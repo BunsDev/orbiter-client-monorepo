@@ -15,16 +15,9 @@ export class AppController {
 
   @Get("/config/arbitration-client")
   async getArbitrationConfig(): Promise<HTTPResponse> {
-    try {
       return HTTPResponse.success({
-        subgraphEndpoint: await this.envConfig.getAsync("SubgraphEndpoint")
-        // allowArbitrationChains: this.envConfig.get("AllowArbitrationChains") || [],
-        // arbitration: this.envConfig.get("ArbitrationRPC")
+          subgraphEndpoint: await this.envConfig.getAsync("SubgraphEndpoint")
       });
-    } catch (error) {
-      this.logger.error('getArbitrationConfig error', error);
-      return HTTPResponse.fail(1000, error.message);
-    }
   }
 
     @Get("/record")

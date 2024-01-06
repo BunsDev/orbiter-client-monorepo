@@ -79,149 +79,131 @@ export class ProofService {
     }
 
     async getVerifyChallengeSourceParams(hash: string) {
-        try {
-            if (!hash) {
-                console.error('Invalid parameters');
-                return [];
-            }
-            const proofDataCount: number = <any>await this.arbitrationProof.count(<any>{
-                where: {
-                    hash: hash.toLowerCase(),
-                    isSource: 1
-                }
-            });
-            if (!proofDataCount) {
-                console.error('none of source proofData count', `hash: ${hash}`);
-                return [];
-            }
-            const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
-                where: {
-                    hash: hash.toLowerCase(),
-                    isSource: 1
-                },
-                order: [['status', 'DESC'], ['createTime', 'DESC']],
-                raw: true
-            });
-            if (!proofDataList || !proofDataList.length) {
-                console.error('none of source proofData', `hash: ${hash}`);
-                return [];
-            }
-            const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
-                attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
-                    'targetChain', 'targetToken', 'ebcAddress'],
-                where: {
-                    sourceId: hash.toLowerCase()
-                }
-            });
-            if (!bridgeTx) {
-                console.error('none of bridgeTx', `hash: ${hash}`);
-                return [];
-            }
-
-            const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 300 : 324;
-            const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
-            const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
-            const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
-            const list = [];
-            for (const proofData of proofDataList) {
-                list.push({
-                    sourceMaker: bridgeTx.sourceMaker,
-                    sourceChain: bridgeTx.sourceChain,
-                    sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
-                    ruleId: bridgeTx.ruleId,
-                    ebcAddress: bridgeTx.ebcAddress,
-                    spvAddress,
-                    ...proofData
-                });
-            }
-            return list;
-        } catch (e) {
-            console.error('getVerifyChallengeSourceParams error', `hash: ${hash}`, e);
-            return [];
+        if (!hash) {
+            throw new Error('ex: Invalid parameters');
         }
+        const proofDataCount: number = <any>await this.arbitrationProof.count(<any>{
+            where: {
+                hash: hash.toLowerCase(),
+                isSource: 1
+            }
+        });
+        if (!proofDataCount) {
+            throw new Error(`ex: None of source proofData count ${hash}`);
+        }
+        const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
+            where: {
+                hash: hash.toLowerCase(),
+                isSource: 1
+            },
+            order: [['status', 'DESC'], ['createTime', 'DESC']],
+            raw: true
+        });
+        if (!proofDataList || !proofDataList.length) {
+            throw new Error(`ex: None of source proofData ${hash}`);
+        }
+        const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
+            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
+                'targetChain', 'targetToken', 'ebcAddress'],
+            where: {
+                sourceId: hash.toLowerCase()
+            }
+        });
+        if (!bridgeTx) {
+            throw new Error(`ex: None of bridgeTx ${hash}`);
+        }
+
+        const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 300 : 324;
+        const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
+        const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
+        const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
+        const list = [];
+        for (const proofData of proofDataList) {
+            list.push({
+                sourceMaker: bridgeTx.sourceMaker,
+                sourceChain: bridgeTx.sourceChain,
+                sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
+                ruleId: bridgeTx.ruleId,
+                ebcAddress: bridgeTx.ebcAddress,
+                spvAddress,
+                ...proofData
+            });
+        }
+        return list;
     }
 
     async getVerifyChallengeDestParams(hash: string) {
-        try {
-            if (!hash) {
-                console.error('Invalid parameters');
-                return [];
-            }
-            const bridgeCount: number = <any>await this.bridgeTransactionModel.count(<any>{
-                where: {
-                    sourceId: hash.toLowerCase()
-                }
-            });
-            if (!bridgeCount) {
-                console.error('none of bridgeTx count', `hash: ${hash}`);
-                return [];
-            }
-            const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
-                attributes: [
-                    'sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime', 'sourceNonce', 'sourceAddress',
-                    'targetId', 'targetChain', 'targetToken', 'targetSymbol', 'targetNonce', 'targetAddress', 'targetMaker',
-                    'sourceSymbol','sourceAmount','targetAmount', 'ruleId', 'ebcAddress'],
-                where: {
-                    sourceId: hash.toLowerCase()
-                }
-            });
-            if (!bridgeTx?.targetId) {
-                console.error('none of targetId', `hash: ${hash}`);
-                return [];
-            }
-            const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
-                where: {
-                    hash: bridgeTx.targetId.toLowerCase(),
-                    isSource: 0,
-                    message: ""
-                },
-                order: [['status', 'DESC'], ['createTime', 'DESC']],
-                raw: true
-            });
-          if (!proofDataList || !proofDataList.length) {
-                console.error('none of dest proofData', `targetId: ${bridgeTx.targetId}`);
-                return [];
-            }
-            const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
-            const targetAmount = new BigNumber(bridgeTx.targetAmount).multipliedBy(10 ** targetDecimal).toFixed(0);
-            const sourceDecimal = getDecimalBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
-            const sourceAmount = new BigNumber(bridgeTx.sourceAmount).multipliedBy(10 ** sourceDecimal).toFixed(0);
-
-            const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 300 : 324;
-            const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
-            const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
-            const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
-            const list = [];
-            for (const proofData of proofDataList) {
-                list.push({
-                    sourceNonce: bridgeTx.sourceNonce,
-                    targetNonce: bridgeTx.targetNonce,
-                    targetChain: bridgeTx.targetChain,
-                    sourceAddress: bridgeTx.sourceAddress,
-                    targetToken: bridgeTx.targetToken,
-                    targetAmount,
-                    sourceAmount,
-                    ruleId: bridgeTx.ruleId,
-                    ebcAddress: bridgeTx.ebcAddress,
-                    sourceId: bridgeTx.sourceId,
-                    sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
-                    sourceMaker: bridgeTx.sourceMaker,
-                    sourceChain: bridgeTx.sourceChain,
-                    isSource: 0,
-                    spvAddress,
-                    ...proofData
-                });
-            }
-            return list;
-        } catch (e) {
-            console.error('getVerifyChallengeDestParams error', `hash: ${hash}`, e);
-            return [];
+        if (!hash) {
+            throw new Error('ex: Invalid parameters');
         }
+        const bridgeCount: number = <any>await this.bridgeTransactionModel.count(<any>{
+            where: {
+                sourceId: hash.toLowerCase()
+            }
+        });
+        if (!bridgeCount) {
+            throw new Error(`ex: None of bridgeTx count ${hash}`);
+        }
+        const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
+            attributes: [
+                'sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime', 'sourceNonce', 'sourceAddress',
+                'targetId', 'targetChain', 'targetToken', 'targetSymbol', 'targetNonce', 'targetAddress', 'targetMaker',
+                'sourceSymbol','sourceAmount','targetAmount', 'ruleId', 'ebcAddress'],
+            where: {
+                sourceId: hash.toLowerCase()
+            }
+        });
+        if (!bridgeTx?.targetId) {
+            throw new Error(`ex: None of targetId ${hash}`);
+        }
+        const proofDataList: IArbitrationProof[] = await this.arbitrationProof.findAll(<any>{
+            where: {
+                hash: bridgeTx.targetId.toLowerCase(),
+                isSource: 0,
+                message: ""
+            },
+            order: [['status', 'DESC'], ['createTime', 'DESC']],
+            raw: true
+        });
+        if (!proofDataList || !proofDataList.length) {
+            throw new Error(`ex: None of dest proofData, targetId: ${hash}`);
+        }
+        const targetDecimal = getDecimalBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
+        const targetAmount = new BigNumber(bridgeTx.targetAmount).multipliedBy(10 ** targetDecimal).toFixed(0);
+        const sourceDecimal = getDecimalBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
+        const sourceAmount = new BigNumber(bridgeTx.sourceAmount).multipliedBy(10 ** sourceDecimal).toFixed(0);
+
+        const eraNetWorkId = Number(await this.envConfigService.getAsync('MAIN_NETWORK') || 1) !== 1 ? 300 : 324;
+        const envSpvAddress = await this.envConfigService.getAsync('SPV_ADDRESS');
+        const envSpvAddressEra = await this.envConfigService.getAsync('SPV_ADDRESS_ERA');
+        const spvAddress = +bridgeTx.sourceChain === eraNetWorkId ? envSpvAddressEra : envSpvAddress;
+        const list = [];
+        for (const proofData of proofDataList) {
+            list.push({
+                sourceNonce: bridgeTx.sourceNonce,
+                targetNonce: bridgeTx.targetNonce,
+                targetChain: bridgeTx.targetChain,
+                sourceAddress: bridgeTx.sourceAddress,
+                targetToken: bridgeTx.targetToken,
+                targetAmount,
+                sourceAmount,
+                ruleId: bridgeTx.ruleId,
+                ebcAddress: bridgeTx.ebcAddress,
+                sourceId: bridgeTx.sourceId,
+                sourceTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
+                sourceMaker: bridgeTx.sourceMaker,
+                sourceChain: bridgeTx.sourceChain,
+                isSource: 0,
+                spvAddress,
+                ...proofData
+            });
+        }
+        return list;
     }
 
     async makerAskProof(data: MakerAskProofRequest) {
         if (!data?.hash) {
-            throw new Error('Invalid parameters');
+            throw new Error('ex: Invalid parameters');
         }
         const bridgeTransaction = await this.bridgeTransactionModel.findOne(<any>{
             attributes: ['sourceId', 'sourceChain', 'sourceToken', 'sourceMaker', 'sourceTime',

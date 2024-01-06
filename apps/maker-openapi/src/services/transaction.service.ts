@@ -117,14 +117,12 @@ export class TransactionService {
             }
         });
         if (!count) {
-            console.error('recordTransaction none of sourceId count', JSON.stringify(data));
-            return;
+            throw new Error(`ex: RecordTransaction none of sourceId ${JSON.stringify(data)}`);
         }
         const mainNetwork = await this.envConfigService.getAsync('MAIN_NETWORK');
         const chainInfo: any = await this.chainConfigService.getChainInfo(String(mainNetwork));
         if (!chainInfo?.rpc || !chainInfo.rpc.length) {
-            console.error('recordTransaction none of chainInfo', `mainnetwork: ${mainNetwork}`);
-            return;
+            throw new Error(`ex: RecordTransaction none of chainInfo, mainnetwork: ${mainNetwork}`);
         }
         let transferFee = "0";
         let fromAddress = '';
@@ -137,13 +135,11 @@ export class TransactionService {
             });
             const receipt = await provider.getTransactionReceipt(data.hash);
             if (!receipt) {
-                console.error('recordTransaction none of receipt', `hash: ${data.hash}`);
-                return;
+                throw new Error(`ex: RecordTransaction none of receipt ${data.hash}`);
             }
             const transaction: any = await provider.getTransaction(data.hash);
             if (!transaction) {
-                console.error('recordTransaction none of transaction', `hash: ${data.hash}`);
-                return;
+                throw new Error(`ex: RecordTransaction none of transaction ${data.hash}`);
             }
             const contractInterface = new Interface(MDCAbi);
             const parsedData = contractInterface.parseTransaction({
@@ -185,7 +181,7 @@ export class TransactionService {
             }
         } catch (e) {
             console.error('recordTransaction error', e);
-            return;
+            throw new Error(`ex: ${e.message}`);
         }
         const iArbitrationRecord: IArbitrationRecord = {
             hash: data.hash,

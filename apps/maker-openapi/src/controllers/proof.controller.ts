@@ -18,93 +18,54 @@ export class ProofController {
     @Post("/proofSubmission")
     async proofSubmission(@Body() data: ProofSubmissionRequest): Promise<HTTPResponse> {
         // spv-client submit
-        try {
-            console.log(`proofSubmission`, data);
-            return HTTPResponse.success(await this.proofService.proofSubmission(data));
-        } catch (error) {
-            console.error('proofSubmission error', error);
-            return HTTPResponse.fail(1000, error.message);
-        }
+        return HTTPResponse.success(await this.proofService.proofSubmission(data));
     }
 
     @Get("/needProofTransactionList")
     async needMakerProofTransactionList(): Promise<HTTPResponse> {
         // spv-client need
-        try {
-            return HTTPResponse.success(await this.proofService.needMakerProofTransactionList());
-        } catch (error) {
-            return HTTPResponse.fail(1000, error.message);
-        }
+        return HTTPResponse.success(await this.proofService.needMakerProofTransactionList());
     }
 
     @Post("/makerAskProof")
     async makerAskProof(@Body() data: MakerAskProofRequest): Promise<HTTPResponse> {
         // maker arbitration-client submit
-        try {
-            await this.proofService.makerAskProof(data);
-            return HTTPResponse.success(null);
-        } catch (error) {
-            console.error('makerAskProof error', error);
-            return HTTPResponse.fail(1000, error.message);
-        }
+        return HTTPResponse.success(await this.proofService.makerAskProof(data));
     }
 
     @Get("/makerNeedResponseTxList")
     async makerNeedResponseTxList(@Query("makerAddress") makerAddress: string): Promise<HTTPResponse> {
         // maker arbitration-client need
-        try {
-            const data = await this.proofService.makerNeedResponseTxList(makerAddress);
-            return HTTPResponse.success(data);
-        } catch (error) {
-            console.error('needResponseTransactionList error', error);
-            return HTTPResponse.fail(1000, error.message);
-        }
+        return HTTPResponse.success(await this.proofService.makerNeedResponseTxList(makerAddress));
     }
 
     @Get("/verifyChallengeSourceParams/:hash")
     async getVerifyChallengeSourceParamsByUserHash(@Param("hash") hash: string): Promise<HTTPResponse> {
-        try {
-            const data = await this.proofService.getVerifyChallengeSourceParams(hash);
-            return HTTPResponse.success(data);
-        } catch (error) {
-            console.error('getProofByHash error', error);
-            return HTTPResponse.fail(1000, error.message);
-        }
+        return HTTPResponse.success(await this.proofService.getVerifyChallengeSourceParams(hash));
     }
 
     @Get("/verifyChallengeDestParams/:hash")
     async getVerifyChallengeDestParamsByMakerHash(@Param("hash") hash: string): Promise<HTTPResponse> {
-        try {
-            const data = await this.proofService.getVerifyChallengeDestParams(hash);
-            return HTTPResponse.success(data);
-        } catch (error) {
-            console.error('getProofByHash error', error);
-            return HTTPResponse.fail(1000, error.message);
-        }
+        return HTTPResponse.success(await this.proofService.getVerifyChallengeDestParams(hash));
     }
 
     @Get("/config/arbitration-client")
     async getArbitrationConfig(): Promise<HTTPResponse> {
-        try {
-            const chains = await this.chainConfig.getAllChains();
-            const filterChains = chains.map(row => {
-                return {
-                    chainId: row.chainId,
-                    name: row.name,
-                    contract: row.contract,
-                    nativeCurrency: row.nativeCurrency,
-                    tokens: row.tokens
-                };
-            });
-            return HTTPResponse.success({
-                chains: filterChains,
-                chainsAllowArbitration: this.envConfig.get("ChainsAllowArbitration") || [],
-                arbitration: this.envConfig.get("ArbitrationRPC")
-            });
-        } catch (error) {
-            console.error('getArbitrationConfig error', error);
-            return HTTPResponse.fail(1000, error.message);
-        }
+        const chains = await this.chainConfig.getAllChains();
+        const filterChains = chains.map(row => {
+            return {
+                chainId: row.chainId,
+                name: row.name,
+                contract: row.contract,
+                nativeCurrency: row.nativeCurrency,
+                tokens: row.tokens
+            };
+        });
+        return HTTPResponse.success({
+            chains: filterChains,
+            chainsAllowArbitration: this.envConfig.get("ChainsAllowArbitration") || [],
+            arbitration: this.envConfig.get("ArbitrationRPC")
+        });
     }
 
 }

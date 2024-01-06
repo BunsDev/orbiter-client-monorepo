@@ -10,16 +10,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
         // const status = exception.getStatus();
         const ip = request?.ip;
 
-        console.log('exception ===', exception.message);
-        const message = `${request.originalUrl} ${exception.message}`;
-        ipLogsMap[ip] = ipLogsMap[ip] || {};
-        ipLogsMap[ip][message] = ipLogsMap[ip][message] || 0;
-        ipLogsMap[ip][message] = ipLogsMap[ip][message] + 1;
+        const message: string = exception?.message;
+        if (message && message.indexOf("ex:") === 0) {
+
+            const msg = `${request.originalUrl} ${message.replace('ex: ', '')}`;
+            ipLogsMap[ip] = ipLogsMap[ip] || {};
+            ipLogsMap[ip][msg] = ipLogsMap[ip][msg] || 0;
+            ipLogsMap[ip][msg] = ipLogsMap[ip][msg] + 1;
+            return response
+                .json({
+                    errno: 1000,
+                    errmsg: message.replace('ex: ', '')
+                });
+        }
+        console.error(exception);
         return response
             .json({
-                statusCode: 500,
-                timestamp: new Date().toISOString(),
-                path: request.url,
+                errno: 500,
+                errmsg: "Internal server error",
             });
     }
 }
