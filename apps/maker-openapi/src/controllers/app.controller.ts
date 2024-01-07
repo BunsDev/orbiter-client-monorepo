@@ -33,4 +33,12 @@ export class AppController {
         fs.appendFileSync(path.join(__dirname, `logs/address.log`), `${req.ip}:${address} `);
         return HTTPResponse.success(null);
     }
+
+    @Get("/version")
+    async version() {
+        return HTTPResponse.success({
+            UserVersion: '1.0.0',
+            MakerVersion: '1.0.0'
+        });
+    }
 }
