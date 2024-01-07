@@ -51,7 +51,7 @@ export class TransactionService {
             const challengerList = result?.data?.createChallenges;
             if (!challengerList || !challengerList.length) return [];
             hashList = challengerList.map(item => item?.sourceTxHash);
-            await keyv.set('CreateChallengesSourceTxHashList', hashList, 1000 * 5);
+            await keyv.set('CreateChallengesSourceTxHashList', hashList, 1000 * 30);
         }
         return hashList;
     }
