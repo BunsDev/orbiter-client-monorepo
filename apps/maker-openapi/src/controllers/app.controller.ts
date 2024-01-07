@@ -37,8 +37,8 @@ export class AppController {
     @Get("/version")
     async version() {
         return HTTPResponse.success({
-            UserVersion: '1.0.0',
-            MakerVersion: '1.0.0'
+            UserVersion: '0.0.0',
+            MakerVersion: '0.0.0'
         });
     }
 }
