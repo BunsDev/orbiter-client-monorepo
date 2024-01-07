@@ -47,7 +47,7 @@ export class TransactionService {
               }
             }
           `;
-            const result = await this.querySubgraph(queryStr);
+            const result: any = await this.querySubgraph(queryStr);
             const challengerList = result?.data?.createChallenges;
             if (!challengerList || !challengerList.length) return [];
             hashList = challengerList.map(item => item?.sourceTxHash);
