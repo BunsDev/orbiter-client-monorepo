@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Transfers, BridgeTransaction, BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
-import dayjs from 'dayjs';
 import { Op } from 'sequelize';
 import { ArbitrationTransaction } from "../common/interfaces/Proof.interface";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
@@ -66,20 +65,58 @@ export class TransactionService {
         return chainRels;
     }
 
-    async getPendingArbitration() {
-        const chainRels = await this.getChainRels();
-        let startTime = new Date().valueOf();
-        let endTime = 0;
-        for (const chain of chainRels) {
-            if ([1, 11155111, 300, 324].includes(+chain.id)) {
-                startTime = Math.min(new Date().valueOf() - (+chain.maxVerifyChallengeSourceTxSecond) * 1000, startTime);
-                endTime = Math.max(new Date().valueOf() - (+chain.minVerifyChallengeSourceTxSecond) * 1000, endTime);
+    async getAllRules(): Promise<{ id, chain0, chain1, chain0ResponseTime, chain1ResponseTime }[]> {
+        let rules = await keyv.get('Rules');
+        if (!rules) {
+            const queryStr = `
+           {
+            mdcs {
+              ruleLatest {
+                ruleUpdateRel {
+                  ruleUpdateVersion(
+                    orderBy: updateVersion
+                    orderDirection: desc
+                    where: {ruleValidation: true}
+                  ) {
+                    id
+                    chain0
+                    chain1
+                    chain0ResponseTime
+                    chain1ResponseTime
+                  }
+                }
+              }
             }
+          }
+          `;
+            const result: any = await this.querySubgraph(queryStr) || {};
+            const mdcs = result?.data?.mdcs || [];
+            const ruleTemps = [];
+            for (const mdc of mdcs) {
+                const ruleLatests = mdc.ruleLatest;
+                if (ruleLatests && ruleLatests.length) {
+                    for (const ruleLatest of ruleLatests) {
+                        const ruleUpdateRels = ruleLatest.ruleUpdateRel;
+                        if (ruleUpdateRels && ruleUpdateRels.length) {
+                            for (const ruleUpdateRel of ruleUpdateRels) {
+                                const ruleUpdateVersions = ruleUpdateRel.ruleUpdateVersion;
+                                if (ruleUpdateVersions && ruleUpdateVersions.length) {
+                                    for (const rule of ruleUpdateVersions) {
+                                        ruleTemps.push(rule);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            rules = ruleTemps;
+            await keyv.set('Rules', rules, 1000 * 5);
         }
-        return { list: await this.getUnreimbursedTransactions(startTime, endTime), startTime, endTime };
+        return rules;
     }
 
-    async getUnreimbursedTransactions(startTime: number | string, endTime: number | string): Promise<ArbitrationTransaction[]> {
+    async getPendingArbitration(): Promise<{ list: ArbitrationTransaction[], nextTime: number }> {
         const isMainNetwork = +(await this.envConfigService.getAsync('MAIN_NETWORK')) === 1;
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
@@ -88,10 +125,6 @@ export class TransactionService {
             where: {
                 status: 0,
                 sourceChain: isMainNetwork ? ["1", "324"] : ["11155111", "300"],
-                sourceTime: {
-                    [Op.gte]: dayjs(startTime).toISOString(),
-                    [Op.lte]: dayjs(endTime).toISOString()
-                },
                 ruleId: {
                     [Op.not]: null
                 }
@@ -99,6 +132,9 @@ export class TransactionService {
             limit: 200
         });
         const dataList: ArbitrationTransaction[] = [];
+        const rules = await this.getAllRules();
+        const nowTime = Math.floor(new Date().valueOf() / 1000);
+        let nextTime = 0;
         for (const bridgeTx of bridgeTransactions) {
             const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
             if (!mainToken?.address) {
@@ -121,13 +157,29 @@ export class TransactionService {
                 console.error('Transfer not found', sourceTxHash);
                 continue;
             }
+            const sourceTxTime = Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000);
+            const diffTime = nowTime - sourceTxTime;
+            const rule = rules.find(item => item.id.toLowerCase() === bridgeTx?.ruleId?.toLowerCase());
+            if (+rule.chain0 === +bridgeTx.sourceChain) {
+                if (+diffTime < +rule.chain0ResponseTime) {
+                    nextTime = Math.max(nextTime, nowTime - +rule.chain0ResponseTime);
+                    continue;
+                }
+            } else if (+rule.chain1 === +bridgeTx.sourceChain) {
+                if (+diffTime < +rule.chain1ResponseTime) {
+                    nextTime = Math.max(nextTime, nowTime - +rule.chain1ResponseTime);
+                    continue;
+                }
+            } else {
+                continue;
+            }
             const arbitrationTransaction: ArbitrationTransaction = {
                 sourceChainId: Number(bridgeTx.sourceChain),
                 sourceTxHash,
                 sourceMaker: bridgeTx.sourceMaker,
                 sourceAddress: bridgeTx.sourceAddress,
                 sourceTxBlockNum: Number(transfer.blockNumber),
-                sourceTxTime: Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000),
+                sourceTxTime,
                 sourceTxIndex: Number(transfer.transactionIndex),
                 ebcAddress: bridgeTx.ebcAddress,
                 ruleId: bridgeTx.ruleId,
@@ -137,7 +189,7 @@ export class TransactionService {
             };
             dataList.push(arbitrationTransaction);
         }
-        return dataList;
+        return { list: dataList, nextTime };
     }
 
     async getSourceIdStatus(sourceId: string): Promise<number> {
