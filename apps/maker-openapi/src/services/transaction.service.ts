@@ -135,6 +135,7 @@ export class TransactionService {
             const sourceTxTime = Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000);
             const diffTime = nowTime - sourceTxTime;
             const rule = rules.find(item => item.id.toLowerCase() === bridgeTx?.ruleId?.toLowerCase());
+            if (!rule) continue;
             if (+rule.chain0 === +bridgeTx.sourceChain) {
                 if (+diffTime < +rule.chain0ResponseTime) {
                     nextTime = Math.max(nextTime, nowTime - +rule.chain0ResponseTime);
