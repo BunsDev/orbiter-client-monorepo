@@ -37,32 +37,23 @@ export class TransactionService {
         return HTTPPost(subgraphEndpoint, { query });
     }
 
-    async getChainRels() {
-        let chainRels = await keyv.get('ChainRels');
-        if (!chainRels) {
+    async getCreateChallengesSourceTxHashList() {
+        let hashList = await keyv.get('CreateChallengesSourceTxHashList');
+        if (!hashList) {
             const queryStr = `
-        query  {
-            chainRels {
-            id
-            nativeToken
-            minVerifyChallengeSourceTxSecond
-            minVerifyChallengeDestTxSecond
-            maxVerifyChallengeSourceTxSecond
-            maxVerifyChallengeDestTxSecond
-            batchLimit
-            enableTimestamp
-            latestUpdateHash
-            latestUpdateBlockNumber
-            latestUpdateTimestamp
-            spvs
+            {
+              createChallenges(orderBy: challengeNodeNumber, orderDirection: asc) {             
+                sourceTxHash
+              }
             }
-      }
           `;
-            const result: any = await this.querySubgraph(queryStr) || {};
-            chainRels = result?.data?.chainRels || [];
-            await keyv.set('ChainRels', chainRels, 1000 * 5);
+            const result = await this.querySubgraph(queryStr);
+            const challengerList = result?.data?.createChallenges;
+            if (!challengerList || !challengerList.length) return [];
+            hashList = challengerList.map(item => item?.sourceTxHash);
+            await keyv.set('CreateChallengesSourceTxHashList', hashList, 1000 * 5);
         }
-        return chainRels;
+        return hashList;
     }
 
     async getAllRules(): Promise<{ id, chain0, chain1, chain0ResponseTime, chain1ResponseTime }[]> {
@@ -133,28 +124,12 @@ export class TransactionService {
         });
         const dataList: ArbitrationTransaction[] = [];
         const rules = await this.getAllRules();
+        const hashList:string[] = await this.getCreateChallengesSourceTxHashList();
         const nowTime = Math.floor(new Date().valueOf() / 1000);
         let nextTime = 0;
         for (const bridgeTx of bridgeTransactions) {
-            const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
-            if (!mainToken?.address) {
-                console.error('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
-                continue;
-            }
-            const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
-            if (!sourceToken?.decimals) continue;
-            if (!bridgeTx?.targetToken) {
-                console.error('TargetToken not found', bridgeTx.sourceId);
-                continue;
-            }
             const sourceTxHash = bridgeTx.sourceId;
-            const transfer = await this.transfersModel.findOne(<any>{
-                where: {
-                    hash: sourceTxHash
-                }
-            });
-            if (!transfer) {
-                console.error('Transfer not found', sourceTxHash);
+            if (hashList.find(item => item.toLowerCase() === sourceTxHash.toLowerCase())) {
                 continue;
             }
             const sourceTxTime = Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000);
@@ -171,6 +146,26 @@ export class TransactionService {
                     continue;
                 }
             } else {
+                continue;
+            }
+            const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
+            if (!mainToken?.address) {
+                console.error('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
+                continue;
+            }
+            const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
+            if (!sourceToken?.decimals) continue;
+            if (!bridgeTx?.targetToken) {
+                console.error('TargetToken not found', bridgeTx.sourceId);
+                continue;
+            }
+            const transfer = await this.transfersModel.findOne(<any>{
+                where: {
+                    hash: sourceTxHash
+                }
+            });
+            if (!transfer) {
+                console.error('Transfer not found', sourceTxHash);
                 continue;
             }
             const arbitrationTransaction: ArbitrationTransaction = {
