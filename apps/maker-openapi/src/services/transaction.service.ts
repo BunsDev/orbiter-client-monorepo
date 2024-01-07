@@ -38,6 +38,34 @@ export class TransactionService {
         return HTTPPost(subgraphEndpoint, { query });
     }
 
+    async getChainRels() {
+        let chainRels = await keyv.get('ChainRels');
+        if (!chainRels) {
+            const queryStr = `
+        query  {
+            chainRels {
+            id
+            nativeToken
+            minVerifyChallengeSourceTxSecond
+            minVerifyChallengeDestTxSecond
+            maxVerifyChallengeSourceTxSecond
+            maxVerifyChallengeDestTxSecond
+            batchLimit
+            enableTimestamp
+            latestUpdateHash
+            latestUpdateBlockNumber
+            latestUpdateTimestamp
+            spvs
+            }
+      }
+          `;
+            const result: any = await this.querySubgraph(queryStr) || {};
+            chainRels = result?.data?.chainRels || [];
+            await keyv.set('ChainRels', chainRels, 1000 * 5);
+        }
+        return chainRels;
+    }
+
     async getSourceTxLatestTime() {
         let sourceTxLatestTime = await keyv.get('SourceTxLatestTime');
         if (!sourceTxLatestTime) {
@@ -45,6 +73,7 @@ export class TransactionService {
         query  {
             chainRels {
             id
+            minVerifyChallengeSourceTxSecond
             maxVerifyChallengeSourceTxSecond
             }
         }
@@ -133,9 +162,17 @@ export class TransactionService {
         return rules;
     }
 
-    async getPendingArbitration(): Promise<{ list: ArbitrationTransaction[], nextTime: number, latestTime: number }> {
+    async getPendingArbitration(): Promise<{ list: ArbitrationTransaction[], startTime: number, endTime: number }> {
         const isMainNetwork = +(await this.envConfigService.getAsync('MAIN_NETWORK')) === 1;
-        const latestTime = await this.getSourceTxLatestTime();
+        const chainRels = await this.getChainRels();
+        let startTime = new Date().valueOf();
+        let endTime = 0;
+        for (const chain of chainRels) {
+            if ([1, 11155111, 300, 324].includes(+chain.id)) {
+                startTime = Math.min(new Date().valueOf() - (+chain.maxVerifyChallengeSourceTxSecond) * 1000, startTime);
+                endTime = Math.max(new Date().valueOf() - (+chain.minVerifyChallengeSourceTxSecond) * 1000, endTime);
+            }
+        }
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
                 'sourceAddress', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
@@ -144,7 +181,8 @@ export class TransactionService {
                 status: 0,
                 sourceChain: isMainNetwork ? ["1", "324"] : ["11155111", "300"],
                 sourceTime: {
-                    [Op.gte]: dayjs(latestTime * 1000).toISOString()
+                    [Op.gte]: dayjs(startTime).toISOString(),
+                    [Op.lte]: dayjs(endTime).toISOString()
                 },
                 ruleId: {
                     [Op.not]: null
@@ -153,32 +191,33 @@ export class TransactionService {
             limit: 200
         });
         const dataList: ArbitrationTransaction[] = [];
-        const rules = await this.getAllRules();
-        const hashList:string[] = await this.getCreateChallengesSourceTxHashList();
-        const nowTime = Math.floor(new Date().valueOf() / 1000);
-        let nextTime = 0;
+        // const rules = await this.getAllRules();
+        // const nowTime = Math.floor(new Date().valueOf() / 1000);
+        // let nextTime = 0;
+        const hashList: string[] = await this.getCreateChallengesSourceTxHashList();
         for (const bridgeTx of bridgeTransactions) {
             const sourceTxHash = bridgeTx.sourceId;
             if (hashList.find(item => item.toLowerCase() === sourceTxHash.toLowerCase())) {
                 continue;
             }
             const sourceTxTime = Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000);
-            const diffTime = nowTime - sourceTxTime;
-            const rule = rules.find(item => item.id.toLowerCase() === bridgeTx?.ruleId?.toLowerCase());
-            if (!rule) continue;
-            if (+rule.chain0 === +bridgeTx.sourceChain) {
-                if (+diffTime < +rule.chain0ResponseTime) {
-                    nextTime = Math.max(nextTime, nowTime - +rule.chain0ResponseTime);
-                    continue;
-                }
-            } else if (+rule.chain1 === +bridgeTx.sourceChain) {
-                if (+diffTime < +rule.chain1ResponseTime) {
-                    nextTime = Math.max(nextTime, nowTime - +rule.chain1ResponseTime);
-                    continue;
-                }
-            } else {
-                continue;
-            }
+            // TODO
+            // const diffTime = nowTime - sourceTxTime;
+            // const rule = rules.find(item => item.id.toLowerCase() === bridgeTx?.ruleId?.toLowerCase());
+            // if (!rule) continue;
+            // if (+rule.chain0 === +bridgeTx.sourceChain) {
+            //     if (+diffTime < +rule.chain0ResponseTime) {
+            //         nextTime = Math.max(nextTime, nowTime - +rule.chain0ResponseTime);
+            //         continue;
+            //     }
+            // } else if (+rule.chain1 === +bridgeTx.sourceChain) {
+            //     if (+diffTime < +rule.chain1ResponseTime) {
+            //         nextTime = Math.max(nextTime, nowTime - +rule.chain1ResponseTime);
+            //         continue;
+            //     }
+            // } else {
+            //     continue;
+            // }
             const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
             if (!mainToken?.address) {
                 console.error('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
@@ -215,7 +254,7 @@ export class TransactionService {
             };
             dataList.push(arbitrationTransaction);
         }
-        return { list: dataList, nextTime, latestTime };
+        return { list: dataList, startTime, endTime };
     }
 
     async getSourceIdStatus(sourceId: string): Promise<number> {
