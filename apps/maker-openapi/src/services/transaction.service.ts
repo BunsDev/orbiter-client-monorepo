@@ -51,7 +51,7 @@ export class TransactionService {
           `;
             const result: any = await this.querySubgraph(queryStr) || {};
             const chainRels = result?.data?.chainRels || [];
-            let latestTime = 0;
+            let latestTime = new Date().valueOf();
             for (const chain of chainRels) {
                 if ([1, 11155111, 300, 324].includes(+chain.id)) {
                     latestTime = Math.min(Math.floor((new Date().valueOf() / 1000)) - +chain.maxVerifyChallengeSourceTxSecond, latestTime);
