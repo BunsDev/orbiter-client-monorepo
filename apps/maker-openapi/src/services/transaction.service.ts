@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Transfers, BridgeTransaction, BridgeTransactionAttributes } from '@orbiter-finance/seq-models';
 import { Op } from 'sequelize';
+import dayjs from 'dayjs';
 import { ArbitrationTransaction } from "../common/interfaces/Proof.interface";
 import { ChainConfigService, ENVConfigService } from "@orbiter-finance/config";
 import BigNumber from "bignumber.js";
@@ -35,6 +36,31 @@ export class TransactionService {
             return null;
         }
         return HTTPPost(subgraphEndpoint, { query });
+    }
+
+    async getSourceTxLatestTime() {
+        let sourceTxLatestTime = await keyv.get('SourceTxLatestTime');
+        if (!sourceTxLatestTime) {
+            const queryStr = `
+        query  {
+            chainRels {
+            id
+            maxVerifyChallengeSourceTxSecond
+            }
+        }
+          `;
+            const result: any = await this.querySubgraph(queryStr) || {};
+            const chainRels = result?.data?.chainRels || [];
+            let latestTime = 0;
+            for (const chain of chainRels) {
+                if ([1, 11155111, 300, 324].includes(+chain.id)) {
+                    latestTime = Math.min(Math.floor((new Date().valueOf() / 1000)) - +chain.maxVerifyChallengeSourceTxSecond, latestTime);
+                }
+            }
+            sourceTxLatestTime = latestTime;
+            await keyv.set('SourceTxLatestTime', sourceTxLatestTime, 1000 * 60);
+        }
+        return sourceTxLatestTime;
     }
 
     async getCreateChallengesSourceTxHashList() {
@@ -107,8 +133,9 @@ export class TransactionService {
         return rules;
     }
 
-    async getPendingArbitration(): Promise<{ list: ArbitrationTransaction[], nextTime: number }> {
+    async getPendingArbitration(): Promise<{ list: ArbitrationTransaction[], nextTime: number, latestTime: number }> {
         const isMainNetwork = +(await this.envConfigService.getAsync('MAIN_NETWORK')) === 1;
+        const latestTime = await this.getSourceTxLatestTime();
         const bridgeTransactions = await this.bridgeTransactionModel.findAll({
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
                 'sourceAddress', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
@@ -116,6 +143,9 @@ export class TransactionService {
             where: {
                 status: 0,
                 sourceChain: isMainNetwork ? ["1", "324"] : ["11155111", "300"],
+                sourceTime: {
+                    [Op.gte]: dayjs(latestTime * 1000).toISOString()
+                },
                 ruleId: {
                     [Op.not]: null
                 }
@@ -185,7 +215,7 @@ export class TransactionService {
             };
             dataList.push(arbitrationTransaction);
         }
-        return { list: dataList, nextTime };
+        return { list: dataList, nextTime, latestTime };
     }
 
     async getSourceIdStatus(sourceId: string): Promise<number> {
