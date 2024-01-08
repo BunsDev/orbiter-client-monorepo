@@ -111,6 +111,25 @@ export class TransactionService {
         return hashList;
     }
 
+    async getLastSourceTxTime() {
+        let lastSourceTxTime = await keyv.get('LastSourceTxTime');
+        if (!lastSourceTxTime) {
+            const queryStr = `
+            {
+              createChallenges(orderBy: sourceTxTime, orderDirection: desc, first: 1) {
+                sourceTxTime
+              }
+            }
+          `;
+            const result: any = await this.querySubgraph(queryStr);
+            const challengerList = result?.data?.createChallenges;
+            if (!challengerList || !challengerList.length) return Math.floor(new Date().valueOf() / 1000);
+            lastSourceTxTime = challengerList[0].sourceTxTime;
+            await keyv.set('LastSourceTxTime', lastSourceTxTime, 1000 * 30);
+        }
+        return lastSourceTxTime;
+    }
+
     async getAllRules(): Promise<{ id, chain0, chain1, chain0ResponseTime, chain1ResponseTime }[]> {
         let rules = await keyv.get('Rules');
         if (!rules) {
@@ -160,6 +179,46 @@ export class TransactionService {
             await keyv.set('Rules', rules, 1000 * 5);
         }
         return rules;
+    }
+
+    async getNextArbitrationTx(): Promise<any> {
+        const isMainNetwork = +(await this.envConfigService.getAsync('MAIN_NETWORK')) === 1;
+        const lastSourceTxTime = await this.getLastSourceTxTime();
+        const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
+            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
+                'sourceAddress', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
+                'targetChain', 'targetToken', 'ebcAddress'],
+            where: {
+                status: 0,
+                sourceChain: isMainNetwork ? ["1", "324"] : ["11155111", "300"],
+                sourceTime: {
+                    [Op.lte]: dayjs(+lastSourceTxTime * 1000).toISOString()
+                },
+                ruleId: {
+                    [Op.not]: null
+                }
+            },
+            order: [["sourceTime", "DESC"]]
+        });
+        if (!bridgeTx) return null;
+        const sourceTxHash = bridgeTx.sourceId;
+        const sourceTxTime = Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000);
+        const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
+        const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
+        return {
+            sourceChainId: Number(bridgeTx.sourceChain),
+            sourceTxHash,
+            sourceMaker: bridgeTx.sourceMaker,
+            sourceAddress: bridgeTx.sourceAddress,
+            // sourceTxBlockNum: Number(transfer.blockNumber),
+            sourceTxTime,
+            // sourceTxIndex: Number(transfer.transactionIndex),
+            ebcAddress: bridgeTx.ebcAddress,
+            ruleId: bridgeTx.ruleId,
+            freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(10 ** sourceToken.decimals).toFixed(0),
+            freezeToken: mainToken.address,
+            minChallengeDepositAmount: String(await this.envConfigService.getAsync("MinChallengeDepositAmount") ?? 0.005 * 10 ** sourceToken.decimals)
+        };
     }
 
     async getPendingArbitration(): Promise<{ list: ArbitrationTransaction[], startTime: number, endTime: number }> {

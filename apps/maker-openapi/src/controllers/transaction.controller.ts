@@ -57,4 +57,9 @@ export class TransactionController {
         await this.transactionService.recordTransaction(data);
         return HTTPResponse.success({ message: 'success' });
     }
+
+    @Get("/nextArbitration")
+    async getNextArbitrationTx() {
+        return HTTPResponse.success(await this.transactionService.getNextArbitrationTx());
+    }
 }
