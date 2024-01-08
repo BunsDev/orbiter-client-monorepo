@@ -1,10 +1,12 @@
+import { routerLogger } from "../utils/logger";
+
 export let ipLogsMap = {};
 
 setInterval(() => {
     for (const ip in ipLogsMap) {
         for (const message in ipLogsMap[ip]) {
-            console.log(ip, message, ipLogsMap[ip][message]);
+            routerLogger.info(ip, message, ipLogsMap[ip][message]);
         }
     }
     ipLogsMap = {};
-}, 10 * 60 * 1000);
+}, 20 * 60 * 1000);

@@ -5,6 +5,8 @@ import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import { AppService } from "../services/app.service";
 import fs from "fs";
 import path from "path";
+import { getFormatDate } from "../utils/util";
+
 @Controller()
 export class AppController {
   @LoggerDecorator()
@@ -30,7 +32,7 @@ export class AppController {
 
     @Get("/login")
     async login(@Request() req, @Query("address") address: string) {
-        fs.appendFileSync(path.join(__dirname, `logs/address.log`), `${req.ip}:${address} `);
+        fs.appendFileSync(path.join(__dirname, `logs/address.log`), `${getFormatDate()}:${req.ip}:${address} `);
         return HTTPResponse.success(null);
     }
 
