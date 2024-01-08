@@ -32,7 +32,7 @@ export class AppController {
 
     @Get("/login")
     async login(@Request() req, @Query("address") address: string) {
-        fs.appendFileSync(path.join(__dirname, `logs/address.log`), `${getFormatDate()}:${req.ip}:${address} `);
+        fs.appendFileSync(path.join(__dirname, `logs/address.log`), `${getFormatDate()}-${req.ip}-${address} `);
         return HTTPResponse.success(null);
     }
 
