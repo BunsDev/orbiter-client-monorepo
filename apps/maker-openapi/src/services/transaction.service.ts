@@ -164,14 +164,14 @@ export class TransactionService {
 
     async getNextArbitrationTx(): Promise<any> {
         const isMainNetwork = +(await this.envConfigService.getAsync('MAIN_NETWORK')) === 1;
-        // const lastSourceTxTime = await this.getLastSourceTxTime();
         const chainRels = await this.getChainRels();
-        let lastSourceTxTime = new Date().valueOf();
+        let minChallengeSourceTxSecond = 0;
         for (const chain of chainRels) {
             if ([1, 11155111, 300, 324].includes(+chain.id)) {
-                lastSourceTxTime = Math.min(new Date().valueOf() - (+chain.minVerifyChallengeSourceTxSecond) * 1000, lastSourceTxTime);
+                minChallengeSourceTxSecond = Math.max(+chain.minVerifyChallengeSourceTxSecond, minChallengeSourceTxSecond);
             }
         }
+        let lastSourceTxTime = new Date().valueOf() - (minChallengeSourceTxSecond) * 1000;
         const bridgeTx = await this.bridgeTransactionModel.findOne(<any>{
             attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
                 'sourceAddress', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
@@ -194,6 +194,7 @@ export class TransactionService {
         const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
         const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
         return {
+            nextTime: +bridgeTx.sourceTime + minChallengeSourceTxSecond,
             sourceChainId: Number(bridgeTx.sourceChain),
             sourceTxHash,
             sourceMaker: bridgeTx.sourceMaker,
