@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { TransactionV1Service } from './transactionV1.service';
 import { SequelizeModule } from '@nestjs/sequelize';
-import { Transfers, BridgeTransaction, DeployRecord } from '@orbiter-finance/seq-models';
+import { Transfers, BridgeTransaction, DeployRecord, UserBalance } from '@orbiter-finance/seq-models';
 import { TransactionV2Service } from './transactionV2.service';
 import { TransactionV3Service } from './transactionV3.service';
 import { MemoryMatchingService } from './memory-matching.service';
@@ -23,7 +23,7 @@ from './bridgeTransaction.builder';
 import InscriptionBuilder, { InscriptionStandardBuilder } from './inscription.builder'
 import { InscriptionMemoryMatchingService } from './inscription-memory-matching.service'
 @Module({
-  imports: [SequelizeModule.forFeature([Transfers, BridgeTransaction, DeployRecord]), MakerModule],
+  imports: [SequelizeModule.forFeature([Transfers, BridgeTransaction, DeployRecord, UserBalance]), MakerModule],
   providers: [
     InscriptionBuilder,
     InscriptionStandardBuilder,

@@ -9,7 +9,7 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
 import { AlertModule } from '@orbiter-finance/alert';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ScheduleModule } from '@nestjs/schedule';
-import { BridgeTransaction, Transfers, DeployRecord } from "@orbiter-finance/seq-models";
+import { BridgeTransaction, Transfers, DeployRecord, UserBalance } from "@orbiter-finance/seq-models";
 
 @Module({
   imports: [
@@ -51,7 +51,7 @@ import { BridgeTransaction, Transfers, DeployRecord } from "@orbiter-finance/seq
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
-        return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction, DeployRecord] };
+        return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction, DeployRecord, UserBalance] };
       },
     }),
     AlertModule.registerAsync({
