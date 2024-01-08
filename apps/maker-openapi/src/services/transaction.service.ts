@@ -194,7 +194,7 @@ export class TransactionService {
         const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
         const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
         return {
-            nextTime: +bridgeTx.sourceTime + minChallengeSourceTxSecond,
+            nextTime: +sourceTxTime + minChallengeSourceTxSecond,
             sourceChainId: Number(bridgeTx.sourceChain),
             sourceTxHash,
             sourceMaker: bridgeTx.sourceMaker,
