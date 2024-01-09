@@ -273,7 +273,12 @@ export class TransactionService {
             const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
             if (!sourceToken?.decimals) continue;
             if (!bridgeTx?.targetToken) {
-                console.error('TargetToken not found', bridgeTx.sourceId);
+                console.error('TargetToken not found', sourceTxHash);
+                continue;
+            }
+            const challenger = await this.getChallenge(sourceTxHash);
+            if (challenger) {
+                console.error('The tx is being challenged', sourceTxHash);
                 continue;
             }
             const transfer = await this.transfersModel.findOne(<any>{
@@ -316,7 +321,7 @@ export class TransactionService {
     }
 
     async submitChallenge(data: any) {
-        await keyv.set(`${data.sourceTxHash.toLowerCase()}_challenge`, data, 60000);
+        await keyv.set(`${data.sourceTxHash.toLowerCase()}_challenge`, data, 180000);
     }
 
     async getChallenge(hash: string) {
