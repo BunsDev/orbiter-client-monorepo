@@ -12,7 +12,7 @@ export class TransactionController {
         const transaction = await this.transactionService.getCrossChainTransaction(hash);
         return transaction
     }
-    @Get("/detail/:hash")
+    @Get("/status/:hash")
     @success('success', 200)
     async queryTransaction(@Param("hash") hash: string) {
         const transaction = await this.transactionService.getTransferByHash(hash);

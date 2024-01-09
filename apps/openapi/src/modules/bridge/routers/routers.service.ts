@@ -6,11 +6,18 @@ import { padStart } from 'lodash';
 
 @Injectable()
 export class RoutersService {
+    private dealerRules: { [key: string]: any[] } = {};
     constructor(
         private readonly rulesService: MakerV1RuleService,
         private readonly chainService: ChainsService,
         private envConfigService: ENVConfigService,
-    ) { }
+    ) {
+        setInterval(() => {
+            for (const dealerId in this.dealerRules) {
+                this.syncV3Routers(dealerId);
+            }
+        }, 1000 * 10)
+    }
 
     /**
      * Get configurations for V1 routers based on rules.
@@ -119,12 +126,21 @@ export class RoutersService {
         return v1RouterConfigs;
     }
 
+    async getV3Routers(dealer: string) {
+        if (this.dealerRules[dealer] && this.dealerRules[dealer].length>0) {
+            return this.dealerRules[dealer];
+        }
+        this.dealerRules[dealer] = [];
+        await this.syncV3Routers(dealer);
+        return this.dealerRules[dealer];
+
+    }
     /**
      * Get configurations for V3 routers based on rules.
      * @param dealerAddress The address of the dealer.
      * @returns An array of V3 router configurations.
      */
-    async getV3Routers(dealerAddress: string): Promise<RoutersConfig[]> {
+    async syncV3Routers(dealerAddress: string): Promise<RoutersConfig[]> {
         // Request V3 router configurations from the remote API
         const { result } = await this.requestRemoteV3Router(dealerAddress);
         const v3RouterConfigs: RoutersConfig[] = [];
@@ -138,8 +154,6 @@ export class RoutersService {
                     console.log(`v3Rule not white maker `, v3Rule);
                     continue;
                 }
-
-
                 const routerConfig: RoutersConfig = {
                     line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
                     endpoint: v3Rule['recipient'],
@@ -181,7 +195,7 @@ export class RoutersService {
             }
 
         }
-
+        this.dealerRules[dealerAddress] = v3RouterConfigs;
         return v3RouterConfigs;
     }
 
