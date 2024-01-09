@@ -35,7 +35,7 @@ export class TransactionService {
     private chainConfigService: ChainConfigService
   ) {
     this.mutex = new Mutex()
-    // this.syncV3BridgeTraxToV1()
+    this.syncV3BridgeTraxToV1()
     this.readV1NotMatchTx2()
     // this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
   }
@@ -99,8 +99,8 @@ export class TransactionService {
           expectValue: '',
           replyAccount: '',
           replySender: '',
-          // createdAt: new Date(),
-          // updatedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
           extra: {
             // toSymbol: "".,
             // toAddress: ""
@@ -386,42 +386,42 @@ export class TransactionService {
     }
     this.logger.info('syncV3V1FromDatabase start')
     // this.mutex.runExclusive(async () => {
-      let index = 1;
-      const list2 = await this.transfersModel.findAll({
-        order: [['id', 'asc']],
-        where: {
-          version: ['1-0'],
-          opStatus: {
-            [Op.not]: 0
-          },
-          syncStatus: {
-            [Op.not]: 9
-          },
-          timestamp: {
-            [Op.gte]: dayjs().subtract(120, 'minutes').toISOString(),
-            [Op.lte]: dayjs().subtract(1, 'minutes').toISOString(),
-          },
+    let index = 1;
+    const list2 = await this.transfersModel.findAll({
+      order: [['id', 'asc']],
+      where: {
+        version: ['1-0'],
+        opStatus: {
+          [Op.not]: 0
         },
-        limit: 500
-      })
-      console.log('syncV3BridgeTraxToV1 TOTAL:', list2.length, new Date());
-      for (const row of list2) {
-        // console.log(`syncV3BridgeTraxToV1 ${index}/${list2.length} sync = ${row.hash}`);
-        await this.syncV3BridgeTraxToV1ByHash(row.hash).then(res => {
-          if (res) {
-            if (res.inId && res.outId) {
-              row.syncStatus = 9;
-              row.save();
-            } else {
-              row.syncStatus = 1;
-              row.save();
-            }
+        syncStatus: {
+          [Op.not]: 9
+        },
+        timestamp: {
+          [Op.gte]: dayjs().subtract(120, 'minutes').toISOString(),
+          [Op.lte]: dayjs().subtract(1, 'minutes').toISOString(),
+        },
+      },
+      limit: 500
+    })
+    console.log('syncV3BridgeTraxToV1 TOTAL:', list2.length, new Date());
+    for (const row of list2) {
+      // console.log(`syncV3BridgeTraxToV1 ${index}/${list2.length} sync = ${row.hash}`);
+      await this.syncV3BridgeTraxToV1ByHash(row.hash).then(res => {
+        if (res) {
+          if (res.inId && res.outId) {
+            row.syncStatus = 9;
+            row.save();
+          } else {
+            row.syncStatus = 1;
+            row.save();
           }
-        }).catch(error => {
-          this.logger.error('syncV3BridgeTraxToV1 error', error)
-        })
-        index++;
-      }
+        }
+      }).catch(error => {
+        this.logger.error('syncV3BridgeTraxToV1 error', error)
+      })
+      index++;
+    }
     // })
   }
   async syncV3BridgeTraxToV1ByHash(sourceId: string) {
@@ -461,37 +461,6 @@ export class TransactionService {
         inId: sourceTx.id
       }
     })
-    if(!btTx) {
-      //
-      const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
-      if (!sourceChain) {
-        throw new Error('sourceChain not found');
-      }
-      const targetChain = this.chainConfigService.getChainInfo(bridgeTx.targetChain);
-      if (!targetChain) {
-        throw new Error('targetChain not found');
-      }
-      const targetChainToken = await this.chainConfigService.getTokenBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
-      if (!targetChainToken) {
-        throw new Error('targetChainToken not found');
-      }
-      const toAmountValue = new BigNumber(bridgeTx.targetAmount).times(10**targetChainToken.decimals);
-      const mtCreateData: MakerTransactionAttributes = {
-        transcationId: bridgeTx.transactionId,
-        inId: sourceTx.id,
-        fromChain: sourceChain.internalId,
-        toChain: Number(targetChain.internalId),
-        toAmount: toAmountValue.toFixed(0),
-        replySender: bridgeTx.targetMaker,
-        replyAccount: bridgeTx.targetAddress,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      const [v1MtTx,isCreated] = await this.makerTransactionModel.upsert(mtCreateData);
-      return {
-        inId: v1MtTx.id
-      }
-    }
     if (btTx && btTx.inId && btTx.outId) {
       console.log('exist match success record');
       return {
@@ -500,15 +469,46 @@ export class TransactionService {
         errmsg: 'exist match success record'
       };
     }
-    if (btTx.inId) {
-      return {
-        inId: btTx.inId,
-        errmsg: 'btTx.inId exist'
-      };
+    // if(!btTx) {
+    //
+    const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
+    if (!sourceChain) {
+      throw new Error('sourceChain not found');
     }
-    console.log(sourceTx, '==sourceTx')
-    console.log(btTx, '==btTx')
-    return
+    const targetChain = this.chainConfigService.getChainInfo(bridgeTx.targetChain);
+    if (!targetChain) {
+      throw new Error('targetChain not found');
+    }
+    const targetChainToken = await this.chainConfigService.getTokenBySymbol(bridgeTx.targetChain, bridgeTx.targetSymbol);
+    if (!targetChainToken) {
+      throw new Error('targetChainToken not found');
+    }
+    const toAmountValue = new BigNumber(bridgeTx.targetAmount).times(10 ** targetChainToken.decimals);
+    const mtCreateData: MakerTransactionAttributes = {
+      transcationId: bridgeTx.transactionId,
+      inId: sourceTx.id,
+      fromChain: sourceChain.internalId,
+      toChain: Number(targetChain.internalId),
+      toAmount: toAmountValue.toFixed(0),
+      replySender: bridgeTx.targetMaker,
+      replyAccount: bridgeTx.targetAddress,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    const [v1MtTx, isCreated] = await this.makerTransactionModel.upsert(mtCreateData);
+    return {
+      inId: v1MtTx.id
+    }
+    // }
+    // if (btTx.inId) {
+    //   return {
+    //     inId: btTx.inId,
+    //     errmsg: 'btTx.inId exist'
+    //   };
+    // }
+    // console.log(sourceTx, '==sourceTx')
+    // console.log(btTx, '==btTx')
+    // return
   }
   @Cron("*/60 * * * * *")
   private async readV1NotMatchTx() {
