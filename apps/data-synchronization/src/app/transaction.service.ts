@@ -36,7 +36,7 @@ export class TransactionService {
   ) {
     this.mutex = new Mutex()
     this.syncV3BridgeTraxToV1()
-    // this.readV1NotMatchTx2()
+    this.readV1NotMatchTx2()
     // this.consumerService.consumeDataSynchronizationMessages(this.consumeDataSynchronizationMessages.bind(this))
   }
   async syncTransferByHash(hash: string) {
