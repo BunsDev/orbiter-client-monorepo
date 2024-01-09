@@ -13,6 +13,7 @@ import { Interface } from 'ethers6';
 import axios from 'axios';
 import { MDCAbi } from '@orbiter-finance/abi';
 import { HTTPPost } from "@orbiter-finance/request";
+import { routerLogger } from "../utils/logger";
 const keyv = new Keyv();
 
 @Injectable()
@@ -243,7 +244,7 @@ export class TransactionService {
         // let nextTime = 0;
         const hashList: string[] = await this.getCreateChallengesSourceTxHashList();
         for (const bridgeTx of bridgeTransactions) {
-            const sourceTxHash = bridgeTx.sourceId;
+            const sourceTxHash = bridgeTx.sourceId.toLowerCase();
             if (hashList.find(item => item.toLowerCase() === sourceTxHash.toLowerCase())) {
                 continue;
             }
@@ -267,18 +268,31 @@ export class TransactionService {
             // }
             const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
             if (!mainToken?.address) {
-                console.error('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
+                routerLogger.error('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
                 continue;
             }
             const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
-            if (!sourceToken?.decimals) continue;
+            if (!sourceToken?.decimals) {
+                routerLogger.error('SourceToken not found', sourceTxHash);
+                continue;
+            }
             if (!bridgeTx?.targetToken) {
-                console.error('TargetToken not found', sourceTxHash);
+                routerLogger.error('TargetToken not found', sourceTxHash);
                 continue;
             }
             const challenger = await this.getChallenge(sourceTxHash);
             if (challenger) {
-                console.error('The tx is being challenged', sourceTxHash);
+                routerLogger.error('The tx is being challenged', sourceTxHash);
+                continue;
+            }
+            const arbitrationRecordCount: number = <any>await this.arbitrationRecord.count(<any>{
+                where: {
+                    sourceId: sourceTxHash,
+                    status: 1
+                }
+            });
+            if (arbitrationRecordCount) {
+                routerLogger.error('Challenge record exists', sourceTxHash);
                 continue;
             }
             const transfer = await this.transfersModel.findOne(<any>{
@@ -287,7 +301,7 @@ export class TransactionService {
                 }
             });
             if (!transfer) {
-                console.error('Transfer not found', sourceTxHash);
+                routerLogger.error('Transfer not found', sourceTxHash);
                 continue;
             }
             const arbitrationTransaction: ArbitrationTransaction = {
