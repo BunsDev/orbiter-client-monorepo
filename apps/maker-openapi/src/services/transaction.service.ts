@@ -235,8 +235,7 @@ export class TransactionService {
                 ruleId: {
                     [Op.not]: null
                 }
-            },
-            limit: 200
+            }
         });
         const dataList: ArbitrationTransaction[] = [];
         // const rules = await this.getAllRules();
@@ -301,6 +300,7 @@ export class TransactionService {
                 minChallengeDepositAmount: String(await this.envConfigService.getAsync("MinChallengeDepositAmount") ?? 0.005 * 10 ** sourceToken.decimals)
             };
             dataList.push(arbitrationTransaction);
+            break;
         }
         return { list: dataList, startTime, endTime };
     }
