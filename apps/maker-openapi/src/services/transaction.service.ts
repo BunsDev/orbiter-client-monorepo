@@ -268,21 +268,21 @@ export class TransactionService {
             // }
             const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
             if (!mainToken?.address) {
-                routerLogger.error('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
+                routerLogger.info('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
                 continue;
             }
             const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
             if (!sourceToken?.decimals) {
-                routerLogger.error('SourceToken not found', sourceTxHash);
+                routerLogger.info('SourceToken not found', sourceTxHash);
                 continue;
             }
             if (!bridgeTx?.targetToken) {
-                routerLogger.error('TargetToken not found', sourceTxHash);
+                routerLogger.info('TargetToken not found', sourceTxHash);
                 continue;
             }
             const challenger = await this.getChallenge(sourceTxHash);
             if (challenger) {
-                routerLogger.error('The tx is being challenged', sourceTxHash);
+                routerLogger.info('The tx is being challenged', sourceTxHash);
                 continue;
             }
             const arbitrationRecordCount: number = <any>await this.arbitrationRecord.count(<any>{
@@ -292,7 +292,7 @@ export class TransactionService {
                 }
             });
             if (arbitrationRecordCount) {
-                routerLogger.error('Challenge record exists', sourceTxHash);
+                routerLogger.info('Challenge record exists', sourceTxHash);
                 continue;
             }
             const transfer = await this.transfersModel.findOne(<any>{
@@ -301,7 +301,7 @@ export class TransactionService {
                 }
             });
             if (!transfer) {
-                routerLogger.error('Transfer not found', sourceTxHash);
+                routerLogger.info('Transfer not found', sourceTxHash);
                 continue;
             }
             const arbitrationTransaction: ArbitrationTransaction = {
