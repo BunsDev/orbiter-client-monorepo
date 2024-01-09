@@ -23,6 +23,35 @@ export class V3Service {
   }
 
   @InjectModel(BridgeTransaction) private BridgeTransactionModel: typeof BridgeTransaction;
+
+  async querySubgraph(query: string) {
+    const thegraphApi = await this.envConfigService.getAsync('THEGRAPH_API');
+    if (!thegraphApi) {
+      return null;
+    }
+    return axios.post(thegraphApi, { query });
+  }
+
+  async getChallengeList(): Promise<{ hash: string, challengeStatus: string }[]> {
+    let challengeList = await keyv.get('ChallengeRecord');
+    if (!challengeList) {
+      const res = await this.querySubgraph(`
+         {
+          createChallenges {             
+            sourceTxHash
+            challengeManager {
+              challengeStatuses
+            }
+          }
+        }`);
+      challengeList = (res?.data?.data?.createChallenges || []).map(item => {
+        return { hash: item?.sourceTxHash, challengeStatus: item?.challengeManager?.challengeStatuses };
+      });
+      await keyv.set('ChallengeRecord', challengeList, 30000);
+    }
+    return challengeList;
+  }
+
   async getTransactionByHash(params: string[]) {
     if (!params || !(params instanceof Array) || params.length < 1 || !params[0]) {
       throw new Error('Invalid params');
@@ -201,10 +230,12 @@ export class V3Service {
     if (params.length >= 9 && params[8]) {
       where['targetId'] = params[8];
     }
+    let isDealerVersion = false;
     if (params.length >= 10 && params[9]) {
       if (+params[9] === 1) {
         where[Op.or] = [{ version: '1-0' }, { version: '1-1' }];
       } else if (+params[9] === 2) {
+        isDealerVersion = true;
         where[Op.or] = [{ version: '2-0' }, { version: '2-1' }];
       }
     }
@@ -219,7 +250,7 @@ export class V3Service {
     });
     let list: any[] = [];
     for (const data of dataList) {
-      list.push({
+      const dt: any = {
         fromHash: data.sourceId,
         toHash: data.targetId,
         fromChainId: data.sourceChain,
@@ -240,7 +271,15 @@ export class V3Service {
         targetToken: data.targetToken,
         sourceDecimal: getDecimalBySymbol(data.sourceChain, data.sourceSymbol),
         targetDecimal: getDecimalBySymbol(data.targetChain, data.targetSymbol)
-      });
+      };
+      if (isDealerVersion && data.status !== 99) {
+        const challengeList = await this.getChallengeList();
+        const challenge = challengeList.find(item => item.hash.toLowerCase() === data.sourceId.toLowerCase());
+        if (challenge) {
+          dt.challengeStatus = challenge.challengeStatus;
+        }
+      }
+      list.push(dt);
     }
 
     list = list.sort(function (a, b) {
