@@ -66,10 +66,10 @@ export class RoutersController {
         if (dealer) {
             return this.simulationDealerRule(dealer, line, value, nonce);
         }
-        const configs = await this.routerService.getV3Routers(dealer);
+        const configs = await this.routerService.getV1Routers();
         const route = configs.find(rule => rule.line === line);
         if (!route) {
-            throw new Error('Config not found');
+            throw new Error(`${line} Router Config not found`);
         }
         const chains = await this.chainService.getChains();
         const sourceChain = chains.find(row => row.chainId == route.srcChain);
