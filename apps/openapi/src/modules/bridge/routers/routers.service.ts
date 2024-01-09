@@ -143,10 +143,15 @@ export class RoutersService {
     async syncV3Routers(dealerAddress: string): Promise<RoutersConfig[]> {
         // Request V3 router configurations from the remote API
         const { result } = await this.requestRemoteV3Router(dealerAddress);
+        if (!result) {
+            console.log('syncV3Routers fail', result);
+            return;
+        }
         const v3RouterConfigs: RoutersConfig[] = [];
         const chains = await this.chainService.getChains();
         const WHITE_MAKERS = this.envConfigService.get("WHITE_MAKERS", []);
         // Iterate through each rule from the API response and convert it to a router configuration
+    
         for (const v3Rule of result.ruleList) {
             try {
                 const { fromChain, toChain } = v3Rule;
