@@ -5,26 +5,33 @@ import { v1MakerUtils } from '@orbiter-finance/utils'
 import { CustomError } from '../../../shared/errors/custom.error'
 import { ChainsService } from '../chains/chains.service';
 import BigNumber from 'bignumber.js';
-import { padStart } from 'lodash';
+import { padStart, shuffle } from 'lodash';
 
 @Controller('routers')
 export class RoutersController {
     constructor(private readonly routerService: RoutersService, private readonly chainService: ChainsService) {
-
     }
+
     @Get()
     @success('success', 200)
     async getRouters(@Query('dealerId') dealerId: string) {
-        const configs = await this.routerService.getV1Routers();
-        let dealerConfigs = [];
+        let routers = [];
+        const v1Routers = shuffle(await this.routerService.getV1Routers());
         if (dealerId) {
             try {
-                dealerConfigs = await this.routerService.getV3Routers(dealerId.toLocaleLowerCase()) || [];
+                const dealerConfigs = await this.routerService.getV3Routers(dealerId.toLocaleLowerCase()) || [];
+                routers.push(...dealerConfigs);
+                for (const v1Line of v1Routers) {
+                    const data = routers.find(item => item.line === v1Line.line);
+                    if (!data) {
+                        routers.push(v1Line);
+                    }
+                }
             } catch (error) {
                 console.error('getRouterV1 -> getV3Routers error', error);
             }
         }
-        return [...dealerConfigs, ...configs];
+        return routers.length <= 0 ? v1Routers : routers;
     }
     @Get("/cross-chain")
     @success('success', 200)
@@ -44,20 +51,25 @@ export class RoutersController {
             return lines[0] != lines[1];
         });
     }
+
     @Get("/dealer/v1/:dealer")
     @success('success', 200)
     async getDealerRouters(@Param("dealer") dealer: string) {
         const configs = await this.routerService.getV3Routers(dealer);
+
         return configs;
     }
 
     @Get("/simulation/receiveAmount")
     @success('success', 200)
-    async simulationRule(@Query('line') line: string, @Query('value') value: string, @Query('nonce') nonce: string) {
+    async simulationRule(@Query('line') line: string, @Query('value') value: string, @Query('nonce') nonce: string, @Query('dealer') dealer: string) {
+        if (dealer) {
+            return this.simulationDealerRule(dealer, line, value, nonce);
+        }
         const configs = await this.routerService.getV1Routers();
         const route = configs.find(rule => rule.line === line);
         if (!route) {
-            throw new Error('Config not found');
+            throw new Error(`${line} Router Config not found`);
         }
         const chains = await this.chainService.getChains();
         const sourceChain = chains.find(row => row.chainId == route.srcChain);
@@ -80,6 +92,7 @@ export class RoutersController {
         );
         if (result && result.state) {
             return {
+                dealer,
                 receiveAmount: result.tAmount,
                 router: route
             }
@@ -88,13 +101,11 @@ export class RoutersController {
         }
     }
 
-    @Get("/simulation/dealer")
-    @success('success', 200)
     async simulationDealerRule(@Query('dealer') dealer: string, @Query('line') line: string, @Query('value') value: string, @Query('nonce') nonce: string) {
-        const configs = await this.routerService.getV3Routers(dealer);
+        const configs = await this.routerService.getV3Routers(dealer.toLocaleLowerCase());
         const route = configs.find(rule => rule.line === line);
         if (!route) {
-            throw new Error('Config not found');
+            throw new Error(`${line} Router Config not found`);
         }
         // const chains = await this.chainService.getChains();
         // const sourceChain = chains.find(row => row.chainId == route.srcChain);
@@ -111,12 +122,14 @@ export class RoutersController {
             new BigNumber(route.withholdingFee).toFixed(0),
             nonce,
         );
-        if (result && result.code == 9) {
+        if (result && result.code == 0) {
             return {
+                dealer,
                 receiveAmount: result.responseAmount,
                 router: route
             }
         } else {
+            console.log(result);
             throw new Error('responseIntent fail');
         }
     }

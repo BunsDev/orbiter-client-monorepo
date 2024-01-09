@@ -18,10 +18,9 @@ services:
     restart: always
     environment:
       CONSUL_URL: '${CONSUL_URL}'
-      application: '${application}'
-      # ENV_CHAINS_CONFIG_PATH: ''
-      # ENV_VAR_PATH: ''
-      # ENV_RULES_PATH: ''
+      ENV_CHAINS_CONFIG_PATH: '${ENV_CHAINS_CONFIG_PATH}'
+      ENV_VAR_PATH: '${ENV_VAR_PATH}'
+      ENV_RULES_PATH: '${ENV_RULES_PATH}'
     ports:
       - '8000:8000'
     networks:
@@ -29,4 +28,3 @@ services:
     volumes:
       - './runtime:/app/runtime'
       - './logs:/app/logs'
-      - './db:/app/db'

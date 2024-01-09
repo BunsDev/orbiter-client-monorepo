@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-
 import { AppController } from './controllers/app.controller';
 import { ProofService } from './services/proof.service';
 import { ConsulModule } from '@orbiter-finance/consul';
@@ -11,10 +10,14 @@ import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
 import {
     ArbitrationProof,
-    ArbitrationMakerTransaction
+    ArbitrationMakerTransaction, ArbitrationRecord
 } from '@orbiter-finance/maker-api-seq-models';
 import { TransactionService } from './services/transaction.service';
 import { isEmpty } from "../../../libs/utils/src";
+import { AppService } from "./services/app.service";
+import { GlobalMiddleware } from "./middleware/globalMiddleware";
+import { HttpExceptionFilter } from "./middleware/httpExceptionFilter";
+import { APP_FILTER } from "@nestjs/core";
 
 @Module({
     imports: [
@@ -31,7 +34,7 @@ import { isEmpty } from "../../../libs/utils/src";
             },
         }),
         OrbiterConfigModule.forRoot({
-            chainConfigPath: "maker-open-api/chains.json",
+            chainConfigPath: "explore-server/chains.json",
             envConfigPath: "maker-open-api/config.yaml",
         }),
         SequelizeModule.forRootAsync({
@@ -42,7 +45,7 @@ import { isEmpty } from "../../../libs/utils/src";
                     console.error('Missing configuration MAKER_API_DATABASE_URL');
                     process.exit(1);
                 }
-                return { ...config, autoLoadModels: false, models: [ArbitrationProof, ArbitrationMakerTransaction] };
+                return { ...config, autoLoadModels: false, models: [ArbitrationProof, ArbitrationMakerTransaction, ArbitrationRecord] };
             },
         }),
         SequelizeModule.forRootAsync({
@@ -56,10 +59,18 @@ import { isEmpty } from "../../../libs/utils/src";
                 return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
             },
         }),
-        SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction])
+        SequelizeModule.forFeature([Transfers, BridgeTransaction, ArbitrationProof, ArbitrationMakerTransaction, ArbitrationRecord])
     ],
     controllers: [AppController, ProofController, TransactionController],
-    providers: [ProofService, TransactionService],
+    providers: [AppService, ProofService, TransactionService, {
+        provide: APP_FILTER,
+        useClass: HttpExceptionFilter,
+    }],
 })
 export class AppModule {
+    configure(consumer) {
+        consumer
+            .apply(GlobalMiddleware)
+            .forRoutes('/');
+    }
 }

@@ -43,8 +43,13 @@ export class MakerService {
         }
           `
     const result = await this.ctx.query(queryStr);
-    return result?.mdcs?.[0]?.columnArraySnapshot?.[0];
-
+      if (!result?.mdcs) return null;
+      for (const mdc of result?.mdcs) {
+          if (mdc?.columnArraySnapshot && mdc.columnArraySnapshot.length) {
+              return mdc.columnArraySnapshot[0];
+          }
+      }
+      return null;
   }
   async getCrossChainMakerSecurityCodeInfoRule(owner: string, ebcAddr: string, sourceChain: number, targetChain: number, sourceToken: string, targetToken: string, txTime: number) {
     let chain0 = null;
@@ -109,12 +114,21 @@ export class MakerService {
           `
     const result = await this.ctx.query(queryStr, {
     });
-    if (result['mdcs'][0] && result['mdcs'][0]['ruleLatest'] && result['mdcs'][0]['ruleLatest'].length > 0) {
-      const ruleUpdateRel = result['mdcs'][0]['ruleLatest'][0]['ruleUpdateRel'];
-      if (ruleUpdateRel && ruleUpdateRel.length > 0 && ruleUpdateRel[0]['ruleUpdateVersion']) {
-        return ruleUpdateRel[0]['ruleUpdateVersion'][0]
-      }
+    if (!result?.mdcs) return null;
+    for(const mdc of result.mdcs){
+        if (mdc?.ruleLatest && mdc.ruleLatest.length) {
+            const ruleUpdateRel = mdc.ruleLatest[0].ruleUpdateRel;
+            if (ruleUpdateRel && ruleUpdateRel.length) {
+                return ruleUpdateRel[0].ruleUpdateVersion[0]
+            }
+        }
     }
+    // if (result['mdcs'][0] && result['mdcs'][0]['ruleLatest'] && result['mdcs'][0]['ruleLatest'].length > 0) {
+    //   const ruleUpdateRel = result['mdcs'][0]['ruleLatest'][0]['ruleUpdateRel'];
+    //   if (ruleUpdateRel && ruleUpdateRel.length > 0 && ruleUpdateRel[0]['ruleUpdateVersion']) {
+    //     return ruleUpdateRel[0]['ruleUpdateVersion'][0]
+    //   }
+    // }
     return null;
   }
   async getMDCAddress(owner: string) {

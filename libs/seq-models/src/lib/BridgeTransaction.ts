@@ -208,3 +208,8 @@ import {
     PAID_SUCCESS = 98, // pending confirm
     BRIDGE_SUCCESS = 99,
   }
+  // 0 = Waiting for payment,
+  // 96 = Money will be refunded soon,
+  // 97 = Abnormal payment, waiting for retry
+  // 98 = Money back successfully, waiting for confirmation
+  // 99 = Confirmation successful

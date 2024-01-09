@@ -140,6 +140,7 @@ export class TransactionV2Service {
       targetToken: null,
       sourceTime: transfer.timestamp,
       dealerAddress: null,
+      status:0,
       ebcAddress: null,
       targetChain: null,
       ruleId: null,
