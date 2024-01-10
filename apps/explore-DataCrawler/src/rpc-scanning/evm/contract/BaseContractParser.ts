@@ -5,17 +5,25 @@ import { ChainConfigService } from '@orbiter-finance/config';
 
 @Injectable()
 export class BaseContractParser {
-  
+  private static contractRegistry: { [contractName: string]: any } = {};
+
+  static registerContract(contractName: string, abi: any) {
+    this.contractRegistry[contractName] = abi;
+  }
+  constructor(private chainConfigService:ChainConfigService) {
+    const chains = this.chainConfigService.getAllChains();
+    for (const chain of chains) {
+
+    }
+  }
   private contractRegistry: ContractRegistry = {};
-  
   registerContract(functionName: string, parser: (contractData: string) => ParsedTransaction) {
     this.contractRegistry[functionName] = parser;
   }
-  parseContract(chainId: string, contract: string, data: any): ParsedTransaction {
-    const key = `${chainId}-${contract}`;
-    if (this.contractRegistry.hasOwnProperty(key)) {
-      const parser = this.contractRegistry[key];
-      return parser(contract);
+  parseContract(functionName:string, data: any): ParsedTransaction {
+    if (this.contractRegistry.hasOwnProperty(functionName)) {
+      const parser = this.contractRegistry[functionName];
+      return parser(functionName);
     } else {
       throw new Error('Contract address not registered');
     }

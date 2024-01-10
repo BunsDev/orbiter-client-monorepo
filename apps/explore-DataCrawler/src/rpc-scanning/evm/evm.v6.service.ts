@@ -15,11 +15,7 @@ import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../.
 import { Orbiter6Provider } from '@orbiter-finance/blockchain-account';
 
 export class EVMRpcScanningV6Service extends RpcScanningService {
-  private contractRegistry: { [address: string]: any } = {};
 
-  registerContract(address: string, abi: any) {
-    this.contractRegistry[address] = abi;
-  }
   #provider: Orbiter6Provider;
   getProvider() {
     const rpc = this.chainConfig.rpc[0];
