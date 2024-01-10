@@ -488,7 +488,7 @@ export class TransactionService {
       throw new Error('targetChainToken not found');
     }
     const toAmountValue = new BigNumber(bridgeTx.targetAmount).times(10 ** targetChainToken.decimals);
-    const mtCreateData: MakerTransactionAttributes = {
+    const mtCreateData: any = {
       transcationId: bridgeTx.transactionId,
       inId: sourceTx.id,
       fromChain: sourceChain.internalId,
