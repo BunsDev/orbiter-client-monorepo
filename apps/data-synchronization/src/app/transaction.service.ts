@@ -107,57 +107,60 @@ export class TransactionService {
           }
         };
 
-        if (transfer.version == '1-0') {
-          const v3BTX = await this.bridgeTransactionModel.findOne({
-            where: {
-              sourceId: hash
+        if (transfer.version == '1-0' ) {
+          transaction.side = '0';
+          if (![2, 3, 4, 5, 6].includes(transfer.opStatus)) {
+            const v3BTX = await this.bridgeTransactionModel.findOne({
+              where: {
+                sourceId: hash
+              }
+            });
+            if (!v3BTX) {
+              throw new Error(`BT Not Found ${hash}`)
             }
-          });
-          if (!v3BTX) {
-            throw new Error(`BT Not Found ${hash}`)
-          }
-          const targetChain = await this.chainConfigService.getChainInfo(v3BTX.targetChain);
-          if (!targetChain) {
-            throw new Error('targetChain not found');
-          }
-          const targetChainToken = await this.chainConfigService.getTokenBySymbol(v3BTX.targetChain, v3BTX.targetSymbol);
-          if (!targetChainToken) {
-            throw new Error('targetChainToken not found');
-          }
-          transaction.extra = {
-            toSymbol: v3BTX.targetSymbol
-          }
-          transaction.expectValue = new BigNumber(v3BTX.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
-          if (transaction.to.toLocaleLowerCase() == '0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
-            transaction.source = 'xvm';
-            transaction.extra['xvm'] = {
-              "name": "swap",
-              "params": {
-                "data": {
-                  "slippage": 50,
-                  "toChainId": targetChain.internalId,
-                  "expectValue": transaction.expectValue,
-                  "toTokenAddress": v3BTX.targetToken,
-                  "toWalletAddress": v3BTX.targetAddress
-                },
-                "token": transfer.token,
-                "value": transfer.value,
-                "recipient": transfer.receiver
+            const targetChain = await this.chainConfigService.getChainInfo(v3BTX.targetChain);
+            if (!targetChain) {
+              throw new Error('targetChain not found');
+            }
+            const targetChainToken = await this.chainConfigService.getTokenBySymbol(v3BTX.targetChain, v3BTX.targetSymbol);
+            if (!targetChainToken) {
+              throw new Error('targetChainToken not found');
+            }
+            transaction.extra = {
+              toSymbol: v3BTX.targetSymbol
+            }
+            transaction.expectValue = new BigNumber(v3BTX.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
+            if (transaction.to.toLocaleLowerCase() == '0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
+              transaction.source = 'xvm';
+              transaction.extra['xvm'] = {
+                "name": "swap",
+                "params": {
+                  "data": {
+                    "slippage": 50,
+                    "toChainId": targetChain.internalId,
+                    "expectValue": transaction.expectValue,
+                    "toTokenAddress": v3BTX.targetToken,
+                    "toWalletAddress": v3BTX.targetAddress
+                  },
+                  "token": transfer.token,
+                  "value": transfer.value,
+                  "recipient": transfer.receiver
+                }
               }
             }
+            transaction.replyAccount = v3BTX.targetAddress;
+            transaction.replySender = v3BTX.targetMaker;
+            transaction.memo = String(targetChain.internalId);
+            transaction.transferId = transaction.transferId = TransferId(
+              String(transaction.memo),
+              transaction.replySender,
+              String(transaction.replyAccount),
+              String(transaction.nonce),
+              String(transaction.symbol),
+              transaction.expectValue,
+            );
           }
-          transaction.side = '0';
-          transaction.replyAccount = v3BTX.targetAddress;
-          transaction.replySender = v3BTX.targetMaker;
-          transaction.memo = String(targetChain.internalId);
-          transaction.transferId = transaction.transferId = TransferId(
-            String(transaction.memo),
-            transaction.replySender,
-            String(transaction.replyAccount),
-            String(transaction.nonce),
-            String(transaction.symbol),
-            transaction.expectValue,
-          );
+
         } else if (transfer.version == '1-1') {
           transaction.side = '1';
           transaction.expectValue = null;
@@ -176,6 +179,7 @@ export class TransactionService {
         if ([2, 3, 4, 5, 6].includes(transfer.opStatus)) {
           // ff
           transaction.status = 3;
+
         }
         if (v1Transfer && v1Transfer.status >= 96) {
           transaction.status = 99;
@@ -528,7 +532,7 @@ export class TransactionService {
     let index = 0;
     // console.log(`ready match ${index}/${rows.length} `);
     for (const row of rows) {
-      // 
+      //
       const tx = await this.transactionModel.findOne({
         raw: true,
         attributes: ['hash', 'status'],
