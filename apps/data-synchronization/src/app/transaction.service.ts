@@ -496,7 +496,7 @@ export class TransactionService {
       toAmount: toAmountValue.toFixed(0),
       replySender: bridgeTx.targetMaker,
       replyAccount: bridgeTx.targetAddress,
-      createdAt: new Date(),
+      // createdAt: new Date(),
       updatedAt: new Date(),
     }
     const [v1MtTx, isCreated] = await this.makerTransactionModel.upsert(mtCreateData);
