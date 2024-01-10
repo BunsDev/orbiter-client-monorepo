@@ -42,6 +42,7 @@ export class V2Schedule {
       targetSymbol: string
     }[] = <any[]>this.makerV1RuleService.getAll();
     let tradingPairs: ITradingPair[] = [];
+    const isMainNet = chainList.find(item => +item.internalId === 1);
     for (const rule of rules) {
       const [fromChainId, toChainId] = rule.chain.split('-');
       const [fromSymbol, toSymbol] = rule.token.split('-');
@@ -52,21 +53,21 @@ export class V2Schedule {
       const fromChainInfo = chainList.find(item => +item.internalId === +fromChainId);
       const toChainInfo = chainList.find(item => +item.internalId === +toChainId);
       if (!fromChainInfo) {
-        console.error(`${fromChainId} not configured`, rule.chain);
+        if (isMainNet) console.error(`${fromChainId} not configured`, rule.chain);
         continue;
       }
       if (!toChainInfo) {
-        console.error(`${toChainId} not configured`, rule.chain);
+        if (isMainNet) console.error(`${toChainId} not configured`, rule.chain);
         continue;
       }
       const fromToken = [fromChainInfo.nativeCurrency, ...fromChainInfo.tokens].find(item => item.symbol === fromSymbol);
       const toToken = [toChainInfo.nativeCurrency, ...toChainInfo.tokens].find(item => item.symbol === toSymbol);
       if (!fromToken) {
-        console.error(`${fromSymbol} not configured`, rule.token);
+        if (isMainNet) console.error(`${fromSymbol} not configured`, rule.token);
         continue;
       }
       if (!toToken) {
-        console.error(`${toSymbol} not configured`, rule.token);
+        if (isMainNet) console.error(`${toSymbol} not configured`, rule.token);
         continue;
       }
       const sendType = (fromSymbol === toSymbol && !([4, 44].includes(+fromChainId) || [4, 44].includes(+toChainId))) ? 1 : 2;
