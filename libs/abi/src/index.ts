@@ -10,6 +10,7 @@ import StarknetERC20 from './lib/StarknetERC20.json';
 import MakerDeposit from './lib/MakerDeposit.json';
 import CrossInscriptions from './lib/CrossInscriptions.json';
 import MDCAbi from './lib/MDCAbi.json';
+import TransitFinanceRouterV5 from './lib/TransitFinanceRouterV5.json'
 type ABI_JSON = any;
 const abis: { [key: string]: ABI_JSON } = {};
 function loadJsonFiles(directoryPath: string) {
@@ -35,5 +36,6 @@ export {
     OrbiterRouterV3,
     MakerDeposit,
     CrossInscriptions,
-    MDCAbi
+    MDCAbi,
+    TransitFinanceRouterV5
 };

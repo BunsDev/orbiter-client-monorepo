@@ -15,6 +15,11 @@ import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../.
 import { Orbiter6Provider } from '@orbiter-finance/blockchain-account';
 
 export class EVMRpcScanningV6Service extends RpcScanningService {
+  private contractRegistry: { [address: string]: any } = {};
+
+  registerContract(address: string, abi: any) {
+    this.contractRegistry[address] = abi;
+  }
   #provider: Orbiter6Provider;
   getProvider() {
     const rpc = this.chainConfig.rpc[0];
@@ -55,9 +60,11 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         const fromAddrLower = (row['from'] || "").toLocaleLowerCase();
         // is to contract addr
         if (contractList.includes(toAddrLower)) {
+          // decode
           rows.push(row);
           continue;
         }
+        // eoa
         const senderValid = await this.isWatchAddress(fromAddrLower);
         if (senderValid) {
           rows.push(row);
@@ -68,6 +75,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           rows.push(row);
           continue;
         }
+        // end eoa
         if (row['data'] && row['data'] != '0x') {
           const calldata = row['data'].slice(10);
           if (isEmpty(calldata)) {
@@ -121,6 +129,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
 
     const filterBeforeTransactions =
       await this.filterBeforeTransactions<TransactionResponse>(transactions);
+    console.log(filterBeforeTransactions, '==filterBeforeTransactions')
     // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
     if (filterBeforeTransactions.length <= 0) {
       return [];
