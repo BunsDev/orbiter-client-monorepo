@@ -287,8 +287,7 @@ export class TransactionService {
             }
             const arbitrationRecordCount: number = <any>await this.arbitrationRecord.count(<any>{
                 where: {
-                    sourceId: sourceTxHash,
-                    status: 1
+                    sourceId: sourceTxHash
                 }
             });
             if (arbitrationRecordCount) {
@@ -335,7 +334,7 @@ export class TransactionService {
     }
 
     async submitChallenge(data: any) {
-        await keyv.set(`${data.sourceTxHash.toLowerCase()}_challenge`, data, 180000);
+        await keyv.set(`${data.sourceTxHash.toLowerCase()}_challenge`, data, 600000);
     }
 
     async getChallenge(hash: string) {
