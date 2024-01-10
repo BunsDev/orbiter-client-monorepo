@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Request } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Request } from '@nestjs/common';
 import { HTTPResponse } from '../utils/Response';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
@@ -38,7 +38,7 @@ export class AppController {
     }
 
     @Post("/error")
-    async error(@Request() req, @Post("message") message: string) {
+    async error(@Request() req, @Body("message") message: string) {
         arbitrationClientLogger.info(req.ip, message);
         return HTTPResponse.success(null);
     }
