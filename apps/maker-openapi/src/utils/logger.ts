@@ -139,3 +139,5 @@ export class Logger {
 }
 
 export const routerLogger = new Logger('router');
+
+export const arbitrationClientLogger = new Logger('arbitrationClient');

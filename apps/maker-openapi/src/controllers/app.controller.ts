@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Request } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Request } from '@nestjs/common';
 import { HTTPResponse } from '../utils/Response';
 import { LoggerDecorator, OrbiterLogger } from '@orbiter-finance/utils';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
@@ -6,6 +6,7 @@ import { AppService } from "../services/app.service";
 import fs from "fs";
 import path from "path";
 import { getFormatDate } from "../utils/util";
+import { arbitrationClientLogger } from "../utils/logger";
 
 @Controller()
 export class AppController {
@@ -36,11 +37,17 @@ export class AppController {
         return HTTPResponse.success(null);
     }
 
+    @Post("/error")
+    async error(@Request() req, @Body("message") message: string) {
+        arbitrationClientLogger.info(req.ip, message);
+        return HTTPResponse.success(null);
+    }
+
     @Get("/version")
     async version() {
         return HTTPResponse.success({
-            UserVersion: '0.0.0',
-            MakerVersion: '0.0.0'
+            UserVersion: '0.0.1',
+            MakerVersion: '0.0.1'
         });
     }
 }
