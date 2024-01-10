@@ -499,7 +499,16 @@ export class TransactionService {
       createdAt: new Date(),
       updatedAt: new Date(),
     }
-    const [v1MtTx, isCreated] = await this.makerTransactionModel.upsert(mtCreateData);
+    const [v1MtTx, isCreated] = await this.makerTransactionModel.upsert(mtCreateData, { fields: [
+      'transcationId',
+      'inId',
+      'fromChain',
+      'toChain',
+      'toAmount',
+      'replySender',
+      'replyAccount',
+      'updatedAt'
+    ] });
     return {
       inId: v1MtTx.id
     }
