@@ -142,19 +142,17 @@ export const routerLogger = new Logger('router');
 
 export const arbitrationClientLogger = new Logger('arbitrationClient');
 
-export let ipLogsMap = {};
+export let aggLogsMap = {};
 
 setInterval(() => {
-    for (const ip in ipLogsMap) {
-        for (const message in ipLogsMap[ip]) {
-            routerLogger.info(ip, message, ipLogsMap[ip][message]);
-        }
+    for (const message in aggLogsMap) {
+        routerLogger.info(message, aggLogsMap[message]);
     }
-    ipLogsMap = {};
-}, 20 * 60 * 1000);
+    aggLogsMap = {};
+}, 30 * 60 * 1000);
 
 
 export function aggregationLog(message) {
-    ipLogsMap[message] = ipLogsMap[message] || {};
-    ipLogsMap[message] = ipLogsMap[message] + 1;
+    aggLogsMap[message] = aggLogsMap[message] || 0;
+    aggLogsMap[message] = aggLogsMap[message] + 1;
 }
