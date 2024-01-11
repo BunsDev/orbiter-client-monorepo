@@ -25,7 +25,7 @@ export class AppService {
                 if (hash) {
                     where["sourceId"] = hash.toLowerCase();
                 }
-                if (status && [0, 1].includes(status)) {
+                if ([0, 1].includes(status)) {
                     where["status"] = status;
                 }
                 const dataList: any[] = JSON.parse(JSON.stringify(await this.arbitrationRecord.findAll({
