@@ -1,5 +1,5 @@
 import { Catch, ExceptionFilter } from '@nestjs/common';
-import { ipLogsMap } from "./middlewareLogs";
+import { aggregationLog, routerLogger } from "../utils/logger";
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -12,18 +12,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
         const message: string = exception?.message;
         if (message && message.indexOf("ex:") === 0) {
-
             const msg = `${request.originalUrl} ${message.replace('ex: ', '')}`;
-            ipLogsMap[ip] = ipLogsMap[ip] || {};
-            ipLogsMap[ip][msg] = ipLogsMap[ip][msg] || 0;
-            ipLogsMap[ip][msg] = ipLogsMap[ip][msg] + 1;
+            aggregationLog(`${ip} ${msg}`);
             return response
                 .json({
                     errno: 1000,
                     errmsg: message.replace('ex: ', '')
                 });
         }
-        console.error(exception);
+        routerLogger.error(request?.originalUrl, exception);
         return response
             .json({
                 errno: 500,

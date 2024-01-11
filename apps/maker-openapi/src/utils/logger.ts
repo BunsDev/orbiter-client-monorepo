@@ -141,3 +141,18 @@ export class Logger {
 export const routerLogger = new Logger('router');
 
 export const arbitrationClientLogger = new Logger('arbitrationClient');
+
+export let aggLogsMap = {};
+
+setInterval(() => {
+    for (const message in aggLogsMap) {
+        routerLogger.info(message, aggLogsMap[message]);
+    }
+    aggLogsMap = {};
+}, 30 * 60 * 1000);
+
+
+export function aggregationLog(message) {
+    aggLogsMap[message] = aggLogsMap[message] || 0;
+    aggLogsMap[message] = aggLogsMap[message] + 1;
+}

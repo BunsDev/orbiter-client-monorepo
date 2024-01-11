@@ -13,7 +13,7 @@ import { Interface } from 'ethers6';
 import axios from 'axios';
 import { MDCAbi } from '@orbiter-finance/abi';
 import { HTTPPost } from "@orbiter-finance/request";
-import { routerLogger } from "../utils/logger";
+import { aggregationLog, routerLogger } from "../utils/logger";
 const keyv = new Keyv();
 
 @Injectable()
@@ -282,7 +282,7 @@ export class TransactionService {
             }
             const challenger = await this.getChallenge(sourceTxHash);
             if (challenger) {
-                routerLogger.info('The tx is being challenged', sourceTxHash);
+                aggregationLog(`The tx is being challenged ${sourceTxHash}`);
                 continue;
             }
             const arbitrationRecordCount: number = <any>await this.arbitrationRecord.count(<any>{
