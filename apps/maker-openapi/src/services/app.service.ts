@@ -30,6 +30,7 @@ export class AppService {
                 }
                 const dataList: any[] = JSON.parse(JSON.stringify(await this.arbitrationRecord.findAll({
                     where,
+                    order: [["createTime", "DESC"]],
                     offset,
                     limit
                 }) || []));
