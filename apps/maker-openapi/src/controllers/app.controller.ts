@@ -27,8 +27,9 @@ export class AppController {
 
     @Get("/record")
     async getRecord(@Query("type") type: string | number, @Query("page") page: string | number,
-                    @Query("pageSize") pageSize: string | number, @Query("hash") hash: string) {
-        return HTTPResponse.success(await this.appService.getArbitrationInfo(+type || 1, page, pageSize, hash));
+                    @Query("pageSize") pageSize: number | number, @Query("sourceTxHash") sourceTxHash: string,
+                    @Query("status") status: number) {
+        return HTTPResponse.success(await this.appService.getArbitrationInfo(+type || 1, +page, +pageSize, sourceTxHash, +status));
     }
 
     @Get("/login")

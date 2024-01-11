@@ -16,23 +16,45 @@ export class AppService {
         private arbitrationProof: typeof ArbitrationProof,
     ) {}
 
-    async getArbitrationInfo(type, page, pageSize, hash:string) {
+    async getArbitrationInfo(type, page: number, pageSize: number, hash: string, status: number) {
         const limit = Math.min(pageSize || 10, 100);
         const offset = ((page || 1) - 1) * limit;
         switch (type) {
             case 1: {
+                let where = {};
                 if (hash) {
-                    return await this.arbitrationRecord.findAll({
-                        where: {
-                            sourceId: hash.toLowerCase()
-                        }
-                    });
-                } else {
-                    return await this.arbitrationRecord.findAll({
-                        offset,
-                        limit
-                    });
+                    where["sourceId"] = hash.toLowerCase();
                 }
+                if (status && [0, 1].includes(status)) {
+                    where["status"] = status;
+                }
+                const dataList: any[] = JSON.parse(JSON.stringify(await this.arbitrationRecord.findAll({
+                    where,
+                    order: [["createTime", "DESC"]],
+                    offset,
+                    limit
+                }) || []));
+                for (const data of dataList) {
+                    switch (data.type) {
+                        case 11: {
+                            data.type = "challenge";
+                            break;
+                        }
+                        case 12: {
+                            data.type = "verifyChallengeSource";
+                            break;
+                        }
+                        case 21: {
+                            data.type = "verifyChallengeDest";
+                            break;
+                        }
+                        case 31: {
+                            data.type = "checkChallenge";
+                            break;
+                        }
+                    }
+                }
+                return dataList;
             }
             case 2: {
                 if (hash) {
