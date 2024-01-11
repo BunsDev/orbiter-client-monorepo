@@ -23,13 +23,10 @@ export class AppService {
             case 1: {
                 let where = {};
                 if (hash) {
-                    where = {
-                        sourceId: hash.toLowerCase()
-                    };
-                } else if (status && [0, 1].includes(status)) {
-                    where = {
-                        status
-                    };
+                    where["sourceId"] = hash.toLowerCase();
+                }
+                if (status && [0, 1].includes(status)) {
+                    where["status"] = status;
                 }
                 const dataList: any[] = JSON.parse(JSON.stringify(await this.arbitrationRecord.findAll({
                     where,
