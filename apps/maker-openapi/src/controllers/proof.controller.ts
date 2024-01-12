@@ -45,7 +45,7 @@ export class ProofController {
     async getVerifyChallengeSourceParamsByUserHash(@Request() req, @Param("hash") hash: string): Promise<HTTPResponse> {
         if (!registerMap[req.ip]) {
             routerLogger.info(`verifyChallengeSourceParams/${hash} ${req.ip} not registered`);
-            HTTPResponse.success(null);
+            return HTTPResponse.success(null);
         }
         return HTTPResponse.success(await this.proofService.getVerifyChallengeSourceParams(hash));
     }
