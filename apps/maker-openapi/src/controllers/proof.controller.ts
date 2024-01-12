@@ -6,7 +6,7 @@ import {
 } from '../common/interfaces/Proof.interface';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import { registerMap } from "../utils/register";
-import { routerLogger } from "../utils/logger";
+import { aggregationLog } from "../utils/logger";
 
 @Controller("proof")
 export class ProofController {
@@ -44,7 +44,7 @@ export class ProofController {
     @Get("/verifyChallengeSourceParams/:hash")
     async getVerifyChallengeSourceParamsByUserHash(@Request() req, @Param("hash") hash: string): Promise<HTTPResponse> {
         if (!registerMap[req.ip]) {
-            routerLogger.info(`verifyChallengeSourceParams/${hash} ${req.ip} not registered`);
+            aggregationLog(`verifyChallengeSourceParams/${hash} ${req.ip} not registered`);
             return HTTPResponse.success(null);
         }
         return HTTPResponse.success(await this.proofService.getVerifyChallengeSourceParams(hash));
