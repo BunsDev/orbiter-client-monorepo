@@ -8,6 +8,7 @@ import path from "path";
 import { getFormatDate } from "../utils/util";
 import { arbitrationClientLogger } from "../utils/logger";
 import { ipRegister } from "../utils/register";
+import { TransactionService } from "../services/transaction.service";
 
 @Controller()
 export class AppController {
@@ -17,6 +18,7 @@ export class AppController {
     private chainConfig: ChainConfigService,
     private envConfig: ENVConfigService,
     private readonly appService: AppService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   @Get("/config/arbitration-client")
@@ -42,6 +44,7 @@ export class AppController {
     @Post("/error")
     async error(@Request() req, @Body("message") message: string) {
         arbitrationClientLogger.info(req.ip, message);
+        await this.transactionService.releaseLock(req.ip, message);
         return HTTPResponse.success(null);
     }
 

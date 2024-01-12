@@ -27,14 +27,14 @@ export class TransactionController {
     }
 
     @Post("/challenge")
-    async submitChallenge(@Body() data: {
+    async submitChallenge(@Request() req, @Body() data: {
         sourceTxHash: string,
         challenger: string
     }) {
         if (!data?.sourceTxHash) {
             return HTTPResponse.fail(1000, "Invalid parameters");
         }
-        await this.transactionService.submitChallenge(data);
+        await this.transactionService.submitChallenge({ ...data, ip: req.ip });
         return HTTPResponse.success({ message: 'success' });
     }
 
