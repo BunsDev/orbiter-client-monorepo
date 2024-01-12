@@ -12,7 +12,7 @@ export class TransactionController {
         // user arbitration-client need
         if (!registerMap[req.ip]) {
             routerLogger.info(`getPendingArbitration ${req.ip} not registered`);
-            HTTPResponse.success({ list: [], startTime: 0, endTime: 0 });
+            return HTTPResponse.success({ list: [], startTime: 0, endTime: 0 });
         }
         return HTTPResponse.success(await this.transactionService.getPendingArbitration());
     }
