@@ -15,13 +15,16 @@ import { ScrollRpcScanningService } from './scroll/scroll.service'
 import { MantaRpcScanningService } from './manta/manta.service'
 import { OPBNBScanningService } from './opbnb/opbnb.service'
 import {L1FeeRpcScanningService} from './l1FeeService/l1Fee.service'
+import { ContractParserService } from './contract-parser/ContractParser.service';
 @Injectable()
 export class RpcScanningFactory {
   public services: { [key: string]: RpcScanningService } = {}
   constructor(
     private chainConfigService: ChainConfigService,
-    private transactionService: TransactionService
-  ) { }
+    private transactionService: TransactionService,
+    private contractParser:ContractParserService
+  ) { 
+  }
 
   createService(chainId: string): RpcScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
@@ -34,7 +37,8 @@ export class RpcScanningFactory {
     }
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
-      transactionService: this.transactionService
+      transactionService: this.transactionService,
+      contractParser: this.contractParser
     }
     let service;
     switch (key) {

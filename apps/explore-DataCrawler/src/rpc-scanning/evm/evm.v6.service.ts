@@ -57,6 +57,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         // is to contract addr
         if (contractList.includes(toAddrLower)) {
           // decode
+          this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row, 2)
           rows.push(row);
           continue;
         }
@@ -125,7 +126,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
 
     const filterBeforeTransactions =
       await this.filterBeforeTransactions<TransactionResponse>(transactions);
-    console.log(filterBeforeTransactions, '==filterBeforeTransactions')
     // this.logger.info(`block ${block.number} filterBeforeTransactions: ${JSON.stringify(filterBeforeTransactions.map(tx=> tx.hash))}`)
     if (filterBeforeTransactions.length <= 0) {
       return [];

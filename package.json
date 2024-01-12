@@ -63,6 +63,7 @@
     "moment": "^2.29.4",
     "mysql2": "^3.6.2",
     "nest-winston": "^1.9.4",
+    "nestjs-consul": "^1.5.1",
     "nx": "17.0.1",
     "pg": "^8.11.3",
     "prom-client": "^15.0.0",

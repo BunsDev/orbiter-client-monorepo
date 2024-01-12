@@ -40,7 +40,6 @@ export class ChainConfigService {
                 );
             }
         }
-
     }
 
     fill(configList: Array<IChainConfig>) {

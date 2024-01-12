@@ -13,6 +13,7 @@ import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { MetricModule } from './metric/metric.module';
 import {AppController} from './app.controller'
+import { ConsulModule as ConsulModule2 } from 'nestjs-consul';
 
 dayjs.extend(utc);
 
@@ -34,6 +35,24 @@ dayjs.extend(utc);
       chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-server/chains.json",
       envConfigPath: process.env['ENV_VAR_PATH'] || "explore-server/config.yaml",
     }),
+    ConsulModule2.forRootAsync({
+			imports: [ConfigModule],
+			inject: [ConfigService],
+			useFactory: async (configService: ConfigService) => {
+        const parsedUrl = new URL(configService.get("CONSUL_URL"));
+        console.log(parsedUrl, '==parsedUrl')
+				return {
+					keys: [{ key: 'v1/explore-server/chains.json', alias: 'env' }, { key: 'prod/explore-server/chains.json', alias: 'chains' }],
+					connection: {
+						protocol: parsedUrl.protocol.replace(":",''),
+						port: parsedUrl.port || 80,
+						host: parsedUrl.hostname,
+						token: parsedUrl.searchParams.get('token'),
+					},
+				} as any;
+			},
+		}),
+
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (configService: ENVConfigService) => {
@@ -55,11 +74,11 @@ dayjs.extend(utc);
       }
     }),
     RabbitMqModule,
-    RpcScanningModule,
     ApiScanningModule,
     ScheduleModule.forRoot(),
     TransactionModule,
     MetricModule,
+    RpcScanningModule,
   ],
   controllers: [AppController],
   providers: [],
