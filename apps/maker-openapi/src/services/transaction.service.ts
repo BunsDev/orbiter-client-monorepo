@@ -403,16 +403,7 @@ export class TransactionService {
             fromAddress = receipt.from;
             status = receipt.status;
             if (+status === 0) {
-                const telegramToken = await this.envConfigService.getAsync('TelegramToken');
-                const telegramChatId = await this.envConfigService.getAsync('TelegramChatId');
-                if (telegramToken && telegramChatId) {
-                    await axios.post(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
-                        chat_id: telegramChatId,
-                        text: `${chainInfo?.infoURL}/tx/${data.hash} ${parsedData.name} ${calldata.join(',')}`,
-                        disable_notification: false,
-                        parse_mode: '',
-                    });
-                }
+                await this.sendTelegram(`${chainInfo?.infoURL}/tx/${data.hash} ${parsedData.name} ${calldata.join(',')}`);
             }
         } catch (e) {
             console.error('recordTransaction error', e);
@@ -429,5 +420,29 @@ export class TransactionService {
             createTime: new Date().valueOf()
         };
         await this.arbitrationRecord.create(iArbitrationRecord);
+    }
+
+    async releaseLock(ip: string, message: string) {
+        if (message && message.toLowerCase().indexOf('insufficient') !== -1) {
+            for await (const [key, value] of keyv.iterator()) {
+                if (value?.ip === ip) {
+                    await this.sendTelegram(`${ip} insufficient balance,release the ${key} lock`);
+                    await keyv.delete(key);
+                }
+            }
+        }
+    }
+
+    async sendTelegram(message: string) {
+        const telegramToken = await this.envConfigService.getAsync('TelegramToken');
+        const telegramChatId = await this.envConfigService.getAsync('TelegramChatId');
+        if (telegramToken && telegramChatId) {
+            await axios.post(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                chat_id: telegramChatId,
+                text: message,
+                disable_notification: false,
+                parse_mode: '',
+            });
+        }
     }
 }
