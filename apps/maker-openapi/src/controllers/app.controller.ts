@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import { getFormatDate } from "../utils/util";
 import { arbitrationClientLogger } from "../utils/logger";
+import { ipRegister } from "../utils/register";
 
 @Controller()
 export class AppController {
@@ -45,7 +46,8 @@ export class AppController {
     }
 
     @Get("/version")
-    async version() {
+    async version(@Request() req) {
+        ipRegister(req.ip);
         return HTTPResponse.success({
             UserVersion: '1.0.0',
             MakerVersion: '1.0.0'

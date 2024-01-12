@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request } from '@nestjs/common';
 import { ProofService } from '../services/proof.service';
 import { HTTPResponse } from '../utils/Response';
 import {
     MakerAskProofRequest, ProofSubmissionRequest
 } from '../common/interfaces/Proof.interface';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
+import { registerMap } from "../utils/register";
+import { routerLogger } from "../utils/logger";
 
 @Controller("proof")
 export class ProofController {
@@ -40,7 +42,11 @@ export class ProofController {
     }
 
     @Get("/verifyChallengeSourceParams/:hash")
-    async getVerifyChallengeSourceParamsByUserHash(@Param("hash") hash: string): Promise<HTTPResponse> {
+    async getVerifyChallengeSourceParamsByUserHash(@Request() req, @Param("hash") hash: string): Promise<HTTPResponse> {
+        if (!registerMap[req.ip]) {
+            routerLogger.info(`verifyChallengeSourceParams/${hash} ${req.ip} not registered`);
+            HTTPResponse.success(null);
+        }
         return HTTPResponse.success(await this.proofService.getVerifyChallengeSourceParams(hash));
     }
 
