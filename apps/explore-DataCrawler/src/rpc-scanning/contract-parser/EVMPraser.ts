@@ -1,5 +1,5 @@
-import { ContractParser, TransferAmountTransaction } from "../ContractParser.interface";
-import { ContractParserService } from "../ContractParser.service";
+import { ContractParser, TransferAmountTransaction } from "./ContractParser.interface";
+import { ContractParserService } from "./ContractParser.service";
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify, AbiCoder } from 'ethers6';
 import { TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 import { IChainConfig } from "@orbiter-finance/config";

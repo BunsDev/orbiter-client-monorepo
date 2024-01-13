@@ -2,7 +2,7 @@ import { ContractParser, TransferAmountTransaction } from "../ContractParser.int
 import { ContractParserService } from "../ContractParser.service";
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify } from 'ethers6';
 
-export class TransitFinanceRouterV5  implements ContractParser{
+export default class  TransitFinanceRouterV5  implements ContractParser{
     constructor() {
     }
     parse(chainId: string, contract: string, transaction: TransactionResponse): TransferAmountTransaction[] {

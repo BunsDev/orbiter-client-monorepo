@@ -1,48 +1,24 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { isEqual } from 'lodash';
-import { KeyValueResult } from 'libs/consul/src/lib/keyValueResult';
-import { ConsulService } from 'libs/consul/src/lib/consul.service'
-import { Logger } from '@nestjs/common';
 import { IChainConfig, Token } from './config.interface'
 import { equals } from '@orbiter-finance/utils'
-import { ORBITER_CONFIG_MODULE_OPTS } from '../lib/config.constants'
-import { ConfigModuleOptions } from '../lib/config.interface'
+import { ConsulService } from 'libs/nestjs-consul/src/index'
+import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class ChainConfigService {
-    private static configs: Array<IChainConfig> = [];
-    constructor(
-        private readonly consul: ConsulService,
-        @Inject(ORBITER_CONFIG_MODULE_OPTS) private readonly options: ConfigModuleOptions
-    ) {
-        ChainConfigService.configs = [];
-        if (this.options.chainConfigPath) {
-            try {
-                this.consul.watchConsulConfig(
-                    this.options.chainConfigPath,
-                    (config: KeyValueResult) => {
-                        if (config) {
-                            const data = config.toJSON();
-                            if (data) {
-                                ChainConfigService.configs = data;
-                                // this.write();
-                            }
-                        } else {
-                            Logger.error(
-                                `watch config change null ${this.options.chainConfigPath}`,
-                            );
-                        }
-                    },
-                );
-            } catch (error: any) {
-                Logger.error(
-                    `watch config change error ${this.options.chainConfigPath}`,
-                    error,
-                );
-            }
-        }
-    }
 
-    fill(configList: Array<IChainConfig>) {
+    constructor(
+        private readonly consul: ConsulService<any>,
+        private readonly configService: ConfigService
+    ) {
+    }
+    get configs() {
+        const name = this.configService.get('ENV_CHAINS_CONFIG_PATH') || 'chains';
+        return this.format(this.consul.configs[name]);
+    }
+    format(configList: Array<IChainConfig>) {
+        if (!configList) {
+            return [];
+        }
         const chains = configList.map((chain: IChainConfig) => {
             if (!chain.workingStatus) {
                 chain.workingStatus = 'stop';
@@ -70,7 +46,6 @@ export class ChainConfigService {
             chain.features = chain.features || [];
             return chain;
         });
-        ChainConfigService.configs = chains;
         return chains;
     }
     /**
@@ -151,7 +126,7 @@ export class ChainConfigService {
     }
 
     getAllChains(): IChainConfig[] {
-        return ChainConfigService.configs || [];
+        return this.configs || [];
     }
     getChainByKeyValue(
         key: keyof IChainConfig,
@@ -179,21 +154,4 @@ export class ChainConfigService {
             return token;
         }
     }
-
-    // async write() {
-    //     if (isEmpty(ChainConfigService.configs)) {
-    //         throw new Error('no configuration to write');
-    //     }
-    //     const chainConfigPath = this.options.chainConfigPath;
-    //     if (!chainConfigPath) {
-    //         throw new Error('Missing configuration path');
-    //     }
-    //     if(!this.options.cachePath) {
-    //         return console.warn('Missing cache path');
-    //     }
-    //     if (ChainConfigService.configs) {
-    //         const data = JSON.stringify(ChainConfigService.configs);
-    //         const filePath = join(this.options.cachePath, chainConfigPath);
-    //     }
-    // }
 }

@@ -37,6 +37,7 @@
     "@nx/nest": "17.0.1",
     "@nx/webpack": "17.0.1",
     "@nx/workspace": "17.0.1",
+    "@types/node-cron": "^3.0.11",
     "@willsoto/nestjs-prometheus": "^6.0.0",
     "amqplib": "^0.10.3",
     "async-mutex": "^0.4.0",
@@ -109,6 +110,10 @@
     "nx-cloud": "16.5.2",
     "prettier": "^3.0.3",
     "ts-jest": "^29.1.1",
-    "ts-node": "10.9.1"
+    "ts-node": "10.9.1",
+    "verdaccio": "^5.0.4"
+  },
+  "nx": {
+    "includedScripts": []
   }
 }

@@ -1,10 +1,10 @@
 import { ContractParser, TransferAmountTransaction } from "../ContractParser.interface";
 import { ContractParserService } from "../ContractParser.service";
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify,AbiCoder } from 'ethers6';
-import {EVMPraser} from './EVMPraser';
+import {EVMPraser} from '../EVMPraser';
 import { TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 
-export class XBridge extends EVMPraser{
+export default class XBridge extends EVMPraser{
     async bridgeToV2(transaction: TransactionResponse, parsedData: TransactionDescription):Promise<TransferAmountTransaction[]> {
         console.log(transaction, '跨链规则转换--', parsedData,'---')
         const args = parsedData.args[0];

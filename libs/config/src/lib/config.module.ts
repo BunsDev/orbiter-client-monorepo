@@ -7,7 +7,7 @@ import {ConfigModuleOptions} from './config.interface';
 import {MakerV1RuleService} from './maker-v1-rule.service'
 @Module({})
 export class OrbiterConfigModule {
-	static forRoot(options: ConfigModuleOptions): DynamicModule {
+	static forRoot(options: ConfigModuleOptions = {}): DynamicModule {
 		return {
 			module: OrbiterConfigModule,
 			global:true,

@@ -1,60 +1,20 @@
-import { get, set, clone, isEmpty, isEqual ,groupBy} from 'lodash';
 import { Inject, Injectable } from '@nestjs/common';
-import * as yaml from 'js-yaml';
-import { join } from 'path';
-import { ConsulService } from 'libs/consul/src/lib/consul.service'
-import { Logger } from '@nestjs/common';
-function getConfig(name: string) {
-    return get(MakerV1RuleService.configs, name);
-}
-import { ORBITER_CONFIG_MODULE_OPTS } from './config.constants';
-import { ConfigModuleOptions } from './config.interface';
+import { ConsulService } from 'libs/nestjs-consul/src/index'
+
 @Injectable()
 export class MakerV1RuleService {
-    public static configs: any = {};
-    private configPath: string;
+    get configs() {
+        const config = this.consul.configs['/rules/']
+        return config && this.format(config);
+    }
     constructor(
-        private readonly consul: ConsulService,
-        @Inject(ORBITER_CONFIG_MODULE_OPTS) private readonly options: ConfigModuleOptions
+        private readonly consul: ConsulService<any>,
     ) {
-        this.configPath = this.options.makerV1RulePath || "";
-        this.init()
     }
     async init() {
-        if (this.configPath) {
-            try {
-                const keys: string[] = await this.consul.keys(this.configPath)
-                if (keys.length<2) {
-                    return console.warn('rules/files not config');
-                }
-                for (let i = 1; i < keys.length; i++) {
-                    try {
-                        const fileKey = keys[i];
-                        this.consul.watchConsulConfig(fileKey, (config: any) => {
-                            const data = config.toJSON();
-                            MakerV1RuleService.configs[fileKey] = data;
-                        })
-                    } catch (error) {
-                        Logger.error(
-                            `${this.configPath} watch config change error ${error.message} ${keys[i]}`,
-                            error,
-                        );
-                    }
-                }
-            } catch (error) {
-                console.error(error);
-                Logger.error(
-                    `${this.configPath} watch config change error ${error.message}`,
-                    error,
-                );
-            }
-        }
+
     }
-    get<T = any>(name: string): T {
-        return getConfig(name);
-    }
-    getAll() {
-        const configs = MakerV1RuleService.configs;
+    format(configs: any[]) {
         if (configs) {
             const makerRules = [];
             for (const file in configs) {
@@ -78,29 +38,6 @@ export class MakerV1RuleService {
             }
             return makerRules;
         }
-        return [];
-    }
-    async set(name: string, value: any) {
-        set(MakerV1RuleService.configs, name, value);
-        await this.write();
-    }
-    async write() {
-        if (isEmpty(MakerV1RuleService.configs)) {
-            throw new Error('no configuration to write');
-        }
-        const chainConfigPath = this.configPath;
-        if (!chainConfigPath) {
-            throw new Error('Missing configuration path');
-        }
-        if (!this.options.cachePath) {
-            return console.warn('Missing cache path');
-        }
-        if (MakerV1RuleService.configs) {
-            const cloneConfig = clone(MakerV1RuleService.configs);
-            delete cloneConfig['privateKey'];
-            const data = yaml.dump(cloneConfig);
-            const filePath = join(this.options.cachePath, chainConfigPath);
-            // await outputFile(filePath, data);
-        }
+        return []
     }
 }

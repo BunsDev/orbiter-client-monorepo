@@ -1,21 +1,27 @@
+import { ENVConfigService } from '@orbiter-finance/config';
 // ContractParserFactory.ts
 import { TransferAmountTransaction, ContractRegistry, ContractParser } from './ContractParser.interface';
 import { ChainConfigService } from '@orbiter-finance/config';
-import { TransitFinanceRouterV5 } from './implement/TransitFinanceRouterV5';
-import { XBridge } from './implement/XBridge';
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
-import { ConsulService } from 'nestjs-consul';
+import implementParses from './implement/'
+console.log(implementParses, '=implementParses')
 @Injectable()
 export class ContractParserService {
   private contractRegistry: { [contractName: string]: ContractParser } = {};
-  constructor(private chainConfigService: ChainConfigService, private readonly consul: ConsulService<any>) {
-      const chains = this.chainConfigService.getAllChains();
-      console.log(chains, '===chains');
-    this.registerContract('TransitFinanceRouterV5', new TransitFinanceRouterV5());
-    this.registerContract('XBridge', new XBridge(null));
-    const configs = this.consul.configs;
-    console.log(configs, '=configs')
-
+  constructor(
+    private chainConfigService: ChainConfigService,
+    private envConfigService:ENVConfigService
+    ) {
+    const chains = this.chainConfigService.getAllChains();
+    for (const chain of chains) {
+      for (const className in implementParses) {
+        for (const addr in chain.contract) {
+          if (chain.contract[addr] === className) {
+            this.registerContract(`${chain.chainId}-${className}`, new implementParses[className](chain));
+          }
+        }
+      }
+    }
   }
   registerContract(contractName: string, instance: ContractParser) {
     this.contractRegistry[contractName] = instance;

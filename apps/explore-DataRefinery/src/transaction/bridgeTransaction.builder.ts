@@ -472,7 +472,6 @@ export default class BridgeTransactionBuilder {
       sourceNonce: transfer.nonce,
       sourceSymbol: transfer.symbol,
       sourceToken: transfer.token,
-      status:0,
       targetToken: null,
       status:BridgeTransactionStatus.PENDING_PAID,
       sourceTime: transfer.timestamp,
@@ -523,7 +522,7 @@ export default class BridgeTransactionBuilder {
     }
     let rule;
     if (targetToken) {
-      rule = this.makerV1RuleService.getAll().find((rule) => {
+      rule = this.makerV1RuleService.configs.find((rule) => {
         const {
           sourceChainId,
           targetChainId,
