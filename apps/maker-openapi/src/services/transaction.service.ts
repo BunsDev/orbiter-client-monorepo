@@ -423,7 +423,7 @@ export class TransactionService {
     }
 
     async releaseLock(ip: string, message: string) {
-        if (message && message.toLowerCase().indexOf('insufficient') !== -1) {
+        if (message && (message.toLowerCase().indexOf('insufficient') !== -1 || message.toLowerCase().indexOf('challenge error: {}') !== -1)) {
             for await (const [key, value] of keyv.iterator()) {
                 if (value?.ip === ip) {
                     await this.sendTelegram(`${ip} insufficient balance,release the ${key} lock`);
