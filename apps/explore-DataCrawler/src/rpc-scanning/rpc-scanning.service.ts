@@ -33,7 +33,7 @@ export class RpcScanningService implements RpcScanningInterface {
     this.dataProcessor = new DataProcessor(this.chainId, this.logger);
     this.firstStartTime = Date.now()
     setTimeout(async () => {
-      this.defaultBatchLimit = await ctx.envConfigService.getAsync('defaultBatchLimit');
+      this.defaultBatchLimit = await ctx.envConfigService.getAsync('DefaultBatchLimit');
       this.logger.info(`defaultBatchLimit: ${this.defaultBatchLimit}`);
     }, 0);
   }
