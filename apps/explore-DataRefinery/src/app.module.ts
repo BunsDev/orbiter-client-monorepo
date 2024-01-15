@@ -28,7 +28,7 @@ import { BridgeTransaction, Transfers, DeployRecord, UserBalance } from "@orbite
     OrbiterConfigModule.forRoot({
       chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-server/chains.json",
       envConfigPath: process.env['ENV_VAR_PATH'] || "explore-server/config.yaml",
-      // makerV1RulePath: process.env['ENV_RULES_PATH'] || "rules",
+      makerV1RulePath: process.env['ENV_RULES_PATH'] || "rules",
       // cachePath: join(__dirname, 'runtime')
     }),
     RabbitMqModule,
