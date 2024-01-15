@@ -279,7 +279,7 @@ export class SequencerScheduleService {
     }
     const isFluidityOK = await this.validatorService.checkMakerFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
     if (!isFluidityOK) {
-      throw new Errors.InsufficientLiquidity(`${targetChain} - ${targetMaker}`)
+      throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker}`)
     }
 
     const success = await this.validatorService.validatingValueMatches(
