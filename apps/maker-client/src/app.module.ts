@@ -1,7 +1,6 @@
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { TransferModule } from "./transfer/transfer.module";
 import { Module } from '@nestjs/common';
-import { ConsulModule } from '@orbiter-finance/consul';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -11,21 +10,24 @@ import { isEmpty } from '@orbiter-finance/utils';
 import { AlertModule } from '@orbiter-finance/alert'
 import { TcpModule } from "@orbiter-finance/tcp";
 import { MetricModule } from './metric/metric.module'
+import { ConsulModule } from '@client-monorepo/nestjs-consul';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ConsulModule.registerAsync({
+    ConsulModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
+      useFactory: async (configService: ConfigService) => {
         return {
-          name: 'Maker-Client',
-          url: config.get("CONSUL_URL")
-        };
+          url:configService.get("CONSUL_URL"),
+          keys: configService.get('CONSUL_KEYS').split(','),
+          updateCron: '* * * * *',
+        } as any;
       },
     }),
+    OrbiterConfigModule.forRoot(),
     OrbiterConfigModule.forRoot({
       chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "maker-client/chains.json",
       envConfigPath: process.env['ENV_VAR_PATH'] || "maker-client/config.yaml",

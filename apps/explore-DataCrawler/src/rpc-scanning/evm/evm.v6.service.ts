@@ -54,13 +54,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         }
         const toAddrLower = (row['to'] || "").toLocaleLowerCase();
         const fromAddrLower = (row['from'] || "").toLocaleLowerCase();
-        // is to contract addr
-        if (contractList.includes(toAddrLower)) {
-          // decode
-          this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row, 2)
-          rows.push(row);
-          continue;
-        }
         // eoa
         const senderValid = await this.isWatchAddress(fromAddrLower);
         if (senderValid) {
@@ -100,6 +93,26 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
               if (senderValid) {
                 rows.push(row);
                 continue;
+              }
+            }
+          }
+          // is to contract addr
+          if (contractList.includes(toAddrLower)) {
+            // decode
+            const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
+            for (const transfer of transfers) {
+              const toAddrLower = (transfer.receiver).toLocaleLowerCase();
+              const fromAddrLower = (transfer.sender).toLocaleLowerCase();
+              // eoa
+              const senderValid = await this.isWatchAddress(fromAddrLower);
+              if (senderValid) {
+                rows.push(row);
+                break;
+              }
+              const receiverValid = await this.isWatchAddress(toAddrLower);
+              if (receiverValid) {
+                rows.push(row);
+                break;
               }
             }
           }
@@ -215,19 +228,21 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           );
         }
       } else if (contractInfo) {
-        if (contractInfo.name === 'CrossInscriptions') {
+        if (contractInfo.name === 'OBSource') {
+          transfers = EVMV6Utils.evmOBSource(chainConfig, transaction, receipt);
+        } else if (contractInfo.name === 'OrbiterRouterV1') {
+          transfers = EVMV6Utils.evmObRouterV1(chainConfig, transaction, receipt);
+        } else if (contractInfo.name === 'OrbiterRouterV3') {
+          transfers = EVMV6Utils.evmObRouterV3(chainConfig, transaction, receipt);
+        } else if (contractInfo.name === 'CrossInscriptions') {
           transfers = EVMV6Utils.crossInscriptions(
             chainConfig,
             transaction,
             receipt,
           );
         } else {
-          transfers = EVMV6Utils.evmContract(
-            chainConfig,
-            contractInfo,
-            transaction,
-            receipt,
-          );
+          transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt);
+          console.log('other contract', contractInfo, transfers)
         }
       } else {
         // 0x646174613a2c

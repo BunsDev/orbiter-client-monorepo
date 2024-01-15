@@ -37,34 +37,31 @@ export class ConsulModule {
 	private static formatConfig(config: IConsulConfig) {
 		if (config.url) {
 			const parsedUrl = new URL(config.url);
-			if (parsedUrl.pathname != '/' && Array.isArray(config.keys)) {
-				const keys = config.keys.map((value) => {
-					let keyName = String(typeof value === 'string' ? value : value.key);
-					let alias = '';
-					if (keyName.includes('.')) {
-						const fileSplit = keyName.split('/');
-						alias = fileSplit[fileSplit.length - 1].split('.')[0];
-					} else {
-						alias = keyName;
+			const keys = config.keys.map((value) => {
+				let keyName = String(typeof value === 'string' ? value : value.key);
+				let alias = '';
+				if (keyName.includes('.')) {
+					const fileSplit = keyName.split('/');
+					alias = fileSplit[fileSplit.length - 1].split('.')[0];
+				} else {
+					alias = keyName;
+				}
+				if (typeof value != 'string') {
+					return {
+						...value,
+						key: keyName,
+						alias,
+						namespace: parsedUrl.pathname != '/' ? parsedUrl.pathname : '',
 					}
-					if (typeof value != 'string') {
-						return {
-							...value,
-							key: keyName,
-							alias,
-							namespace: parsedUrl.pathname != '/' ? parsedUrl.pathname : '',
-						}
-					} else {
-						return {
-							alias,
-							key: keyName,
-							namespace: parsedUrl.pathname != '/' ? parsedUrl.pathname : '',
-						}
+				} else {
+					return {
+						alias,
+						key: keyName,
+						namespace: parsedUrl.pathname != '/' ? parsedUrl.pathname : '',
 					}
-				})
-				config.keys = keys;
-			}
-
+				}
+			})
+			config.keys = keys;
 			const connection = {
 				protocol: parsedUrl.protocol.replace(":", ''),
 				port: parsedUrl.port || 80,

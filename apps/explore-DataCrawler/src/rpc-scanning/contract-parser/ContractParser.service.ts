@@ -9,8 +9,7 @@ console.log(implementParses, '=implementParses')
 export class ContractParserService {
   private contractRegistry: { [contractName: string]: ContractParser } = {};
   constructor(
-    private chainConfigService: ChainConfigService,
-    private envConfigService:ENVConfigService
+    private chainConfigService: ChainConfigService
     ) {
     const chains = this.chainConfigService.getAllChains();
     for (const chain of chains) {
@@ -32,12 +31,13 @@ export class ContractParserService {
     if (!contractName) {
       throw new Error(`Chain ${chain.name} Contract ${contractAddr} Not Register`);
     }
-    if (this.contractRegistry.hasOwnProperty(contractName)) {
-      const instance = this.contractRegistry[contractName];
+    const registerName = `${chainId}-${contractName}`;
+    if (this.contractRegistry.hasOwnProperty(registerName)) {
+      const instance = this.contractRegistry[registerName];
       // const parser = this.contractRegistry[contractName];
-      return instance.parse(chainId, contractAddr, data);
+      return instance.parse(contractAddr, data);
     } else {
-      throw new Error('Contract decode parse not registered');
+      throw new Error(`${registerName} Contract decode parse not registered`);
     }
   }
 

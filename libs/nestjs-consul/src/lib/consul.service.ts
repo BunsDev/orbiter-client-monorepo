@@ -55,7 +55,7 @@ export class ConsulService<T> {
 				}).toPromise();
 			return data;
 		} catch (e) {
-			const msg = `Cannot find key ${String(k.key)}`;
+			const msg = `Cannot find key ${JSON.stringify(k)}`;
 			if (k.required) {
 				throw new Error(msg)
 			}

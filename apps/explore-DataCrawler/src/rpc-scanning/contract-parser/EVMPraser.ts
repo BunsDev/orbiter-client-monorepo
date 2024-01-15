@@ -6,18 +6,22 @@ import { IChainConfig } from "@orbiter-finance/config";
 import BigNumber from 'bignumber.js';
 import { equals } from '@orbiter-finance/utils';
 export class EVMPraser implements ContractParser {
-    constructor(private readonly chainInfo: IChainConfig) {
+    public contractInterface: Interface;
+    get abi() {
+        return this.abi;
     }
-    parse(chainId: string, contract: string, [transaction]: any[]): TransferAmountTransaction[] {
-        const contractInterface = new Interface(ERC20Abi);
-        const parsedData = contractInterface.parseTransaction({ data: transaction.data });
+    constructor(protected readonly chainInfo: IChainConfig) {
+        this.contractInterface = new Interface(this.abi);
+    }
+    parse(contract: string, [transaction, receipt]: any[]): TransferAmountTransaction[] {
+        const parsedData = this.contractInterface.parseTransaction({ data: transaction.data });
         if (!parsedData) {
             return null;
         }
         if (!this[parsedData.name]) {
             return null;
         }
-        return this[parsedData.name](transaction, parsedData);
+        return this[parsedData.name](transaction, receipt, parsedData);
     }
     async transfer(transaction: TransactionResponse, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
         const { nonce } = transaction;
@@ -63,21 +67,29 @@ export class EVMPraser implements ContractParser {
 
         return transfers;
     }
-    buildTransferBaseData(transaction: TransactionResponse, parsedData?: TransactionDescription) {
+    async buildTransferBaseData(transaction: TransactionResponse, receipt: TransactionReceipt, parsedData?: TransactionDescription) {
+        let fee = '';
+        let txIndex;
+        if (receipt) {
+            fee = await this.getTransferFee(transaction, receipt);
+            txIndex = receipt.index;
+        }
         const txData: TransferAmountTransaction = {
             chainId: transaction.chainId.toString(),
             hash: transaction.hash,
             blockNumber: transaction.blockNumber,
-            transactionIndex: transaction.index,
-            sender: transaction.from,
-            receiver: transaction.to,
+            transactionIndex: transaction.index || txIndex,
+            sender: transaction.from.toLocaleLowerCase(),
+            receiver: transaction.to.toLocaleLowerCase(),
             amount: null,
             value: null,
             token: null,
             symbol: '',
-            fee: null,
-            feeAmount: null,
-            feeToken: null,
+            fee: fee,
+            feeToken: this.chainInfo.nativeCurrency.symbol,
+            feeAmount: fee && new BigNumber(fee)
+                .div(Math.pow(10, this.chainInfo.nativeCurrency.decimals))
+                .toString(),
             timestamp: 0,
             status: TransferAmountTransactionStatus.pending,
             nonce: transaction.nonce,
@@ -103,229 +115,237 @@ export class EVMPraser implements ContractParser {
         }
         return transfers;
     }
+    async getTransferFee(
+        transaction: TransactionResponse,
+        receipt: TransactionReceipt,
+    ): Promise<string> {
+        const gasUsed = receipt.gasUsed.toString();
+        const gasPrice = transaction.gasPrice.toString();
+        return new BigNumber(gasUsed).multipliedBy(gasPrice).toFixed(0);
+    }
 }
 
-export const ERC20Abi = [
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Approval",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "from",
-                "type": "address"
-            },
-            {
-                "indexed": true,
-                "internalType": "address",
-                "name": "to",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "value",
-                "type": "uint256"
-            }
-        ],
-        "name": "Transfer",
-        "type": "event"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "owner",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            }
-        ],
-        "name": "allowance",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            }
-        ],
-        "name": "approve",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "account",
-                "type": "address"
-            }
-        ],
-        "name": "balanceOf",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "decimals",
-        "outputs": [
-            {
-                "internalType": "uint8",
-                "name": "",
-                "type": "uint8"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "name",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "totalSupply",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "recipient",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            }
-        ],
-        "name": "transfer",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "sender",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "recipient",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            }
-        ],
-        "name": "transferFrom",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-]
+// export const ERC20Abi = [
+//     {
+//         "anonymous": false,
+//         "inputs": [
+//             {
+//                 "indexed": true,
+//                 "internalType": "address",
+//                 "name": "owner",
+//                 "type": "address"
+//             },
+//             {
+//                 "indexed": true,
+//                 "internalType": "address",
+//                 "name": "spender",
+//                 "type": "address"
+//             },
+//             {
+//                 "indexed": false,
+//                 "internalType": "uint256",
+//                 "name": "value",
+//                 "type": "uint256"
+//             }
+//         ],
+//         "name": "Approval",
+//         "type": "event"
+//     },
+//     {
+//         "anonymous": false,
+//         "inputs": [
+//             {
+//                 "indexed": true,
+//                 "internalType": "address",
+//                 "name": "from",
+//                 "type": "address"
+//             },
+//             {
+//                 "indexed": true,
+//                 "internalType": "address",
+//                 "name": "to",
+//                 "type": "address"
+//             },
+//             {
+//                 "indexed": false,
+//                 "internalType": "uint256",
+//                 "name": "value",
+//                 "type": "uint256"
+//             }
+//         ],
+//         "name": "Transfer",
+//         "type": "event"
+//     },
+//     {
+//         "inputs": [
+//             {
+//                 "internalType": "address",
+//                 "name": "owner",
+//                 "type": "address"
+//             },
+//             {
+//                 "internalType": "address",
+//                 "name": "spender",
+//                 "type": "address"
+//             }
+//         ],
+//         "name": "allowance",
+//         "outputs": [
+//             {
+//                 "internalType": "uint256",
+//                 "name": "",
+//                 "type": "uint256"
+//             }
+//         ],
+//         "stateMutability": "view",
+//         "type": "function"
+//     },
+//     {
+//         "inputs": [
+//             {
+//                 "internalType": "address",
+//                 "name": "spender",
+//                 "type": "address"
+//             },
+//             {
+//                 "internalType": "uint256",
+//                 "name": "amount",
+//                 "type": "uint256"
+//             }
+//         ],
+//         "name": "approve",
+//         "outputs": [
+//             {
+//                 "internalType": "bool",
+//                 "name": "",
+//                 "type": "bool"
+//             }
+//         ],
+//         "stateMutability": "nonpayable",
+//         "type": "function"
+//     },
+//     {
+//         "inputs": [
+//             {
+//                 "internalType": "address",
+//                 "name": "account",
+//                 "type": "address"
+//             }
+//         ],
+//         "name": "balanceOf",
+//         "outputs": [
+//             {
+//                 "internalType": "uint256",
+//                 "name": "",
+//                 "type": "uint256"
+//             }
+//         ],
+//         "stateMutability": "view",
+//         "type": "function"
+//     },
+//     {
+//         "inputs": [],
+//         "name": "decimals",
+//         "outputs": [
+//             {
+//                 "internalType": "uint8",
+//                 "name": "",
+//                 "type": "uint8"
+//             }
+//         ],
+//         "stateMutability": "view",
+//         "type": "function"
+//     },
+//     {
+//         "inputs": [],
+//         "name": "name",
+//         "outputs": [
+//             {
+//                 "internalType": "string",
+//                 "name": "",
+//                 "type": "string"
+//             }
+//         ],
+//         "stateMutability": "view",
+//         "type": "function"
+//     },
+//     {
+//         "inputs": [],
+//         "name": "symbol",
+//         "outputs": [
+//             {
+//                 "internalType": "string",
+//                 "name": "",
+//                 "type": "string"
+//             }
+//         ],
+//         "stateMutability": "view",
+//         "type": "function"
+//     },
+//     {
+//         "inputs": [],
+//         "name": "totalSupply",
+//         "outputs": [
+//             {
+//                 "internalType": "uint256",
+//                 "name": "",
+//                 "type": "uint256"
+//             }
+//         ],
+//         "stateMutability": "view",
+//         "type": "function"
+//     },
+//     {
+//         "inputs": [
+//             {
+//                 "internalType": "address",
+//                 "name": "recipient",
+//                 "type": "address"
+//             },
+//             {
+//                 "internalType": "uint256",
+//                 "name": "amount",
+//                 "type": "uint256"
+//             }
+//         ],
+//         "name": "transfer",
+//         "outputs": [
+//             {
+//                 "internalType": "bool",
+//                 "name": "",
+//                 "type": "bool"
+//             }
+//         ],
+//         "stateMutability": "nonpayable",
+//         "type": "function"
+//     },
+//     {
+//         "inputs": [
+//             {
+//                 "internalType": "address",
+//                 "name": "sender",
+//                 "type": "address"
+//             },
+//             {
+//                 "internalType": "address",
+//                 "name": "recipient",
+//                 "type": "address"
+//             },
+//             {
+//                 "internalType": "uint256",
+//                 "name": "amount",
+//                 "type": "uint256"
+//             }
+//         ],
+//         "name": "transferFrom",
+//         "outputs": [
+//             {
+//                 "internalType": "bool",
+//                 "name": "",
+//                 "type": "bool"
+//             }
+//         ],
+//         "stateMutability": "nonpayable",
+//         "type": "function"
+//     }
+// ]

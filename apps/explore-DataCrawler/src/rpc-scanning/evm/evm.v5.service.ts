@@ -134,19 +134,20 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           receipt as any,
         );
       } else if (contractInfo) {
-        if (contractInfo.name === 'CrossInscriptions') {
+        if (contractInfo.name === 'OBSource') {
+          transfers = EVMV5Utils.evmOBSource(chainConfig, transaction as any, receipt as any);
+        } else if (contractInfo.name === 'OrbiterRouterV1') {
+          transfers = EVMV5Utils.evmObRouterV1(chainConfig, transaction as any, receipt as any);
+        } else if (EVMV5Utils.name === 'OrbiterRouterV3') {
+          transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
+        }else if (contractInfo.name === 'CrossInscriptions') {
           transfers = EVMV5Utils.crossInscriptions(
             chainConfig,
             transaction as any,
             receipt as any,
           );
         } else {
-          transfers = EVMV5Utils.evmContract(
-            chainConfig,
-            contractInfo,
-            transaction as any,
-            receipt as any,
-          );
+          console.log('other contract', contractInfo)
         }
       } else {
         if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {

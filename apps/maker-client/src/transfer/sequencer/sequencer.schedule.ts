@@ -99,6 +99,7 @@ export class SequencerScheduleService {
         // read db history
         const privateKey = this.validatorService.getSenderPrivateKey(owner);
         if (!privateKey) {
+          this.logger.warn(`${owner} No private key injected`)
           continue;
         }
         this.readQueueExecByKey(`${chainId}-${owner.toLocaleLowerCase()}`);
@@ -153,16 +154,15 @@ export class SequencerScheduleService {
       const queueLength = await this.redis.llen(queueKey);
       // 1. If the number of transactions is reached, use aggregation, if not, use single transaction
       // 2. If aggregation is not reached within the specified time, send all, otherwise continue to wait.
-      const paidType = this.envConfig.get(`${targetChain}.PaidType`, 1);
+      const paidType = +this.envConfig.get(`${targetChain}.PaidType`, 1);
       let hashList: string[] = [];
-      if (+paidType === 2) {
+      if (paidType === 2) {
         const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
         if (queueLength >= batchSize) {
           hashList = await this.dequeueMessages(queueKey, maxPaidTransferCount);
         } else {
           // is timeout
           if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
-            return;
           }
           hashList = await this.dequeueMessages(queueKey, queueLength);
         }
@@ -279,7 +279,7 @@ export class SequencerScheduleService {
     }
     const isFluidityOK = await this.validatorService.checkMakerFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
     if (!isFluidityOK) {
-      throw new Errors.InsufficientLiquidity(`${targetChain} - ${targetMaker}`)
+      throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker}`)
     }
 
     const success = await this.validatorService.validatingValueMatches(
