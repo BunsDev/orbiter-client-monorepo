@@ -383,18 +383,13 @@ export class TransactionV3Service {
     }
 
     const callData = transfer.calldata as any;
-    if (!callData) {
-      return this.errorBreakResult(
-        `handleMintTransfer fail ${transfer.hash} Incorrect callData, must not be null`,
-      );
-    }
-    const { tick, op, p, amt, fc } = callData;
-    if (op !== InscriptionOpType.Mint) {
-      return this.errorBreakResult(
-        `handleMintTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Mint}`,
-      );
-    }
-    if (!p || !tick || !amt || !/^[1-9]\d*(\.\d+)?$/.test(amt) || !fc) {
+    if (
+      !callData ||
+      !callData.p ||
+      !callData.tick ||
+      !callData.amt ||
+      !/^[1-9]\d*(\.\d+)?$/.test(callData.amt) ||
+      !callData.fc) {
       await this.transfersModel.update(
         {
           opStatus: TransferOpStatus.INVALID_OP_PARAMS,
@@ -409,6 +404,12 @@ export class TransactionV3Service {
         `handleMintTransfer fail ${
           transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
+      );
+    }
+    const { tick, op, p, amt, fc } = callData;
+    if (op !== InscriptionOpType.Mint) {
+      return this.errorBreakResult(
+        `handleMintTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Mint}`,
       );
     }
     const fromChainInternalId = +fc;
