@@ -383,6 +383,11 @@ export class TransactionV3Service {
     }
 
     const callData = transfer.calldata as any;
+    if (!callData) {
+      return this.errorBreakResult(
+        `handleMintTransfer fail ${transfer.hash} Incorrect callData, must not be null`,
+      );
+    }
     const { tick, op, p, amt, fc } = callData;
     if (op !== InscriptionOpType.Mint) {
       return this.errorBreakResult(
