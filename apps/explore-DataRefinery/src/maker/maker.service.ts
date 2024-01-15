@@ -176,5 +176,9 @@ export class MakerService {
         }
         return false;
     }
-
+    async isInscriptionMakers(address: string): Promise<boolean> {
+      const makers = await this.envConfigService.getAsync('MAKERS');
+      const inscriptions = makers.map(e => e.toLowerCase());
+      return inscriptions.includes(address);
+    }
 }
