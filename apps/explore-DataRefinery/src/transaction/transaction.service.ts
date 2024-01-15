@@ -84,9 +84,6 @@ export class TransactionService {
         let versionStr = null;
         const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');
         if ((await this.makerService.isInscriptionMakers(transfer.sender)) || await this.makerService.isInscriptionMakers(transfer.receiver)) {
-          transfer.version = '3';
-        }
-        if (transfer.version == '3') {
           // upsertData.opStatus = TransferOpStatus.INIT_STATUS;
           const calldata = upsertData.calldata
           if (await this.makerService.isInscriptionMakers(transfer.receiver)) {

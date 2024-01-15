@@ -21,6 +21,10 @@ export class MakerScheduuleService {
         this.envConfigService.getAsync('MAKERS').then(async(owners) => {
             await this.redis.sadd("v1Owners", owners)
         })
+        this.envConfigService.getAsync('INSCRIPTION_MAKERS').then(async(list) => {
+          const makers = list.map(e => e.toLowerCase());
+          await this.redis.sadd("v3Owners", makers)
+      })
     }
     async getSubClient(): Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
