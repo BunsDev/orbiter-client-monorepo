@@ -30,7 +30,6 @@ export class TransactionService {
             attributes: ['chainId', 'hash', 'sender', 'receiver', 'amount', 'symbol', 'timestamp', 'status', 'opStatus'],
             where: {
                 hash,
-                version: ['1-0', '2-0', '3-0'],
             }
         });
         if (transaction) {
