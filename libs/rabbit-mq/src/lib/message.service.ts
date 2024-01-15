@@ -35,8 +35,8 @@ export class MessageService {
     }
   }
 
-  async sendTransferToMakerClient(data: BridgeTransactionAttributes, version:string="") {
-    const queue = `makerWaitTransfer${version}`
+  async sendTransferToMakerClient(data: BridgeTransactionAttributes, afterPrefix:string="") {
+    const queue = `makerWaitTransfer${afterPrefix}`
     const channel = this.connectionManager.getChannel();
     try {
       // Logger.log(`sendTransferToMakerClient ${JSON.stringify(data)}`)
@@ -99,6 +99,22 @@ export class MessageService {
     }
   }
 
+  async sendClaimTransferToMakerClient(data: BridgeTransactionAttributes, afterPrefix:string="") {
+    const queue = `makerWaitClaimTransfer${afterPrefix}`
+    const channel = this.connectionManager.getChannel();
+    try {
+      // Logger.log(`sendTransferToMakerClient ${JSON.stringify(data)}`)
+      await channel.assertQueue(queue);
+      const result = await channel.sendToQueue(
+        queue,
+        Buffer.from(JSONStringify(data)),
+      );
+      return result;
+    } catch (error) {
+      Logger.error('Failed to send message:', (error as any).message);
+      throw error;
+    }
+  }
   async sendMessage(queue: string, message: string) {
     const channel = this.connectionManager.getChannel();
     try {

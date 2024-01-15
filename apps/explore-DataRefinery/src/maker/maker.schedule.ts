@@ -18,7 +18,9 @@ export class MakerScheduuleService {
         this.syncV1Owners()
         this.syncV2ChainTokens()
         this.syncV2Owners()
-
+        this.envConfigService.getAsync('MAKERS').then(async(owners) => {
+            await this.redis.sadd("v1Owners", owners)
+        })
     }
     async getSubClient(): Promise<SubgraphClient> {
         const SubgraphEndpoint = await this.envConfigService.getAsync("SubgraphEndpoint");
@@ -64,9 +66,11 @@ export class MakerScheduuleService {
             this.logger.error('syncV2Owners error:', error);
         }
     }
+
     @Interval(1000 * 60)
     async syncV1Owners() {
         try {
+
             const v1Makers = await this.makerService.getV1MakerOwners();
             const v1OwnersCount = await this.redis.scard("v1Owners");
             if (v1Makers.length > 0 && v1OwnersCount != v1Makers.length) {

@@ -210,15 +210,55 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           );
         }
       } else if (contractInfo) {
-        transfers = EVMV6Utils.evmContract(
-          chainConfig,
-          contractInfo,
-          transaction,
-          receipt,
-        );
+        if (contractInfo.name === 'CrossInscriptions') {
+          transfers = EVMV6Utils.crossInscriptions(
+            chainConfig,
+            transaction,
+            receipt,
+          );
+        } else {
+          transfers = EVMV6Utils.evmContract(
+            chainConfig,
+            contractInfo,
+            transaction,
+            receipt,
+          );
+        }
       } else {
-        if (transaction.data === '0x' || (transaction.to && await provider.getCode(transaction.to) === '0x')) {
-          // tag:
+        // 0x646174613a2c
+        if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {
+          const decodeData = EVMV6Utils.decodeInscriptionCallData(transaction.data)
+          if (decodeData) {
+            const value = transaction.value.toString();
+            transfers.push({
+              chainId: String(chainId),
+              hash: transaction.hash,
+              blockNumber: transaction.blockNumber,
+              transactionIndex: transaction.index,
+              sender: transaction.from,
+              receiver: transaction.to,
+              amount: new BigNumber(value)
+                .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+                .toString(),
+              value,
+              calldata: decodeData,
+              token: chainConfig.nativeCurrency.address,
+              symbol: chainConfig.nativeCurrency.symbol,
+              fee: fee.toString(),
+              feeToken: chainConfig.nativeCurrency.symbol,
+              feeAmount: new BigNumber(fee.toString())
+                .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+                .toString(),
+              timestamp: 0,
+              selector: decodeData.op,
+              version: '3',
+              status,
+              nonce,
+              receipt
+            })
+          }
+        }
+        else if (transaction.data === '0x' || (transaction.to && await provider.getCode(transaction.to) === '0x')) {
           const value = transaction.value.toString();
           transfers.push({
             chainId: String(chainId),

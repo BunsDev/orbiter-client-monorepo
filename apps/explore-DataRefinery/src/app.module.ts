@@ -9,7 +9,7 @@ import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
 import { AlertModule } from '@orbiter-finance/alert';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ScheduleModule } from '@nestjs/schedule';
-import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
+import { BridgeTransaction, Transfers, DeployRecord, UserBalance } from "@orbiter-finance/seq-models";
 
 @Module({
   imports: [
@@ -28,14 +28,14 @@ import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
     OrbiterConfigModule.forRoot({
       chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-server/chains.json",
       envConfigPath: process.env['ENV_VAR_PATH'] || "explore-server/config.yaml",
-      makerV1RulePath: process.env['ENV_RULES_PATH'] || "rules",
+      // makerV1RulePath: process.env['ENV_RULES_PATH'] || "rules",
       // cachePath: join(__dirname, 'runtime')
     }),
     RabbitMqModule,
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async(configService: ENVConfigService) => {
-        const REDIS_URL = await configService.getAsync("REDIS_URL"); 
+        const REDIS_URL = await configService.getAsync("REDIS_URL");
         return {
           config: {
             url: REDIS_URL
@@ -51,7 +51,7 @@ import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
-        return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction] };
+        return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction, DeployRecord, UserBalance] };
       },
     }),
     AlertModule.registerAsync({

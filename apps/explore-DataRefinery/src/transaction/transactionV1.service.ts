@@ -292,10 +292,9 @@ export class TransactionV1Service {
             targetMaker: transfer.sender
           },
           {
-            limit: 1,
             where: {
               id: memoryBT.id,
-              status: [0, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
+              status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
               sourceTime: {
                 [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
                 [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
@@ -373,7 +372,7 @@ export class TransactionV1Service {
       });
       if (!btTx || !btTx.id) {
         const where = {
-          status: [0, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
+          status: [0,BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
           targetId: null,
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,

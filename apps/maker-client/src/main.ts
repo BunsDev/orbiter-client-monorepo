@@ -9,6 +9,7 @@ dayjs.extend(utc);
 import { AppModule } from './app.module';
 import { WinstonModule } from 'nest-winston';
 import { logger, characterPattern } from '@orbiter-finance/utils'
+
 const sysLogger = logger.createLoggerByName('app');
 
 async function bootstrap() {
@@ -27,6 +28,7 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
+  console.error(reason)
   sysLogger.error(`Unhandled Rejection at: ${reason}`)
 });
 bootstrap();

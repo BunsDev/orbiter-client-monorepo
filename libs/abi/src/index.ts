@@ -8,6 +8,7 @@ import ChainLinkAggregatorV3 from './lib/ChainLinkAggregatorV3.json';
 import StarknetAccount from './lib/StarknetAccount.json';
 import StarknetERC20 from './lib/StarknetERC20.json';
 import MakerDeposit from './lib/MakerDeposit.json';
+import CrossInscriptions from './lib/CrossInscriptions.json';
 import MDCAbi from './lib/MDCAbi.json';
 type ABI_JSON = any;
 const abis: { [key: string]: ABI_JSON } = {};
@@ -33,5 +34,6 @@ export {
     OrbiterRouterV1,
     OrbiterRouterV3,
     MakerDeposit,
+    CrossInscriptions,
     MDCAbi
 };

@@ -37,7 +37,7 @@ dayjs.extend(utc);
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (configService: ENVConfigService) => {
-        const REDIS_URL = await configService.getAsync("REDIS_URL"); 
+        const REDIS_URL = await configService.getAsync("REDIS_URL");
         return {
           config: {
             url: REDIS_URL

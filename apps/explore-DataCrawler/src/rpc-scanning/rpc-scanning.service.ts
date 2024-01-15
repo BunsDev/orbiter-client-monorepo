@@ -118,25 +118,25 @@ export class RpcScanningService implements RpcScanningInterface {
       const firstStart = isEmpty(this.rpcLastBlockNumber);
       this.rpcLastBlockNumber = await promiseWithTimeout(this.getLatestBlockNumber(), 1000 * 20);
       if (isEmpty(this.rpcLastBlockNumber)) {
-        throw new Error('checkLatestHeight: getLatestBlockNumber returned empty value.');
+        throw new Error('checkLatestHeight getLatestBlockNumber returned empty value.');
       }
 
       let lastScannedBlockNumber = await this.dataProcessor.getNextScanMaxBlockNumber();
       if (!lastScannedBlockNumber) {
         lastScannedBlockNumber = this.rpcLastBlockNumber - this.batchLimit;
-        this.logger.info(`checkLatestHeight: Initialize ${lastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
+        this.logger.info(`checkLatestHeight Initialize ${lastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
         this.dataProcessor.changeMaxScanBlockNumber(lastScannedBlockNumber);
       }
 
       if (firstStart) {
         const newLastScannedBlockNumber = lastScannedBlockNumber > this.batchLimit ? lastScannedBlockNumber - this.batchLimit : lastScannedBlockNumber;
-        this.logger.info(`checkLatestHeight: restart app, go back ${lastScannedBlockNumber} change ${newLastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
+        this.logger.info(`checkLatestHeight restart app, go back ${lastScannedBlockNumber} change ${newLastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
         lastScannedBlockNumber = newLastScannedBlockNumber;
       }
       const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
       const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
       this.chainConfig.debug && this.logger.debug(
-        `${this.chainConfig.name} checkLatestHeight: Checking - Target Confirmation: ${targetConfirmation}, lastScannedBlockNumber: ${lastScannedBlockNumber}, safetyBlockNumber: ${safetyBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}, batchLimit: ${this.batchLimit}, nextScanBlock: ${await this.dataProcessor.getNextScanMaxBlockNumber()}`,
+        `${this.chainConfig.name} checkLatestHeight Checking - Target Confirmation: ${targetConfirmation}, lastScannedBlockNumber: ${lastScannedBlockNumber}, safetyBlockNumber: ${safetyBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}, batchLimit: ${this.batchLimit}, nextScanBlock: ${await this.dataProcessor.getNextScanMaxBlockNumber()}`,
       );
 
       if (safetyBlockNumber >= lastScannedBlockNumber) {
@@ -145,7 +145,7 @@ export class RpcScanningService implements RpcScanningInterface {
         return blockNumbers;
       }
     } catch (error) {
-      this.logger.error(`checkLatestHeight: Error - ${error}`);
+      this.logger.error(`checkLatestHeight error - ${error}`);
     }
   }
 

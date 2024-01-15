@@ -28,7 +28,6 @@ export class ProceedsController extends PrometheusController {
             const total = sumBy(result, row=> {
                 return row['currencyData']['proceeds'];
             });
-            console.log('总收益：', total);
         }
         return super.index(response);
     }
