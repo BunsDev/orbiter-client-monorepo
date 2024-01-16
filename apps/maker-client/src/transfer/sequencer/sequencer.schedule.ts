@@ -61,6 +61,30 @@ export class SequencerScheduleService {
   }
   private async readDBTransactionRecords(owner: string) {
     const maxTransferTimeoutMinute = this.validatorService.getTransferGlobalTimeout();
+    const where: any = {
+      status: 0,
+      sourceMaker: owner,
+      targetId: null,
+      sourceTime: {
+        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
+      },
+    };
+    const enablePaidChains: string[] = this.envConfig.get("ENABLE_PAID_CHAINS");
+    if (!enablePaidChains) {
+      this.logger.warn('ENABLE_PAID_CHAINS not found');
+      return;
+    }
+    const enablePaidVersion: string[] = this.envConfig.get("ENABLE_PAID_VERSION");
+    if (!enablePaidVersion) {
+      this.logger.warn('ENABLE_PAID_VERSION not found');
+      return;
+    }
+    if (!enablePaidChains.includes('*')) {
+      where['targetChain'] = enablePaidChains;
+    }
+    if (!enablePaidVersion.includes('*')) {
+      where['version'] = enablePaidVersion;
+    }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
       order: [['id', 'asc'], ['sourceTime', 'asc']],
@@ -69,16 +93,7 @@ export class SequencerScheduleService {
         'targetMaker',
         'sourceId'
       ],
-      where: {
-        status: 0,
-        sourceMaker: owner,
-        targetId: null,
-        targetChain: this.envConfig.get("ENABLE_PAID_CHAINS"),
-        version: this.envConfig.get("ENABLE_PAID_VERSION"),
-        sourceTime: {
-          [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
-        },
-      },
+      where,
     });
     if (records.length > 0) {
       for (const tx of records) {
