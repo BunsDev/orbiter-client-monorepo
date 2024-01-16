@@ -54,8 +54,8 @@ services:
       dockerfile:  ./apps/explore-DataRefinery/Dockerfile.clients
     restart: always
     environment:
-      CONSUL_URL: '${CONSUL_KEYS2}'
-      CONSUL_KEYS: '${CONSUL_KEYS}'
+      CONSUL_URL: '${CONSUL_URL}'
+      CONSUL_KEYS: '${CONSUL_KEYS2}'
       application: '${application}-refinery'
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     depends_on:
