@@ -28,6 +28,7 @@ services:
     command: ["node", 'main.js']
     environment:
       CONSUL_URL: '${CONSUL_URL}'
+      CONSUL_KEYS: '${CONSUL_KEYS1}'
       application: '${application}-crawler'
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     ports:
@@ -53,7 +54,7 @@ services:
       dockerfile:  ./apps/explore-DataRefinery/Dockerfile.clients
     restart: always
     environment:
-      CONSUL_URL: '${CONSUL_URL}'
+      CONSUL_URL: '${CONSUL_KEYS2}'
       CONSUL_KEYS: '${CONSUL_KEYS}'
       application: '${application}-refinery'
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
