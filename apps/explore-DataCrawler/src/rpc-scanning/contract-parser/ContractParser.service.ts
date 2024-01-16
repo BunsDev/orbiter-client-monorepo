@@ -28,7 +28,14 @@ export class ContractParserService {
   existRegisterContract(chainId: string, contractAddress: string) {
     const chain = this.chainConfigService.getChainInfo(chainId);
     const contractName = chain.contract[contractAddress.toLocaleLowerCase()];
-    return !isEmpty(contractName)
+    if (!contractName) {
+      return false;
+    }
+    const registerName = `${chainId}-${contractName}`;
+    if (this.contractRegistry.hasOwnProperty(registerName)) {
+      return true;
+    }
+    return false;
   }
   parseContract(chainId: string, contractAddress: string, ...data: any[]): TransferAmountTransaction[] {
     const chain = this.chainConfigService.getChainInfo(chainId);
