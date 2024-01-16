@@ -13,7 +13,7 @@ export class EVMPraser implements ContractParser {
     constructor(protected readonly chainInfo: IChainConfig) {
         this.contractInterface = new Interface(this.abi);
     }
-    parse(contract: string, [transaction, receipt]: any[]): TransferAmountTransaction[] {
+    parse(contractAddress: string, [transaction, receipt]: any[]): TransferAmountTransaction[] {
         const parsedData = this.contractInterface.parseTransaction({ data: transaction.data });
         if (!parsedData) {
             return null;
@@ -21,52 +21,52 @@ export class EVMPraser implements ContractParser {
         if (!this[parsedData.name]) {
             return null;
         }
-        return this[parsedData.name](transaction, receipt, parsedData);
+        return this[parsedData.name](contractAddress,transaction, receipt, parsedData);
     }
-    async transfer(transaction: TransactionResponse, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
-        const { nonce } = transaction;
-        const transfers: TransferAmountTransaction[] = [];
-        const chainInfo = this.chainInfo;
-        if (parsedData && parsedData.signature === 'transfer(address,uint256)') {
-            // find log
-            const txData: TransferAmountTransaction = {
-                chainId: chainInfo.chainId,
-                hash: transaction.hash,
-                blockNumber: transaction.blockNumber,
-                transactionIndex: transaction.index,
-                sender: transaction.from,
-                receiver: parsedData.args[0],
-                amount: null,
-                value: null,
-                token: transaction.to,
-                symbol: '',
-                fee: null,
-                feeAmount: null,
-                feeToken: chainInfo.nativeCurrency.symbol,
-                timestamp: 0,
-                status: TransferAmountTransactionStatus.pending,
-                nonce,
-                contract: transaction.to,
-                calldata: parsedData.args.toArray(),
-                selector: parsedData.selector,
-                signature: parsedData.signature,
-            };
+    // async transfer(transaction: TransactionResponse, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
+    //     const { nonce } = transaction;
+    //     const transfers: TransferAmountTransaction[] = [];
+    //     const chainInfo = this.chainInfo;
+    //     if (parsedData && parsedData.signature === 'transfer(address,uint256)') {
+    //         // find log
+    //         const txData: TransferAmountTransaction = {
+    //             chainId: chainInfo.chainId,
+    //             hash: transaction.hash,
+    //             blockNumber: transaction.blockNumber,
+    //             transactionIndex: transaction.index,
+    //             sender: transaction.from,
+    //             receiver: parsedData.args[0],
+    //             amount: null,
+    //             value: null,
+    //             token: transaction.to,
+    //             symbol: '',
+    //             fee: null,
+    //             feeAmount: null,
+    //             feeToken: chainInfo.nativeCurrency.symbol,
+    //             timestamp: 0,
+    //             status: TransferAmountTransactionStatus.pending,
+    //             nonce,
+    //             contract: transaction.to,
+    //             calldata: parsedData.args.toArray(),
+    //             selector: parsedData.selector,
+    //             signature: parsedData.signature,
+    //         };
 
-            txData.value = new BigNumber(parsedData.args[1]).toFixed(0);
-            const tokenInfo = chainInfo.tokens.find((t) =>
-                equals(t.address, transaction.to),
-            );
-            if (tokenInfo) {
-                txData.amount = new BigNumber(txData.value)
-                    .div(Math.pow(10, tokenInfo.decimals))
-                    .toString();
-                txData.symbol = tokenInfo.symbol;
-            }
-            transfers.push(txData);
-        }
+    //         txData.value = new BigNumber(parsedData.args[1]).toFixed(0);
+    //         const tokenInfo = chainInfo.tokens.find((t) =>
+    //             equals(t.address, transaction.to),
+    //         );
+    //         if (tokenInfo) {
+    //             txData.amount = new BigNumber(txData.value)
+    //                 .div(Math.pow(10, tokenInfo.decimals))
+    //                 .toString();
+    //             txData.symbol = tokenInfo.symbol;
+    //         }
+    //         transfers.push(txData);
+    //     }
 
-        return transfers;
-    }
+    //     return transfers;
+    // }
     async buildTransferBaseData(transaction: TransactionResponse, receipt: TransactionReceipt, parsedData?: TransactionDescription) {
         let fee = '';
         let txIndex;

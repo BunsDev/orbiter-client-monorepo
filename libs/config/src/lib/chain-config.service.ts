@@ -20,9 +20,6 @@ export class ChainConfigService {
             return [];
         }
         const chains = configList.map((chain: IChainConfig) => {
-            if (!chain.workingStatus) {
-                chain.workingStatus = 'stop';
-            }
             chain.internalId = +chain.internalId;
             chain.tokens =
                 chain.tokens?.map((row: Token) => {

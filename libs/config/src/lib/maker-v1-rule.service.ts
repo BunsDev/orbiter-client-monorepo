@@ -1,16 +1,22 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ConsulService } from 'libs/nestjs-consul/src/index'
 
 @Injectable()
 export class MakerV1RuleService {
-    get configs() {
-        const config = this.consul.configs['/rules/']
-        return config && this.format(config);
-    }
     constructor(
-        private readonly consul: ConsulService<any>,
+        private readonly consul: ConsulService<any>
     ) {
     }
+    get configs() {
+        for (const key in this.consul.configs) {
+            if (key.includes('rules')) {
+                const config = this.consul.configs[key]
+                return config && this.format(config);
+            }
+        }
+    }
+
     async init() {
 
     }

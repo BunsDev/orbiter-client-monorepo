@@ -9,7 +9,7 @@ export default class XBridge extends EVMPraser {
   get abi() {
     return XBRIDGE_ADAPTER_ABI;
   }
-  async bridgeToV2(transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
+  async bridgeToV2(contractAddress:string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
     const txData = await this.buildTransferBaseData(transaction, receipt, parsedData);
     if (transaction.value > 0) {
       txData.value = transaction.value.toString();
@@ -30,7 +30,7 @@ export default class XBridge extends EVMPraser {
       for(const log of receipt.logs) {
         try {
           const logData = this.contractInterface.parseLog(log as any);
-          console.log(logData, '==logData', log);
+          console.log(logData, 'logData', log);
         } catch (error) {
           console.log('error', error);
         }

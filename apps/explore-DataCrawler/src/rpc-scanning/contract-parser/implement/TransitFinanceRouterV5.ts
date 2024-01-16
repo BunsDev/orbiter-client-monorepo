@@ -7,8 +7,8 @@ export default class TransitFinanceRouterV5 extends EVMPraser {
     get abi() {
         return abi;
     }
-    async cross(transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
-        console.log(parsedData, '==parsedData')
+    async cross(contractAddress:string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
+        console.log(parsedData, 'cross')
         return [];
     }
 }

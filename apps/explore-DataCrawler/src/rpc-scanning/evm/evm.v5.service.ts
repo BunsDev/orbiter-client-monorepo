@@ -139,8 +139,13 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         } else if (contractInfo.name === 'OrbiterRouterV1') {
           transfers = EVMV5Utils.evmObRouterV1(chainConfig, transaction as any, receipt as any);
         } else if (EVMV5Utils.name === 'OrbiterRouterV3') {
-          transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
-        }else if (contractInfo.name === 'CrossInscriptions') {
+          const methodId = transaction.data.substring(0, 10);
+          if (['0x29723511', '0xf9c028ec'].includes(methodId)) {
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt);
+          } else {
+            transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
+          }
+        } else if (contractInfo.name === 'CrossInscriptions') {
           transfers = EVMV5Utils.crossInscriptions(
             chainConfig,
             transaction as any,
@@ -237,7 +242,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
   }
   async handleTransactionAfter(transfers: TransferAmountTransaction[]): Promise<TransferAmountTransaction[]> {
     return transfers.map(transfer => {
-      
+
       if (transfer.status === TransferAmountTransactionStatus.confirmed) {
         if (!this.ctx.chainConfigService.inValidMainToken(transfer.chainId, transfer.token)) {
           // erc20
@@ -342,6 +347,27 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
               if (receiverValid) {
                 rows.push(row);
                 continue;
+              }
+            }
+          }
+
+          // is to contract addr
+          if (contractList.includes(toAddrLower)) {
+            // decode
+            const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
+            for (const transfer of transfers) {
+              const toAddrLower = (transfer.receiver).toLocaleLowerCase();
+              const fromAddrLower = (transfer.sender).toLocaleLowerCase();
+              // eoa
+              const senderValid = await this.isWatchAddress(fromAddrLower);
+              if (senderValid) {
+                rows.push(row);
+                break;
+              }
+              const receiverValid = await this.isWatchAddress(toAddrLower);
+              if (receiverValid) {
+                rows.push(row);
+                break;
               }
             }
           }

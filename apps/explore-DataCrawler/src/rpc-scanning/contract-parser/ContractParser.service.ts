@@ -4,7 +4,6 @@ import { TransferAmountTransaction, ContractRegistry, ContractParser } from './C
 import { ChainConfigService } from '@orbiter-finance/config';
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import implementParses from './implement/'
-console.log(implementParses, '=implementParses')
 @Injectable()
 export class ContractParserService {
   private contractRegistry: { [contractName: string]: ContractParser } = {};
@@ -25,17 +24,17 @@ export class ContractParserService {
   registerContract(contractName: string, instance: ContractParser) {
     this.contractRegistry[contractName] = instance;
   }
-  parseContract(chainId: string, contractAddr: string, ...data: any[]): TransferAmountTransaction[] {
+  parseContract(chainId: string, contractAddress: string, ...data: any[]): TransferAmountTransaction[] {
     const chain = this.chainConfigService.getChainInfo(chainId);
-    const contractName = chain.contract[contractAddr.toLocaleLowerCase()];
+    const contractName = chain.contract[contractAddress.toLocaleLowerCase()];
     if (!contractName) {
-      throw new Error(`Chain ${chain.name} Contract ${contractAddr} Not Register`);
+      throw new Error(`Chain ${chain.name} Contract ${contractAddress} Not Register`);
     }
     const registerName = `${chainId}-${contractName}`;
     if (this.contractRegistry.hasOwnProperty(registerName)) {
       const instance = this.contractRegistry[registerName];
       // const parser = this.contractRegistry[contractName];
-      return instance.parse(contractAddr, data);
+      return instance.parse(contractAddress, data);
     } else {
       throw new Error(`${registerName} Contract decode parse not registered`);
     }

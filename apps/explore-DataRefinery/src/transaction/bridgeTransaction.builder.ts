@@ -5,14 +5,15 @@ import {
   equals,
   getObjKeyByValue
 } from '@orbiter-finance/utils';
+import querystring from 'querystring';
 import { BridgeTransactionAttributes, Transfers as TransfersModel, TransferOpStatus, BridgeTransactionStatus } from '@orbiter-finance/seq-models';
 import { validateAndParseAddress } from 'starknet'
 import { ChainConfigService, ENVConfigService, IChainConfig, MakerV1RuleService, Token } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
-import { v1MakerUtils} from '@orbiter-finance/utils'
+import { v1MakerUtils } from '@orbiter-finance/utils'
 import dayjs from 'dayjs';
 import { hexlify } from 'ethers6';
-import { TransactionID, ValidSourceTxError, addressPadStart, decodeV1SwapData } from '../utils';
+import { QueryStringUtils, TransactionID, ValidSourceTxError, addressPadStart, decodeHex, decodeV1SwapData } from '../utils';
 import RLP from "rlp";
 
 export function parseSourceTxSecurityCode(value: string) {
@@ -38,7 +39,7 @@ export function parseSourceTxSecurityCode(value: string) {
   }
   return nCode % 1000;
 }
-export function parseTragetTxSecurityCode(value: string):string {
+export function parseTragetTxSecurityCode(value: string): string {
   return (+value.substring(value.length - 4)).toString();
 }
 
@@ -340,9 +341,37 @@ export class EVMRouterV3ContractBuilder {
       && ['transfer(address,bytes)', 'transferToken(address,address,uint256,bytes)'].includes(transfer.signature)
       && getObjKeyByValue(contract, 'OrbiterRouterV3').toLowerCase() === transfer.contract.toLowerCase();
   }
-
-  async build(transfer: TransfersModel): Promise<BuilderData> {
+  paramsMap(params: any): BuilderData {
     const result = {} as BuilderData;
+    for (const k in params) {
+      if (k === 'c') {
+        const targetChain = this.chainConfigService.getChainByKeyValue('internalId', +params[k]);
+        result.targetChain = targetChain;
+      } else if (k === 't') {
+        result.targetAddress = params[k].toLocaleLowerCase();
+      }
+    }
+    return result;
+  }
+  async build(transfer: TransfersModel): Promise<BuilderData> {
+    let result = {} as BuilderData;
+    // new 
+    if (transfer.signature === 'transfer(address,bytes)') {
+      const urlStr = decodeHex(transfer.calldata[1]);
+      const urlParams = QueryStringUtils.parse(urlStr);
+      if (urlParams) {
+        result = this.paramsMap(urlParams)
+      }
+      return result;
+    } else if (transfer.signature === 'transferToken(address,address,uint256,bytes)') {
+      const urlParams = decodeHex(transfer.calldata[1]);
+      if (urlParams) {
+        result = this.paramsMap(urlParams)
+      }
+      return result;
+    }
+
+    // old
     const decodeData = (<any[]>RLP.decode(transfer.calldata[1])).map(item => <any>hexlify(item));
     const type = decodeData[0];
     const targetChainId = +decodeData[1];
@@ -443,8 +472,6 @@ export class EVMRouterV1ContractBuilder {
 }
 
 
-
-
 @Injectable()
 export default class BridgeTransactionBuilder {
   @LoggerDecorator()
@@ -473,7 +500,7 @@ export default class BridgeTransactionBuilder {
       sourceSymbol: transfer.symbol,
       sourceToken: transfer.token,
       targetToken: null,
-      status:BridgeTransactionStatus.PENDING_PAID,
+      status: BridgeTransactionStatus.PENDING_PAID,
       sourceTime: transfer.timestamp,
       dealerAddress: null,
       ebcAddress: null,
@@ -499,7 +526,9 @@ export default class BridgeTransactionBuilder {
     );
     let builderData: BuilderData
     if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.evmRouterV3ContractBuilder.build(transfer);
+      const baseBuild = await this.standardBuilder.build(transfer) || {};
+      const builderData2 = await this.evmRouterV3ContractBuilder.build(transfer) || {};
+      builderData = {...baseBuild,...builderData2} as any;
     } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
       builderData = await this.evmRouterV1ContractBuilder.build(transfer)
     } else if (this.loopringBuilder.check(transfer)) {
