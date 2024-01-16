@@ -144,14 +144,18 @@ export class TransferService {
         console.error('transferResult', transferResult);
         await transaction.rollback();
       } else {
-        sourceTx.targetNonce = String(transferResult && transferResult.nonce);
-        sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
-        sourceTx.targetMaker = transferResult && transferResult.from;
-        sourceTx.targetId = transferResult && transferResult.hash;
-        await sourceTx.save({
-          transaction,
-        });
-        await transaction.commit();
+        try {
+          sourceTx.targetNonce = String(transferResult && transferResult.nonce);
+          sourceTx.status = BridgeTransactionStatus.PAID_CRASH;
+          sourceTx.targetMaker = transferResult && transferResult.from;
+          sourceTx.targetId = transferResult && transferResult.hash;
+          await sourceTx.save({
+            transaction,
+          });
+          await transaction.commit();
+        } catch (e) {
+          await transaction.rollback();
+        }
       }
       throw error;
     }
@@ -249,7 +253,7 @@ export class TransferService {
             status: BridgeTransactionStatus.PAID_SUCCESS,
             targetMaker: wallet.address,
             targetId: transferResult && `${transferResult.hash}#${i}`,
-            targetNonce: String(transferResult && transferResult.nonce)
+            targetNonce: String(transferResult?.nonce ?? -1)
           },
           {
             where: {
@@ -270,7 +274,7 @@ export class TransferService {
             {
               status: BridgeTransactionStatus.PAID_CRASH,
               targetId: transferResult && `${transferResult.hash}#${i}`,
-              targetNonce: String(transferResult && transferResult.nonce)
+              targetNonce: String(transferResult?.nonce ?? -1)
             },
             {
               where: {
@@ -388,7 +392,7 @@ export class TransferService {
             status: BridgeTransactionStatus.PAID_SUCCESS,
             targetMaker: wallet.address,
             targetId: transferResult && `${transferResult.hash}#${i}`,
-            targetNonce: String(transferResult.nonce)
+            targetNonce: String(transferResult?.nonce ?? -1)
           },
           {
             where: {
@@ -410,7 +414,7 @@ export class TransferService {
               {
                 status: BridgeTransactionStatus.PAID_CRASH,
                 targetId: transferResult && `${transferResult.hash}#${i}`,
-                targetNonce: String(transferResult && transferResult.nonce)
+                targetNonce: String(transferResult?.nonce ?? -1)
               },
               {
                 where: {
