@@ -20,4 +20,11 @@ export class AppController {
     const result = await this.transactionService.syncTransferByHash(hash)
     return { data: result, code: 'ok' };
   }
+
+  @Get('/manualSyncBTT')
+  async manualSyncBTT(@Query() queryParams: { hash: string }) {
+    const { hash } = queryParams;
+    const result = await this.transactionService.syncBTTransfer(hash)
+    return { data: result, code: 'ok' };
+  }
 }
