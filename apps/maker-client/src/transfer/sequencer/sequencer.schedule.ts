@@ -107,7 +107,10 @@ export class SequencerScheduleService {
   }
   @Interval(1000)
   private readCacheQueue() {
-    const chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
+    let chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
+    if (chainIds.includes('*')) {
+      chainIds = this.chainConfigService.getAllChains().map(item => item.chainId);
+    }
     const owners = this.envConfig.get("MAKERS") || [];
     for (const chainId of chainIds) {
       for (const owner of owners) {
