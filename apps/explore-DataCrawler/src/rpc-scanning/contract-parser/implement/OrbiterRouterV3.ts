@@ -59,9 +59,7 @@ export default class OrbiterRouterV3 extends EVMPraser {
         if (receipt) {
             const logEvent = this.findERC20TransferEvent(receipt.logs as any, txData.token, txData.receiver, txData.value);
             // sender
-            if (logEvent) {
-                txData.sender = logEvent.args[0];
-            } else {
+            if (!logEvent) {
                 for (const transfer of transfers) {
                     if (transfer.status != TransferAmountTransactionStatus.failed) {
                         transfer.status = TransferAmountTransactionStatus.failed;
