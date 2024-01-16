@@ -171,7 +171,7 @@ export class TransferService {
               },
             }
           );
-          this.logger.info(`${transfer.targetChain} - ${transferResult.hash} update success`);
+          this.logger.info(`${sourceTx.sourceId} - ${transferResult.hash} pay success`);
         })
         .catch((error) => {
           this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transfer.targetChain} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
