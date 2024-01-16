@@ -98,7 +98,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           }
           // is to contract addr
           const isRegister = this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower);
-          console.log(isRegister, '==isRegister')
           if (contractList.includes(toAddrLower) && isRegister) {
             // decode
             try {
