@@ -99,21 +99,25 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           // is to contract addr
           if (contractList.includes(toAddrLower) && this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower, row)) {
             // decode
-            const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
-            for (const transfer of transfers) {
-              const toAddrLower = (transfer.receiver).toLocaleLowerCase();
-              const fromAddrLower = (transfer.sender).toLocaleLowerCase();
-              // eoa
-              const senderValid = await this.isWatchAddress(fromAddrLower);
-              if (senderValid) {
-                rows.push(row);
-                break;
+            try {
+              const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
+              for (const transfer of transfers) {
+                const toAddrLower = (transfer.receiver).toLocaleLowerCase();
+                const fromAddrLower = (transfer.sender).toLocaleLowerCase();
+                // eoa
+                const senderValid = await this.isWatchAddress(fromAddrLower);
+                if (senderValid) {
+                  rows.push(row);
+                  break;
+                }
+                const receiverValid = await this.isWatchAddress(toAddrLower);
+                if (receiverValid) {
+                  rows.push(row);
+                  break;
+                }
               }
-              const receiverValid = await this.isWatchAddress(toAddrLower);
-              if (receiverValid) {
-                rows.push(row);
-                break;
-              }
+            } catch (error) {
+              this.logger.error(`${this.chainConfig.name} parseContract error ${error.message}`, error)
             }
           }
         }
@@ -233,13 +237,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         } else if (contractInfo.name === 'OrbiterRouterV1') {
           transfers = EVMV6Utils.evmObRouterV1(chainConfig, transaction, receipt);
         } else if (contractInfo.name === 'OrbiterRouterV3') {
-          const methodId = transaction.data.substring(0,10);
-          if(['0x29723511', '0xf9c028ec'].includes(methodId)) {
+          const methodId = transaction.data.substring(0, 10);
+          if (['0x29723511', '0xf9c028ec'].includes(methodId)) {
             transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt);
           } else {
             transfers = EVMV6Utils.evmObRouterV3(chainConfig, transaction, receipt);
           }
-      
+
         } else if (contractInfo.name === 'CrossInscriptions') {
           transfers = EVMV6Utils.crossInscriptions(
             chainConfig,

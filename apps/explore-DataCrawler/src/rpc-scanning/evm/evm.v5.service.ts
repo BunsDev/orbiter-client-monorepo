@@ -354,21 +354,25 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           // is to contract addr
           if (contractList.includes(toAddrLower) && this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower, row)) {
             // decode
-            const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
-            for (const transfer of transfers) {
-              const toAddrLower = (transfer.receiver).toLocaleLowerCase();
-              const fromAddrLower = (transfer.sender).toLocaleLowerCase();
-              // eoa
-              const senderValid = await this.isWatchAddress(fromAddrLower);
-              if (senderValid) {
-                rows.push(row);
-                break;
+            try {
+              const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
+              for (const transfer of transfers) {
+                const toAddrLower = (transfer.receiver).toLocaleLowerCase();
+                const fromAddrLower = (transfer.sender).toLocaleLowerCase();
+                // eoa
+                const senderValid = await this.isWatchAddress(fromAddrLower);
+                if (senderValid) {
+                  rows.push(row);
+                  break;
+                }
+                const receiverValid = await this.isWatchAddress(toAddrLower);
+                if (receiverValid) {
+                  rows.push(row);
+                  break;
+                }
               }
-              const receiverValid = await this.isWatchAddress(toAddrLower);
-              if (receiverValid) {
-                rows.push(row);
-                break;
-              }
+            } catch (error) {
+              this.logger.error(`${this.chainConfig.name} parseContract error ${error.message}`, error)
             }
           }
         }
