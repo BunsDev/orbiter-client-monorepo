@@ -2,14 +2,26 @@ import { ContractParser, TransferAmountTransaction } from "../ContractParser.int
 import { ContractParserService } from "../ContractParser.service";
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify } from 'ethers6';
 import { EVMPraser } from "../EVMPraser";
+import OrbiterRouterV3 from "./OrbiterRouterV3";
 
 export default class TransitFinanceRouterV5 extends EVMPraser {
     get abi() {
         return abi;
     }
     async cross(contractAddress:string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
-        console.log(parsedData, 'cross')
-        return [];
+        console.log(parsedData, '----------cross')
+        const args = parsedData.args[0];
+        const orbiterXContract = args[2];
+        if (!this.chainInfo.contract[orbiterXContract.toLocaleLowerCase()]) {
+            console.log('不支持--')
+            return [];
+        }
+        const srcToken = args[0];
+        const orbiterRouter = new OrbiterRouterV3(this.chainInfo);
+        const callOrbiterRouterData = args[9];
+        const orbiterRouterParseData = orbiterRouter.contractInterface.parseTransaction({data: callOrbiterRouterData});
+        console.log(orbiterRouterParseData,'存在---', callOrbiterRouterData)
+        return []
     }
 }
 

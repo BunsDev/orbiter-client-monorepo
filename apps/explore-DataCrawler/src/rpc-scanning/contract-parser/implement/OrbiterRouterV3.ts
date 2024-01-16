@@ -7,7 +7,7 @@ import BigNumber from "bignumber.js";
 import { equals } from "@orbiter-finance/utils";
 import { isEmpty } from "lodash";
 
-export default class XBridge extends EVMPraser {
+export default class OrbiterRouterV3 extends EVMPraser {
     get abi() {
         return abi;
     }
@@ -44,7 +44,7 @@ export default class XBridge extends EVMPraser {
         txData.receiver = parsedData.args[1];
         txData.value = value;
         const tokenInfo = this.chainInfo.tokens.find((t) =>
-            equals(t.address, txData.token) && equals(contractAddress, txData.token),
+            equals(t.address, txData.token),
         );
         if (tokenInfo) {
             txData.symbol = tokenInfo.symbol;

@@ -21,7 +21,8 @@ export class EVMPraser implements ContractParser {
         if (!this[parsedData.name]) {
             return null;
         }
-        return this[parsedData.name](contractAddress,transaction, receipt, parsedData);
+        const transfers= this[parsedData.name](contractAddress,transaction, receipt, parsedData);
+        return transfers;
     }
     // async transfer(transaction: TransactionResponse, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
     //     const { nonce } = transaction;
