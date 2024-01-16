@@ -107,57 +107,60 @@ export class TransactionService {
           }
         };
 
-        if (transfer.version == '1-0') {
-          const v3BTX = await this.bridgeTransactionModel.findOne({
-            where: {
-              sourceId: hash
+        if (transfer.version == '1-0' ) {
+          transaction.side = '0';
+          if (![2, 3, 4, 5, 6].includes(transfer.opStatus)) {
+            const v3BTX = await this.bridgeTransactionModel.findOne({
+              where: {
+                sourceId: hash
+              }
+            });
+            if (!v3BTX) {
+              throw new Error(`BT Not Found ${hash}`)
             }
-          });
-          if (!v3BTX) {
-            throw new Error(`BT Not Found ${hash}`)
-          }
-          const targetChain = await this.chainConfigService.getChainInfo(v3BTX.targetChain);
-          if (!targetChain) {
-            throw new Error('targetChain not found');
-          }
-          const targetChainToken = await this.chainConfigService.getTokenBySymbol(v3BTX.targetChain, v3BTX.targetSymbol);
-          if (!targetChainToken) {
-            throw new Error('targetChainToken not found');
-          }
-          transaction.extra = {
-            toSymbol: v3BTX.targetSymbol
-          }
-          transaction.expectValue = new BigNumber(v3BTX.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
-          if (transaction.to.toLocaleLowerCase() == '0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
-            transaction.source = 'xvm';
-            transaction.extra['xvm'] = {
-              "name": "swap",
-              "params": {
-                "data": {
-                  "slippage": 50,
-                  "toChainId": targetChain.internalId,
-                  "expectValue": transaction.expectValue,
-                  "toTokenAddress": v3BTX.targetToken,
-                  "toWalletAddress": v3BTX.targetAddress
-                },
-                "token": transfer.token,
-                "value": transfer.value,
-                "recipient": transfer.receiver
+            const targetChain = await this.chainConfigService.getChainInfo(v3BTX.targetChain);
+            if (!targetChain) {
+              throw new Error('targetChain not found');
+            }
+            const targetChainToken = await this.chainConfigService.getTokenBySymbol(v3BTX.targetChain, v3BTX.targetSymbol);
+            if (!targetChainToken) {
+              throw new Error('targetChainToken not found');
+            }
+            transaction.extra = {
+              toSymbol: v3BTX.targetSymbol
+            }
+            transaction.expectValue = new BigNumber(v3BTX.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
+            if (transaction.to.toLocaleLowerCase() == '0x1c84daa159cf68667a54beb412cdb8b2c193fb32') {
+              transaction.source = 'xvm';
+              transaction.extra['xvm'] = {
+                "name": "swap",
+                "params": {
+                  "data": {
+                    "slippage": 50,
+                    "toChainId": targetChain.internalId,
+                    "expectValue": transaction.expectValue,
+                    "toTokenAddress": v3BTX.targetToken,
+                    "toWalletAddress": v3BTX.targetAddress
+                  },
+                  "token": transfer.token,
+                  "value": transfer.value,
+                  "recipient": transfer.receiver
+                }
               }
             }
+            transaction.replyAccount = v3BTX.targetAddress;
+            transaction.replySender = v3BTX.targetMaker;
+            transaction.memo = String(targetChain.internalId);
+            transaction.transferId = transaction.transferId = TransferId(
+              String(transaction.memo),
+              transaction.replySender,
+              String(transaction.replyAccount),
+              String(transaction.nonce),
+              String(transaction.symbol),
+              transaction.expectValue,
+            );
           }
-          transaction.side = '0';
-          transaction.replyAccount = v3BTX.targetAddress;
-          transaction.replySender = v3BTX.targetMaker;
-          transaction.memo = String(targetChain.internalId);
-          transaction.transferId = transaction.transferId = TransferId(
-            String(transaction.memo),
-            transaction.replySender,
-            String(transaction.replyAccount),
-            String(transaction.nonce),
-            String(transaction.symbol),
-            transaction.expectValue,
-          );
+
         } else if (transfer.version == '1-1') {
           transaction.side = '1';
           transaction.expectValue = null;
@@ -176,6 +179,7 @@ export class TransactionService {
         if ([2, 3, 4, 5, 6].includes(transfer.opStatus)) {
           // ff
           transaction.status = 3;
+
         }
         if (v1Transfer && v1Transfer.status >= 96) {
           transaction.status = 99;
@@ -362,6 +366,160 @@ export class TransactionService {
       console.error(`syncBTTransfer error ${hash}`, error);
     }
   }
+  async syncBTTransfer2(hash: string) {
+    try {
+      const v1Transfer = await this.transactionModel.findOne({
+        raw: true,
+        where: {
+          hash
+        }
+      });
+      if (!v1Transfer) {
+        await this.syncTransferByHash(hash);
+        return {
+          errno: 0,
+          errmsg: 'v1 transfer not found'
+        }
+      }
+      if (v1Transfer.status == 99) {
+        return {
+          errno: 0,
+          errmsg: 'Exception transfer'
+        }
+      }
+      const v3Transfer = await this.transfersModel.findOne({
+        where: {
+          hash
+        }
+      });
+      if (!v3Transfer) {
+        return {
+          errno: 0,
+          errmsg: 'V3 transfer not found'
+        }
+      }
+      let where: any = {
+        version: '-'
+      }
+      if (v3Transfer.version === '1-0') {
+        where = {
+          version: '1-0',
+          sourceId: hash,
+        }
+
+      } else if (v3Transfer.version === '1-1') {
+        where = {
+          version: '1-0',
+          targetId: hash,
+        }
+
+      }
+      const bridgeTransaction = await this.bridgeTransactionModel.findOne({
+        where,
+        raw: true
+      });
+      if (!bridgeTransaction) {
+        throw new Error('btTx not found');
+      }
+      const sourceTx = await this.transactionModel.findOne({
+        attributes: ['id', 'value'],
+        where: {
+          hash: bridgeTransaction.sourceId
+        }
+      });
+      if (!sourceTx) {
+        const result = await this.syncTransferByHash(bridgeTransaction.sourceId);
+        // throw new Error(`${bridgeTransaction.sourceId} bridgeTransaction.sourceId not found`);
+        return {
+          errno: 0,
+          errmsg: 'The Source transaction does not exist in v1, synchronize to v1',
+          data: result
+        }
+      }
+      const targetTx = await this.transactionModel.findOne({
+        attributes: ['id', 'value'],
+        where: {
+          hash: bridgeTransaction.targetId
+        }
+      });
+
+      const sourceChain = this.chainConfigService.getChainInfo(bridgeTransaction.sourceChain);
+      if (!sourceChain) {
+        throw new Error('sourceChain not found');
+      }
+      const targetChain = await this.chainConfigService.getChainInfo(bridgeTransaction.targetChain);
+      if (!targetChain) {
+        throw new Error('targetChain not found');
+      }
+      const targetChainToken = await this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol);
+      if (!targetChainToken) {
+        throw new Error('targetChainToken not found');
+      }
+      const  expectValue = new BigNumber(bridgeTransaction.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
+      const mtCreateData: any = {
+        transcationId: bridgeTransaction.transactionId,
+        inId: sourceTx.id,
+        outId: targetTx.id ? targetTx.id : null,
+        fromChain: sourceChain.internalId,
+        toChain: Number(targetChain.internalId),
+        toAmount: expectValue,
+        replySender: bridgeTransaction.targetMaker,
+        replyAccount: bridgeTransaction.targetAddress,
+      }
+      const v1MtTx = await this.makerTransactionModel.findOne({
+        attributes: ['id'],
+        where: {
+          inId: sourceTx.id
+        }
+      });
+      const t = await this.v1Sequelize.transaction()
+      try {
+        if (v1MtTx && v1MtTx.id) {
+          const [updateTransferRows] = await this.makerTransactionModel.update(mtCreateData, {
+            where: {
+              id: v1MtTx.id
+            },
+            transaction: t
+          })
+          if (updateTransferRows != 1) {
+            throw new Error(`updateTransferRows row error !=1/${updateTransferRows}`);
+          }
+        } else {
+          const res = await this.makerTransactionModel.create(mtCreateData, {
+            transaction: t,
+          });
+          if (!res || !res.id) {
+            throw new Error('create makerTransactionModel error');
+          }
+        }
+        if (targetTx && targetTx.id) {
+          const [updateTransferRows2] = await this.transactionModel.update({
+            status: 99
+          }, {
+            where: {
+              id: [sourceTx.id, targetTx.id],
+              status: {
+                [Op.not]: 99
+              }
+            }, transaction: t
+          });
+          if (updateTransferRows2 != 2) {
+            throw new Error('updateTransferRows row error !=2');
+          }
+        }
+        await t.commit();
+        return {
+          errno: 0,
+          errmsg: 'success'
+        }
+      } catch (error) {
+        await t.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error(`syncBTTransfer error ${hash}`, error);
+    }
+  }
   async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
     // console.log(data)
     try {
@@ -484,7 +642,7 @@ export class TransactionService {
       throw new Error('targetChainToken not found');
     }
     const toAmountValue = new BigNumber(bridgeTx.targetAmount).times(10 ** targetChainToken.decimals);
-    const mtCreateData: MakerTransactionAttributes = {
+    const mtCreateData: any = {
       transcationId: bridgeTx.transactionId,
       inId: sourceTx.id,
       fromChain: sourceChain.internalId,
@@ -492,10 +650,19 @@ export class TransactionService {
       toAmount: toAmountValue.toFixed(0),
       replySender: bridgeTx.targetMaker,
       replyAccount: bridgeTx.targetAddress,
-      createdAt: new Date(),
+      // createdAt: new Date(),
       updatedAt: new Date(),
     }
-    const [v1MtTx, isCreated] = await this.makerTransactionModel.upsert(mtCreateData);
+    const [v1MtTx, isCreated] = await this.makerTransactionModel.upsert(mtCreateData, { fields: [
+      'transcationId',
+      'inId',
+      'fromChain',
+      'toChain',
+      'toAmount',
+      'replySender',
+      'replyAccount',
+      'updatedAt'
+    ] });
     return {
       inId: v1MtTx.id
     }
@@ -528,7 +695,7 @@ export class TransactionService {
     let index = 0;
     // console.log(`ready match ${index}/${rows.length} `);
     for (const row of rows) {
-      // 
+      //
       const tx = await this.transactionModel.findOne({
         raw: true,
         attributes: ['hash', 'status'],

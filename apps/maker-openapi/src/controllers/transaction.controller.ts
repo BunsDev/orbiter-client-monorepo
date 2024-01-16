@@ -1,19 +1,19 @@
 import { TransactionService } from '../services/transaction.service';
 import { HTTPResponse } from '../utils/Response';
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Request } from '@nestjs/common';
+import { registerMap } from "../utils/register";
+import { aggregationLog } from "../utils/logger";
 @Controller('transaction')
 export class TransactionController {
     constructor(private readonly transactionService: TransactionService) {
     }
-    @Get("/unreimbursedTransactions")
-    async unreimbursedTransactions() {
-        const { list } = await this.transactionService.getPendingArbitration();
-        return HTTPResponse.success(list)
-    }
-
     @Get("/pendingArbitration")
-    async getPendingArbitration() {
+    async getPendingArbitration(@Request() req) {
         // user arbitration-client need
+        if (!registerMap[req.ip]) {
+            aggregationLog(`getPendingArbitration ${req.ip} not registered`);
+            return HTTPResponse.success({ list: [], startTime: 0, endTime: 0 });
+        }
         return HTTPResponse.success(await this.transactionService.getPendingArbitration());
     }
 
@@ -27,14 +27,14 @@ export class TransactionController {
     }
 
     @Post("/challenge")
-    async submitChallenge(@Body() data: {
+    async submitChallenge(@Request() req, @Body() data: {
         sourceTxHash: string,
         challenger: string
     }) {
         if (!data?.sourceTxHash) {
             return HTTPResponse.fail(1000, "Invalid parameters");
         }
-        await this.transactionService.submitChallenge(data);
+        await this.transactionService.submitChallenge({ ...data, ip: req.ip });
         return HTTPResponse.success({ message: 'success' });
     }
 
