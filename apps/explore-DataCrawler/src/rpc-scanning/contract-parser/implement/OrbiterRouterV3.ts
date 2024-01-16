@@ -23,6 +23,7 @@ export default class OrbiterRouterV3 extends EVMPraser {
         }
         txData.receiver = parsedData.args[0];
         txData.selector = parsedData['selector'];
+        txData.contract = contractAddress;
         const transfers = this.buildExecuteStatus([txData], receipt);
         if (receipt) {
             const logEvent = this.verifyTransferEvent(receipt.logs as any, contractAddress, txData.receiver, txData.value);
@@ -53,10 +54,14 @@ export default class OrbiterRouterV3 extends EVMPraser {
                 .toString();
         }
         txData.selector = parsedData['selector'];
+        txData.contract = contractAddress;
         const transfers = this.buildExecuteStatus([txData], receipt);
         if (receipt) {
-            const logEvent = this.verifyERC20Event(receipt.logs as any, txData.token, txData.sender, txData.receiver, txData.value);
-            if (isEmpty(logEvent)) {
+            const logEvent = this.findERC20TransferEvent(receipt.logs as any, txData.token, txData.receiver, txData.value);
+            // sender
+            if (logEvent) {
+                txData.sender = logEvent.args[0];
+            } else {
                 for (const transfer of transfers) {
                     if (transfer.status != TransferAmountTransactionStatus.failed) {
                         transfer.status = TransferAmountTransactionStatus.failed;
@@ -92,37 +97,6 @@ export default class OrbiterRouterV3 extends EVMPraser {
                 }
             } catch (error) {
                 console.error('verifyTransferEvent error', error);
-            }
-        }
-    }
-    verifyERC20Event(
-        logArray: Array<any>,
-        token: string,
-        from: string,
-        to: string,
-        value: string,
-    ): LogDescription {
-        // LogDescription
-        for (const log of logArray) {
-            try {
-                const parsedLogData = this.contractInterface.parseLog(log as any);
-                if (
-                    equals(log.address, token) &&
-                    parsedLogData &&
-                    parsedLogData.signature === 'Transfer(address,address,uint256)' &&
-                    parsedLogData.topic ===
-                    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
-                ) {
-                    if (
-                        equals(from, parsedLogData.args[0]) &&
-                        equals(to, parsedLogData.args[1]) &&
-                        equals(value, parsedLogData.args[2])
-                    ) {
-                        return parsedLogData;
-                    }
-                }
-            } catch (error) {
-                console.error('verifyERC20Event error', error);
             }
         }
     }

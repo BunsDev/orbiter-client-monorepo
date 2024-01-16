@@ -345,8 +345,10 @@ export class EVMRouterV3ContractBuilder {
     const result = {} as BuilderData;
     for (const k in params) {
       if (k === 'c') {
-        const targetChain = this.chainConfigService.getChainByKeyValue('internalId', +params[k]);
-        result.targetChain = targetChain;
+        const targetChain = this.chainConfigService.getChainByKeyValue('internalId', +params[k] - 9000);
+        if (targetChain) {
+          result.targetChain = targetChain;
+        }
       } else if (k === 't') {
         result.targetAddress = params[k].toLocaleLowerCase();
       }
@@ -364,7 +366,8 @@ export class EVMRouterV3ContractBuilder {
       }
       return result;
     } else if (transfer.signature === 'transferToken(address,address,uint256,bytes)') {
-      const urlParams = decodeHex(transfer.calldata[1]);
+      const urlStr = decodeHex(transfer.calldata[3]);
+      const urlParams = QueryStringUtils.parse(urlStr);
       if (urlParams) {
         result = this.paramsMap(urlParams)
       }
@@ -541,6 +544,17 @@ export default class BridgeTransactionBuilder {
       builderData = await this.zksyncLiteBuilder.build(transfer)
     } else {
       builderData = await this.standardBuilder.build(transfer);
+    }
+
+    if (!builderData.targetToken && builderData.targetChain) {
+      const targetToken = this.chainConfigService.getTokenBySymbol(
+        builderData.targetChain.chainId,
+        transfer.symbol,
+      );
+      builderData.targetToken = targetToken
+    }
+    if (!builderData.targetAddress) {
+      builderData.targetAddress = transfer.sender
     }
     const { targetAddress: builderDataTargetAddress, targetChain, targetToken, targetAmount } = builderData
     if (!targetChain) {
