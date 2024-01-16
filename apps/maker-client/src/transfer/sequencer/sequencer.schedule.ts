@@ -519,21 +519,20 @@ export class SequencerScheduleService {
           if (bridgeTx[0].version === '3-0') {
             result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey)
           } else {
-            // result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
+            result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
           }
         } else {
           if (bridgeTx[0].version === '3-0') {
             result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
           } else {
-
-            // result = await this.paidSingleBridgeTransaction(bridgeTx[0])
+            result = await this.paidSingleBridgeTransaction(bridgeTx[0])
           }
         }
       } else {
         if (bridgeTx.version === '3-0') {
           result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx, queueKey)
         } else {
-          // result = await this.paidSingleBridgeTransaction(bridgeTx)
+          result = await this.paidSingleBridgeTransaction(bridgeTx)
         }
       }
     } catch (error) {
