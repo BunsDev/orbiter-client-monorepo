@@ -24,6 +24,11 @@ export class ContractParserService {
   registerContract(contractName: string, instance: ContractParser) {
     this.contractRegistry[contractName] = instance;
   }
+  existRegisterContract(chainId: string, contractAddress: string, ...data: any[]) {
+    const chain = this.chainConfigService.getChainInfo(chainId);
+    const contractName = chain.contract[contractAddress.toLocaleLowerCase()];
+    return !!contractName
+  }
   parseContract(chainId: string, contractAddress: string, ...data: any[]): TransferAmountTransaction[] {
     const chain = this.chainConfigService.getChainInfo(chainId);
     const contractName = chain.contract[contractAddress.toLocaleLowerCase()];

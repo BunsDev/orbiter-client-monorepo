@@ -97,7 +97,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
             }
           }
           // is to contract addr
-          if (contractList.includes(toAddrLower)) {
+          if (contractList.includes(toAddrLower) && this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower, row)) {
             // decode
             const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
             for (const transfer of transfers) {
