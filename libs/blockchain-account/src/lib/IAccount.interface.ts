@@ -27,6 +27,19 @@ export class TransactionSendBeforeError extends TransactionError {
     this.name = "TransactionSendBeforeError";
   }
 }
+// export class TransactionSendConfirmFail extends TransactionError {
+//   constructor(message: string) {
+//     super(message);
+//     this.name = "TransactionSendConfirmFail";
+//   }
+// }
+export class TransactionSendConfirmFail extends Error {
+  constructor(message: string = 'Transaction confirmation failed to send') {
+      super(message);
+      this.name = 'TransactionSendConfirmFail';
+  }
+}
+
 export class TransactionSendAfterError extends TransactionError {
   constructor(message: string) {
     super(message);

@@ -66,6 +66,8 @@ export class NonceManager {
     nonce: number;
     submit: Function;
     rollback: Function;
+    networkNonce:number,
+    localNonce:number
   }> {
     return await new Promise(async (resolve, reject) => {
       try {
@@ -73,6 +75,7 @@ export class NonceManager {
         try {
           const networkNonce = await this.refreshNonceFun();
           let nonce = await this.store.get("nonce");
+          const localNonce= nonce;
           if (networkNonce > nonce) {
             nonce = networkNonce;
             await this.store.set("nonce", nonce);
@@ -81,6 +84,8 @@ export class NonceManager {
           }
           resolve({
             nonce,
+            networkNonce,
+            localNonce,
             submit: async () => {
               await this.store.set("lastUsage", Date.now());
               await this.setNonce(nonce + 1);

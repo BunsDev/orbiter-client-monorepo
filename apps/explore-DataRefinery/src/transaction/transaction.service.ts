@@ -2,11 +2,12 @@ import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { BigIntToString } from '@orbiter-finance/utils';
 import { TransferAmountTransaction } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
-import { Transfers as TransfersModel, TransferOpStatus } from '@orbiter-finance/seq-models';
+import { Transfers as TransfersModel, TransferOpStatus, InscriptionOpType } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { TransactionV1Service } from './transactionV1.service';
 import { TransactionV2Service } from './transactionV2.service';
+import { TransactionV3Service } from './transactionV3.service';
 import { MakerService } from '../maker/maker.service'
 import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
@@ -22,6 +23,7 @@ export class TransactionService {
     private consumerService: ConsumerService,
     private transactionV1Service: TransactionV1Service,
     private transactionV2Service: TransactionV2Service,
+    private transactionV3Service: TransactionV3Service,
     private makerService: MakerService,
     private envConfig: ENVConfigService
   ) {
@@ -81,7 +83,17 @@ export class TransactionService {
         }
         let versionStr = null;
         const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');
-        if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
+        if (transfer.version == '3') {
+          // upsertData.opStatus = TransferOpStatus.INIT_STATUS;
+          const calldata = upsertData.calldata
+          if (calldata && calldata.op && calldata.op === InscriptionOpType.Deploy) {
+            versionStr = '3-2';
+          } else if (calldata && calldata.op && calldata.op === InscriptionOpType.Claim) {
+            versionStr = '3-0';
+          } else if (calldata &&calldata.op && calldata.op === InscriptionOpType.Mint) {
+            versionStr = '3-1';
+          }
+        } else if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
           upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
         } else {
           if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver) && await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
@@ -100,7 +112,7 @@ export class TransactionService {
               versionStr = '1-1';
             }
           }
-          if (transfer.sender === transfer.receiver) {
+          if (!transfer.version && transfer.sender === transfer.receiver) {
             upsertData.opStatus = TransferOpStatus.VALID;
           }
         }
@@ -192,7 +204,16 @@ export class TransactionService {
         if (+this.envConfig.get("enablePointsSystemGray") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystemGray(result.data)
         }
-      } else {
+      } else if (payload.version === '3-0') {
+        result = await this.transactionV3Service.handleClaimTransfer(payload)
+        if (result && result.errno === 0) {
+          this.messageService.sendClaimTransferToMakerClient(result.data)
+        }
+      } else if (payload.version === '3-1') {
+        result = this.transactionV3Service.handleMintTransfer(payload);
+      } else if (payload.version === '3-2') {
+        result = this.transactionV3Service.handleDeployTransfer(payload);
+      }else {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0

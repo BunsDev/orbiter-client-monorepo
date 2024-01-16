@@ -153,6 +153,84 @@ export default class EVMVUtils {
     }
     return transfers;
   }
+  public static crossInscriptions(
+    chainInfo: IChainConfig,
+    transaction: TransactionResponse,
+    receipt: TransactionReceipt,
+  ): TransferAmountTransaction[] {
+    const transfers: TransferAmountTransaction[] = [];
+    const { nonce } = transaction;
+    const contractInterface = new Interface2(abis.CrossInscriptions);
+    const parsedData = contractInterface.parseTransaction({
+      data: transaction.data,
+    });
+    if (!parsedData) {
+      return transfers;
+    }
+    const txData: TransferAmountTransaction = {
+      chainId: chainInfo.chainId,
+      hash: transaction.hash,
+      blockNumber: transaction.blockNumber,
+      transactionIndex: transaction.index,
+      sender: transaction.from,
+      receiver: parsedData.args[0],
+      amount: null,
+      value: null,
+      token: null,
+      symbol: '',
+      fee: null,
+      feeAmount: null,
+      feeToken: chainInfo.nativeCurrency.symbol,
+      timestamp: 0,
+      status: +receipt.status
+        ? TransferAmountTransactionStatus.confirmed
+        : TransferAmountTransactionStatus.failed,
+      nonce,
+      calldata: parsedData.args.toArray(),
+      contract: transaction.to,
+      selector: parsedData.selector,
+      signature: parsedData.signature,
+      receipt,
+    };
+    const logs = receipt.logs;
+    const hitLogs = []
+    if (parsedData.signature === 'transfers(address[],uint256[],bytes[])') {
+      logs.forEach((log, index) => {
+        const parsedLogData = contractInterface.parseLog(log as any);
+        // console.log(parsedLogData, '=parsedLogData')
+        if (
+          parsedLogData &&
+          parsedLogData.signature === 'Transfer(address,uint256)' &&
+          parsedLogData.topic ===
+          '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
+        ) {
+          hitLogs.push(log)
+        }
+      })
+      hitLogs.forEach((log, index) => {
+        const parsedLogData = contractInterface.parseLog(log as any);
+        const decodeData = this.decodeInscriptionCallData(parsedData.args[2][index])
+        if (!decodeData) {
+          return;
+        }
+        const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
+        const copyTxData = clone(txData);
+        copyTxData.hash = `${txData.hash}#${transfers.length}`;
+        copyTxData.token = chainInfo.nativeCurrency.address;
+        copyTxData.symbol = chainInfo.nativeCurrency.symbol;
+        copyTxData.calldata = decodeData;
+        copyTxData.receiver = parsedLogData.args[0];
+        copyTxData.value = value;
+        copyTxData.amount = new BigNumber(value)
+          .div(Math.pow(10, chainInfo.nativeCurrency.decimals))
+          .toString();
+        copyTxData.version = '3'
+        copyTxData.selector = decodeData.op
+        transfers.push(copyTxData);
+      })
+    }
+    return transfers;
+  }
   public static evmOBSource(
     chainInfo: IChainConfig,
     transaction: TransactionResponse,
@@ -455,5 +533,18 @@ export default class EVMVUtils {
         console.error('getTransferEvent error', error);
       }
     }
+  }
+  static decodeInscriptionCallData(data: string) {
+    let decodeData = null;
+    try {
+      const jsonData = Buffer.from(data.slice(2), 'hex').toString('utf-8');
+      if (jsonData && jsonData.startsWith('data:,')) {
+        decodeData = JSON.parse(jsonData.slice(6));
+      }
+    } catch (error) {
+      console.log('deCodeInscriptionCallData error', error)
+      return decodeData
+    }
+    return decodeData
   }
 }

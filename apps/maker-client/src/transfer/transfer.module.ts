@@ -1,27 +1,29 @@
 import { Module } from "@nestjs/common";
 import { ValidatorService } from "./validator/validator.service";
-import { SequencerService } from "./sequencer/sequencer.service";
 import { AccountFactoryService } from "../factory";
 import { Transfers, BridgeTransaction } from "@orbiter-finance/seq-models";
 import { SequelizeModule } from "@nestjs/sequelize";
 import { SequencerScheduleService } from "./sequencer/sequencer.schedule";
 import { ChainLinkService } from '../service/chainlink.service'
 import { PrivateKeyService } from "../service/privatekey.service";
+import { TransferService } from "./sequencer/transfer.service";
+import { ScheduleModule } from "@nestjs/schedule";
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     SequelizeModule.forFeature([Transfers, BridgeTransaction]),
   ],
   providers: [
     PrivateKeyService,
     ChainLinkService,
     SequencerScheduleService,
-    SequencerService,
     ValidatorService,
     AccountFactoryService,
+    TransferService
   ],
   exports: [
+    TransferService,
     ValidatorService,
-    SequencerService,
     SequencerScheduleService
   ]
 })

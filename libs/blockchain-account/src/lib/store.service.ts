@@ -3,20 +3,27 @@ import { BridgeTransaction } from "@orbiter-finance/seq-models";
 import { Mutex } from "async-mutex";
 import { cloneDeep } from "lodash";
 import { JSONStringify } from '@orbiter-finance/utils';
-
+import Keyv from 'keyv';
+import dayjs from 'dayjs';
 export class StoreService {
-  private static readonly levels = new Map<string, Level>();
+  // private static readonly levels = new Map<string, Level>();
   private readonly symbolRelHash = new Map<string, Set<string>>();
   private readonly transactions = new Map<string, BridgeTransaction>(); // key = symbol
-  public lastId = 0;
+  // public lastId = 0;
   public static WalletLock: Record<string, Mutex> = {}; // key = chainId + address
+  private cache:Keyv;
   constructor(public readonly chainId: string) {
-    if (!StoreService.levels.has(chainId)) {
-      StoreService.levels.set(
-        chainId,
-        new Level(`./runtime/${chainId}`)
-      );
-    }
+    this.cache = new Keyv(`sqlite://./runtime/db/${dayjs().month() + 1}-${chainId}.sqlite`);
+    this.cache.on('error', (error) => {
+      console.error('Failed to initialize cache：', error)
+      throw new Error('')
+    });
+    // if (!StoreService.levels.has(chainId)) {
+    //   StoreService.levels.set(
+    //     chainId,
+    //     new Level(`./runtime/${chainId}`)
+    //   );
+    // }
   }
 
   public async accountRunExclusive(
@@ -34,31 +41,26 @@ export class StoreService {
 
   public async getSerialRecord(serialId: string) {
     try {
-      const level = StoreService.levels.get(this.chainId);
-      const data = await level.get(serialId);
-      return data;
+      // const level = StoreService.levels.get(this.chainId);
+      // const data = await level.get(serialId);
+      return await this.cache.get(serialId);
+      // return data;
     } catch (error) {
       return null;
     }
   }
 
-  public async saveSerialRecord(datas: Array<{ key: string; data: string }>) {
-    const batchData = [];
-    const level = StoreService.levels.get(this.chainId);
-    for (const row of datas) {
-      batchData.push({ type: "put", key: row.key, value: row.data });
-    }
-    return await level.batch(batchData);
-  }
 
   public async setSerialRecord(key: string, value: string) {
-    const level = StoreService.levels.get(this.chainId);
-    return await level.put(key, value);
+    // const level = StoreService.levels.get(this.chainId);
+    // return await level.put(key, value);
+    return await this.cache.set(key, value);
   }
 
   public async deleteSerialRecord(hash: string) {
-    const level = StoreService.levels.get(this.chainId);
-    await level.del(hash);
+    // const level = StoreService.levels.get(this.chainId);
+   return await this.cache.delete(hash);
+    // await level.del(hash);
   }
 
   public async removeTransactionAndSetSerial(
@@ -122,13 +124,15 @@ export class StoreService {
     }
   }
 
+
   public async saveSerialRelTxHash(ids: string[], txHash: string) {
-    const batchData = [];
-    const level = StoreService.levels.get(this.chainId);
+    // const batchData = [];
+    // const level = StoreService.levels.get(this.chainId);
     for (const id of ids) {
-      batchData.push({ type: "put", key: id, value: txHash });
+      // batchData.push({ type: "put", key: id, value: txHash });
+      await this.cache.set(id, txHash);
     }
-    return await level.batch(batchData);
+    // return await level.batch(batchData);
   }
   public async isTransfersExist(sourceId: string) {
     const data = await this.getSerialRecord(sourceId);

@@ -70,12 +70,10 @@ export class ProceedsService {
             let currencyData = {
             }
             if (row.sourceSymbol !== calculateCurrency) {
-                // console.log(`重新计算 inTotalAmount ${row.sourceSymbol} ${inTotalAmount} to ${calculateCurrency}`)
                 inTotalAmount = await this.exchangeRateService.conversion(inTotalAmount, row.sourceSymbol, calculateCurrency);
                 currencyData[`inTotalAmount${calculateCurrency}`] = inTotalAmount;
             }
             if (row.targetSymbol !== calculateCurrency) {
-                // console.log(`重新计算 outTotalAmount ${row.targetSymbol} ${outTotalAmount} to ${calculateCurrency}`)
                 outTotalAmount = await this.exchangeRateService.conversion(outTotalAmount, row.targetSymbol, calculateCurrency);
                 currencyData[`outTotalAmount${calculateCurrency}`] = outTotalAmount;
             }

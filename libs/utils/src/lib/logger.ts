@@ -6,14 +6,14 @@ export function loggerFormat() {
   return winston.format.combine(
     winston.format.colorize(),
     winston.format.timestamp(),
-    winston.format.printf(({ timestamp, level, message, stack, service,context }) => {
-      return `${timestamp} ${service && service.name} ${context} [${level}]: ${message}\n${stack || ''}`;
+    winston.format.printf(({ timestamp, level, message, stack, application,context }) => {
+      return `${timestamp} ${application || ''} ${context} [${level}]: ${message}\n${stack || ''}`;
     })
   );
 }
 
 export function createLoggerByName(context: string, meta: any = {}): OrbiterLogger {
-  const dirName = process.env['APP_NAME'] ||  __dirname.substring(__dirname.lastIndexOf('/') + 1);
+  const dirName = process.env['application'] || process.env['APP_NAME'] ||  __dirname.substring(__dirname.lastIndexOf('/') + 1);
   const transports = [
     new winston.transports.Console({
       format: loggerFormat()
@@ -32,9 +32,7 @@ export function createLoggerByName(context: string, meta: any = {}): OrbiterLogg
     level: process.env['LOG_LEVEL'] || 'debug',
     defaultMeta: {
       ...Object.assign(meta, {
-        service: {
-          name: dirName
-        }
+        application: dirName.toLocaleLowerCase(),
       }),
       context: context,
     },

@@ -48,3 +48,4 @@ cmd/.env
 config.yaml
 
 /runtime
+db

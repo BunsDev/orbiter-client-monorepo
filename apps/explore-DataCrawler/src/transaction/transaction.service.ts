@@ -4,10 +4,16 @@ import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { TransferAmountTransaction } from './transaction.interface';
 import { addressPadStart } from '../utils';
+import { ENVConfigService } from '@orbiter-finance/config';
 @Injectable()
 export class TransactionService {
     #v2Owners: string[] = [];
-    constructor(private readonly messageSerice: MessageService, @InjectRedis() private readonly redis: Redis) {
+    constructor(
+      private readonly messageSerice: MessageService,
+      @InjectRedis()
+      private readonly redis: Redis,
+      private readonly envConfigService: ENVConfigService
+      ) {
         this.redis.smembers('v2Owners').then(data => {
             this.#v2Owners = data || [];
         })
@@ -29,6 +35,12 @@ export class TransactionService {
         // if (+v1Exists == 1) {
         //     return true;
         // }
+        const MintMakers = await this.envConfigService.getAsync('MAKERS');
+        if (MintMakers && Array.isArray(MintMakers)) {
+          if (MintMakers.find(item => addressPadStart(item, 66).toLowerCase() === addressPadStart(address, 66).toLowerCase())) {
+            return true;
+        }
+        }
         const v1MakerList = await this.getWatchAddress();
         if (v1MakerList.find(item => addressPadStart(item, 66).toLowerCase() === addressPadStart(address, 66).toLowerCase())) {
             return true;
