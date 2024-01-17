@@ -11,7 +11,7 @@ import { TransactionV3Service } from './transactionV3.service';
 import { MakerService } from '../maker/maker.service'
 import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
-import { ENVConfigService } from '@orbiter-finance/config';
+import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
 @Injectable()
 export class TransactionService {
   @LoggerDecorator()
@@ -25,8 +25,16 @@ export class TransactionService {
     private transactionV2Service: TransactionV2Service,
     private transactionV3Service: TransactionV3Service,
     private makerService: MakerService,
-    private envConfig: ENVConfigService
+    private envConfig: ENVConfigService,
+    private makerV1RuleService: MakerV1RuleService
   ) {
+    const ruleConfigs = this.makerV1RuleService.configs;
+    if (!ruleConfigs || ruleConfigs.length<=0) {
+      throw new Error('Load ruleConfigs fail');
+    }
+    if(!this.envConfig.get('RABBITMQ_URL')) {
+      throw new Error('Get RABBITMQ_URL Config fail');
+    }
     this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
     this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
   }
@@ -90,7 +98,7 @@ export class TransactionService {
             versionStr = '3-2';
           } else if (calldata && calldata.op && calldata.op === InscriptionOpType.Claim) {
             versionStr = '3-0';
-          } else if (calldata &&calldata.op && calldata.op === InscriptionOpType.Mint) {
+          } else if (calldata && calldata.op && calldata.op === InscriptionOpType.Mint) {
             versionStr = '3-1';
           }
         } else if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
@@ -213,7 +221,7 @@ export class TransactionService {
         result = this.transactionV3Service.handleMintTransfer(payload);
       } else if (payload.version === '3-2') {
         result = this.transactionV3Service.handleDeployTransfer(payload);
-      }else {
+      } else {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
