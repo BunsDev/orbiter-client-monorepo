@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { makeGaugeProvider } from "@willsoto/nestjs-prometheus";
-import { PrometheusModule } from "  ";
+import { PrometheusModule } from "@willsoto/nestjs-prometheus";
 import { RpcScanningModule } from '../rpc-scanning/rpc-scanning.module';
 import { ApiScanningModule } from '../api-scanning/api-scanning.module';
 import { MetricController } from './metric.controller';
