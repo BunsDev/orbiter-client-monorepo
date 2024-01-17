@@ -167,7 +167,7 @@ export class TransactionService {
               }
             }
             if (!isPush) {
-              console.log('push:', result);
+              this.logger.info('push:', result?.data?.sourceId);
               this.messageService.sendTransferToMakerClient(result.data)
             }
           }

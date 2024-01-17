@@ -45,6 +45,22 @@ export class SequencerScheduleService {
     } else {
       this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
     }
+
+    const subV1Makers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER_V1", []);
+    if (subV1Makers && subV1Makers.length) {
+      for (const key of subV1Makers) {
+        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), `1_0_${key}`);
+      }
+    }
+
+    const subV2Makers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER_V2", []);
+    if (subV2Makers && subV2Makers.length) {
+      for (const key of subV2Makers) {
+        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), `2_0_${key}`);
+      }
+    }
+
+    console.log("subMakers", subMakers, 'subV1Makers', subV1Makers, 'subV2Makers', subV2Makers);
   }
   @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
@@ -125,7 +141,7 @@ export class SequencerScheduleService {
       }
     }
   }
-  @Interval(1000)
+  @Interval(10000)
   private readCacheQueue() {
     let chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
     if (chainIds.includes('*')) {
