@@ -15,6 +15,9 @@ import { MetricService } from './metric.service';
       defaultMetrics: {
         enabled: false,
       },
+      defaultLabels: {
+        service: process.env['application'] || "ExploreCrawler",
+      },
     }),
   ],
   controllers: [],
