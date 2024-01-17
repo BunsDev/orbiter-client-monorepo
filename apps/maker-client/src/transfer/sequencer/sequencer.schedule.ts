@@ -89,15 +89,35 @@ export class SequencerScheduleService {
       raw: true,
       order: [['id', 'asc'], ['sourceTime', 'asc']],
       attributes: [
-        'targetChain',
-        'targetMaker',
-        'sourceId'
+        "id",
+        "transactionId",
+        'status',
+        "sourceId",
+        "targetId",
+        'sourceTime',
+        "sourceChain",
+        "targetChain",
+        "sourceAmount",
+        "targetAmount",
+        "sourceMaker",
+        "targetMaker",
+        "sourceAddress",
+        "targetAddress",
+        "sourceSymbol",
+        "targetSymbol",
+        "sourceNonce",
+        "sourceToken",
+        "targetToken",
+        "responseMaker",
+        'ruleId',
+        "version"
       ],
       where,
     });
     if (records.length > 0) {
+      this.logger.info(`DB message ${records.map(item => item.sourceId).join(', ')}`);
       for (const tx of records) {
-        this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId).catch(error => {
+        this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId, tx).catch(error => {
           this.logger.error(
             `[readDBTransactionRecords] enqueueMessage handle error ${tx.sourceId}`, error
           );
@@ -123,11 +143,12 @@ export class SequencerScheduleService {
       }
     }
   }
-  async enqueueMessage(QUEUE_NAME: string, message: string) {
+  async enqueueMessage(QUEUE_NAME: string, message: string, data: any) {
     const isMemberExists = await this.redis.sismember(QUEUE_NAME + ':set', message);
     if (!isMemberExists) {
       await this.redis.lpush(QUEUE_NAME, message);
       await this.redis.sadd(QUEUE_NAME + ':set', message);
+      await this.redis.set(`${message}_tx`, JSON.stringify(data));
       // console.log(`Enqueued: ${message}`);
     } else {
       console.log(`Message "${message}" already exists in the queue.`);
@@ -148,8 +169,18 @@ export class SequencerScheduleService {
       return [];
     }
   }
+
+  async dequeueMessageData(message: string) {
+    const tx = await this.redis.get(`${message}_tx`);
+    if (tx) {
+      await this.redis.del(`${message}_tx`);
+      return JSON.parse(tx);
+    }
+    return null;
+  }
+
   private async readQueueExecByKey(queueKey: string) {
-    let records;
+    const records: any[] = [];
     const [targetChain, targetMaker] = queueKey.split('-');
     try {
       if (!Lock[queueKey]) {
@@ -200,45 +231,20 @@ export class SequencerScheduleService {
       if (hashList.length <= 0) {
         return;
       }
-      records = await this.bridgeTransactionModel.findAll({
-        raw: true,
-        attributes: [
-          "id",
-          "transactionId",
-          'status',
-          "sourceId",
-          "targetId",
-          'sourceTime',
-          "sourceChain",
-          "targetChain",
-          "sourceAmount",
-          "targetAmount",
-          "sourceMaker",
-          "targetMaker",
-          "sourceAddress",
-          "targetAddress",
-          "sourceSymbol",
-          "targetSymbol",
-          "sourceNonce",
-          "sourceToken",
-          "targetToken",
-          "responseMaker",
-          'ruleId',
-          "version"
-        ],
-        where: {
-          sourceId: hashList
-        },
-      });
+      for (const hash of hashList) {
+        const tx = await this.dequeueMessageData(hash);
+        if (tx) records.push(tx);
+      }
+      this.logger.info(`record: ${records.map(item => item.sourceId).join(', ')}`);
       Lock[queueKey].prevTime = Date.now();
-      const result = await this.consumptionSendingQueue(records, queueKey)
+      await this.consumptionSendingQueue(records, queueKey)
       Lock[queueKey].prevTime = Date.now();
     } catch (error) {
       this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
       this.logger.error(`readQueueExecByKey error: message ${error.message}`, error);
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         for (const tx of records) {
-          this.enqueueMessage(queueKey, tx.sourceId);
+          this.enqueueMessage(queueKey, tx.sourceId, tx);
         }
         this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
       }
@@ -564,7 +570,8 @@ export class SequencerScheduleService {
       this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId}  status not 0`)
       return;
     }
-    await this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId)
+    this.logger.info(`MQ message ${tx.sourceId}`);
+    await this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId, tx)
     return true;
   }
 
