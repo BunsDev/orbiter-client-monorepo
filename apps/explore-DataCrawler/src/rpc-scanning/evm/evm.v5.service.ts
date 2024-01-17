@@ -214,23 +214,26 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           });
         }
       }
-      transfers = transfers.map((tx) => {
-        tx.transactionIndex = receipt.transactionIndex;
-        tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
-        tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
-        tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
-        tx.token = tx.token && tx.token.toLocaleLowerCase();
-        tx.nonce = nonce;
-        tx.receipt = receipt;
-        tx.fee = new BigNumber(fee.toString())
-          .dividedBy(transfers.length)
-          .toFixed(0);
-        tx.feeAmount = new BigNumber(tx.fee)
-          .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-          .toString();
-        tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
-        return tx;
-      });
+      if (transfers) {
+        transfers = transfers.map((tx) => {
+          tx.transactionIndex = receipt.transactionIndex;
+          tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
+          tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
+          tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
+          tx.token = tx.token && tx.token.toLocaleLowerCase();
+          tx.nonce = nonce;
+          tx.receipt = receipt;
+          tx.fee = new BigNumber(fee.toString())
+            .dividedBy(transfers.length)
+            .toFixed(0);
+          tx.feeAmount = new BigNumber(tx.fee)
+            .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+            .toString();
+          tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
+          return tx;
+        });
+      }
+
       return await this.handleTransactionAfter(transfers);
     } catch (error) {
       this.logger.error(
@@ -350,7 +353,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
               }
             }
           }
-          if(contractList.includes(toAddrLower)) {
+          if (contractList.includes(toAddrLower)) {
             rows.push(row);
             continue;
           }

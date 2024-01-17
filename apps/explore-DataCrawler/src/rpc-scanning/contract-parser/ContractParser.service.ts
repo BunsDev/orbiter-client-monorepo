@@ -47,10 +47,11 @@ export class ContractParserService {
     if (this.contractRegistry.hasOwnProperty(registerName)) {
       const instance = this.contractRegistry[registerName];
       // const parser = this.contractRegistry[contractName];
-      return instance.parse(contractAddress, data);
+      return instance.parse(contractAddress, data) || [];
     } else {
       throw new Error(`${registerName} Contract decode parse not registered`);
     }
+    return [];
   }
 
 }

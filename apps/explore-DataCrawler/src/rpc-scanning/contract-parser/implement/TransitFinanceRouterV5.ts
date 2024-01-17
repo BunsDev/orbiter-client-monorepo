@@ -26,7 +26,7 @@ export default class TransitFinanceRouterV5 extends EVMPraser {
             const transfers = await orbiterRouter.transfer(caller, transaction, receipt, orbiterRouterParseData);
             return transfers;
         }
-
+        return [];
     }
 }
 

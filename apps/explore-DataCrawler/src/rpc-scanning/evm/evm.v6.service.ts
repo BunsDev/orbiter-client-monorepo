@@ -229,7 +229,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       // toAddr is token contract
       const tokenInfo = this.getChainConfigToken(transaction.to);
       const contractInfo = this.getChainConfigContract(transaction.to);
-      console.log(contractInfo, '==contractInfo')
       if (tokenInfo) {
         if (EVMV6Utils.isERC20Transfer(transaction.data)) {
           transfers = EVMV6Utils.evmStandardTokenTransfer(
@@ -322,23 +321,25 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           });
         }
       }
-      transfers = transfers.map((tx) => {
-        tx.transactionIndex = receipt.index;
-        tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
-        tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
-        tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
-        tx.token = tx.token && tx.token.toLocaleLowerCase();
-        tx.nonce = nonce;
-        tx.receipt = receipt;
-        tx.fee = new BigNumber(fee.toString())
-          .dividedBy(transfers.length)
-          .toFixed(0);
-        tx.feeAmount = new BigNumber(tx.fee)
-          .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-          .toString();
-        tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
-        return tx;
-      });
+      if (transfers) {
+        transfers = transfers.map((tx) => {
+          tx.transactionIndex = receipt.index;
+          tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
+          tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
+          tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
+          tx.token = tx.token && tx.token.toLocaleLowerCase();
+          tx.nonce = nonce;
+          tx.receipt = receipt;
+          tx.fee = new BigNumber(fee.toString())
+            .dividedBy(transfers.length)
+            .toFixed(0);
+          tx.feeAmount = new BigNumber(tx.fee)
+            .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+            .toString();
+          tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
+          return tx;
+        });
+      }
       return await this.handleTransactionAfter(transfers);
     } catch (error) {
       this.logger.error(
