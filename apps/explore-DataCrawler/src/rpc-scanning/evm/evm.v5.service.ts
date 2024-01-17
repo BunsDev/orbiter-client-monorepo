@@ -350,9 +350,12 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
               }
             }
           }
-
+          if(contractList.includes(toAddrLower)) {
+            rows.push(row);
+            continue;
+          }
           // is to contract addr
-          if (contractList.includes(toAddrLower) && this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower)) {
+          if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower)) {
             // decode
             try {
               const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);

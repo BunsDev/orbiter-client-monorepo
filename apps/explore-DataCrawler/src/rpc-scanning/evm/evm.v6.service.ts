@@ -96,9 +96,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
               }
             }
           }
+          if(contractList.includes(toAddrLower)) {
+            rows.push(row);
+            continue;
+          }
           // is to contract addr
           const isRegister = this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower);
-          if (contractList.includes(toAddrLower) && isRegister) {
+          if (isRegister) {
             // decode
             try {
               const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
@@ -121,6 +125,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
               this.logger.error(`${this.chainConfig.name} parseContract error ${error.message}`, error)
             }
           }
+    
         }
       } catch (error) {
         this.logger.error(
@@ -224,6 +229,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       // toAddr is token contract
       const tokenInfo = this.getChainConfigToken(transaction.to);
       const contractInfo = this.getChainConfigContract(transaction.to);
+      console.log(contractInfo, '==contractInfo')
       if (tokenInfo) {
         if (EVMV6Utils.isERC20Transfer(transaction.data)) {
           transfers = EVMV6Utils.evmStandardTokenTransfer(
