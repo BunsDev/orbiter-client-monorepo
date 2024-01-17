@@ -22,7 +22,7 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
       useFactory: async (configService: ConfigService) => {
         return {
           url:configService.get("CONSUL_URL"),
-          keys: configService.get('CONSUL_KEYS').split(','),
+          keys: configService.get('CONSUL_KEYS2').split(','),
           updateCron: '* * * * *',
         } as any;
       },

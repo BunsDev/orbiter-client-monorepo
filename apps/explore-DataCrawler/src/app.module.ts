@@ -26,7 +26,7 @@ dayjs.extend(utc);
       useFactory: async (configService: ConfigService) => {
         return {
           url:configService.get("CONSUL_URL"),
-          keys: configService.get('CONSUL_KEYS').split(','),
+          keys: configService.get('CONSUL_KEYS1').split(','),
           updateCron: '* * * * *',
         } as any;
       },
