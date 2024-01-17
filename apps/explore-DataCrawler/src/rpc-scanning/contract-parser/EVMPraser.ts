@@ -103,19 +103,6 @@ export class EVMPraser implements ContractParser {
         }
         return txData;
     }
-    buildExecuteStatus(transfers: TransferAmountTransaction[], receipt: TransactionReceipt) {
-        for (const transfer of transfers) {
-            if (receipt) {
-                transfer.status = +receipt.status
-                    ? TransferAmountTransactionStatus.confirmed
-                    : TransferAmountTransactionStatus.failed;
-            } else {
-                transfer.status = TransferAmountTransactionStatus.pending;
-            }
-
-        }
-        return transfers;
-    }
     async getTransferFee(
         transaction: TransactionResponse,
         receipt: TransactionReceipt,
@@ -153,6 +140,7 @@ export class EVMPraser implements ContractParser {
             }
         }
     }
+
 }
 
 export const ERC20Abi = [

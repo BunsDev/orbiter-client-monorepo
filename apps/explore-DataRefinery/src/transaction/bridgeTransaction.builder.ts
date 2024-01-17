@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import { hexlify } from 'ethers6';
 import { QueryStringUtils, TransactionID, ValidSourceTxError, addressPadStart, decodeHex, decodeV1SwapData } from '../utils';
 import RLP from "rlp";
+import { CrossChainParams } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 
 export function parseSourceTxSecurityCode(value: string) {
   let index = 0;
@@ -83,24 +84,36 @@ export class StandardBuilder {
   async build(transfer: TransfersModel): Promise<BuilderData> {
     const result = {} as BuilderData
     const targetChainId = parseSourceTxSecurityCode(transfer.amount);
-    const targetChain = this.chainConfigService.getChainByKeyValue(
-      'internalId',
-      targetChainId,
-    );
-    if (!targetChain) {
-      return result
+    if (targetChainId) {
+      const targetChain = this.chainConfigService.getChainByKeyValue(
+        'internalId',
+        targetChainId,
+      );
+      if (targetChain) {
+        result.targetChain = targetChain
+      }
+      //
+      const targetToken = this.chainConfigService.getTokenBySymbol(
+        targetChain.chainId,
+        transfer.symbol,
+      );
+      if (targetToken) {
+        result.targetToken = targetToken
+      }
     }
-    result.targetChain = targetChain
-    //
-    const targetToken = this.chainConfigService.getTokenBySymbol(
-      targetChain.chainId,
-      transfer.symbol,
-    );
-    if (!targetToken) {
-      return result
-    }
-    result.targetToken = targetToken
     result.targetAddress = transfer.sender;
+    const crossParams: CrossChainParams = transfer.crossChainParams || {};
+    if (crossParams.targetChain) {
+      const targetChainId = +crossParams.targetChain - 9000;
+      const targetChain = this.chainConfigService.getChainByKeyValue(
+        'internalId',
+        targetChainId,
+      );
+      result.targetChain = targetChain;
+    }
+    if (crossParams.targetRecipient) {
+      result.targetAddress = crossParams.targetRecipient;
+    }
     return result
   }
 }
@@ -358,21 +371,21 @@ export class EVMRouterV3ContractBuilder {
   async build(transfer: TransfersModel): Promise<BuilderData> {
     let result = {} as BuilderData;
     // new 
-    if (transfer.signature === 'transfer(address,bytes)') {
-      const urlStr = decodeHex(transfer.calldata[1]);
-      const urlParams = QueryStringUtils.parse(urlStr);
-      if (urlParams) {
-        result = this.paramsMap(urlParams)
-      }
-      return result;
-    } else if (transfer.signature === 'transferToken(address,address,uint256,bytes)') {
-      const urlStr = decodeHex(transfer.calldata[3]);
-      const urlParams = QueryStringUtils.parse(urlStr);
-      if (urlParams) {
-        result = this.paramsMap(urlParams)
-      }
-      return result;
-    }
+    // if (transfer.signature === 'transfer(address,bytes)') {
+    //   const urlStr = decodeHex(transfer.calldata[1]);
+    //   const urlParams = QueryStringUtils.parse(urlStr);
+    //   if (urlParams) {
+    //     result = this.paramsMap(urlParams)
+    //   }
+    //   return result;
+    // } else if (transfer.signature === 'transferToken(address,address,uint256,bytes)') {
+    //   const urlStr = decodeHex(transfer.calldata[3]);
+    //   const urlParams = QueryStringUtils.parse(urlStr);
+    //   if (urlParams) {
+    //     result = this.paramsMap(urlParams)
+    //   }
+    //   return result;
+    // }
 
     // old
     const decodeData = (<any[]>RLP.decode(transfer.calldata[1])).map(item => <any>hexlify(item));
@@ -527,11 +540,9 @@ export default class BridgeTransactionBuilder {
       sourceChain.chainId,
       transfer.token,
     );
-    let builderData: BuilderData
+    let builderData: BuilderData = await this.standardBuilder.build(transfer);
     if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
-      const baseBuild = await this.standardBuilder.build(transfer) || {};
-      const builderData2 = await this.evmRouterV3ContractBuilder.build(transfer) || {};
-      builderData = {...baseBuild,...builderData2} as any;
+      builderData = await this.evmRouterV3ContractBuilder.build(transfer);
     } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
       builderData = await this.evmRouterV1ContractBuilder.build(transfer)
     } else if (this.loopringBuilder.check(transfer)) {
@@ -542,8 +553,6 @@ export default class BridgeTransactionBuilder {
       builderData = await this.starknetOBSourceContractBuilder.build(transfer)
     } else if (this.zksyncLiteBuilder.check(transfer)) {
       builderData = await this.zksyncLiteBuilder.build(transfer)
-    } else {
-      builderData = await this.standardBuilder.build(transfer);
     }
 
     if (!builderData.targetToken && builderData.targetChain) {

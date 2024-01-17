@@ -79,6 +79,7 @@ export class TransactionService {
           feeToken: transfer.feeToken,
           transactionIndex: transfer.transactionIndex,
           syncStatus: 0,
+          crossChainParams: transfer.crossChainParams
         }
         let versionStr = null;
         const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');

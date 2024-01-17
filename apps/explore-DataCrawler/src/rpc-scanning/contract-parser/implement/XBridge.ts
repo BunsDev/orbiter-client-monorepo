@@ -2,15 +2,18 @@ import { ContractParser, TransferAmountTransaction } from "../ContractParser.int
 import { ContractParserService } from "../ContractParser.service";
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify, AbiCoder } from 'ethers6';
 import { EVMPraser } from '../EVMPraser';
-import { TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
+import { CrossChainParams, TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 import BigNumber from "bignumber.js";
+import OrbiterRouterV3 from "./OrbiterRouterV3";
+import { decodeOrbiterCrossChainParams } from "apps/explore-DataCrawler/src/utils";
 
 export default class XBridge extends EVMPraser {
   get abi() {
     return XBRIDGE_ADAPTER_ABI;
   }
-  async bridgeToV2(contractAddress:string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
+  async bridgeToV2(contractAddress: string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
     const txData = await this.buildTransferBaseData(transaction, receipt, parsedData);
+    const orbiterRouterContractAddress = '0xc741900276cd598060b0fe6594fbe977392928f4';
     if (transaction.value > 0) {
       txData.value = transaction.value.toString();
       txData.amount = new BigNumber(txData.value)
@@ -18,26 +21,29 @@ export default class XBridge extends EVMPraser {
         .toString();
       txData.symbol = this.chainInfo.nativeCurrency.symbol;
       txData.token = this.chainInfo.nativeCurrency.address;
-      const extraData = this.decodeToStarknet(parsedData.args[0][5]);
-      txData.receiver = extraData[0];
-
+    } else {
+      // token
     }
+    const extraData = this.decodeToStarknet(parsedData.args[0][5]);
+    try {
+      const crossChainParams: CrossChainParams = decodeOrbiterCrossChainParams(extraData[1]);
+      txData.crossChainParams = crossChainParams;
+    } catch (error) {
+      console.error('decodeOrbiterCrossChainParams error', error);
+    }
+    txData.receiver = extraData[0];
     txData.selector = parsedData['selector'];
-    const transfer = this.buildExecuteStatus([txData], receipt);
     if (receipt) {
-      // check event
-      // const event = 
-      for(const log of receipt.logs) {
-        try {
-          const logData = this.contractInterface.parseLog(log as any);
-          console.log(logData, 'logData', log);
-        } catch (error) {
-          console.log('error', error);
-        }
-
+      const orbiterRouter = new OrbiterRouterV3(this.chainInfo);
+      const events = orbiterRouter.findOrbiterRouterTransferEvent(receipt.logs as any, orbiterRouterContractAddress, extraData[0], txData.value);
+      if (events && events.length > 0 && receipt.status) {
+        txData.status = TransferAmountTransactionStatus.confirmed;
+      }
+      if (!events || events.length <= 0) {
+        txData.status = TransferAmountTransactionStatus.failed;
       }
     }
-    return transfer;
+    return [txData];
   }
   decodeToStarknet(hexData: string) {
     // const args = parsedData.args[0];

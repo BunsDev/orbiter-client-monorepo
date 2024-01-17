@@ -194,4 +194,7 @@ export class Transfers
     unique: false
   })
   syncStatus?: number
+
+  @Column({ allowNull: true, type: DataType.JSONB })
+  crossChainParams?: object;
 }

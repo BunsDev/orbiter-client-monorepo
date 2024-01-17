@@ -245,7 +245,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         } else if (contractInfo.name === 'OrbiterRouterV3') {
           const methodId = transaction.data.substring(0, 10);
           if (['0x29723511', '0xf9c028ec'].includes(methodId)) {
-            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt);
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt)
           } else {
             transfers = EVMV6Utils.evmObRouterV3(chainConfig, transaction, receipt);
           }
@@ -258,7 +258,6 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           );
         } else {
           transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt);
-          console.log('other contract', contractInfo, transfers)
         }
       } else {
         // 0x646174613a2c

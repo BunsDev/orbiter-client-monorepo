@@ -1,3 +1,4 @@
+import { CrossChainParams } from './../../../transaction/transaction.interface';
 import { ContractParser, TransferAmountTransaction } from "../ContractParser.interface";
 import { ContractParserService } from "../ContractParser.service";
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify, AbiCoder } from 'ethers6';
@@ -6,6 +7,7 @@ import { TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/tr
 import BigNumber from "bignumber.js";
 import { equals } from "@orbiter-finance/utils";
 import { isEmpty } from "lodash";
+import { decodeOrbiterCrossChainParams } from "apps/explore-DataCrawler/src/utils";
 
 export default class OrbiterRouterV3 extends EVMPraser {
     get abi() {
@@ -24,18 +26,21 @@ export default class OrbiterRouterV3 extends EVMPraser {
         txData.receiver = parsedData.args[0];
         txData.selector = parsedData['selector'];
         txData.contract = contractAddress;
-        const transfers = this.buildExecuteStatus([txData], receipt);
+        try {
+            const crossChainParams: CrossChainParams = decodeOrbiterCrossChainParams(parsedData.args[1]);
+            txData.crossChainParams = crossChainParams;
+        } catch (error) {
+            console.error('decodeOrbiterCrossChainParams error', error);
+        }
         if (receipt) {
             const logEvent = this.verifyTransferEvent(receipt.logs as any, contractAddress, txData.receiver, txData.value);
-            if (isEmpty(logEvent)) {
-                for (const transfer of transfers) {
-                    if (transfer.status != TransferAmountTransactionStatus.failed) {
-                        transfer.status = TransferAmountTransactionStatus.failed;
-                    }
-                }
+            if (logEvent && receipt.status) {
+                txData.status = TransferAmountTransactionStatus.confirmed;
+            } else {
+                txData.status = TransferAmountTransactionStatus.failed;
             }
         }
-        return transfers;
+        return [txData];
     }
     async transferToken(contractAddress: string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription) {
         const txData = await this.buildTransferBaseData(transaction, receipt, parsedData);
@@ -55,19 +60,22 @@ export default class OrbiterRouterV3 extends EVMPraser {
         }
         txData.selector = parsedData['selector'];
         txData.contract = contractAddress;
-        const transfers = this.buildExecuteStatus([txData], receipt);
+        try {
+            const crossChainParams: CrossChainParams = decodeOrbiterCrossChainParams(parsedData.args[3]);
+            txData.crossChainParams = crossChainParams;
+        } catch (error) {
+            console.error('decodeOrbiterCrossChainParams error', error);
+        }
         if (receipt) {
             const logEvent = this.findERC20TransferEvent(receipt.logs as any, txData.token, txData.receiver, txData.value);
             // sender
-            if (!logEvent) {
-                for (const transfer of transfers) {
-                    if (transfer.status != TransferAmountTransactionStatus.failed) {
-                        transfer.status = TransferAmountTransactionStatus.failed;
-                    }
-                }
+            if (logEvent && receipt.status) {
+                txData.status = TransferAmountTransactionStatus.confirmed;
+            } else {
+                txData.status = TransferAmountTransactionStatus.failed;
             }
         }
-        return transfers;
+        return [txData];
     }
     verifyTransferEvent(
         logArray: Array<any>,
@@ -97,6 +105,37 @@ export default class OrbiterRouterV3 extends EVMPraser {
                 console.error('verifyTransferEvent error', error);
             }
         }
+    }
+    findOrbiterRouterTransferEvent(
+        logArray: Array<any>,
+        contract: string,
+        to: string,
+        value: string,
+    ): Array<LogDescription> {
+        // LogDescription
+        const logs = [];
+        for (const log of logArray) {
+            try {
+                const parsedLogData = this.contractInterface.parseLog(log as any);
+                if (
+                    equals(log.address, contract) &&
+                    parsedLogData &&
+                    parsedLogData.signature === 'Transfer(address,uint256)' &&
+                    parsedLogData.topic ===
+                    '0x69ca02dd4edd7bf0a4abb9ed3b7af3f14778db5d61921c7dc7cd545266326de2'
+                ) {
+                    if (
+                        equals(to, parsedLogData.args[0]) &&
+                        equals(value, parsedLogData.args[1])
+                    ) {
+                        logs.push(parsedLogData);
+                    }
+                }
+            } catch (error) {
+                console.error('verifyTransferEvent error', error);
+            }
+        }
+        return logs;
     }
 }
 

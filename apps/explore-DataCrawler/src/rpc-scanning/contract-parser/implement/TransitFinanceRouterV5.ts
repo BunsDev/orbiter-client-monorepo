@@ -9,6 +9,7 @@ export default class TransitFinanceRouterV5 extends EVMPraser {
         return abi;
     }
     async cross(contractAddress: string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
+        const txData = await this.buildTransferBaseData(transaction, receipt, parsedData);
         const args = parsedData.args[0];
         const orbiterXContract = args[2];
         if (!this.chainInfo.contract[orbiterXContract.toLocaleLowerCase()]) {
@@ -19,14 +20,29 @@ export default class TransitFinanceRouterV5 extends EVMPraser {
         const orbiterRouter = new OrbiterRouterV3(this.chainInfo);
         const callOrbiterRouterData = args[9];
         const orbiterRouterParseData = orbiterRouter.contractInterface.parseTransaction({ data: callOrbiterRouterData });
+        let transfers:TransferAmountTransaction[] = []
         if (orbiterRouterParseData.name === 'transferToken') {
-            const transfers = await orbiterRouter.transferToken(caller, transaction, receipt, orbiterRouterParseData);
-            return transfers;
+             transfers = await orbiterRouter.transferToken(caller, transaction, receipt, orbiterRouterParseData);
+            // return transfers;
         } else if (orbiterRouterParseData.name === 'transfer') {
-            const transfers = await orbiterRouter.transfer(caller, transaction, receipt, orbiterRouterParseData);
-            return transfers;
+             transfers = await orbiterRouter.transfer(caller, transaction, receipt, orbiterRouterParseData);
+            // return transfers;
         }
-        return [];
+        if(transfers && transfers.length) {
+            const transfer = transfers[0];
+            txData.sender = transfer.sender;
+            txData.receiver = transfer.receiver;
+            txData.amount = transfer.amount;
+            txData.symbol = transfer.symbol;
+            txData.value = transfer.value;
+            txData.token = transfer.token;
+            txData.fee = transfer.fee;
+            txData.feeToken = transfer.feeToken;
+            txData.status = transfer.status;
+            txData.crossChainParams = transfer.crossChainParams;
+        }
+        
+        return [txData];
     }
 }
 
