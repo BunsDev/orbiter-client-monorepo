@@ -105,7 +105,10 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           if (isRegister) {
             // decode
             try {
-              const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
+              const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row).catch((error)=> {
+                this.logger.error(`${row['hash']} parseContract error:${error.message}`, error);
+                return [];
+              })
               for (const transfer of transfers) {
                 const toAddrLower = (transfer.receiver).toLocaleLowerCase();
                 const fromAddrLower = (transfer.sender).toLocaleLowerCase();
@@ -257,7 +260,10 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
             receipt,
           );
         } else {
-          transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt);
+          transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt).catch((error)=> {
+            this.logger.error(`${transaction.hash} parseContract error:${error.message}`, error);
+            return [];
+          })
         }
       } else {
         // 0x646174613a2c

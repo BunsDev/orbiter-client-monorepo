@@ -10,7 +10,7 @@ export class ContractParserService {
   private contractRegistry: { [contractName: string]: ContractParser } = {};
   constructor(
     private chainConfigService: ChainConfigService
-    ) {
+  ) {
     const chains = this.chainConfigService.getAllChains();
     for (const chain of chains) {
       for (const className in implementParses) {
@@ -37,8 +37,9 @@ export class ContractParserService {
     }
     return false;
   }
-  parseContract(chainId: string, contractAddress: string, ...data: any[]): TransferAmountTransaction[] {
+  async parseContract(chainId: string, contractAddress: string, ...data: any[]): Promise<TransferAmountTransaction[]> {
     const chain = this.chainConfigService.getChainInfo(chainId);
+    let transfers: TransferAmountTransaction[] = [];
     const contractName = chain.contract[contractAddress.toLocaleLowerCase()];
     if (!contractName) {
       throw new Error(`Chain ${chain.name} Contract ${contractAddress} Not Register`);
@@ -46,12 +47,11 @@ export class ContractParserService {
     const registerName = `${chainId}-${contractName}`;
     if (this.contractRegistry.hasOwnProperty(registerName)) {
       const instance = this.contractRegistry[registerName];
-      // const parser = this.contractRegistry[contractName];
-      return instance.parse(contractAddress, data) || [];
+      transfers = await instance.parse(contractAddress, data) || [];
     } else {
       throw new Error(`${registerName} Contract decode parse not registered`);
     }
-    return [];
+    return transfers;
   }
 
 }

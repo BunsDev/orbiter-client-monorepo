@@ -141,7 +141,10 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         } else if (EVMV5Utils.name === 'OrbiterRouterV3') {
           const methodId = transaction.data.substring(0, 10);
           if (['0x29723511', '0xf9c028ec'].includes(methodId)) {
-            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt);
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt).catch((error)=> {
+              this.logger.error(`${transaction.hash} parseContract error:${error.message}`, error);
+              return [];
+            })
           } else {
             transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
           }
@@ -361,7 +364,10 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower)) {
             // decode
             try {
-              const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row);
+              const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row).catch((error)=> {
+                this.logger.error(`${row['hash']} parseContract error:${error.message}`, error);
+                return [];
+              })
               for (const transfer of transfers) {
                 const toAddrLower = (transfer.receiver).toLocaleLowerCase();
                 const fromAddrLower = (transfer.sender).toLocaleLowerCase();
