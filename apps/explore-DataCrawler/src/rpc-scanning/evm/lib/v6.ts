@@ -135,7 +135,8 @@ export default class EVMVUtils {
     let transfers: TransferAmountTransaction[] = [];
     const abi = abis[contractInfo.name];
     if (!abi) {
-      throw new Error(`${transaction.hash} ${contractInfo.name} abi not found`);
+      console.error(`${transaction.hash} ${contractInfo.name} abi not found`);
+      return [];
     }
     const contractInterface = new Interface2(abi);
     const parsedData = contractInterface.parseTransaction({
