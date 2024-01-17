@@ -292,14 +292,13 @@ export class TransactionV3Service {
         throw error;
       }
     }
-
+    if (createdData.targetAddress.length >= 100) {
+      return this.errorBreakResult(
+        `${transfer.hash} There is an issue with the transaction format`,
+      );
+    }
     const t = await this.sequelize.transaction();
     try {
-      if (createdData.targetAddress.length >= 100) {
-        return this.errorBreakResult(
-          `${transfer.hash} There is an issue with the transaction format`,
-        );
-      }
       if (sourceBT && sourceBT.id) {
         sourceBT.targetChain = createdData.targetChain;
         await sourceBT.update(createdData, {
