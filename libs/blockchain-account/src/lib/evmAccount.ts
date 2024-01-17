@@ -135,7 +135,7 @@ export class EVMAccount extends OrbiterAccount {
         this.logger.info(`estimateGas error ${error.message}`);
       }
       if (!transactionRequest.gasLimit) {
-        if (transactionRequest.data.length >= 500 && chainCustomConfig.defaultManyMintLimit) {
+        if (transactionRequest?.data && transactionRequest.data.length >= 500 && chainCustomConfig.defaultManyMintLimit) {
           transactionRequest.gasLimit = new BigNumber(chainCustomConfig.defaultManyMintLimit).toFixed(0);
         } else {
           if (chainCustomConfig.defaultSingleMintLimit) {
