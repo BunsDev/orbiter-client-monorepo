@@ -366,6 +366,160 @@ export class TransactionService {
       console.error(`syncBTTransfer error ${hash}`, error);
     }
   }
+  async syncBTTransfer2(hash: string) {
+    try {
+      const v1Transfer = await this.transactionModel.findOne({
+        raw: true,
+        where: {
+          hash
+        }
+      });
+      if (!v1Transfer) {
+        await this.syncTransferByHash(hash);
+        return {
+          errno: 0,
+          errmsg: 'v1 transfer not found'
+        }
+      }
+      if (v1Transfer.status == 99) {
+        return {
+          errno: 0,
+          errmsg: 'Exception transfer'
+        }
+      }
+      const v3Transfer = await this.transfersModel.findOne({
+        where: {
+          hash
+        }
+      });
+      if (!v3Transfer) {
+        return {
+          errno: 0,
+          errmsg: 'V3 transfer not found'
+        }
+      }
+      let where: any = {
+        version: '-'
+      }
+      if (v3Transfer.version === '1-0') {
+        where = {
+          version: '1-0',
+          sourceId: hash,
+        }
+
+      } else if (v3Transfer.version === '1-1') {
+        where = {
+          version: '1-0',
+          targetId: hash,
+        }
+
+      }
+      const bridgeTransaction = await this.bridgeTransactionModel.findOne({
+        where,
+        raw: true
+      });
+      if (!bridgeTransaction) {
+        throw new Error('btTx not found');
+      }
+      const sourceTx = await this.transactionModel.findOne({
+        attributes: ['id', 'value'],
+        where: {
+          hash: bridgeTransaction.sourceId
+        }
+      });
+      if (!sourceTx) {
+        const result = await this.syncTransferByHash(bridgeTransaction.sourceId);
+        // throw new Error(`${bridgeTransaction.sourceId} bridgeTransaction.sourceId not found`);
+        return {
+          errno: 0,
+          errmsg: 'The Source transaction does not exist in v1, synchronize to v1',
+          data: result
+        }
+      }
+      const targetTx = await this.transactionModel.findOne({
+        attributes: ['id', 'value'],
+        where: {
+          hash: bridgeTransaction.targetId
+        }
+      });
+
+      const sourceChain = this.chainConfigService.getChainInfo(bridgeTransaction.sourceChain);
+      if (!sourceChain) {
+        throw new Error('sourceChain not found');
+      }
+      const targetChain = await this.chainConfigService.getChainInfo(bridgeTransaction.targetChain);
+      if (!targetChain) {
+        throw new Error('targetChain not found');
+      }
+      const targetChainToken = await this.chainConfigService.getTokenBySymbol(bridgeTransaction.targetChain, bridgeTransaction.targetSymbol);
+      if (!targetChainToken) {
+        throw new Error('targetChainToken not found');
+      }
+      const  expectValue = new BigNumber(bridgeTransaction.targetAmount).times(10 ** targetChainToken.decimals).toFixed(0);
+      const mtCreateData: any = {
+        transcationId: bridgeTransaction.transactionId,
+        inId: sourceTx.id,
+        outId: targetTx.id ? targetTx.id : null,
+        fromChain: sourceChain.internalId,
+        toChain: Number(targetChain.internalId),
+        toAmount: expectValue,
+        replySender: bridgeTransaction.targetMaker,
+        replyAccount: bridgeTransaction.targetAddress,
+      }
+      const v1MtTx = await this.makerTransactionModel.findOne({
+        attributes: ['id'],
+        where: {
+          inId: sourceTx.id
+        }
+      });
+      const t = await this.v1Sequelize.transaction()
+      try {
+        if (v1MtTx && v1MtTx.id) {
+          const [updateTransferRows] = await this.makerTransactionModel.update(mtCreateData, {
+            where: {
+              id: v1MtTx.id
+            },
+            transaction: t
+          })
+          if (updateTransferRows != 1) {
+            throw new Error(`updateTransferRows row error !=1/${updateTransferRows}`);
+          }
+        } else {
+          const res = await this.makerTransactionModel.create(mtCreateData, {
+            transaction: t,
+          });
+          if (!res || !res.id) {
+            throw new Error('create makerTransactionModel error');
+          }
+        }
+        if (targetTx && targetTx.id) {
+          const [updateTransferRows2] = await this.transactionModel.update({
+            status: 99
+          }, {
+            where: {
+              id: [sourceTx.id, targetTx.id],
+              status: {
+                [Op.not]: 99
+              }
+            }, transaction: t
+          });
+          if (updateTransferRows2 != 2) {
+            throw new Error('updateTransferRows row error !=2');
+          }
+        }
+        await t.commit();
+        return {
+          errno: 0,
+          errmsg: 'success'
+        }
+      } catch (error) {
+        await t.rollback();
+        throw error;
+      }
+    } catch (error) {
+      console.error(`syncBTTransfer error ${hash}`, error);
+    }
+  }
   async consumeDataSynchronizationMessages(data: { type: string; data: TransfersAttributes }) {
     // console.log(data)
     try {
