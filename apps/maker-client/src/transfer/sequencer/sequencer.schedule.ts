@@ -133,18 +133,19 @@ export class SequencerScheduleService {
   private async readQueueExecByKey(queueKey: string) {
     let records;
     const [targetChain, targetMaker] = queueKey.split('-');
+    if (!Lock[queueKey]) {
+      Lock[queueKey] = {
+        locked: false,
+        prevTime: Date.now()
+      }
+    }
+    if (Lock[queueKey].locked === true) {
+      return;
+    }
     try {
-      if (!Lock[queueKey]) {
-        Lock[queueKey] = {
-          locked: false,
-          prevTime: Date.now()
-        }
-      }
-      if (Lock[queueKey].locked === true) {
-        return;
-      }
       const globalPaidInterval = this.envConfig.get(`PaidInterval`, 1000);
       const paidInterval = this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval)
+      console.log(`queueKey=${queueKey}, paidInterval=${paidInterval}`);
       Lock[queueKey].locked = true;
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       if (batchSize <= 0) {
