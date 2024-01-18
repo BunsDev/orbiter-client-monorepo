@@ -99,7 +99,6 @@ export class SequencerScheduleService {
         // read db history
         const privateKey = this.validatorService.getSenderPrivateKey(owner);
         if (!privateKey) {
-          this.logger.warn(`${owner} No private key injected`)
           continue;
         }
         const queueKey = `${chainId}-${owner.toLocaleLowerCase()}`;
@@ -163,7 +162,7 @@ export class SequencerScheduleService {
       const queueLength = await this.redis.llen(queueKey);
       // 1. If the number of transactions is reached, use aggregation, if not, use single transaction
       // 2. If aggregation is not reached within the specified time, send all, otherwise continue to wait.
-      const paidType = +this.envConfig.get(`${targetChain}.PaidType`, 1);
+      const paidType = this.envConfig.get(`${targetChain}.PaidType`, 1);
       let hashList: string[] = [];
       console.log(`queueKey=${queueKey}, paidInterval=${paidInterval}, locked:${Lock[queueKey].locked},prevTime:${Lock[queueKey].prevTime} isOK:${Date.now() - Lock[queueKey].prevTime < paidInterval}， queueLength：${queueLength}, batchSize:${batchSize}`);
       Lock[queueKey].locked = true;
@@ -522,21 +521,20 @@ export class SequencerScheduleService {
           if (bridgeTx[0].version === '3-0') {
             result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey)
           } else {
-            // result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
+            result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
           }
         } else {
           if (bridgeTx[0].version === '3-0') {
             result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
           } else {
-
-            // result = await this.paidSingleBridgeTransaction(bridgeTx[0])
+            result = await this.paidSingleBridgeTransaction(bridgeTx[0])
           }
         }
       } else {
         if (bridgeTx.version === '3-0') {
           result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx, queueKey)
         } else {
-          // result = await this.paidSingleBridgeTransaction(bridgeTx)
+          result = await this.paidSingleBridgeTransaction(bridgeTx)
         }
       }
     } catch (error) {
