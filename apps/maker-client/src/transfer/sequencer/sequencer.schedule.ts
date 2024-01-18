@@ -19,12 +19,12 @@ import { Redis } from 'ioredis';
 import { TransactionSendConfirmFail } from "@orbiter-finance/blockchain-account";
 import { LockData } from './sequencer.interface';
 
-const Lock: { [key: string]: LockData } = {}
 @Injectable()
 export class SequencerScheduleService {
   @LoggerDecorator()
   private readonly logger: OrbiterLogger;
   private readonly applicationStartupTime: number = Date.now();
+  static Lock: { [key: string]: LockData } = {}
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
@@ -90,7 +90,7 @@ export class SequencerScheduleService {
       }
     }
   }
-  @Interval(1000 * 10)
+  @Interval(1000)
   private readCacheQueue() {
     const chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
     const owners = this.envConfig.get("MAKERS") || [];
@@ -102,13 +102,13 @@ export class SequencerScheduleService {
           continue;
         }
         const queueKey = `${chainId}-${owner.toLocaleLowerCase()}`;
-        if (!Lock[queueKey]) {
-          Lock[queueKey] = {
+        if (!SequencerScheduleService.Lock[queueKey]) {
+          SequencerScheduleService.Lock[queueKey] = {
             locked: false,
             prevTime: Date.now()
           }
         }
-        if (Lock[queueKey].locked == false) {
+        if (SequencerScheduleService.Lock[queueKey].locked == false) {
           this.readQueueExecByKey(queueKey);
         }
       }
@@ -141,6 +141,7 @@ export class SequencerScheduleService {
   }
   private async readQueueExecByKey(queueKey: string) {
     let records;
+    const Lock = SequencerScheduleService.Lock;
     const [targetChain, targetMaker] = queueKey.split('-');
     if (!Lock[queueKey]) {
       Lock[queueKey] = {
@@ -152,7 +153,6 @@ export class SequencerScheduleService {
       return;
     }
     try {
-      Lock[queueKey].locked = true;
       const globalPaidInterval = this.envConfig.get(`PaidInterval`, 1000);
       const paidInterval = +(this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval))
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
@@ -165,6 +165,8 @@ export class SequencerScheduleService {
       const paidType = this.envConfig.get(`${targetChain}.PaidType`, 1);
       let hashList: string[] = [];
       console.log(`queueKey=${queueKey}, paidInterval=${paidInterval}, locked:${Lock[queueKey].locked},prevTime:${Lock[queueKey].prevTime} isOK:${Date.now() - Lock[queueKey].prevTime < paidInterval}， queueLength：${queueLength}, batchSize:${batchSize}`);
+      Lock[queueKey].locked = true;
+      let isBreak = false;
       if (+paidType === 2) {
         const maxPaidTransferCount = +(this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2));
         if (queueLength >= batchSize) {
@@ -172,18 +174,22 @@ export class SequencerScheduleService {
         } else {
           // is timeout
           if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
-            console.log('intercept paidType is 2')
+            isBreak = true;
             return;
           }
           hashList = await this.dequeueMessages(queueKey, queueLength);
         }
       } else {
         if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
-          console.log('intercept paidType is 1')
+          isBreak = true;
           return;
         }
         const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
         hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? maxPaidTransferCount : 1);
+      }
+      if (isBreak) {
+        console.log('intercept paidType is 1')
+        return;
       }
       for (let i = hashList.length - 1; i >= 0; i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
@@ -236,7 +242,6 @@ export class SequencerScheduleService {
         this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
       }
     } finally {
-      Lock[queueKey].prevTime = Date.now();
       Lock[queueKey].locked = false;
     }
   }
