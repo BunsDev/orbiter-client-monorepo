@@ -41,6 +41,7 @@ export class ChainConfigService {
                 });
             }
             chain.features = chain.features || [];
+            chain.contracts = chain.contracts || [];
             return chain;
         });
         return chains;

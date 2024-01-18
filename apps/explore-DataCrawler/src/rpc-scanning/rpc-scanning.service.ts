@@ -59,7 +59,7 @@ export class RpcScanningService implements RpcScanningInterface {
       }
       return [];
     }
-    if (Date.now() % 1000 * 10===0) {
+    if (Date.now() % 1000 * 10 === 0) {
       this.dataProcessor.getDataByStorage().then(data => {
         this.chainConfig.debug && this.logger.debug(`getDataByStorage data ${JSON.stringify(data)}`);
       })
@@ -342,13 +342,16 @@ export class RpcScanningService implements RpcScanningInterface {
   }
 
   protected getChainConfigContract(toAddress: string) {
-    if (this.chainConfig.contract) {
+    let contractInfo = this.chainConfig.contracts.find(c => equals(c.address, toAddress));
+    if (!contractInfo && this.chainConfig.contract) {
       for (const [addr, name] of Object.entries(this.chainConfig.contract)) {
         if (equals(addr, toAddress)) {
-          return { contract: addr, name };
+          contractInfo = { address: addr, name };
+          break;
         }
       }
     }
+    return contractInfo;
   }
 
   async getLatestBlockNumber(): Promise<number> {

@@ -14,6 +14,14 @@ export class EVMPraser implements ContractParser {
         this.contractInterface = new Interface(this.abi);
     }
     parse(contractAddress: string, [transaction, receipt]: any[]): TransferAmountTransaction[] {
+        const contract = this.chainInfo.contracts.find(c => equals(contractAddress, c.address));
+        if (contract.methods) {
+            const methodId = String(transaction.data).substring(0, 10);
+            const method = contract.methods.find(f => equals(id(f).substring(0, 10), methodId))
+            if (!method) {
+                return [];
+            }
+        }
         const parsedData = this.contractInterface.parseTransaction({ data: transaction.data });
         if (!parsedData) {
             return null;

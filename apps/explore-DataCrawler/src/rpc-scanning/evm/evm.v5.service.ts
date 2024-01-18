@@ -1,6 +1,6 @@
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
-import { isEmpty, JSONStringify } from '@orbiter-finance/utils';
+import { equals, isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { ZeroAddress } from 'ethers6';
 import ethers from 'ethers';
 export type TransactionResponse = ethers.providers.TransactionResponse;
@@ -141,7 +141,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
         } else if (EVMV5Utils.name === 'OrbiterRouterV3') {
           const methodId = transaction.data.substring(0, 10);
           if (['0x29723511', '0xf9c028ec'].includes(methodId)) {
-            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt).catch((error)=> {
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
               this.logger.error(`${transaction.hash} parseContract error:${error.message}`, error);
               return [];
             })
@@ -155,7 +155,12 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
             receipt as any,
           );
         } else {
-          console.log('other contract', contractInfo)
+          if (this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
+              this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);
+              return [];
+            })
+          }
         }
       } else {
         if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {
@@ -302,7 +307,11 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     const contractList = this.chainConfig.contract
       ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())
       : [];
-
+    if (this.chainConfig.contracts) {
+      for (const contract of this.chainConfig.contracts) {
+        contractList.push(contract.address);
+      }
+    }
     for (const row of transactions) {
       try {
         if (row['to'] == ZeroAddress) {
@@ -356,36 +365,16 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
               }
             }
           }
+          const isRegister = this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower);
+          if (isRegister) {
+            // decode
+            if (!this.ctx.contractParser.whiteContractMethodId(this.chainId,toAddrLower,row['data'])) {
+              continue;
+            }
+          }
           if (contractList.includes(toAddrLower)) {
             rows.push(row);
             continue;
-          }
-          // is to contract addr
-          if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower)) {
-            // decode
-            try {
-              const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row).catch((error)=> {
-                this.logger.error(`${row['hash']} parseContract error:${error.message}`, error);
-                return [];
-              })
-              for (const transfer of transfers) {
-                const toAddrLower = (transfer.receiver).toLocaleLowerCase();
-                const fromAddrLower = (transfer.sender).toLocaleLowerCase();
-                // eoa
-                const senderValid = await this.isWatchAddress(fromAddrLower);
-                if (senderValid) {
-                  rows.push(row);
-                  break;
-                }
-                const receiverValid = await this.isWatchAddress(toAddrLower);
-                if (receiverValid) {
-                  rows.push(row);
-                  break;
-                }
-              }
-            } catch (error) {
-              this.logger.error(`${this.chainConfig.name} parseContract error ${error.message}`, error)
-            }
           }
         }
       } catch (error) {

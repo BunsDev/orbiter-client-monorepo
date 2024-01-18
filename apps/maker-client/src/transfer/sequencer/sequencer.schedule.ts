@@ -163,6 +163,7 @@ export class SequencerScheduleService {
         } else {
           // is timeout
           if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
+            return;
           }
           hashList = await this.dequeueMessages(queueKey, queueLength);
         }

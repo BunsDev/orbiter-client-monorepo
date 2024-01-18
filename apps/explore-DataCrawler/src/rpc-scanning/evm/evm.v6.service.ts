@@ -3,9 +3,10 @@ import {
   TransactionReceipt,
   ZeroAddress,
   Block,
-  Network
+  Network,
+  ethers
 } from 'ethers6';
-import { isEmpty, JSONStringify } from '@orbiter-finance/utils';
+import { equals, isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 
@@ -47,6 +48,12 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     const contractList = this.chainConfig.contract
       ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())
       : [];
+    if (this.chainConfig.contracts) {
+      for (const contract of this.chainConfig.contracts) {
+        contractList.push(contract.address);
+      }
+    }
+
     for (const row of transactions) {
       try {
         if (row['to'] == ZeroAddress) {
@@ -96,39 +103,20 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
               }
             }
           }
-          if(contractList.includes(toAddrLower)) {
-            rows.push(row);
-            continue;
-          }
           // is to contract addr
           const isRegister = this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower);
           if (isRegister) {
             // decode
-            try {
-              const transfers = await this.ctx.contractParser.parseContract(this.chainId, toAddrLower, row).catch((error)=> {
-                this.logger.error(`${row['hash']} parseContract error:${error.message}`, error);
-                return [];
-              })
-              for (const transfer of transfers) {
-                const toAddrLower = (transfer.receiver).toLocaleLowerCase();
-                const fromAddrLower = (transfer.sender).toLocaleLowerCase();
-                // eoa
-                const senderValid = await this.isWatchAddress(fromAddrLower);
-                if (senderValid) {
-                  rows.push(row);
-                  break;
-                }
-                const receiverValid = await this.isWatchAddress(toAddrLower);
-                if (receiverValid) {
-                  rows.push(row);
-                  break;
-                }
-              }
-            } catch (error) {
-              this.logger.error(`${this.chainConfig.name} parseContract error ${error.message}`, error)
+            if (!this.ctx.contractParser.whiteContractMethodId(this.chainId,toAddrLower,row['data'])) {
+              continue;
             }
           }
-    
+          if (contractList.includes(toAddrLower)) {
+            rows.push(row);
+            continue;
+          }
+
+
         }
       } catch (error) {
         this.logger.error(
@@ -248,7 +236,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         } else if (contractInfo.name === 'OrbiterRouterV3') {
           const methodId = transaction.data.substring(0, 10);
           if (['0x29723511', '0xf9c028ec'].includes(methodId)) {
-            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt)
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt)
           } else {
             transfers = EVMV6Utils.evmObRouterV3(chainConfig, transaction, receipt);
           }
@@ -260,10 +248,12 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
             receipt,
           );
         } else {
-          transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.contract, transaction, receipt).catch((error)=> {
-            this.logger.error(`${transaction.hash} parseContract error:${error.message}`, error);
-            return [];
-          })
+          if (this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
+              this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);
+              return [];
+            })
+          }
         }
       } else {
         // 0x646174613a2c
