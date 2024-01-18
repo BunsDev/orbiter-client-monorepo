@@ -34,6 +34,7 @@ export interface TransfersAttributes {
   version?: string;
   feeToken?: string;
   syncStatus?: number;
+  crossChainParams?:object;
 }
 
 
@@ -46,6 +47,7 @@ export enum TransferOpStatus {
   NONCE_EXCEED_MAXIMUM = 5,
   AMOUNT_TOO_SMALL = 6,
   BALANCED_LIQUIDITY = 10,
+  REFUND = 80,
   MATCHED = 99,
 
   // inscription Op Status
