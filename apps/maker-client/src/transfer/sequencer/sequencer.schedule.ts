@@ -90,7 +90,7 @@ export class SequencerScheduleService {
       }
     }
   }
-  @Interval(1000)
+  @Interval(1000 * 10)
   private readCacheQueue() {
     const chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
     const owners = this.envConfig.get("MAKERS") || [];
@@ -101,7 +101,16 @@ export class SequencerScheduleService {
         if (!privateKey) {
           continue;
         }
-        this.readQueueExecByKey(`${chainId}-${owner.toLocaleLowerCase()}`);
+        const queueKey = `${chainId}-${owner.toLocaleLowerCase()}`;
+        if (!Lock[queueKey]) {
+          Lock[queueKey] = {
+            locked: false,
+            prevTime: Date.now()
+          }
+        }
+        if (Lock[queueKey].locked == false) {
+          this.readQueueExecByKey(queueKey);
+        }
       }
     }
   }
@@ -143,9 +152,9 @@ export class SequencerScheduleService {
       return;
     }
     try {
+      Lock[queueKey].locked = true;
       const globalPaidInterval = this.envConfig.get(`PaidInterval`, 1000);
       const paidInterval = +(this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval))
-      Lock[queueKey].locked = true;
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       if (batchSize <= 0) {
         return;
