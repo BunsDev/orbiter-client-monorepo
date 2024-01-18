@@ -139,13 +139,12 @@ export class SequencerScheduleService {
         prevTime: Date.now()
       }
     }
-    if (Lock[queueKey].locked === true) {
+    if (Lock[queueKey].locked == true) {
       return;
     }
     try {
       const globalPaidInterval = this.envConfig.get(`PaidInterval`, 1000);
-      const paidInterval = this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval)
-      console.log(`queueKey=${queueKey}, paidInterval=${paidInterval}`);
+      const paidInterval = +(this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval))
       Lock[queueKey].locked = true;
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       if (batchSize <= 0) {
@@ -156,19 +155,22 @@ export class SequencerScheduleService {
       // 2. If aggregation is not reached within the specified time, send all, otherwise continue to wait.
       const paidType = this.envConfig.get(`${targetChain}.PaidType`, 1);
       let hashList: string[] = [];
+      console.log(`queueKey=${queueKey}, paidInterval=${paidInterval}, locked:${Lock[queueKey].locked},prevTime:${Lock[queueKey].prevTime} isOK:${Date.now() - Lock[queueKey].prevTime < paidInterval}， queueLength：${queueLength}, batchSize:${batchSize}`);
       if (+paidType === 2) {
-        const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
+        const maxPaidTransferCount = +(this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2));
         if (queueLength >= batchSize) {
           hashList = await this.dequeueMessages(queueKey, maxPaidTransferCount);
         } else {
           // is timeout
           if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
+            console.log('intercept paidType is 2')
             return;
           }
           hashList = await this.dequeueMessages(queueKey, queueLength);
         }
       } else {
         if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
+          console.log('intercept paidType is 1')
           return;
         }
         const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
@@ -213,8 +215,7 @@ export class SequencerScheduleService {
           sourceId: hashList
         },
       });
-      Lock[queueKey].prevTime = Date.now();
-      const result = await this.consumptionSendingQueue(records, queueKey)
+      const result = await this.consumptionSendingQueue(records, queueKey);
       Lock[queueKey].prevTime = Date.now();
     } catch (error) {
       this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
@@ -226,6 +227,7 @@ export class SequencerScheduleService {
         this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
       }
     } finally {
+      Lock[queueKey].prevTime = Date.now();
       Lock[queueKey].locked = false;
     }
   }
