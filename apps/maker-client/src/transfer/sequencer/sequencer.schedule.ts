@@ -141,7 +141,7 @@ export class SequencerScheduleService {
       }
     }
   }
-  @Interval(10000)
+  @Interval(1000)
   private readCacheQueue() {
     let chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
     if (chainIds.includes('*')) {

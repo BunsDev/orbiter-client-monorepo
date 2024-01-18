@@ -44,7 +44,6 @@ import { MetricModule } from './metric/metric.module'
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (envConfig: ENVConfigService) => {
-        console.log(await envConfig.getAsync('DisabledSourceAddress'), '===', process.env['ENV_VAR_PATH'])
         const config: any = await envConfig.getAsync('DATABASE_URL');
         if (isEmpty(config)) {
           console.error('Missing configuration DATABASE_URL');
