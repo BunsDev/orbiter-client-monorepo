@@ -164,7 +164,8 @@ export class SequencerScheduleService {
     if (!isMemberExists) {
       await this.redis.lpush(QUEUE_NAME, message);
       await this.redis.sadd(QUEUE_NAME + ':set', message);
-      await this.redis.set(`${message}_tx`, JSON.stringify(data));
+      await this.redis.set(`tx:${message}`, JSON.stringify({ ...data, redisTime: new Date() }));
+      await this.redis.expire(`tx:${message}`, 86400);
       // console.log(`Enqueued: ${message}`);
     } else {
       console.log(`Message "${message}" already exists in the queue.`);
@@ -187,9 +188,9 @@ export class SequencerScheduleService {
   }
 
   async dequeueMessageData(message: string) {
-    const tx = await this.redis.get(`${message}_tx`);
+    const tx = await this.redis.get(`tx:${message}`);
     if (tx) {
-      await this.redis.del(`${message}_tx`);
+      await this.redis.del(`tx:${message}`);
       return JSON.parse(tx);
     }
     return null;
