@@ -28,7 +28,7 @@ export class ValidatorService {
   }
   public getPaidTransferCount(chainId:string) {
     const chainPaidTransferCount = this.envConfig.get<number>(`${chainId}.PaidTransferCount`, 1);
-    return chainPaidTransferCount;
+    return +chainPaidTransferCount;
   }
   public async validDisabledPaid(chainId:string) {
     const disabledPaid = this.envConfig.get<boolean>(`${chainId}.DisabledPaid`, false);

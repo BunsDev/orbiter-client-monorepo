@@ -87,7 +87,10 @@ export class InscriptionStandardBuilder {
     if (!targetChain) {
       return result
     }
-    result.targetChain = targetChain
+    const chains = await this.envConfigService.getAsync('INSCRIPTION_SUPPORT_CHAINS')
+    if (chains.includes(targetChain.chainId)) {
+      result.targetChain = targetChain
+    }
     //
     // const targetToken = this.chainConfigService.getTokenBySymbol(
     //   targetChain.chainId,

@@ -176,5 +176,8 @@ export class MakerService {
         }
         return false;
     }
-
+    async isInscriptionMakers(address: string): Promise<boolean> {
+      const r = await this.redis.sismember('v3Owners', address.toLowerCase());
+      return !!r
+    }
 }

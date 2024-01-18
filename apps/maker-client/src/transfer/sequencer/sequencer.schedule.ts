@@ -19,12 +19,12 @@ import { Redis } from 'ioredis';
 import { TransactionSendConfirmFail } from "@orbiter-finance/blockchain-account";
 import { LockData } from './sequencer.interface';
 
-const Lock: { [key: string]: LockData } = {}
 @Injectable()
 export class SequencerScheduleService {
   @LoggerDecorator()
   private readonly logger: OrbiterLogger;
   private readonly applicationStartupTime: number = Date.now();
+  static Lock: { [key: string]: LockData } = {}
   constructor(
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
@@ -102,7 +102,16 @@ export class SequencerScheduleService {
           this.logger.warn(`${owner} No private key injected`)
           continue;
         }
-        this.readQueueExecByKey(`${chainId}-${owner.toLocaleLowerCase()}`);
+        const queueKey = `${chainId}-${owner.toLocaleLowerCase()}`;
+        if (!SequencerScheduleService.Lock[queueKey]) {
+          SequencerScheduleService.Lock[queueKey] = {
+            locked: false,
+            prevTime: Date.now()
+          }
+        }
+        if (SequencerScheduleService.Lock[queueKey].locked == false) {
+          this.readQueueExecByKey(queueKey);
+        }
       }
     }
   }
@@ -133,20 +142,20 @@ export class SequencerScheduleService {
   }
   private async readQueueExecByKey(queueKey: string) {
     let records;
+    const Lock = SequencerScheduleService.Lock;
     const [targetChain, targetMaker] = queueKey.split('-');
+    if (!Lock[queueKey]) {
+      Lock[queueKey] = {
+        locked: false,
+        prevTime: Date.now()
+      }
+    }
+    if (Lock[queueKey].locked == true) {
+      return;
+    }
     try {
-      if (!Lock[queueKey]) {
-        Lock[queueKey] = {
-          locked: false,
-          prevTime: Date.now()
-        }
-      }
-      if (Lock[queueKey].locked === true) {
-        return;
-      }
       const globalPaidInterval = this.envConfig.get(`PaidInterval`, 1000);
-      const paidInterval = this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval)
-      Lock[queueKey].locked = true;
+      const paidInterval = +(this.envConfig.get(`${targetChain}.PaidInterval`, globalPaidInterval))
       const batchSize = this.validatorService.getPaidTransferCount(targetChain);
       if (batchSize <= 0) {
         return;
@@ -156,23 +165,32 @@ export class SequencerScheduleService {
       // 2. If aggregation is not reached within the specified time, send all, otherwise continue to wait.
       const paidType = +this.envConfig.get(`${targetChain}.PaidType`, 1);
       let hashList: string[] = [];
-      if (paidType === 2) {
-        const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
+      console.log(`queueKey=${queueKey}, paidInterval=${paidInterval}, locked:${Lock[queueKey].locked},prevTime:${Lock[queueKey].prevTime} isOK:${Date.now() - Lock[queueKey].prevTime < paidInterval}， queueLength：${queueLength}, batchSize:${batchSize}`);
+      Lock[queueKey].locked = true;
+      let isBreak = false;
+      if (+paidType === 2) {
+        const maxPaidTransferCount = +(this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2));
         if (queueLength >= batchSize) {
           hashList = await this.dequeueMessages(queueKey, maxPaidTransferCount);
         } else {
           // is timeout
           if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
+            isBreak = true;
             return;
           }
           hashList = await this.dequeueMessages(queueKey, queueLength);
         }
       } else {
         if (Date.now() - Lock[queueKey].prevTime < paidInterval) {
+          isBreak = true;
           return;
         }
         const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
         hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? maxPaidTransferCount : 1);
+      }
+      if (isBreak) {
+        console.log('intercept paidType is 1')
+        return;
       }
       for (let i = hashList.length - 1; i >= 0; i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
@@ -213,8 +231,7 @@ export class SequencerScheduleService {
           sourceId: hashList
         },
       });
-      Lock[queueKey].prevTime = Date.now();
-      const result = await this.consumptionSendingQueue(records, queueKey)
+      const result = await this.consumptionSendingQueue(records, queueKey);
       Lock[queueKey].prevTime = Date.now();
     } catch (error) {
       this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
