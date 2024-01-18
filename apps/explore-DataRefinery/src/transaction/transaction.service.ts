@@ -54,7 +54,6 @@ export class TransactionService {
         const contractAddr = (transfer.contract || '').toLocaleLowerCase();
         const calldata = BigIntToString(transfer.calldata);
         const txTime = dayjs(transfer.timestamp).toDate(); // TODO: time
-        console.log(txTime, '==')
         // valid v1 or v2
 
         const upsertData: any = {
