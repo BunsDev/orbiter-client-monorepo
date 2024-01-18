@@ -296,6 +296,10 @@ export class SequencerScheduleService {
   }
 
   async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel) {
+    const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
+    if (isDisabledSourceAddress) {
+      throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
+    }
     // is exist
     const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
     if (transactionTimeValid) {
@@ -352,6 +356,10 @@ export class SequencerScheduleService {
     const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
     if (!sourceChain) {
       throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
+    }
+    const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
+    if (isDisabledSourceAddress) {
+      throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
     }
     const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
     if (transactionTimeValid) {
@@ -425,6 +433,10 @@ export class SequencerScheduleService {
         if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
           throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
         }
+        const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
+        if (isDisabledSourceAddress) {
+          throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
+        }
         const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
         if (transactionTimeValid) {
           throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
@@ -482,6 +494,10 @@ export class SequencerScheduleService {
         }
         if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
           throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+        }
+        const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
+        if (isDisabledSourceAddress) {
+          throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
         }
         const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
         if (transactionTimeValid) {
@@ -569,6 +585,11 @@ export class SequencerScheduleService {
     return result;
   }
   async consumptionQueue(tx: BridgeTransactionModel) {
+    const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(tx.sourceAddress);
+    if (isDisabledSourceAddress) {
+      this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} disabled source address: ${tx.sourceAddress}`);
+      return;
+    }
     if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
       this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
       return

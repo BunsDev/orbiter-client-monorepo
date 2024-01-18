@@ -327,7 +327,7 @@ export class EVMAccount extends OrbiterAccount {
 
   async waitForTransactionConfirmation(transactionHash) {
     const provider = this.getProvider();
-    const receipt = await provider.waitForTransaction(transactionHash, 2, 60 * 1000);
+    const receipt = await provider.waitForTransaction(transactionHash, 2, 2 * 60 * 1000);
     return receipt;
   }
 
