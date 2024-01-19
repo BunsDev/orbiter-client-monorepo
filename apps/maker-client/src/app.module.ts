@@ -28,10 +28,6 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
       },
     }),
     OrbiterConfigModule.forRoot(),
-    OrbiterConfigModule.forRoot({
-      chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "maker-client/chains.json",
-      envConfigPath: process.env['ENV_VAR_PATH'] || "maker-client/config.yaml",
-    }),
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async(configService: ENVConfigService) => {
