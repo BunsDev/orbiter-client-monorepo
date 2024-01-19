@@ -35,6 +35,15 @@ export class V2Service {
   @InjectModel(MakerTransaction) private MakerTransactionModel: typeof MakerTransaction;
   @InjectModel(NetState) private NetStateModel: typeof NetState;
 
+  async getTradingV2Pairs() {
+    return V2Service.tradingPairs.filter(item=>
+      String(+(item.fromChain.chainId)) === String(item.fromChain.chainId) &&
+      String(+(item.toChain.chainId)) === String(item.toChain.chainId)
+    ).map(item => {
+      return { id: `${item.fromChain.id}-${item.toChain.id}:${item.fromChain.symbol}-${item.toChain.symbol}`, ...item };
+    });
+  }
+
   async getTradingPairs() {
     return { ruleList: V2Service.tradingPairs, chainList: V2Service.chainList };
   }

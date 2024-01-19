@@ -29,7 +29,7 @@ export class V2Controller {
     try {
       switch (method) {
         case 'orbiter_getTradingPairs': {
-          return { id, jsonrpc, result: await v2Service.getTradingPairs() };
+          return { id, jsonrpc, result: await v2Service.getTradingV2Pairs() };
         }
         case 'orbiter_offline': {
           return { id, jsonrpc, result: await v2Service.getOffline() };
