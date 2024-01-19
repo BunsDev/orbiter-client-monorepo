@@ -3,7 +3,6 @@ import { TransactionModule } from './transaction/transaction.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
-import { ConsulModule } from '@orbiter-finance/consul';
 import { isEmpty } from '@orbiter-finance/utils';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
 import { AlertModule } from '@orbiter-finance/alert';
