@@ -38,6 +38,7 @@ export class SequencerScheduleService {
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
     const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER", []);
+    console.log('SUB_WAIT_TRANSFER_MAKER ===', subMakers);
     if (subMakers && subMakers.length > 0) {
       for (const key of subMakers) {
         this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this), key)
@@ -45,22 +46,6 @@ export class SequencerScheduleService {
     } else {
       this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
     }
-
-    const subV1Makers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER_V1", []);
-    if (subV1Makers && subV1Makers.length) {
-      for (const key of subV1Makers) {
-        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), `1_0_${key}`);
-      }
-    }
-
-    const subV2Makers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER_V2", []);
-    if (subV2Makers && subV2Makers.length) {
-      for (const key of subV2Makers) {
-        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), `2_0_${key}`);
-      }
-    }
-
-    console.log("subMakers", subMakers, 'subV1Makers', subV1Makers, 'subV2Makers', subV2Makers);
   }
   @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
