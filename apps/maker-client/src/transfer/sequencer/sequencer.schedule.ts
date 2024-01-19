@@ -37,14 +37,24 @@ export class SequencerScheduleService {
     @InjectRedis() private readonly redis: Redis,
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
-    const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER", []);
-    console.log('SUB_WAIT_TRANSFER_MAKER ===', subMakers);
-    if (subMakers && subMakers.length > 0) {
-      for (const key of subMakers) {
+    const inscMakers = this.envConfig.get("INSCRIPTION_MAKERS", []);
+    console.log('INSCRIPTION_MAKERS ===', inscMakers);
+    if (inscMakers && inscMakers.length > 0) {
+      for (const key of inscMakers) {
         this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this), key)
       }
     } else {
       this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
+    }
+
+    const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER", []);
+    console.log('SUB_WAIT_TRANSFER_MAKER ===', subMakers);
+    if (subMakers && subMakers.length > 0) {
+      for (const key of subMakers) {
+        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), key)
+      }
+    } else {
+      this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this))
     }
   }
   @Cron("0 */2 * * * *")
