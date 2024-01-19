@@ -38,7 +38,6 @@ export class ConsulService<T> {
 			}
 		}
 		const configName = String(k.alias || k.key);
-		console.debug('updateConfig:', configName, k);
 		this.configs[configName]  = configs;
 	}
 	private async getKeyFromConsul(k: IConsulKeys) {
@@ -75,7 +74,6 @@ export class ConsulService<T> {
 	}
 	private updateConfig(value: any, key: IConsulKeys) {
 		try {
-			console.debug('updateConfig:', key);
 			this.configs[String(key.alias || key.key)]  = this.convertConfigFormat(String(key.key), value);
 		} catch (e) {
 			const msg = `Invalid JSON value in ${String(key.key)}`;
