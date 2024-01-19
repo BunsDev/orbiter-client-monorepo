@@ -215,7 +215,6 @@ export class SequencerScheduleService {
       // 2. If aggregation is not reached within the specified time, send all, otherwise continue to wait.
       const paidType = this.envConfig.get(`${targetChain}.PaidType`, 1);
       let hashList: string[] = [];
-      console.log(`queueKey=${queueKey}, paidInterval=${paidInterval}, locked:${Lock[queueKey].locked},prevTime:${Lock[queueKey].prevTime} isOK:${Date.now() - Lock[queueKey].prevTime < paidInterval}， queueLength：${queueLength}, batchSize:${batchSize}`);
       Lock[queueKey].locked = true;
       let isBreak = false;
       if (+paidType === 2) {
