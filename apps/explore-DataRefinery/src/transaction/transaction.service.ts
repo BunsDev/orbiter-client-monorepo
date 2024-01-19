@@ -55,6 +55,7 @@ export class TransactionService {
     transfers: TransferAmountTransaction[],
   ) {
     if (transfers) {
+      this.logger.info(`batchInsertTransactionReceipt: ${transfers.map(item => item.hash).join(', ')}`);
       for (const transfer of transfers) {
         // this.logger.debug(`handleScanBlockResult ${transfer.blockNumber}-${transfer.hash}, receipt:${JSON.stringify(transfer.receipt)}`)
         // this.logger.debug(
@@ -185,7 +186,7 @@ export class TransactionService {
               }
             }
             if (!isPush) {
-              console.log('push:', result);
+              this.logger.info('push:', result?.data?.sourceId);
               this.messageService.sendTransferToMakerClient(result.data)
             }
           }

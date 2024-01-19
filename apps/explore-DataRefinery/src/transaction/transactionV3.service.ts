@@ -299,7 +299,6 @@ export class TransactionV3Service {
     }
     const t = await this.sequelize.transaction();
     try {
- 
       if (sourceBT && sourceBT.id) {
         sourceBT.targetChain = createdData.targetChain;
         await sourceBT.update(createdData, {

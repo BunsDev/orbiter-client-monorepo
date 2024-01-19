@@ -135,7 +135,7 @@ export class EVMAccount extends OrbiterAccount {
         this.logger.info(`estimateGas error ${error.message}`);
       }
       if (!transactionRequest.gasLimit) {
-        if (transactionRequest.data.length >= 500 && chainCustomConfig.defaultManyMintLimit) {
+        if (transactionRequest?.data && transactionRequest.data.length >= 500 && chainCustomConfig.defaultManyMintLimit) {
           transactionRequest.gasLimit = new BigNumber(chainCustomConfig.defaultManyMintLimit).toFixed(0);
         } else {
           if (chainCustomConfig.defaultSingleMintLimit) {
@@ -327,7 +327,7 @@ export class EVMAccount extends OrbiterAccount {
 
   async waitForTransactionConfirmation(transactionHash) {
     const provider = this.getProvider();
-    const receipt = await provider.waitForTransaction(transactionHash, 2, 60 * 3);
+    const receipt = await provider.waitForTransaction(transactionHash, 2, 2 * 60 * 1000);
     return receipt;
   }
 

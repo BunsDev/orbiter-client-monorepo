@@ -21,6 +21,7 @@ export class RpcScanningService implements RpcScanningInterface {
   readonly dataProcessor: DataProcessor;
   private blockCount: number = 0;
   private firstStartTime: number;
+  private defaultBatchLimit: number;
 
   constructor(
     public readonly chainId: string,
@@ -31,10 +32,14 @@ export class RpcScanningService implements RpcScanningInterface {
     });
     this.dataProcessor = new DataProcessor(this.chainId, this.logger);
     this.firstStartTime = Date.now()
+    setTimeout(async () => {
+      this.defaultBatchLimit = await ctx.envConfigService.getAsync('DefaultBatchLimit');
+      this.logger.info(`defaultBatchLimit: ${this.defaultBatchLimit}`);
+    }, 0);
   }
 
   get batchLimit(): number {
-    return Number(this.chainConfig['batchLimit'] || 100);
+    return Number(this.chainConfig['batchLimit'] || this.defaultBatchLimit || 100);
   }
 
   get chainConfig(): IChainConfig {

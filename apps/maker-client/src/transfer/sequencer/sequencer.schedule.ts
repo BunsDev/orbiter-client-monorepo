@@ -45,6 +45,22 @@ export class SequencerScheduleService {
     } else {
       this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
     }
+
+    const subV1Makers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER_V1", []);
+    if (subV1Makers && subV1Makers.length) {
+      for (const key of subV1Makers) {
+        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), `1_0_${key}`);
+      }
+    }
+
+    const subV2Makers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER_V2", []);
+    if (subV2Makers && subV2Makers.length) {
+      for (const key of subV2Makers) {
+        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), `2_0_${key}`);
+      }
+    }
+
+    console.log("subMakers", subMakers, 'subV1Makers', subV1Makers, 'subV2Makers', subV2Makers);
   }
   @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
@@ -61,28 +77,63 @@ export class SequencerScheduleService {
   }
   private async readDBTransactionRecords(owner: string) {
     const maxTransferTimeoutMinute = this.validatorService.getTransferGlobalTimeout();
+    const where: any = {
+      status: 0,
+      sourceMaker: owner,
+      targetId: null,
+      sourceTime: {
+        [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
+      },
+    };
+    const enablePaidChains: string[] = this.envConfig.get("ENABLE_PAID_CHAINS");
+    if (!enablePaidChains) {
+      this.logger.warn('ENABLE_PAID_CHAINS not found');
+      return;
+    }
+    const enablePaidVersion: string[] = this.envConfig.get("ENABLE_PAID_VERSION");
+    if (!enablePaidVersion) {
+      this.logger.warn('ENABLE_PAID_VERSION not found');
+      return;
+    }
+    if (!enablePaidChains.includes('*')) {
+      where['targetChain'] = enablePaidChains;
+    }
+    if (!enablePaidVersion.includes('*')) {
+      where['version'] = enablePaidVersion;
+    }
     const records = await this.bridgeTransactionModel.findAll({
       raw: true,
       order: [['id', 'asc'], ['sourceTime', 'asc']],
       attributes: [
-        'targetChain',
-        'targetMaker',
-        'sourceId'
+        "id",
+        "transactionId",
+        'status',
+        "sourceId",
+        "targetId",
+        'sourceTime',
+        "sourceChain",
+        "targetChain",
+        "sourceAmount",
+        "targetAmount",
+        "sourceMaker",
+        "targetMaker",
+        "sourceAddress",
+        "targetAddress",
+        "sourceSymbol",
+        "targetSymbol",
+        "sourceNonce",
+        "sourceToken",
+        "targetToken",
+        "responseMaker",
+        'ruleId',
+        "version"
       ],
-      where: {
-        status: 0,
-        sourceMaker: owner,
-        targetId: null,
-        targetChain: this.envConfig.get("ENABLE_PAID_CHAINS"),
-        version: this.envConfig.get("ENABLE_PAID_VERSION"),
-        sourceTime: {
-          [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
-        },
-      },
+      where,
     });
     if (records.length > 0) {
+      this.logger.info(`DB message ${records.map(item => item.sourceId).join(', ')}`);
       for (const tx of records) {
-        this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId).catch(error => {
+        this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId, tx).catch(error => {
           this.logger.error(
             `[readDBTransactionRecords] enqueueMessage handle error ${tx.sourceId}`, error
           );
@@ -92,7 +143,10 @@ export class SequencerScheduleService {
   }
   @Interval(1000)
   private readCacheQueue() {
-    const chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
+    let chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
+    if (chainIds.includes('*')) {
+      chainIds = this.chainConfigService.getAllChains().map(item => item.chainId);
+    }
     const owners = this.envConfig.get("MAKERS") || [];
     for (const chainId of chainIds) {
       for (const owner of owners) {
@@ -114,11 +168,13 @@ export class SequencerScheduleService {
       }
     }
   }
-  async enqueueMessage(QUEUE_NAME: string, message: string) {
+  async enqueueMessage(QUEUE_NAME: string, message: string, data: any) {
     const isMemberExists = await this.redis.sismember(QUEUE_NAME + ':set', message);
     if (!isMemberExists) {
       await this.redis.lpush(QUEUE_NAME, message);
       await this.redis.sadd(QUEUE_NAME + ':set', message);
+      await this.redis.set(`tx:${message}`, JSON.stringify({ ...data, redisTime: new Date() }));
+      await this.redis.expire(`tx:${message}`, 86400);
       // console.log(`Enqueued: ${message}`);
     } else {
       console.log(`Message "${message}" already exists in the queue.`);
@@ -139,8 +195,18 @@ export class SequencerScheduleService {
       return [];
     }
   }
+
+  async dequeueMessageData(message: string) {
+    const tx = await this.redis.get(`tx:${message}`);
+    if (tx) {
+      await this.redis.del(`tx:${message}`);
+      return JSON.parse(tx);
+    }
+    return null;
+  }
+
   private async readQueueExecByKey(queueKey: string) {
-    let records;
+    const records: any[] = [];
     const Lock = SequencerScheduleService.Lock;
     const [targetChain, targetMaker] = queueKey.split('-');
     if (!Lock[queueKey]) {
@@ -200,44 +266,20 @@ export class SequencerScheduleService {
       if (hashList.length <= 0) {
         return;
       }
-      records = await this.bridgeTransactionModel.findAll({
-        raw: true,
-        attributes: [
-          "id",
-          "transactionId",
-          'status',
-          "sourceId",
-          "targetId",
-          'sourceTime',
-          "sourceChain",
-          "targetChain",
-          "sourceAmount",
-          "targetAmount",
-          "sourceMaker",
-          "targetMaker",
-          "sourceAddress",
-          "targetAddress",
-          "sourceSymbol",
-          "targetSymbol",
-          "sourceNonce",
-          "sourceToken",
-          "targetToken",
-          "responseMaker",
-          'ruleId',
-          "version"
-        ],
-        where: {
-          sourceId: hashList
-        },
-      });
-      const result = await this.consumptionSendingQueue(records, queueKey);
+      for (const hash of hashList) {
+        const tx = await this.dequeueMessageData(hash);
+        if (tx) records.push(tx);
+      }
+      this.logger.info(`record: ${records.map(item => item.sourceId).join(', ')}`);
+      Lock[queueKey].prevTime = Date.now();
+      await this.consumptionSendingQueue(records, queueKey)
       Lock[queueKey].prevTime = Date.now();
     } catch (error) {
       this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
       this.logger.error(`readQueueExecByKey error: message ${error.message}`, error);
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         for (const tx of records) {
-          this.enqueueMessage(queueKey, tx.sourceId);
+          this.enqueueMessage(queueKey, tx.sourceId, tx);
         }
         this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
       }
@@ -273,6 +315,10 @@ export class SequencerScheduleService {
   }
 
   async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel) {
+    const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
+    if (isDisabledSourceAddress) {
+      throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
+    }
     // is exist
     const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
     if (transactionTimeValid) {
@@ -329,6 +375,10 @@ export class SequencerScheduleService {
     const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
     if (!sourceChain) {
       throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
+    }
+    const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
+    if (isDisabledSourceAddress) {
+      throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
     }
     const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
     if (transactionTimeValid) {
@@ -402,6 +452,10 @@ export class SequencerScheduleService {
         if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
           throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
         }
+        const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
+        if (isDisabledSourceAddress) {
+          throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
+        }
         const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
         if (transactionTimeValid) {
           throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
@@ -459,6 +513,10 @@ export class SequencerScheduleService {
         }
         if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
           throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+        }
+        const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
+        if (isDisabledSourceAddress) {
+          throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
         }
         const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
         if (transactionTimeValid) {
@@ -546,6 +604,11 @@ export class SequencerScheduleService {
     return result;
   }
   async consumptionQueue(tx: BridgeTransactionModel) {
+    const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(tx.sourceAddress);
+    if (isDisabledSourceAddress) {
+      this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} disabled source address: ${tx.sourceAddress}`);
+      return;
+    }
     if (this.validatorService.transactionTimeValid(tx.sourceChain, tx.sourceTime)) {
       this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId} Exceeding the effective payment collection time failed`)
       return
@@ -563,7 +626,8 @@ export class SequencerScheduleService {
       this.logger.warn(`[readDBTransactionRecords] ${tx.sourceId}  status not 0`)
       return;
     }
-    await this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId)
+    this.logger.info(`MQ message ${tx.sourceId}`);
+    await this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId, tx)
     return true;
   }
 

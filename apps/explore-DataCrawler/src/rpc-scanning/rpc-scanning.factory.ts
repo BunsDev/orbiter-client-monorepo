@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChainConfigService } from '@orbiter-finance/config';
+import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import { ArbitrumRpcScanningService } from './arbitrum/arbitrum.service';
 import { OptimisticRpcScanningService } from './optimistic/optimistic.service';
 import { BaseRpcScanningService } from './base/base.service';
@@ -22,9 +22,9 @@ export class RpcScanningFactory {
   constructor(
     private chainConfigService: ChainConfigService,
     private transactionService: TransactionService,
+    private envConfigService: ENVConfigService,
     private contractParser:ContractParserService
-  ) { 
-  }
+  ) { }
 
   createService(chainId: string): RpcScanningService {
     const chainConfig = this.chainConfigService.getChainInfo(chainId);
@@ -38,6 +38,7 @@ export class RpcScanningFactory {
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
       transactionService: this.transactionService,
+      envConfigService: this.envConfigService,
       contractParser: this.contractParser
     }
     let service;
