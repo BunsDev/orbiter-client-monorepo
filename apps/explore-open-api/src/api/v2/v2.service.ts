@@ -40,7 +40,7 @@ export class V2Service {
       String(+(item.fromChain.chainId)) === String(item.fromChain.chainId) &&
       String(+(item.toChain.chainId)) === String(item.toChain.chainId)
     ).map(item => {
-      return { id: `${item.fromChain.id}-${item.toChain.id}:${item.fromChain.symbol}-${item.fromChain.symbol}:${item.toChain.symbol}`, ...item };
+      return { id: `${item.fromChain.id}-${item.toChain.id}:${item.fromChain.symbol}-${item.toChain.symbol}`, ...item };
     });
   }
 
