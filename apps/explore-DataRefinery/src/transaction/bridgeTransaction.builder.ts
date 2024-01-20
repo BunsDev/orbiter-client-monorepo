@@ -93,12 +93,14 @@ export class StandardBuilder {
         result.targetChain = targetChain
       }
       //
-      const targetToken = this.chainConfigService.getTokenBySymbol(
-        targetChain.chainId,
-        transfer.symbol,
-      );
-      if (targetToken) {
-        result.targetToken = targetToken
+      if (targetChain) {
+        const targetToken = this.chainConfigService.getTokenBySymbol(
+          targetChain.chainId,
+          transfer.symbol,
+        );
+        if (targetToken) {
+          result.targetToken = targetToken
+        }
       }
     }
     result.targetAddress = transfer.sender;
