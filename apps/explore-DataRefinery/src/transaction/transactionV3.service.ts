@@ -85,7 +85,7 @@ export class TransactionV3Service {
     };
   }
 
-  @Cron('0 */5 * * * *')
+  // @Cron('0 */5 * * * *')
   async matchScheduleTask() {
     this.logger.info('matchScheduleTask start');
     const transfers = await this.transfersModel.findAll({
@@ -140,7 +140,7 @@ export class TransactionV3Service {
       }
     }
   }
-  @Cron('0 */10 * * * *')
+  // @Cron('0 */10 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
