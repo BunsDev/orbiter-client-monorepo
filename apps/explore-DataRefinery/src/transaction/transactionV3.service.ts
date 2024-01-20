@@ -91,7 +91,7 @@ export class TransactionV3Service {
     const transfers = await this.transfersModel.findAll({
       raw: true,
       order: [['id', 'desc']],
-      limit: 500,
+      limit: 10000,
       where: {
         status: 2,
         opStatus: 0,
