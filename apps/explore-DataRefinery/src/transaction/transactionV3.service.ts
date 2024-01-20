@@ -66,22 +66,22 @@ export class TransactionV3Service {
     private messageService: MessageService,
     @InjectRedis() private readonly redis: Redis,
   ) {
-    // this.matchScheduleTask()
-    //   .then((_res) => {
-    //     this.matchSenderScheduleTask();
-    //   })
-    //   .catch((error) => {
-    //     this.logger.error(
-    //       `constructor TransactionV3Service matchScheduleTask error `,
-    //       error,
-    //     );
-    //   });
-    this.matchALlVersion3_0().catch((error) => {
-      this.logger.error(
-        `constructor TransactionV3Service matchScheduleTask error `,
-        error,
-      );
-    })
+    this.matchScheduleTask()
+      .then((_res) => {
+        this.matchSenderScheduleTask();
+      })
+      .catch((error) => {
+        this.logger.error(
+          `constructor TransactionV3Service matchScheduleTask error `,
+          error,
+        );
+      });
+    // this.matchALlVersion3_0().catch((error) => {
+    //   this.logger.error(
+    //     `constructor TransactionV3Service matchScheduleTask error `,
+    //     error,
+    //   );
+    // })
   }
   errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
@@ -91,13 +91,13 @@ export class TransactionV3Service {
     };
   }
 
-  // @Cron('0 */1 * * * *')
+  @Cron('0 */1 * * * *')
   async matchScheduleTask() {
     this.logger.info('matchScheduleTask start');
     const transfers = await this.transfersModel.findAll({
       raw: true,
       order: [['id', 'desc']],
-      limit: 1500,
+      limit: 1000,
       where: {
         status: 2,
         opStatus: 0,
@@ -157,7 +157,7 @@ export class TransactionV3Service {
       }
     } while(!done)
   }
-  // @Cron('*/5 * * * * *')
+  @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.inscriptionMemoryMatchingService.transfers) {
       if (transfer.version === '3-1') {
@@ -183,7 +183,7 @@ export class TransactionV3Service {
       }
     }
   }
-  @Cron('0 */10 * * * *')
+  @Cron('0 */1 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
