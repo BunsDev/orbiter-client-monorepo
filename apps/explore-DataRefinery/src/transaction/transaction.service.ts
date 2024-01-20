@@ -28,7 +28,7 @@ export class TransactionService {
     private envConfig: ENVConfigService
   ) {
     this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
-    // this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
+    this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
   }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],
