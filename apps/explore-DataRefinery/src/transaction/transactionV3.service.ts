@@ -66,16 +66,22 @@ export class TransactionV3Service {
     private messageService: MessageService,
     @InjectRedis() private readonly redis: Redis,
   ) {
-    this.matchScheduleTask()
-      .then((_res) => {
-        this.matchSenderScheduleTask();
-      })
-      .catch((error) => {
-        this.logger.error(
-          `constructor TransactionV3Service matchScheduleTask error `,
-          error,
-        );
-      });
+    // this.matchScheduleTask()
+    //   .then((_res) => {
+    //     this.matchSenderScheduleTask();
+    //   })
+    //   .catch((error) => {
+    //     this.logger.error(
+    //       `constructor TransactionV3Service matchScheduleTask error `,
+    //       error,
+    //     );
+    //   });
+    this.matchALlVersion3_0().catch((error) => {
+      this.logger.error(
+        `constructor TransactionV3Service matchScheduleTask error `,
+        error,
+      );
+    })
   }
   errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
@@ -85,7 +91,7 @@ export class TransactionV3Service {
     };
   }
 
-  @Cron('0 */1 * * * *')
+  // @Cron('0 */1 * * * *')
   async matchScheduleTask() {
     this.logger.info('matchScheduleTask start');
     const transfers = await this.transfersModel.findAll({
@@ -114,7 +120,44 @@ export class TransactionV3Service {
       });
     }
   }
-  @Cron('*/5 * * * * *')
+
+  async matchALlVersion3_0() {
+    this.logger.info('matchALlVersion3_0 start');
+    let done = false
+    const limit = 500
+    do {
+      const transfers = await this.transfersModel.findAll({
+        raw: true,
+        order: [['id', 'desc']],
+        limit: limit,
+        where: {
+          status: 2,
+          opStatus: 0,
+          version: '3-0',
+          timestamp: {
+            [Op.gte]: dayjs().subtract(48, 'hour').toISOString(),
+            [Op.lte]: dayjs().subtract(1, 'hour').toISOString(),
+          },
+          // nonce: {
+          //   [Op.lt]: 9000
+          // }
+        },
+      });
+      this.logger.info(`matchALlVersion3_0 transfers.length: ${transfers.length}, ${transfers[0] ? transfers[0].id: 'null'}`);
+      for (const transfer of transfers) {
+        const result = await this.handleClaimTransfer(transfer).catch((error) => {
+          this.logger.error(
+            `TransactionV3Service matchALlVersion3_0 handleTransferBySourceTx ${transfer.hash} error`,
+            error,
+          );
+        });
+      }
+      if (transfers.length < limit) {
+        done = true
+      }
+    } while(!done)
+  }
+  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.inscriptionMemoryMatchingService.transfers) {
       if (transfer.version === '3-1') {
