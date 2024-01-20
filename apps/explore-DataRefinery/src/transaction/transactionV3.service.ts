@@ -66,16 +66,16 @@ export class TransactionV3Service {
     private messageService: MessageService,
     @InjectRedis() private readonly redis: Redis,
   ) {
-    this.matchScheduleTask()
-      .then((_res) => {
-        this.matchSenderScheduleTask();
-      })
-      .catch((error) => {
-        this.logger.error(
-          `constructor TransactionV3Service matchScheduleTask error `,
-          error,
-        );
-      });
+    // this.matchScheduleTask()
+    //   .then((_res) => {
+    //     this.matchSenderScheduleTask();
+    //   })
+    //   .catch((error) => {
+    //     this.logger.error(
+    //       `constructor TransactionV3Service matchScheduleTask error `,
+    //       error,
+    //     );
+    //   });
   }
   errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
@@ -114,7 +114,7 @@ export class TransactionV3Service {
       });
     }
   }
-  @Cron('*/5 * * * * *')
+  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.inscriptionMemoryMatchingService.transfers) {
       if (transfer.version === '3-1') {
