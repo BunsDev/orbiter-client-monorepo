@@ -142,8 +142,8 @@ export default class InscriptionBuilder {
       createdAt: new Date(),
       version: transfer.version,
     };
-    if (+transfer.nonce >= 9000) {
-      throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 9000`)
+    if (+transfer.nonce >= 100000000000000) {
+      throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 100000000000000`)
     }
 
     const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);
