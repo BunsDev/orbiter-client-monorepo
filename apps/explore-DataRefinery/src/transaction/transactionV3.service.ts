@@ -103,7 +103,7 @@ export class TransactionV3Service {
         opStatus: 0,
         version: '3-0',
         timestamp: {
-          [Op.gte]: dayjs().subtract(48*5, 'hour').toISOString(),
+          [Op.gte]: dayjs().subtract(24 * 30, 'hour').toISOString(),
         },
         // nonce: {
         //   [Op.lt]: 9000
