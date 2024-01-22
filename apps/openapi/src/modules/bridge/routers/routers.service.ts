@@ -32,14 +32,14 @@ export class RoutersService {
         // Retrieve rules from Maker V1 service
         const v1Rules = await this.rulesService.configs;
         // Iterate through each rule and convert it to a router configuration
-        const whiteMakers = [];
+        const notWhiteMakers = [];
         for (const v1Rule of v1Rules) {
             try {
                 const internalChainId = v1Rule['chain'].split('-');
                 const sourceChain = chains.find(row => row.internalId == internalChainId[0]);
                 const targetChain = chains.find(row => row.internalId == internalChainId[1]);
                 if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
-                    whiteMakers.push(v1Rule['makerAddress'].toLocaleLowerCase());
+                    notWhiteMakers.push(v1Rule['makerAddress'].toLocaleLowerCase());
                     continue;
                 }
                 if (!sourceChain || !sourceChain.tokens) {
@@ -122,8 +122,8 @@ export class RoutersService {
             }
 
         }
-        if (whiteMakers && whiteMakers.length>0) {
-            console.log(`v1Rule not white maker ${v1Rule['makerAddress'].toLocaleLowerCase()}`);
+        if (notWhiteMakers && notWhiteMakers.length>0) {
+            console.log(`v1Rule not white maker ${JSON.stringify(notWhiteMakers)}`);
         }
         return v1RouterConfigs;
     }
@@ -153,12 +153,12 @@ export class RoutersService {
         const chains = await this.chainService.getChains();
         const WHITE_MAKERS = this.envConfigService.get("WHITE_MAKERS", []);
         // Iterate through each rule from the API response and convert it to a router configuration
-    
+        const notWhiteMakers = [];
         for (const v3Rule of result.ruleList) {
             try {
                 const { fromChain, toChain } = v3Rule;
                 if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v3Rule['recipient'].toLocaleLowerCase())) {
-                    console.log(`v3Rule not white maker `, v3Rule);
+                    notWhiteMakers.push(v3Rule['recipient'].toLocaleLowerCase());
                     continue;
                 }
                 const routerConfig: RoutersConfig = {
@@ -201,6 +201,9 @@ export class RoutersService {
                 console.error('getV3Routers error', error);
             }
 
+        }
+        if (notWhiteMakers && notWhiteMakers.length>0) {
+            console.log(`v3Rule not white maker ${JSON.stringify(notWhiteMakers)}`);
         }
         this.dealerRules[dealerAddress] = v3RouterConfigs;
         return v3RouterConfigs;
