@@ -48,7 +48,7 @@ export enum TransferOpStatus {
   BALANCED_LIQUIDITY = 10,
   MATCHED = 99,
 
-  // inscription Op Status
+  // insription Op Status
   INVALID_OP = 41,
   INVALID_OP_PARAMS = 42,
   CLAIM_AMOUNT_EXCEED_LIMIT = 43,
@@ -60,13 +60,18 @@ export enum TransferOpStatus {
   CHARING_TOO_LOW = 49,
   CLAIM_EXCEED_MAXIMUM = 50,
   INCORRECT_FC = 51,
-  INVALID_DEPLOY_MAKER= 52
+  INVALID_DEPLOY_MAKER = 52,
+  NOT_SUFFICIENT_FUNDS = 53,
+  CROSS_INVALID_TARGET_ADDRESS = 54
 }
 
 export enum InscriptionOpType {
   Deploy = 'deploy',
   Claim = 'claim',
   Mint = 'mint',
+  Transfer = 'transfer',
+  Cross = 'cross',
+  CrossOver = 'crossover'
 }
 
 

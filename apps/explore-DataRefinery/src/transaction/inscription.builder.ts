@@ -14,6 +14,11 @@ import dayjs from 'dayjs';
 import { hexlify } from 'ethers6';
 import { TransactionID, ValidSourceTxError, addressPadStart, decodeV1SwapData } from '../utils';
 import RLP from "rlp";
+import {
+  UserBalance as UserBalanceModel,
+  IUserBalance,
+} from '@orbiter-finance/seq-models';
+import { InjectModel } from '@nestjs/sequelize'
 export function parseSourceTxSecurityCode(value: string) {
   let index = 0;
   for (let i = value.length - 1; i > 0; i--) {
@@ -106,6 +111,39 @@ export class InscriptionStandardBuilder {
     result.targetAddress = transfer.sender;
     return result
   }
+
+  async buildCross(transfer: TransfersModel): Promise<BuilderData> {
+    const result = {} as BuilderData
+    const targetChainId = parseSourceTxSecurityCode(transfer.amount);
+    const targetChain = this.chainConfigService.getChainByKeyValue(
+      'internalId',
+      targetChainId,
+    );
+    if (!targetChain) {
+      return result
+    }
+    const chains = await this.envConfigService.getAsync('INSCRIPTION_SUPPORT_CHAINS')
+    if (chains.includes(targetChain.chainId)) {
+      result.targetChain = targetChain
+    }
+    //
+    // const targetToken = this.chainConfigService.getTokenBySymbol(
+    //   targetChain.chainId,
+    //   transfer.symbol,
+    // );
+    // if (!targetToken) {
+    //   return result
+    // }
+    const callData = transfer.calldata as any
+    const { amt, to } = callData
+    result.targetAmount = new BigNumber(amt).toString();
+    // result.targetToken = targetToken
+    result.targetAddress = transfer.sender;
+    if (to) {
+      result.targetAddress = to.toLowerCase();
+    }
+    return result
+  }
 }
 
 
@@ -117,6 +155,8 @@ export default class InscriptionBuilder {
     protected chainConfigService: ChainConfigService,
     protected makerV1RuleService: MakerV1RuleService,
     protected envConfigService: ENVConfigService,
+    @InjectModel(UserBalanceModel)
+    private userBalanceModel: typeof UserBalanceModel,
     private standardBuilder: InscriptionStandardBuilder,
   ) { }
   async build(transfer: TransfersModel, deployRecord: DeployRecord): Promise<BridgeTransactionAttributes> {
@@ -190,6 +230,99 @@ export default class InscriptionBuilder {
     if (new BigNumber(fee).isGreaterThan(new BigNumber(transfer.amount))) {
       throw new ValidSourceTxError(TransferOpStatus.CHARING_TOO_LOW, `CHARING_TOO_LOW`)
     }
+    createdData.targetAddress = targetAddress
+    createdData.withholdingFee = createdData.sourceAmount;
+    createdData.targetAmount = targetAmount;
+    createdData.targetChain = targetChain.chainId
+    createdData.targetSymbol = deployRecord.tick;
+    createdData.targetMaker = transfer.receiver;
+    createdData.transactionId = TransactionID(
+      transfer.sender,
+      sourceChain.internalId,
+      transfer.nonce,
+      transfer.symbol,
+      dayjs(transfer.timestamp).valueOf(),
+    );
+    createdData.ruleId = deployRecord.protocol;
+    createdData.ebcAddress =  deployRecord.hash;
+    createdData.responseMaker = [transfer.receiver];
+    return createdData
+  }
+
+
+  async buildCross(transfer: TransfersModel, deployRecord: DeployRecord): Promise<BridgeTransactionAttributes> {
+    // build other common
+    const createdData: BridgeTransactionAttributes = {
+      sourceId: transfer.hash,
+      sourceAddress: transfer.sender,
+      sourceMaker: transfer.receiver,
+      sourceAmount: transfer.amount.toString(),
+      sourceChain: transfer.chainId,
+      sourceNonce: transfer.nonce,
+      sourceSymbol: transfer.symbol,
+      sourceToken: transfer.token,
+      targetToken: null,
+      sourceTime: transfer.timestamp,
+      dealerAddress: null,
+      ebcAddress: null,
+      targetChain: null,
+      ruleId: null,
+      targetAmount: null,
+      targetAddress: null,
+      targetSymbol: null,
+      createdAt: new Date(),
+      version: transfer.version,
+    };
+    if (+transfer.nonce >= 9000) {
+      throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 9000`)
+    }
+
+    const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);
+    if (!sourceChain) {
+      throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `${transfer.token} sourceChain not found`)
+    }
+
+    const callData = transfer.calldata as any
+    const { p } = callData;
+    if (p !== deployRecord.protocol) {
+      throw new ValidSourceTxError(TransferOpStatus.INCORRECT_PROTOCOL, `incorrect protocol`)
+    }
+
+    const builderData = await this.standardBuilder.buildCross(transfer);
+    const { targetAddress, targetChain, targetAmount } = builderData
+    if (!targetChain) {
+      throw new ValidSourceTxError(TransferOpStatus.TARGET_CHAIN_OR_TOKEN_NOT_FOUND, `targetChain not found`)
+    }
+
+    if (targetChain.chainId === sourceChain.chainId) {
+      throw new ValidSourceTxError(TransferOpStatus.CLAIM_MUST_CROSS_CHAIN, `MUST_CROSS_CHAIN`)
+    }
+
+    if (new BigNumber(targetAmount).decimalPlaces() > 0 || new BigNumber(targetAmount).isLessThan(1)) {
+      throw new ValidSourceTxError(TransferOpStatus.AMOUNT_MUST_BE_INTEGER, `cross amount must be integer and large than 0`)
+    }
+
+    const fee = await this.envConfigService.getAsync('INSCRIPTION_CHARGING_RULES')
+
+    if (!fee) {
+      throw new ValidSourceTxError(TransferOpStatus.CHARING_RULE_NOT_FOUND, `CHARING_RULE_NOT_FOUND`)
+    }
+    const userBalance = await this.userBalanceModel.findOne({ where: {
+      address: transfer.sender,
+      chainId: transfer.chainId
+    }})
+    if (!userBalance || new BigNumber(userBalance.balance).isLessThan(new BigNumber(targetAmount))) {
+      throw new ValidSourceTxError(TransferOpStatus.NOT_SUFFICIENT_FUNDS, `NOT_SUFFICIENT_FUNDS`)
+    }
+    // TAG: fee
+    if (new BigNumber(fee).isGreaterThan(new BigNumber(transfer.amount))) {
+      throw new ValidSourceTxError(TransferOpStatus.CHARING_TOO_LOW, `CROSS_CHARING_TOO_LOW`)
+    }
+
+    if (!targetAddress.startsWith('0x') && targetAddress.length !== 42) {
+      throw new ValidSourceTxError(TransferOpStatus.CROSS_INVALID_TARGET_ADDRESS, `CROSS_INVALID_TARGET_ADDRESS`)
+    }
+
     createdData.targetAddress = targetAddress
     createdData.withholdingFee = createdData.sourceAmount;
     createdData.targetAmount = targetAmount;
