@@ -381,7 +381,9 @@ export class TransactionV3Service {
         await this.incUserBalance({
           address: createdData.sourceAddress,
           chainId: createdData.targetChain,
-          value: createdData.targetAmount
+          value: createdData.targetAmount,
+          protocol: p,
+          tick: tick,
         }, t)
         // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.inscriptionMemoryMatchingService
@@ -797,10 +799,10 @@ export class TransactionV3Service {
   }
 
   public async incUserBalance(
-    params: { address: string; chainId: string; value: string, createdAt?: string, updatedAt?: string},
+    params: { address: string; chainId: string; protocol: string; tick: string; value: string, createdAt?: string, updatedAt?: string},
     t: Transaction,
   ) {
-    const { address, chainId, value } = params
+    const { address, chainId, value, protocol, tick } = params
     let { updatedAt, createdAt } = params;
     const now = dayjs().format('YYYY-MM-DD HH:mm:ss.sss')
     if (!updatedAt) {
@@ -815,15 +817,17 @@ export class TransactionV3Service {
       schema = config.schema
     }
     const sql = `
-    INSERT INTO "${schema}"."user_balance" ( "address", "chainId", "balance", "createdAt", "updatedAt" )
+    INSERT INTO "${schema}"."user_balance" ( "address", "chainId", "protocol", "tick", "balance", "createdAt", "updatedAt" )
     VALUES
-      ( '${address}','${chainId}',${value},'${createdAt}','${updatedAt}' ) ON CONFLICT ( "address", "chainId" ) DO
+      ( '${address}','${chainId}',${value},'${protocol}','${tick}','${createdAt}','${updatedAt}' ) ON CONFLICT ( "address", "chainId", "protocol", "tick" ) DO
     UPDATE
       SET "balance" = EXCLUDED."balance" + "user_balance"."balance",
       "updatedAt" = EXCLUDED."updatedAt"
       RETURNING "id",
       "address",
       "chainId",
+      "protocol",
+      "tick",
       "balance",
       "createdAt",
       "updatedAt";
