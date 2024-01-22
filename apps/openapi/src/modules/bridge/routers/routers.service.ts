@@ -123,7 +123,7 @@ export class RoutersService {
 
         }
         if (notWhiteMakers && notWhiteMakers.length>0) {
-            console.log(`v1Rule not white maker ${JSON.stringify(notWhiteMakers)}`);
+            console.log(`v1Rule not white maker ${JSON.stringify(uniq(notWhiteMakers))}`);
         }
         return v1RouterConfigs;
     }
@@ -203,7 +203,7 @@ export class RoutersService {
 
         }
         if (notWhiteMakers && notWhiteMakers.length>0) {
-            console.log(`v3Rule not white maker ${JSON.stringify(notWhiteMakers)}`);
+            console.log(`v3Rule not white maker ${JSON.stringify(uniq(notWhiteMakers))}`);
         }
         this.dealerRules[dealerAddress] = v3RouterConfigs;
         return v3RouterConfigs;
