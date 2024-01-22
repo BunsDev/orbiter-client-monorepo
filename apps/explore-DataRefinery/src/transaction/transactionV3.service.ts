@@ -42,6 +42,7 @@ import { parseTragetTxSecurityCode } from './bridgeTransaction.builder';
 import BigNumber from 'bignumber.js';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
+import { MakerService } from '../maker/maker.service'
 export interface handleTransferReturn {
   errno: number;
   errmsg?: string;
@@ -69,6 +70,7 @@ export class TransactionV3Service {
     protected makerV1RuleService: MakerV1RuleService,
     protected inscriptionBuilder: InscriptionBuilder,
     private messageService: MessageService,
+    private makerService: MakerService,
     @InjectRedis() private readonly redis: Redis,
   ) {
     this.matchScheduleTask()
@@ -735,8 +737,8 @@ export class TransactionV3Service {
         `handleDeployTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Deploy}`,
       );
     }
-    const makers = await this.envConfigService.getAsync('MAKERS');
-    if (!makers.map((e) => e.toLocaleLowerCase()).includes(transfer.receiver)) {
+    const isInscriptionMaker = await this.makerService.isInscriptionMakers(transfer.receiver)
+    if (!isInscriptionMaker) {
       await this.transfersModel.update(
         {
           opStatus: TransferOpStatus.INVALID_DEPLOY_MAKER,
