@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RoutersConfig } from '../bridge.interface';
 import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
 import { ChainsService } from '../chains/chains.service';
-import { padStart } from 'lodash';
+import { padStart, uniq } from 'lodash';
 
 @Injectable()
 export class RoutersService {
