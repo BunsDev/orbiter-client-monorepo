@@ -819,7 +819,7 @@ export class TransactionV3Service {
     const sql = `
     INSERT INTO "${schema}"."user_balance" ( "address", "chainId", "protocol", "tick", "balance", "createdAt", "updatedAt" )
     VALUES
-      ( '${address}','${chainId}',${value},'${protocol}','${tick}','${createdAt}','${updatedAt}' ) ON CONFLICT ( "address", "chainId", "protocol", "tick" ) DO
+      ( '${address}','${chainId}','${protocol}','${tick}',${value},'${createdAt}','${updatedAt}' ) ON CONFLICT ( "address", "chainId", "protocol", "tick" ) DO
     UPDATE
       SET "balance" = EXCLUDED."balance" + "user_balance"."balance",
       "updatedAt" = EXCLUDED."updatedAt"
