@@ -1,3 +1,4 @@
+import { StarknetPraser } from './../contract-parser/StarknetParser';
 import { RpcScanningService } from '../rpc-scanning.service';
 import {
   isEmpty,
@@ -11,9 +12,10 @@ import {
   StarknetChainId,
 } from './starknet.interface';
 import BigNumber from 'bignumber.js';
-import { RpcProvider, RPC } from 'starknet';
+import { RpcProvider, RPC, CallData, Contract, shortString } from 'starknet';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 import { addressPadStart } from '../../utils';
+import { StarknetAccountCairo1 } from '@orbiter-finance/abi';
 export class StarknetRpcScanningService extends RpcScanningService {
   #provider: RpcProvider;
   getProvider() {
@@ -62,7 +64,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     const transactions = block.transactions;
     const blockNumber = block['block_number'];
     if (!transactions) {
-      throw new Error(`${blockNumber} transactions empty`);
+      throw new Error(`${this.chainConfig.name} ${blockNumber} transactions empty`);
     }
     const txTransfersArray: any[] = await Promise.all(transactions.map((transaction) => {
       transaction.block_number = block.block_number;
@@ -84,10 +86,6 @@ export class StarknetRpcScanningService extends RpcScanningService {
     if (receipt['finality_status'] && receipt['execution_status']) {
       // cairo 1
       if (receipt['execution_status'] === 'SUCCEEDED') {
-        // if (receipt['finality_status'] === 'ACCEPTED_ON_L2') {
-        //   return TransferAmountTransactionStatus.confirmed;
-        // }
-        // return TransferAmountTransactionStatus.pending;
         return TransferAmountTransactionStatus.confirmed;
       } else if (receipt['execution_status'] === 'REVERTED' || receipt['execution_status'] === 'REJECTED') {
         return TransferAmountTransactionStatus.failed;
@@ -109,6 +107,16 @@ export class StarknetRpcScanningService extends RpcScanningService {
   ): Promise<TransferAmountTransaction[]> {
     if (transaction.type != 'INVOKE') {
       return [];
+    }
+    const toAddress = addressPadStart(transaction.calldata[1].toLocaleLowerCase(), 66);
+    if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddress)) {
+      const contractInfo = this.getChainConfigContract(toAddress);
+      const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
+      const transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
+        this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);
+        return [];
+      })
+      return transfers;
     }
     let parseData = this.decodeExecuteCalldataCairo0(transaction.calldata);
     if (!parseData || parseData.length <= 0) {
@@ -296,7 +304,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
 
       while (currentIndex < inputs.length) {
         const length = +inputs[0];
-        if (length<=0) {
+        if (length <= 0) {
           break;
         }
         for (let i = 0; i < length; i++) {
@@ -351,7 +359,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     } else if (
       selector ===
       '0x68bcbdba7cc8cac2832d23e2c32e9eec39a9f1d03521eff5dff800a62725fa' &&
-      this.chainConfig.contract[addressPadStart(to,66).toLowerCase()] === 'OBSource'
+      this.chainConfig.contract[addressPadStart(to, 66).toLowerCase()] === 'OBSource'
     ) {
       return {
         name: 'transferERC20',
@@ -428,8 +436,8 @@ export class StarknetRpcScanningService extends RpcScanningService {
   async getBlock(blockNumber: number): Promise<RPC.GetBlockWithTxs> {
     const provider = this.getProvider();
     const data = await provider.getBlockWithTxs(blockNumber);
-    if(isEmpty(data)) {
-      throw new Error('Block isEmpty');
+    if (isEmpty(data)) {
+      throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
     }
     return data;
   }

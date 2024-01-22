@@ -30,7 +30,7 @@ export class RoutersService {
         const v1RouterConfigs: RoutersConfig[] = [];
 
         // Retrieve rules from Maker V1 service
-        const v1Rules = await this.rulesService.getAll();
+        const v1Rules = await this.rulesService.configs;
 
         // Iterate through each rule and convert it to a router configuration
         for (const v1Rule of v1Rules) {

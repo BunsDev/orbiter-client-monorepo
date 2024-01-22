@@ -1,0 +1,691 @@
+[
+  {
+    "type": "impl",
+    "name": "Account",
+    "interface_name": "argent::common::account::IAccount"
+  },
+  {
+    "type": "struct",
+    "name": "core::starknet::account::Call",
+    "members": [
+      {
+        "name": "to",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "name": "selector",
+        "type": "core::felt252"
+      },
+      {
+        "name": "calldata",
+        "type": "core::array::Array::<core::felt252>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::felt252>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::felt252>"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "argent::common::account::IAccount",
+    "items": [
+      {
+        "type": "function",
+        "name": "__validate__",
+        "inputs": [
+          {
+            "name": "calls",
+            "type": "core::array::Array::<core::starknet::account::Call>"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "__execute__",
+        "inputs": [
+          {
+            "name": "calls",
+            "type": "core::array::Array::<core::starknet::account::Call>"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::array::Array::<core::array::Span::<core::felt252>>"
+          }
+        ],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "is_valid_signature",
+        "inputs": [
+          {
+            "name": "hash",
+            "type": "core::felt252"
+          },
+          {
+            "name": "signature",
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "ExecuteFromOutsideImpl",
+    "interface_name": "argent::common::outside_execution::IOutsideExecution"
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::starknet::account::Call>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::starknet::account::Call>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "argent::common::outside_execution::OutsideExecution",
+    "members": [
+      {
+        "name": "caller",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "name": "nonce",
+        "type": "core::felt252"
+      },
+      {
+        "name": "execute_after",
+        "type": "core::integer::u64"
+      },
+      {
+        "name": "execute_before",
+        "type": "core::integer::u64"
+      },
+      {
+        "name": "calls",
+        "type": "core::array::Span::<core::starknet::account::Call>"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "core::bool",
+    "variants": [
+      {
+        "name": "False",
+        "type": "()"
+      },
+      {
+        "name": "True",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "argent::common::outside_execution::IOutsideExecution",
+    "items": [
+      {
+        "type": "function",
+        "name": "execute_from_outside",
+        "inputs": [
+          {
+            "name": "outside_execution",
+            "type": "argent::common::outside_execution::OutsideExecution"
+          },
+          {
+            "name": "signature",
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::array::Array::<core::array::Span::<core::felt252>>"
+          }
+        ],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "is_valid_outside_execution_nonce",
+        "inputs": [
+          {
+            "name": "nonce",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_outside_execution_message_hash",
+        "inputs": [
+          {
+            "name": "outside_execution",
+            "type": "argent::common::outside_execution::OutsideExecution"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "UpgradeableImpl",
+    "interface_name": "argent::common::upgrade::IUpgradeable"
+  },
+  {
+    "type": "interface",
+    "name": "argent::common::upgrade::IUpgradeable",
+    "items": [
+      {
+        "type": "function",
+        "name": "upgrade",
+        "inputs": [
+          {
+            "name": "new_implementation",
+            "type": "core::starknet::class_hash::ClassHash"
+          },
+          {
+            "name": "calldata",
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "execute_after_upgrade",
+        "inputs": [
+          {
+            "name": "data",
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "ArgentMultisigImpl",
+    "interface_name": "argent::multisig::interface::IArgentMultisig"
+  },
+  {
+    "type": "struct",
+    "name": "argent::common::version::Version",
+    "members": [
+      {
+        "name": "major",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "minor",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "patch",
+        "type": "core::integer::u8"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "argent::multisig::interface::IArgentMultisig",
+    "items": [
+      {
+        "type": "function",
+        "name": "__validate_declare__",
+        "inputs": [
+          {
+            "name": "class_hash",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "__validate_deploy__",
+        "inputs": [
+          {
+            "name": "class_hash",
+            "type": "core::felt252"
+          },
+          {
+            "name": "contract_address_salt",
+            "type": "core::felt252"
+          },
+          {
+            "name": "threshold",
+            "type": "core::integer::u32"
+          },
+          {
+            "name": "signers",
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "change_threshold",
+        "inputs": [
+          {
+            "name": "new_threshold",
+            "type": "core::integer::u32"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "add_signers",
+        "inputs": [
+          {
+            "name": "new_threshold",
+            "type": "core::integer::u32"
+          },
+          {
+            "name": "signers_to_add",
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_signers",
+        "inputs": [
+          {
+            "name": "new_threshold",
+            "type": "core::integer::u32"
+          },
+          {
+            "name": "signers_to_remove",
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "replace_signer",
+        "inputs": [
+          {
+            "name": "signer_to_remove",
+            "type": "core::felt252"
+          },
+          {
+            "name": "signer_to_add",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_name",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_version",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "argent::common::version::Version"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_threshold",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u32"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_signers",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_signer",
+        "inputs": [
+          {
+            "name": "signer",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_valid_signer_signature",
+        "inputs": [
+          {
+            "name": "hash",
+            "type": "core::felt252"
+          },
+          {
+            "name": "signer",
+            "type": "core::felt252"
+          },
+          {
+            "name": "signature_r",
+            "type": "core::felt252"
+          },
+          {
+            "name": "signature_s",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "Erc165Impl",
+    "interface_name": "argent::common::erc165::IErc165"
+  },
+  {
+    "type": "interface",
+    "name": "argent::common::erc165::IErc165",
+    "items": [
+      {
+        "type": "function",
+        "name": "supports_interface",
+        "inputs": [
+          {
+            "name": "interface_id",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "OldArgentMultisigImpl",
+    "interface_name": "argent::multisig::interface::IDeprecatedArgentMultisig"
+  },
+  {
+    "type": "interface",
+    "name": "argent::multisig::interface::IDeprecatedArgentMultisig",
+    "items": [
+      {
+        "type": "function",
+        "name": "getVersion",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "getName",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "supportsInterface",
+        "inputs": [
+          {
+            "name": "interface_id",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "isValidSignature",
+        "inputs": [
+          {
+            "name": "hash",
+            "type": "core::felt252"
+          },
+          {
+            "name": "signatures",
+            "type": "core::array::Array::<core::felt252>"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::felt252"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "constructor",
+    "name": "constructor",
+    "inputs": [
+      {
+        "name": "new_threshold",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "signers",
+        "type": "core::array::Array::<core::felt252>"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "argent::multisig::argent_multisig::ArgentMultisig::ThresholdUpdated",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "new_threshold",
+        "type": "core::integer::u32",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::array::Span::<core::felt252>>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::array::Span::<core::felt252>>"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "argent::multisig::argent_multisig::ArgentMultisig::TransactionExecuted",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "response",
+        "type": "core::array::Span::<core::array::Span::<core::felt252>>",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "argent::multisig::argent_multisig::ArgentMultisig::AccountUpgraded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "new_implementation",
+        "type": "core::starknet::class_hash::ClassHash",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "argent::multisig::argent_multisig::ArgentMultisig::OwnerAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "new_owner_guid",
+        "type": "core::felt252",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "argent::multisig::argent_multisig::ArgentMultisig::OwnerRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_owner_guid",
+        "type": "core::felt252",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "argent::multisig::argent_multisig::ArgentMultisig::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "ThresholdUpdated",
+        "type": "argent::multisig::argent_multisig::ArgentMultisig::ThresholdUpdated",
+        "kind": "nested"
+      },
+      {
+        "name": "TransactionExecuted",
+        "type": "argent::multisig::argent_multisig::ArgentMultisig::TransactionExecuted",
+        "kind": "nested"
+      },
+      {
+        "name": "AccountUpgraded",
+        "type": "argent::multisig::argent_multisig::ArgentMultisig::AccountUpgraded",
+        "kind": "nested"
+      },
+      {
+        "name": "OwnerAdded",
+        "type": "argent::multisig::argent_multisig::ArgentMultisig::OwnerAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "OwnerRemoved",
+        "type": "argent::multisig::argent_multisig::ArgentMultisig::OwnerRemoved",
+        "kind": "nested"
+      }
+    ]
+  }
+]

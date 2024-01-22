@@ -54,11 +54,11 @@ export class ConsulService<T> {
 				}).toPromise();
 			return data;
 		} catch (e) {
-			const msg = `Cannot find key ${JSON.stringify(k)}`;
+			const msg = `${this.consulURL}${k.namespace} Cannot find key ${JSON.stringify(k)}`;
 			if (k.required) {
 				throw new Error(msg)
 			}
-			Logger.warn(msg);
+			Logger.error(msg);
 			return null;
 		}
 	}

@@ -284,7 +284,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     const provider = this.getProvider();
     const data = await provider.getBlockWithTransactions(blockNumber);
     if (isEmpty(data)) {
-      throw new Error('Block isEmpty');
+      throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
     }
     return data;
   }
