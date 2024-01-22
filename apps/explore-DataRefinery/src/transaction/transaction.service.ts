@@ -91,11 +91,17 @@ export class TransactionService {
               versionStr = '3-2';
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Claim)) {
               versionStr = '3-0';
+            } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Cross)) {
+              versionStr = '3-3';
+            } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Transfer)) {
+              versionStr = '3-5';
             }
           } else if (await this.makerService.isInscriptionMakers(transfer.sender)) {
             versionStr = '3-1' // All maker transfers out of tx are 3-1 by default
             if (calldata && calldata.op && calldata.op === InscriptionOpType.Mint) {
               versionStr = '3-1';
+            } if (calldata && calldata.op && calldata.op === InscriptionOpType.CrossOver) {
+              versionStr = '3-4';
             }
           }
         } else if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
@@ -218,7 +224,10 @@ export class TransactionService {
         result = this.transactionV3Service.handleMintTransfer(payload);
       } else if (payload.version === '3-2') {
         result = this.transactionV3Service.handleDeployTransfer(payload);
-      }else {
+      }else if (['3-3','3-4', '3-5'].includes(payload.version)) {
+        // nothing to do
+        result = { errno: 0 }
+      } else {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
