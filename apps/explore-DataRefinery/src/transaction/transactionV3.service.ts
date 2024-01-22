@@ -974,6 +974,8 @@ export class TransactionV3Service {
           {
             address: createdData.sourceAddress,
             chainId: createdData.sourceChain,
+            protocol: p,
+            tick: tick,
             value: `-${createdData.targetAmount}`,
           },
           t,
@@ -1044,7 +1046,30 @@ export class TransactionV3Service {
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
-    const { tick, amt, fc } = callData;
+    const { tick, amt, fc, p } = callData;
+    const deployRecord = await this.deployRecordModel.findOne({
+      raw: true,
+      where: {
+        to: transfer.sender,
+        protocol: p,
+        tick: tick
+      }
+    })
+    if (!deployRecord) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.DEPLOY_RECORD_NOT_FOUND,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleTransferTransfer fail ${transfer.hash} deployTick nof found`,
+      );
+    }
     const fromChainInternalId = +fc;
     const chainInfo = this.chainConfigService.getChainInfo(fromChainInternalId);
     if (!chainInfo) {
@@ -1137,6 +1162,8 @@ export class TransactionV3Service {
           address: memoryBT.targetAddress,
           chainId: memoryBT.targetChain,
           value: memoryBT.targetAmount,
+          tick: tick,
+          protocol: p
         }, t1)
         await t1.commit();
         this.inscriptionCrossMemoryMatchingService.removeTransferMatchCache(
@@ -1244,6 +1271,8 @@ export class TransactionV3Service {
         await this.incUserBalance({
           address: btTx.targetAddress,
           chainId: btTx.targetChain,
+          protocol: p,
+          tick: tick,
           value: btTx.targetAmount,
         }, t2)
         this.inscriptionCrossMemoryMatchingService.removeTransferMatchCache(
@@ -1313,6 +1342,30 @@ export class TransactionV3Service {
         } Incorrect params : ${JSON.stringify(calldata)}`,
       );
     }
+    const { p, tick } = calldata
+    const deployRecord = await this.deployRecordModel.findOne({
+      raw: true,
+      where: {
+        to: transfer.receiver,
+        protocol: p,
+        tick: tick
+      }
+    })
+    if (!deployRecord) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.DEPLOY_RECORD_NOT_FOUND,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleTransferTransfer fail ${transfer.hash} deployTick nof found`,
+      );
+    }
     const sourceUserBalance = await this.userBalanceModel.findOne({
       where: {
         address: transfer.sender,
@@ -1349,6 +1402,8 @@ export class TransactionV3Service {
           {
             address: transfer.sender,
             chainId: transfer.chainId,
+            protocol: p,
+            tick: tick,
             value: `-${transferAmount.toString()}`,
           },
           t,
@@ -1357,6 +1412,8 @@ export class TransactionV3Service {
           {
             address: transfer.receiver,
             chainId: transfer.chainId,
+            protocol: p,
+            tick: tick,
             value: transferAmount.toString(),
           },
           t,
