@@ -31,15 +31,15 @@ export class RoutersService {
 
         // Retrieve rules from Maker V1 service
         const v1Rules = await this.rulesService.configs;
-
         // Iterate through each rule and convert it to a router configuration
+        const whiteMakers = [];
         for (const v1Rule of v1Rules) {
             try {
                 const internalChainId = v1Rule['chain'].split('-');
                 const sourceChain = chains.find(row => row.internalId == internalChainId[0]);
                 const targetChain = chains.find(row => row.internalId == internalChainId[1]);
                 if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
-                    console.log(`v1Rule not white maker ${v1Rule['makerAddress'].toLocaleLowerCase()}`);
+                    whiteMakers.push(v1Rule['makerAddress'].toLocaleLowerCase());
                     continue;
                 }
                 if (!sourceChain || !sourceChain.tokens) {
@@ -122,7 +122,9 @@ export class RoutersService {
             }
 
         }
-
+        if (whiteMakers && whiteMakers.length>0) {
+            console.log(`v1Rule not white maker ${v1Rule['makerAddress'].toLocaleLowerCase()}`);
+        }
         return v1RouterConfigs;
     }
 
