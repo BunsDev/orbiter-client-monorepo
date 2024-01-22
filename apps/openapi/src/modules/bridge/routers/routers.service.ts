@@ -43,11 +43,11 @@ export class RoutersService {
                     continue;
                 }
                 if (!sourceChain || !sourceChain.tokens) {
-                    console.log(`v1Rule not find sourceChain`, v1Rule.chain);
+                    console.log(`v1Rule not find sourceChain ${internalChainId[0]}`, internalChainId);
                     continue;
                 }
                 if (!targetChain) {
-                    console.log(`v1Rule not find targetChain`, v1Rule.tgtChain);
+                    console.log(`v1Rule not find targetChain ${internalChainId[1]}`, internalChainId);
                     continue;
                 }
                 const sourceToken = sourceChain.tokens.find(t => t.symbol == v1Rule['sourceSymbol']);

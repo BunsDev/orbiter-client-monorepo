@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { NextFunction, Request, Response } from 'express';
-import { ethers } from 'ethers';
+import { verifyMessage } from 'ethers6';
 
 @Injectable()
 export class EthereumAuthMiddleware implements NestMiddleware {
@@ -29,7 +29,7 @@ function validateEthereumSignature(address: string, signature: string): boolean 
   // You may need to use the provider to query the Ethereum network for verification
 
   // Example (using ethers):
-  const recoveredAddress = ethers.utils.verifyMessage('Hello Orbiter', signature);
+  const recoveredAddress = verifyMessage('Hello Orbiter', signature);
 
   return recoveredAddress.toLowerCase() === address.toLowerCase();
 }
