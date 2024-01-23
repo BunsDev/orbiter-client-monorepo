@@ -321,7 +321,7 @@ export class EVMAccount extends OrbiterAccount {
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
-    const response = await this.sendTransaction(router, transactionRequest);
+    const response = await this.sendTransaction(transactionRequest);
     return response;
   }
 
