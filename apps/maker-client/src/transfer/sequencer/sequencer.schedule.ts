@@ -406,6 +406,11 @@ export class SequencerScheduleService {
     try {
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         await this.removeConsumeStatus(targetChain, sourceIds);
+        try {
+          this.alertService.sendMessage(`PaidTransactionError ${targetChain} - ${sourceIds.join(',')} message: ${error.message}`, "TG")
+        } catch (error) {
+          console.error('handlePaidTransactionError sendAlertMessage error:', error);
+        }
       }
     } catch (cleanupError) {
       this.logger.error(`handlePaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);

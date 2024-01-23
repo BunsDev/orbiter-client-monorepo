@@ -103,7 +103,7 @@ export class EVMAccount extends OrbiterAccount {
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
-    const tx = await this.sendTransaction(token, transactionRequest);
+    const tx = await this.sendTransaction(transactionRequest);
     return {
       hash: tx.hash,
       nonce: tx.nonce,
@@ -209,7 +209,7 @@ export class EVMAccount extends OrbiterAccount {
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
-    const response = await this.sendTransaction(to, transactionRequest);
+    const response = await this.sendTransaction(transactionRequest);
     return response;
   }
 
@@ -259,7 +259,7 @@ export class EVMAccount extends OrbiterAccount {
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
-    const response = await this.sendTransaction(router, transactionRequest);
+    const response = await this.sendTransaction(transactionRequest);
     return response;
   }
 
@@ -331,60 +331,134 @@ export class EVMAccount extends OrbiterAccount {
     return receipt;
   }
 
-  public async sendTransaction(
-    to: string,
-    transactionRequest: TransactionRequest = {}
-  ): Promise<TransactionResponse> {
-    const serialIds =
-      typeof transactionRequest.serialId === "string"
-        ? [transactionRequest.serialId]
-        : transactionRequest.serialId;
-    this.chainConfig.debug && this.logger.debug(`sendTransaction serialIds: ${JSONStringify(serialIds)}`)
-    const chainConfig = this.chainConfig;
-    const provider = this.getProvider();
-    const chainId: number | undefined = Number(
-      transactionRequest.chainId || chainConfig.chainId
-    );
+  // public async sendTransaction(
+  //   to: string,
+  //   transactionRequest: TransactionRequest = {}
+  // ): Promise<TransactionResponse> {
+  //   const serialIds =
+  //     typeof transactionRequest.serialId === "string"
+  //       ? [transactionRequest.serialId]
+  //       : transactionRequest.serialId;
+  //   this.chainConfig.debug && this.logger.debug(`sendTransaction serialIds: ${JSONStringify(serialIds)}`)
+  //   const chainConfig = this.chainConfig;
+  //   const provider = this.getProvider();
+  //   const chainId: number | undefined = Number(
+  //     transactionRequest.chainId || chainConfig.chainId
+  //   );
 
-    const tx: TransactionRequest = {
-      chainId,
-      ...transactionRequest,
-      from: this.wallet.address,
-      to,
-    };
-    const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
-    let txHash;
+  //   const tx: TransactionRequest = {
+  //     chainId,
+  //     ...transactionRequest,
+  //     from: this.wallet.address,
+  //     to,
+  //   };
+  //   const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
+  //   let txHash;
+  //   try {
+  //     tx.nonce = nonce;
+  //     if (tx.value) {
+  //       tx.value = new BigNumber(String(tx.value)).toFixed(0);
+  //     }
+  //     this.logger.info(
+  //       `${chainConfig.name} sendTransaction:${JSONStringify(tx)}`
+  //     );
+  //     const signedTx = await this.wallet.signTransaction(tx);
+  //     txHash = keccak256(signedTx);
+  //     const response = await provider.broadcastTransaction(signedTx);
+  //     this.logger.info(
+  //       `${chainConfig.name} sendTransaction txHash:${txHash}`
+  //     );
+  //     //
+  //     submit();
+  //     return response;
+  //   } catch (error) {
+  //     rollback();
+  //     this.logger.error(
+  //       `broadcastTransaction tx error:${txHash} - ${error.message}`,
+  //       error
+  //     );
+  //     // rollback()
+  //     if (isError(error, "NONCE_EXPIRED")) {
+  //       throw new TransactionSendConfirmFail(error.message);
+  //     }
+  //     throw new TransactionFailedError(error.message);
+  //   }
+  // }
+
+  public async sendTransaction(
+    transactionRequest: TransactionRequest
+  ): Promise<TransactionResponse> {
+    const chainConfig = this.chainConfig;
+    // const provider = this.getProvider();
+    let nonceResult;
     try {
-      tx.nonce = nonce;
-      if (tx.value) {
-        tx.value = new BigNumber(String(tx.value)).toFixed(0);
+      nonceResult = await this.nonceManager.getNextNonce();
+      if (nonceResult.localNonce > nonceResult.networkNonce + 20) {
+        throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+      }
+      if (transactionRequest.value)
+        transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
+      transactionRequest.from = this.wallet.address;
+      transactionRequest.chainId = chainConfig.chainId;
+      transactionRequest.nonce = nonceResult.nonce;
+      await promiseWithTimeout(this.getGasPrice(transactionRequest), 2000 * 60);
+      try {
+        const populateTransaction = await this.wallet.populateTransaction(transactionRequest);
+        if (populateTransaction.nonce > transactionRequest.nonce) {
+          transactionRequest.nonce = populateTransaction.nonce;
+        }
+        if (!transactionRequest.gasLimit) {
+          transactionRequest.gasLimit = populateTransaction.gasLimit;
+        }
+        if (!transactionRequest.gasPrice) {
+          transactionRequest.gasPrice = populateTransaction.gasPrice;
+        }
+        if (!transactionRequest.maxFeePerGas) {
+          transactionRequest.maxFeePerGas = populateTransaction.maxFeePerGas;
+        }
+        if (!transactionRequest.maxPriorityFeePerGas) {
+          transactionRequest.maxPriorityFeePerGas = populateTransaction.maxPriorityFeePerGas;
+        }
+      } catch (error) {
+        console.error('sendTransaction error', error);
+        this.logger.error(
+          `${chainConfig.name} sendTransaction before populateTransaction error:${JSONStringify(transactionRequest)}, message: ${error.message}`, error
+        );
       }
       this.logger.info(
-        `${chainConfig.name} sendTransaction:${JSONStringify(tx)}`
+        `${chainConfig.name} sendTransaction before:${JSONStringify(transactionRequest)}`
       );
-      const signedTx = await this.wallet.signTransaction(tx);
-      txHash = keccak256(signedTx);
-      const response = await provider.broadcastTransaction(signedTx);
+    } catch (error) {
+      console.error(error);
+      nonceResult && await nonceResult.rollback();
+      this.logger.error(
+        `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)},Nonce: ${transactionRequest.nonce}, message: ${error.message}`, error
+      );
+      throw new TransactionSendConfirmFail(error.message);
+    }
+    if (!nonceResult) {
+      throw new TransactionSendConfirmFail(`Nonce not obtained`);
+    }
+    try {
+      const response = await this.wallet.sendTransaction(transactionRequest);
       this.logger.info(
-        `${chainConfig.name} sendTransaction txHash:${txHash}`
+        `${chainConfig.name} - [${transactionRequest.nonce}] - sendTransaction txHash: ${response.hash}`
       );
-      //
-      submit();
+      await nonceResult.submit();
       return response;
     } catch (error) {
-      rollback();
+      await nonceResult.rollback();
       this.logger.error(
-        `broadcastTransaction tx error:${txHash} - ${error.message}`,
+        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}`,
         error
       );
-      // rollback()
       if (isError(error, "NONCE_EXPIRED")) {
+        this.logger.error(`sendTransaction NONCE_EXPIRED from:${transactionRequest.from}, to:${transactionRequest.to},nonce:${transactionRequest.nonce}, value:${transactionRequest.value}`);
         throw new TransactionSendConfirmFail(error.message);
       }
       throw new TransactionFailedError(error.message);
     }
   }
-
   public async mintInscription(
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
@@ -456,6 +530,7 @@ export class EVMAccount extends OrbiterAccount {
         error
       );
       if (isError(error, "NONCE_EXPIRED")) {
+        this.logger.error(`sendTransaction NONCE_EXPIRED from:${transactionRequest.from}, to:${transactionRequest.to},nonce:${transactionRequest.nonce}, value:${transactionRequest.value}`);
         throw new TransactionSendConfirmFail(error.message);
       }
       throw new TransactionFailedError(error.message);
