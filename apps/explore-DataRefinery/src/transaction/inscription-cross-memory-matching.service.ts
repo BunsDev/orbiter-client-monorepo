@@ -64,7 +64,7 @@ export class InscriptionCrossMemoryMatchingService {
         equals(bt.sourceNonce, transfer.value) &&
         dayjs(transfer.timestamp).valueOf() > (dayjs(bt.sourceTime).valueOf() - 1000 * 60) &&
         responseMaker.includes(transfer.sender) &&
-        bt.version === `${transfer.version.split('-')[0]}-0`
+        bt.version === `${transfer.version.split('-')[0]}-3`
       );
     });
     if (!matchTx) {
