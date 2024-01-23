@@ -28,12 +28,14 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
     OrbiterConfigModule.forRoot(),
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],
+      name: 'bridge',
       useFactory: async (envConfig: ENVConfigService) => {
         const config: SequelizeModuleOptions = await envConfig.getAsync('DATABASE_URL');
         if (!config) {
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
+        config.schema = 'public';
         return config;
       },
     }),

@@ -6,9 +6,9 @@ import { Op } from 'sequelize';
 @Injectable()
 export class TransactionService {
     constructor(
-        @InjectModel(Transfers)
+        @InjectModel(Transfers, 'bridge')
         private transfersModel: typeof Transfers,
-        @InjectModel(BridgeTransaction)
+        @InjectModel(BridgeTransaction, 'bridge')
         private bridgeTransactionModel: typeof BridgeTransaction) {
     }
 
