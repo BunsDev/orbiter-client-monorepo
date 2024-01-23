@@ -36,7 +36,7 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
           process.exit(1);
         }
         config.schema = 'public';
-        return config;
+        return {...config,schema: 'public'};
       },
     }),
     SequelizeModule.forRootAsync({
@@ -48,8 +48,7 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
-        config.schema = 'stats';
-        return config;
+        return {...config,schema: 'stats'};
       },
     }),
     
