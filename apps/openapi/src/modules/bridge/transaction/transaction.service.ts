@@ -17,8 +17,7 @@ export class TransactionService {
             raw: true,
             attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceMaker', 'targetMaker', 'sourceAddress', 'targetAddress', 'sourceSymbol', 'targetSymbol', 'status', 'sourceTime', 'targetTime', 'ruleId'],
             where: {
-                sourceId: hash,
-                targetId: hash
+                sourceId: hash
             }
         })
     }
