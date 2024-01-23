@@ -1,0 +1,48 @@
+{
+  "name": "orbiter-nestjs-consul",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/orbiter-nestjs-consul/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/orbiter-nestjs-consul",
+        "tsConfig": "libs/orbiter-nestjs-consul/tsconfig.lib.json",
+        "packageJson": "libs/orbiter-nestjs-consul/package.json",
+        "main": "libs/orbiter-nestjs-consul/src/index.ts",
+        "assets": ["libs/orbiter-nestjs-consul/*.md"]
+      }
+    },
+    "publish": {
+      "command": "node tools/scripts/publish.mjs orbiter-nestjs-consul {args.ver} {args.tag}",
+      "dependsOn": ["build"]
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": [
+          "libs/orbiter-nestjs-consul/**/*.ts",
+          "libs/orbiter-nestjs-consul/package.json"
+        ]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/orbiter-nestjs-consul/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    }
+  },
+  "tags": []
+}

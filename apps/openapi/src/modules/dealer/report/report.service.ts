@@ -24,7 +24,7 @@ export class ReportService {
 
             // If the transaction was created, it means no existing record was found
             if (created) {
-                console.log('New transaction created:', transaction.toJSON());
+                // console.log('New transaction created:', transaction.toJSON());
             } else {
                 console.log('Transaction already exists:', transaction.toJSON());
             }

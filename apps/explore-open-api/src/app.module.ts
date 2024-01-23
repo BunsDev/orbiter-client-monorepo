@@ -4,13 +4,13 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { ConsulModule } from "@orbiter-finance/consul";
 import { join } from "path";
 import { SequelizeModule } from "@nestjs/sequelize";
 import { isEmpty } from "@orbiter-finance/utils";
 import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
 import { MakerTransaction, NetState, Transaction, UserHistory } from "@orbiter-finance/v1-seq-models";
 import { ScheduleModule } from "@nestjs/schedule";
+import { ConsulModule } from '@client-monorepo/nestjs-consul';
 
 dayjs.extend(utc);
 
@@ -19,21 +19,18 @@ dayjs.extend(utc);
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ConsulModule.registerAsync({
+    ConsulModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
+      useFactory: async (configService: ConfigService) => {
         return {
-          name: 'explore-open-api',
-          url:config.get("CONSUL_URL")
-        };
+          url:configService.get("CONSUL_URL"),
+          keys: configService.get('CONSUL_KEYS').split(','),
+          updateCron: '* * * * *',
+        } as any;
       },
     }),
-    OrbiterConfigModule.forRoot({
-      chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-open-api/chains.json",
-      envConfigPath: process.env['ENV_VAR_PATH'] || "explore-open-api/config.yaml",
-      makerV1RulePath: process.env['ENV_RULES_PATH'] || "rules",
-      cachePath: join(__dirname,'runtime')
-    }),
+    OrbiterConfigModule.forRoot(),
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (envConfig: ENVConfigService) => {

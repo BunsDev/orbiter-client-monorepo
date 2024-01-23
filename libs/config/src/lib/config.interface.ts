@@ -13,6 +13,11 @@ export interface Token {
     isNative?: boolean;
 }
 export type IChainConfigWorkingStatus = 'running' | 'pause' | 'stop';
+export interface IContractConfig {
+    name:string;
+    address:string;
+    methods?:string[]
+}
 export interface IChainConfig {
     name: string;
     chainId: string;
@@ -35,7 +40,7 @@ export interface IChainConfig {
     watch: Array<string>;
     explorers: IExplorerConfig[];
     tokens: Array<Token>;
-    contracts: Array<string>;
+    contracts: Array<IContractConfig>;
     xvmList: Array<string>;
     workingStatus: IChainConfigWorkingStatus;
     service: { [key: string]: string };

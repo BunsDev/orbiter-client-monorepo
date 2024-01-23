@@ -292,14 +292,13 @@ export class TransactionV3Service {
         throw error;
       }
     }
-
+    if (createdData.targetAddress.length >= 100) {
+      return this.errorBreakResult(
+        `${transfer.hash} There is an issue with the transaction format`,
+      );
+    }
     const t = await this.sequelize.transaction();
     try {
-      if (createdData.targetAddress.length >= 100) {
-        return this.errorBreakResult(
-          `${transfer.hash} There is an issue with the transaction format`,
-        );
-      }
       if (sourceBT && sourceBT.id) {
         sourceBT.targetChain = createdData.targetChain;
         await sourceBT.update(createdData, {
@@ -383,13 +382,13 @@ export class TransactionV3Service {
     }
 
     const callData = transfer.calldata as any;
-    const { tick, op, p, amt, fc } = callData;
-    if (op !== InscriptionOpType.Mint) {
-      return this.errorBreakResult(
-        `handleMintTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Mint}`,
-      );
-    }
-    if (!p || !tick || !amt || !/^[1-9]\d*(\.\d+)?$/.test(amt) || !fc) {
+    if (
+      !callData ||
+      !callData.p ||
+      !callData.tick ||
+      !callData.amt ||
+      !/^[1-9]\d*(\.\d+)?$/.test(callData.amt) ||
+      !callData.fc) {
       await this.transfersModel.update(
         {
           opStatus: TransferOpStatus.INVALID_OP_PARAMS,
@@ -404,6 +403,12 @@ export class TransactionV3Service {
         `handleMintTransfer fail ${
           transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
+      );
+    }
+    const { tick, op, p, amt, fc } = callData;
+    if (op !== InscriptionOpType.Mint) {
+      return this.errorBreakResult(
+        `handleMintTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Mint}`,
       );
     }
     const fromChainInternalId = +fc;

@@ -28,7 +28,7 @@ export class ValidatorService {
   }
   public getPaidTransferCount(chainId:string) {
     const chainPaidTransferCount = this.envConfig.get<number>(`${chainId}.PaidTransferCount`, 1);
-    return chainPaidTransferCount;
+    return +chainPaidTransferCount;
   }
   public async validDisabledPaid(chainId:string) {
     const disabledPaid = this.envConfig.get<boolean>(`${chainId}.DisabledPaid`, false);
@@ -68,6 +68,7 @@ export class ValidatorService {
       wallet,
       chainId
     );
+    await account.connect(this.getSenderPrivateKey(wallet), wallet);
     const targetToken = this.chainConfigService.getTokenByChain(chainId, token);
     const value = new BigNumber(+amount * 10 **targetToken.decimals).toFixed(0);
     const balance = await account.getBalance(wallet, token);

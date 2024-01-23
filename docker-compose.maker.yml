@@ -16,6 +16,7 @@ services:
         - orbiter/clients
       dockerfile:  ./apps/maker-client/Dockerfile.clients
     restart: always
+    env_file: .env
     environment:
       CONSUL_URL: '${CONSUL_URL}'
       ENV_CHAINS_CONFIG_PATH: '${ENV_CHAINS_CONFIG_PATH}'

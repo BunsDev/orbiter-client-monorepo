@@ -87,7 +87,10 @@ export class InscriptionStandardBuilder {
     if (!targetChain) {
       return result
     }
-    result.targetChain = targetChain
+    const chains = await this.envConfigService.getAsync('INSCRIPTION_SUPPORT_CHAINS')
+    if (chains.includes(targetChain.chainId)) {
+      result.targetChain = targetChain
+    }
     //
     // const targetToken = this.chainConfigService.getTokenBySymbol(
     //   targetChain.chainId,
@@ -139,10 +142,9 @@ export default class InscriptionBuilder {
       createdAt: new Date(),
       version: transfer.version,
     };
-    if (+transfer.nonce >= 9000) {
-      throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 9000`)
+    if (+transfer.nonce >= 10000000000000) {
+      throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 10000000000000`)
     }
-
     const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);
     if (!sourceChain) {
       throw new ValidSourceTxError(TransferOpStatus.SOURCE_CHAIN_OR_TOKEN_NOT_FOUND, `${transfer.token} sourceChain not found`)

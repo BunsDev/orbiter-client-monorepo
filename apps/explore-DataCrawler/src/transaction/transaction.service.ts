@@ -35,11 +35,9 @@ export class TransactionService {
         // if (+v1Exists == 1) {
         //     return true;
         // }
-        const MintMakers = await this.envConfigService.getAsync('MAKERS');
-        if (MintMakers && Array.isArray(MintMakers)) {
-          if (MintMakers.find(item => addressPadStart(item, 66).toLowerCase() === addressPadStart(address, 66).toLowerCase())) {
-            return true;
-        }
+        const v3OwnerExists = await this.redis.sismember('v3Owners', address.toLowerCase());
+        if (+v3OwnerExists === 1) {
+          return true;
         }
         const v1MakerList = await this.getWatchAddress();
         if (v1MakerList.find(item => addressPadStart(item, 66).toLowerCase() === addressPadStart(address, 66).toLowerCase())) {

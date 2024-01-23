@@ -8,12 +8,11 @@ import { AlertModule } from '@orbiter-finance/alert';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
-import { ConsulModule } from '@orbiter-finance/consul';
 import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { MetricModule } from './metric/metric.module';
-import {AppController} from './app.controller'
-
+import { AppController } from './app.controller'
+import { ConsulModule } from '@client-monorepo/nestjs-consul'
 dayjs.extend(utc);
 
 @Module({
@@ -21,19 +20,18 @@ dayjs.extend(utc);
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ConsulModule.registerAsync({
+    ConsulModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
+      useFactory: async (configService: ConfigService) => {
         return {
-          name: 'DataCrawler',
-          url:config.get("CONSUL_URL")
-        };
+          url:configService.get("CONSUL_URL"),
+          keys: configService.get('CONSUL_KEYS1').split(','),
+          updateCron: '* * * * *',
+        } as any;
       },
     }),
-    OrbiterConfigModule.forRoot({
-      chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-server/chains.json",
-      envConfigPath: process.env['ENV_VAR_PATH'] || "explore-server/config.yaml",
-    }),
+    OrbiterConfigModule.forRoot(),
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
       useFactory: async (configService: ENVConfigService) => {
@@ -46,8 +44,8 @@ dayjs.extend(utc);
       },
     }),
     AlertModule.registerAsync({
-      inject:[ENVConfigService],
-      useFactory:async(configService:ENVConfigService) => {
+      inject: [ENVConfigService],
+      useFactory: async (configService: ENVConfigService) => {
         const tgConfig = await configService.getAsync("TELEGRAM");
         return {
           telegram: tgConfig
@@ -55,11 +53,11 @@ dayjs.extend(utc);
       }
     }),
     RabbitMqModule,
-    RpcScanningModule,
     ApiScanningModule,
     ScheduleModule.forRoot(),
     TransactionModule,
     MetricModule,
+    RpcScanningModule,
   ],
   controllers: [AppController],
   providers: [],

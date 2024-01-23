@@ -16,9 +16,7 @@ services:
       dockerfile:  ./apps/explore-DataCrawler/Dockerfile.clients
     restart: always
     command: ["node", 'main.js']
-    environment:
-      CONSUL_URL: '${CONSUL_URL}'
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    env_file: .env
     ports:
       - ':3000'
     networks:

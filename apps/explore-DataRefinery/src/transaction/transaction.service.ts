@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { BigIntToString } from '@orbiter-finance/utils';
 import { TransferAmountTransaction } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
-import { Transfers as TransfersModel, TransferOpStatus, InscriptionOpType } from '@orbiter-finance/seq-models';
+import { Transfers as TransfersModel, TransferOpStatus, InscriptionOpType, RefundRecord as RefundRecordModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
 import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { TransactionV1Service } from './transactionV1.service';
@@ -11,7 +11,9 @@ import { TransactionV3Service } from './transactionV3.service';
 import { MakerService } from '../maker/maker.service'
 import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
-import { ENVConfigService } from '@orbiter-finance/config';
+import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
+import { Op } from 'sequelize';
+import { Interval } from '@nestjs/schedule';
 @Injectable()
 export class TransactionService {
   @LoggerDecorator()
@@ -19,14 +21,24 @@ export class TransactionService {
   constructor(
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,
+    @InjectModel(RefundRecordModel)
+    private refundRecordModel: typeof RefundRecordModel,
     private messageService: MessageService,
     private consumerService: ConsumerService,
     private transactionV1Service: TransactionV1Service,
     private transactionV2Service: TransactionV2Service,
     private transactionV3Service: TransactionV3Service,
     private makerService: MakerService,
-    private envConfig: ENVConfigService
+    private envConfig: ENVConfigService,
+    private makerV1RuleService: MakerV1RuleService
   ) {
+    const ruleConfigs = this.makerV1RuleService.configs;
+    if (!ruleConfigs || ruleConfigs.length <= 0) {
+      throw new Error('Load ruleConfigs fail');
+    }
+    if (!this.envConfig.get('RABBITMQ_URL')) {
+      throw new Error('Get RABBITMQ_URL Config fail');
+    }
     this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
     this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
   }
@@ -43,6 +55,7 @@ export class TransactionService {
     transfers: TransferAmountTransaction[],
   ) {
     if (transfers) {
+      this.logger.info(`batchInsertTransactionReceipt: ${transfers.map(item => item.hash).join(', ')}`);
       for (const transfer of transfers) {
         // this.logger.debug(`handleScanBlockResult ${transfer.blockNumber}-${transfer.hash}, receipt:${JSON.stringify(transfer.receipt)}`)
         // this.logger.debug(
@@ -79,18 +92,25 @@ export class TransactionService {
           feeToken: transfer.feeToken,
           transactionIndex: transfer.transactionIndex,
           syncStatus: 0,
+          crossChainParams: transfer.crossChainParams
         }
         let versionStr = null;
         const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');
-        if (transfer.version == '3') {
+        if ((await this.makerService.isInscriptionMakers(transfer.sender)) || await this.makerService.isInscriptionMakers(transfer.receiver)) {
           // upsertData.opStatus = TransferOpStatus.INIT_STATUS;
           const calldata = upsertData.calldata
-          if (calldata && calldata.op && calldata.op === InscriptionOpType.Deploy) {
-            versionStr = '3-2';
-          } else if (calldata && calldata.op && calldata.op === InscriptionOpType.Claim) {
-            versionStr = '3-0';
-          } else if (calldata &&calldata.op && calldata.op === InscriptionOpType.Mint) {
-            versionStr = '3-1';
+          if (await this.makerService.isInscriptionMakers(transfer.receiver)) {
+            versionStr = '3-0'; // All tx transfers to maker are 3-0 by default
+            if (calldata && calldata.op && calldata.op === InscriptionOpType.Deploy) {
+              versionStr = '3-2';
+            } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Claim)) {
+              versionStr = '3-0';
+            }
+          } else if (await this.makerService.isInscriptionMakers(transfer.sender)) {
+            versionStr = '3-1' // All maker transfers out of tx are 3-1 by default
+            if (calldata && calldata.op && calldata.op === InscriptionOpType.Mint) {
+              versionStr = '3-1';
+            }
           }
         } else if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
           upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
@@ -166,7 +186,7 @@ export class TransactionService {
               }
             }
             if (!isPush) {
-              console.log('push:', result);
+              this.logger.info('push:', result?.data?.sourceId);
               this.messageService.sendTransferToMakerClient(result.data)
             }
           }
@@ -212,7 +232,7 @@ export class TransactionService {
         result = this.transactionV3Service.handleMintTransfer(payload);
       } else if (payload.version === '3-2') {
         result = this.transactionV3Service.handleDeployTransfer(payload);
-      }else {
+      } else {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
       // send to maker client when side is 0
@@ -242,5 +262,90 @@ export class TransactionService {
       }
     }
 
+  }
+  @Interval(600000)
+  async matchRefundRecord() {
+    const transfers = await this.transfersModel.findAll({
+      raw: true,
+      attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp'],
+      where: {
+        version: ['1-1', '2-1'],
+        opStatus: {
+          [Op.not]: 99
+        },
+        status: 2,
+        sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328'],
+        timestamp: {
+          [Op.lte]: dayjs().subtract(60, 'minute')
+        }
+      },
+      limit: 500
+    });
+    for (const transfer of transfers) {
+      const version = transfer.version === '1-1' ? '1-0' : '2-0';
+      const sourceTx = await this.transfersModel.findOne({
+        attributes: ['id', 'hash', 'amount', 'chainId', 'symbol', 'opStatus', 'timestamp'],
+        where: {
+          version: version,
+          status: 2,
+          opStatus: {
+            [Op.not]: 99
+          },
+          chainId: transfer.chainId,
+          sender: transfer.receiver,
+          amount: transfer.amount,
+          symbol: transfer.symbol,
+          timestamp: {
+            [Op.lte]: dayjs(transfer.timestamp).add(10, 'minute').toISOString(),
+            [Op.gte]: dayjs(transfer.timestamp).subtract(1, 'month').toISOString(),
+          }
+        }
+      })
+      if (sourceTx) {
+        const refundRecord = await this.refundRecordModel.findOne({
+          attributes: ['id'],
+          where: {
+            targetId: transfer.hash,
+            status: {
+              [Op.lte]: 10
+            }
+          }
+        });
+        if (!refundRecord) {
+          const t = await this.refundRecordModel.sequelize.transaction();
+          try {
+            const createData = await this.refundRecordModel.create({
+              targetId: transfer.hash,
+              sourceAmount: sourceTx.amount,
+              sourceChain: sourceTx.chainId,
+              sourceId: sourceTx.hash,
+              sourceSymbol: sourceTx.symbol,
+              sourceTime: sourceTx.timestamp,
+              reason: sourceTx.opStatus.toString(),
+              status: TransferOpStatus.REFUND,
+              targetAmount: transfer.amount
+            }, {
+              transaction: t
+            })
+            if (!createData) {
+              throw new Error('refund record create fail')
+            }
+            const [rows] = await this.transfersModel.update({
+              opStatus: TransferOpStatus.REFUND
+            }, {
+              where: {
+                id: [transfer.id, sourceTx.id],
+              }
+            });
+            if (rows != 2) {
+              throw new Error(`match refund change status rows fail ${rows}/2`)
+            }
+            t && await t.commit();
+          } catch (error) {
+            t && await t.rollback();
+          }
+        };
+      }
+    }
   }
 }

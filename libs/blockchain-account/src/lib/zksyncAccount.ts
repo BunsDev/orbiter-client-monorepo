@@ -13,7 +13,7 @@ export class ZkSyncAccount extends OrbiterAccount  {
       const l1Wallet = new ethers.Wallet(privateKey);
       const wallet  = await this.getL2Wallet(privateKey);
       this.account = wallet;
-      this.address = wallet.address();
+      this.address = address;
       if (!this.nonceManager) {
         this.nonceManager = new NonceManager(l1Wallet.address, async () => {
           const nonce = await wallet.getNonce("committed");
@@ -100,8 +100,7 @@ export class ZkSyncAccount extends OrbiterAccount  {
     }
   }
   public async getTokenBalance(token: string, address?: string): Promise<bigint> {
-    console.log(this.address, '====', address)
-    if (address && address.toLowerCase() != this.address.toLowerCase()) {
+    if (address && this.address && address.toLowerCase() != this.address.toLowerCase()) {
       throw new Error(`The specified address query is not supported temporarily ${address} - ${this.address}`);
     }
     return BigInt((await this.account.getBalance(token, 'committed')).toString());

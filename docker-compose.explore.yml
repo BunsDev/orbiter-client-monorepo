@@ -26,10 +26,7 @@ services:
       - "com.docker.compose.project=orbiter-explore"
     restart: always
     command: ["node", 'main.js']
-    environment:
-      CONSUL_URL: '${CONSUL_URL}'
-      application: '${application}-crawler'
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    env_file: .env
     ports:
       - '3000:3000'
     depends_on:
@@ -52,10 +49,7 @@ services:
         - orbiter/clients
       dockerfile:  ./apps/explore-DataRefinery/Dockerfile.clients
     restart: always
-    environment:
-      CONSUL_URL: '${CONSUL_URL}'
-      application: '${application}-refinery'
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    env_file: .env
     depends_on:
       - redis
     links:

@@ -3,34 +3,31 @@ import { TransactionModule } from './transaction/transaction.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
-import { ConsulModule } from '@orbiter-finance/consul';
 import { isEmpty } from '@orbiter-finance/utils';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq';
 import { AlertModule } from '@orbiter-finance/alert';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ScheduleModule } from '@nestjs/schedule';
-import { BridgeTransaction, Transfers, DeployRecord, UserBalance } from "@orbiter-finance/seq-models";
+import { BridgeTransaction, Transfers, DeployRecord, UserBalance, RefundRecord } from "@orbiter-finance/seq-models";
+import { ConsulModule } from '@client-monorepo/nestjs-consul';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ConsulModule.registerAsync({
+    ConsulModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
+      useFactory: async (configService: ConfigService) => {
         return {
-          name: 'DataRefinery',
-          url:config.get("CONSUL_URL")
-        };
+          url:configService.get("CONSUL_URL"),
+          keys: configService.get('CONSUL_KEYS2').split(','),
+          updateCron: '* * * * *',
+        } as any;
       },
     }),
-    OrbiterConfigModule.forRoot({
-      chainConfigPath: process.env['ENV_CHAINS_CONFIG_PATH'] || "explore-server/chains.json",
-      envConfigPath: process.env['ENV_VAR_PATH'] || "explore-server/config.yaml",
-      // makerV1RulePath: process.env['ENV_RULES_PATH'] || "rules",
-      // cachePath: join(__dirname, 'runtime')
-    }),
+    OrbiterConfigModule.forRoot(),
     RabbitMqModule,
     RedisModule.forRootAsync({
       inject: [ENVConfigService],
@@ -51,7 +48,7 @@ import { BridgeTransaction, Transfers, DeployRecord, UserBalance } from "@orbite
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
-        return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction, DeployRecord, UserBalance] };
+        return { ...config, autoLoadModels: false, models: [Transfers, BridgeTransaction, DeployRecord, UserBalance,RefundRecord] };
       },
     }),
     AlertModule.registerAsync({

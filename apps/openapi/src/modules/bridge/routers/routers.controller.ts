@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Headers, Param, Query } from '@nestjs/common';
 import { RoutersService } from './routers.service';
 import { success, error } from 'apps/openapi/src/shared/decorators/responser.decorator';
 import { v1MakerUtils } from '@orbiter-finance/utils'
@@ -14,8 +14,9 @@ export class RoutersController {
 
     @Get()
     @success('success', 200)
-    async getRouters(@Query('dealerId') dealerId: string) {
+    async getRouters(@Query('dealerId') dealerId: string, @Headers('X-Channel-Identifier') channelHeader: string) {
         let routers = [];
+        console.log(`getRouters - channelHeader: ${channelHeader}`)
         const v1Routers = shuffle(await this.routerService.getV1Routers());
         if (dealerId) {
             try {
@@ -35,7 +36,8 @@ export class RoutersController {
     }
     @Get("/cross-chain")
     @success('success', 200)
-    async getCrossChainRouters() {
+    async getCrossChainRouters(@Headers('X-Channel-Identifier') channelHeader: string) {
+        console.log(`getRouters - channelHeader: ${channelHeader}`)
         const configs = await this.routerService.getV1Routers();
         return configs.filter(config => {
             const lines = config.line.split('-')[1].split('/');
