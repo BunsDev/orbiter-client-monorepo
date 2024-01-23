@@ -17,15 +17,13 @@ export class TransactionService {
             raw: true,
             attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceMaker', 'targetMaker', 'sourceAddress', 'targetAddress', 'sourceSymbol', 'targetSymbol', 'status', 'sourceTime', 'targetTime', 'ruleId'],
             where: {
-                [Op.or]: {
-                    sourceId: hash,
-                    targetId: hash
-                }
+                sourceId: hash,
+                targetId: hash
             }
         })
     }
     async getTransferByHash(hash: string) {
-        const transaction:any = await this.transfersModel.findOne({
+        const transaction: any = await this.transfersModel.findOne({
             raw: true,
             attributes: ['chainId', 'hash', 'sender', 'receiver', 'amount', 'symbol', 'timestamp', 'status', 'opStatus'],
             where: {
@@ -36,7 +34,7 @@ export class TransactionService {
             if (transaction.opStatus === 99) {
                 // success
                 const bridgeTransaction = await this.bridgeTransactionModel.findOne({
-                    attributes:['targetChain', 'targetId', 'targetAmount', 'targetSymbol'],
+                    attributes: ['targetChain', 'targetId', 'targetAmount', 'targetSymbol'],
                     where: {
                         sourceId: transaction.hash
                     }
