@@ -1347,7 +1347,7 @@ export class TransactionV3Service {
         } Incorrect params : ${JSON.stringify(calldata)}`,
       );
     }
-    const { p, tick } = calldata
+    const { p, tick, to } = calldata
     const deployRecord = await this.deployRecordModel.findOne({
       raw: true,
       where: {
@@ -1417,7 +1417,7 @@ export class TransactionV3Service {
         ),
         this.incUserBalance(
           {
-            address: transfer.receiver,
+            address: to,
             chainId: transfer.chainId,
             protocol: p,
             tick: tick,
