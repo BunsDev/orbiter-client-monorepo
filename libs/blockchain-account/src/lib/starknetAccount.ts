@@ -35,11 +35,10 @@ export class StarknetAccount extends OrbiterAccount {
     this.account = account;
     this.address = account.address;
     if (!this.nonceManager) {
-      this.nonceManager = new NonceManager(address, async () => {
+      this.nonceManager = this.createNonceManager(this.address, async () => {
         const nonce = await this.account.getNonce();
         return Number(nonce);
-      });
-      await this.nonceManager.forceRefreshNonce();
+      })
     }
     return this;
   }

@@ -1,15 +1,20 @@
-import IAccount, {
+import {
   Context,
 } from "./IAccount";
-import { TransferResponse,TransactionRequest } from "./IAccount.interface";
+import { TransferResponse, TransactionRequest } from "./IAccount.interface";
 import { IChainConfig } from "@orbiter-finance/config";
-import { OrbiterLogger,logger } from "@orbiter-finance/utils";
+import { OrbiterLogger, logger } from "@orbiter-finance/utils";
+import { EventEmitter } from 'events';
+import Keyv from "keyv";
+import KeyvFile from "keyv-file";
+import path from "path";
+import { NonceManager } from "./nonceManager";
 
-export class OrbiterAccount extends IAccount {
+export class OrbiterAccount extends EventEmitter {
   public address: string;
   public logger!: OrbiterLogger;
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
-    super(chainId, ctx);
+    super();
     this.logger = logger.createLoggerByName(`account-${chainId}`);
   }
 
@@ -70,5 +75,21 @@ export class OrbiterAccount extends IAccount {
   ): Promise<any> {
     throw new Error("waitForTransactionConfirmation Method not implemented.");
   }
-
+  public createNonceManager(address: string, getNonceFun: Function) {
+    const store = new Keyv({
+      store: new KeyvFile({
+        filename: path.join(process.cwd(), "runtime", "nonce", `${address}.json`), // the file path to store the data
+        expiredCheckDelay: 24 * 3600 * 1000, // ms, check and remove expired data in each ms
+        writeDelay: 100, // ms, batch write to disk in a specific duration, enhance write perfor
+      }),
+      namespace: address,
+    });
+    const nonceManager = new NonceManager(async () => {
+      return await getNonceFun();
+    }, store);
+    nonceManager.on("noncesExceed", (data) => {
+      this.emit('noncesExceed', data)
+    });
+    return nonceManager;
+  }
 }

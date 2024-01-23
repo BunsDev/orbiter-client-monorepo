@@ -7,6 +7,6 @@ export * from './lib/orbiterAccount';
 export * from './lib/starknetAccount';
 export * from './lib/zkspaceAccount';
 export * from './lib/zksyncAccount';
-export * from './lib/store.service';
 
+export * from './lib/nonceManager/index'
 export * from './lib/provider'

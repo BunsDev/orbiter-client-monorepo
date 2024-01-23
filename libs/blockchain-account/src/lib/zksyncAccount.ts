@@ -1,28 +1,29 @@
-import {OrbiterAccount} from './orbiterAccount';
+import { OrbiterAccount } from './orbiterAccount';
 import { HTTPGet } from "@orbiter-finance/request";
 import { ethers } from 'ethers';
 import * as zksync from 'zksync';
 import { AbstractWallet } from "zksync/build/abstract-wallet";
-import { TransactionRequest,TransferResponse } from './IAccount.interface';
-import {NonceManager} from './nonceManager';
+import { TransactionRequest, TransferResponse } from './IAccount.interface';
+import { NonceManager } from './nonceManager';
 import { sleep } from '@orbiter-finance/utils';
-export class ZkSyncAccount extends OrbiterAccount  {
-    public account: AbstractWallet;
-    private nonceManager: NonceManager;
-    async connect(privateKey: string, address:string) {
-      const l1Wallet = new ethers.Wallet(privateKey);
-      const wallet  = await this.getL2Wallet(privateKey);
-      this.account = wallet;
-      this.address = address;
-      if (!this.nonceManager) {
-        this.nonceManager = new NonceManager(l1Wallet.address, async () => {
-          const nonce = await wallet.getNonce("committed");
-          return Number(nonce);
-        });
-        await this.nonceManager.forceRefreshNonce();
-      }
-      return this;
+export class ZkSyncAccount extends OrbiterAccount {
+  public account: AbstractWallet;
+  private nonceManager: NonceManager;
+  async connect(privateKey: string, address: string) {
+    const l1Wallet = new ethers.Wallet(privateKey);
+    const wallet = await this.getL2Wallet(privateKey);
+    this.account = wallet;
+    this.address = address;
+
+
+    if (!this.nonceManager) {
+      this.nonceManager = this.createNonceManager(this.address, async () => {
+        const nonce = await wallet.getNonce("committed");
+        return Number(nonce);
+      })
     }
+    return this;
+  }
   private async getL2Wallet(privateKey) {
     let l1Provider;
     let l2Provider;

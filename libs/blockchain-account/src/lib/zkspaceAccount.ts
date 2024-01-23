@@ -16,12 +16,15 @@ export class ZkSpaceAccount extends OrbiterAccount {
     const wallet = new ethers.Wallet(privateKey);
     this.wallet = wallet;
     this.address = wallet.address;
-    this.nonceManager = new NonceManager(wallet.address, async () => {
-      const account = await this.getAccountInfo();
-      const nonce = account["nonce"];
-      return Number(nonce);
-    });
-    this.nonceManager.forceRefreshNonce();
+
+    if (!this.nonceManager) {
+      this.nonceManager = this.createNonceManager(this.address, async () => {
+        const account = await this.getAccountInfo();
+        const nonce = account["nonce"];
+        return Number(nonce);
+      })
+    }
+
     return this;
   }
 

@@ -1,93 +1,154 @@
 import { Mutex } from "async-mutex";
 import Keyv from "keyv";
-import KeyvFile from "keyv-file";
-import path from "path";
+import { EventEmitter } from 'events';
 
-export class NonceManager {
+const FIVE_MINUTES_MS = 1000 * 60 * 5;
+
+export class NonceManager extends EventEmitter {
   private readonly mutex = new Mutex();
-  private readonly store: Keyv;
+
   constructor(
-    private readonly key: string,
     private readonly refreshNonceFun: Function,
-    option: {
-      initNonce?: number;
-      store?: Keyv.Store<any>;
-    } = {}
+    private readonly store: Keyv,
+    option: { initNonce?: number } = {}
   ) {
-    if (!option.store) {
-      option.store = new KeyvFile({
-        filename: path.join(process.cwd(), "runtime", "nonce", `${key}.json`), // the file path to store the data
-        expiredCheckDelay: 24 * 3600 * 1000, // ms, check and remove expired data in each ms
-        writeDelay: 100, // ms, batch write to disk in a specific duration, enhance write perfor
-      });
-    }
-    this.store = new Keyv({
-      store: option.store,
-      namespace: key,
-    });
+    super();
     this.mutex.acquire().then(async (release) => {
-      // ...
-      const refreshNonce = await this.refreshNonceFun();
-      const nonce = (await this.store.get("nonce")) || 0;
-      const initNonce = option.initNonce || 0;
-      const maxNonce = Math.max(refreshNonce, nonce, initNonce);
-      if (maxNonce != nonce) {
-        await this.setNonce(maxNonce);
+      try {
+        // Initialize nonce based on the maximum of refreshNonce, stored nonce, and initNonce
+        const refreshNonce = await this.refreshNonceFun();
+        const nonce = (await this.store.get("nonce")) || 0;
+        const initNonce = option.initNonce || 0;
+        const maxNonce = Math.max(refreshNonce, nonce, initNonce);
+
+        // Update nonce if needed
+        if (maxNonce !== nonce) {
+          await this.setNonce(maxNonce);
+        }
+      } finally {
+        release();
       }
-      release();
     });
+    if (option && !option.initNonce) {
+      this.forceRefreshNonce();
+      console.log('forceRefreshNonce-');
+    }
+    // Start the auto-update mechanism
     this.autoUpdate();
   }
 
+  /**
+   * Set the nonce value in the store.
+   * @param nonce - The nonce value to set.
+   */
   public async setNonce(nonce: number) {
     await this.store.set("nonce", nonce);
   }
 
+  /**
+   * Force a refresh of the nonce and update the store.
+   */
   public async forceRefreshNonce() {
-    const nonce = await this.refreshNonceFun();
-    await this.setNonce(nonce);
-  }
-
-  public async autoUpdate() {
-    const lastUsage = await this.store.get("lastUsage");
-    let nonce = await this.store.get("nonce");
-    // console.log('autoUpdate nonce,', nonce);
-    if (Date.now() - lastUsage > 1000 * 60 * 5) {
-      const refreshNonce = await this.refreshNonceFun();
-      if (refreshNonce > nonce) {
-        nonce = refreshNonce;
-        await this.setNonce(refreshNonce);
-      }
+    try {
+      const nonce = await this.refreshNonceFun();
+      await this.setNonce(nonce);
+    } catch (error) {
+      // Handle er.addListener
+      throw error;
     }
-    setTimeout(this.autoUpdate.bind(this), 1000 * 60);
   }
 
+  /**
+   * Periodically check for the need to refresh the nonce and update the last usage timestamp.
+   */
+  public async autoUpdate() {
+    try {
+      const lastUsage = await this.getLastUsageTime();
+      let nonce = await this.store.get("nonce");
+      // Check if it's time to refresh the nonce
+      if (Date.now() - lastUsage > FIVE_MINUTES_MS) {
+        await this.handleAutoUpdate(nonce);
+      }
+    } catch (error) {
+      console.error(`autoUpdate error`, error);
+      // Handle error during auto-update
+    } finally {
+      // Schedule the next auto-update after a delay
+      setTimeout(() => this.autoUpdate(), FIVE_MINUTES_MS);
+    }
+  }
+
+  /**
+   * Get the last usage timestamp from the store.
+   */
+  private async getLastUsageTime(): Promise<number> {
+    return await this.store.get("lastUsageTime");
+  }
+
+  /**
+   * Handle the auto-update process, refreshing the nonce if needed and updating the last usage timestamp.
+   */
+  private async handleAutoUpdate(nonce: number) {
+    const refreshNonce = await this.refreshNonceFun();
+    if (refreshNonce > nonce) {
+      await this.setNonce(refreshNonce);
+    }
+  }
+
+  /**
+   * Set the last usage timestamp in the store.
+   * @param lastUsage - The timestamp of the last usage.
+   */
+  private async setLastUsageTime(lastUsage: number) {
+    await this.store.set("lastUsageTime", lastUsage);
+  }
+
+  /**
+   * Get the current nonce from the store.
+   */
+  public async getLocalNonce() {
+    const nonce = await this.store.get("nonce");
+    return nonce;
+  }
+
+  /**
+   * Get the next nonce, including functions to submit, rollback, and details about network and local nonces.
+   */
   public async getNextNonce(): Promise<{
     nonce: number;
     submit: Function;
     rollback: Function;
-    networkNonce:number,
-    localNonce:number
+    networkNonce: number;
+    localNonce: number;
   }> {
     return await new Promise(async (resolve, reject) => {
       try {
+        // Acquire the mutex to ensure thread safety
         const release = await this.mutex.acquire();
         try {
+          // Get the network nonce and the local nonce from the store
           const networkNonce = await this.refreshNonceFun();
-          let nonce = await this.store.get("nonce");
-          const localNonce= nonce;
+          let nonce = await this.store.get("nonce").then(nonce => +nonce);
+          const localNonce = nonce;
+          if (+localNonce > (+networkNonce + 20)) {
+            this.emit("noncesExceed", { localNonce: nonce, networkNonce });
+            throw new Error(`noncesExceed localNonce: ${localNonce}, networkNonce:${networkNonce}`);
+          }
+          // Update the nonce if the network nonce is greater
           if (networkNonce > nonce) {
             nonce = networkNonce;
             await this.store.set("nonce", nonce);
           } else {
-            // check nonce
+            // Check nonce integrity or handle as needed
           }
+
+          // Resolve with nonce details and functions to submit and rollback
           resolve({
             nonce,
             networkNonce,
             localNonce,
             submit: async () => {
-              await this.store.set("lastUsage", Date.now());
+              await this.setLastUsageTime(Date.now());
               await this.setNonce(nonce + 1);
               release();
             },
@@ -97,10 +158,12 @@ export class NonceManager {
             },
           });
         } catch (error) {
+          // Release mutex and propagate error
           release();
           reject(error);
         }
       } catch (error) {
+        // Propagate error
         reject(error);
       }
     });

@@ -23,10 +23,13 @@ import {
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
 import { Orbiter6Provider } from './provider'
+import Keyv from "keyv";
+import KeyvFile from "keyv-file";
+import path from "path";
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
-  public nonceManager: NonceManager;
   #provider: Orbiter6Provider;
+  public nonceManager: NonceManager;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
@@ -34,48 +37,45 @@ export class EVMAccount extends OrbiterAccount {
     const rpc = this.chainConfig.rpc[0];
     return new Orbiter6Provider(rpc)
   }
-  getProvider() {
-    try {
-      const rpc = this.chainConfig.rpc[0];
-      return new JsonRpcProvider(rpc)
-    } catch (error) {
-      this.logger.error(`${this.chainConfig.chainId} - ${this.chainConfig.name} ${this.chainConfig.rpc[0]} getProvider error`, error)
-    }
-    // const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
-    // if (!this.#provider) {
-    //   const provider = new Orbiter6Provider(rpc,
-    //     network, {
-    //     staticNetwork: network,
-    //   });
-    //   this.#provider = provider;
-    // }
-    // if (this.#provider && this.#provider.getUrl() != rpc) {
-    //   this.logger.info(
-    //     `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
-    //   );
-    //   this.#provider = new Orbiter6Provider(rpc, network, {
-    //     staticNetwork: network
-    //   });
-    // }
-    // return this.#provider;
-  }
+  // getProvider() {
+  //   try {
+  //     const rpc = this.chainConfig.rpc[0];
+  //     this.#provider = new Orbiter6Provider(rpc)
+  //     return this.#provider;
+  //   } catch (error) {
+  //     this.logger.error(`${this.chainConfig.chainId} - ${this.chainConfig.name} ${this.chainConfig.rpc[0]} getProvider error`, error)
+  //   }
+  //   // const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
+  //   // if (!this.#provider) {
+  //   //   const provider = new Orbiter6Provider(rpc,
+  //   //     network, {
+  //   //     staticNetwork: network,
+  //   //   });
+  //   //   this.#provider = provider;
+  //   // }
+  //   // if (this.#provider && this.#provider.getUrl() != rpc) {
+  //   //   this.logger.info(
+  //   //     `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
+  //   //   );
+  //   //   this.#provider = new Orbiter6Provider(rpc, network, {
+  //   //     staticNetwork: network
+  //   //   });
+  //   // }
+  //   // return this.#provider;
+  // }
 
   async connect(privateKey: string, _address?: string) {
-    const provider = this.getProvider();
-    this.wallet = new ethers.Wallet(privateKey).connect(provider);
+    this.wallet = new ethers.Wallet(privateKey).connect(this.provider);
     if (_address) {
       if (!equals(_address, this.wallet.address)) {
         throw new Error('The connected wallet address is inconsistent with the private key address')
       }
     }
     this.address = this.wallet.address;
-    if (!this.nonceManager) {
-      this.nonceManager = new NonceManager(this.wallet.address, async () => {
-        const nonce = await this.wallet.getNonce("pending");
-        return Number(nonce);
-      });
-      await this.nonceManager.forceRefreshNonce();
-    }
+    this.nonceManager = this.createNonceManager(this.address, async () => {
+      const nonce = await this.wallet.getNonce("pending");
+      return Number(nonce);
+    })
     return this;
   }
 
@@ -118,7 +118,7 @@ export class EVMAccount extends OrbiterAccount {
   async getGasPrice(transactionRequest: TransactionRequest): Promise<TransactionRequest> {
     const chainConfig = this.chainConfig;
     const chainCustomConfig = await this.ctx.envConfigService.getAsync(chainConfig.chainId) || {};
-    const provider = this.getProvider();
+    const provider = this.provider;
     if (!transactionRequest.gasLimit) {
       try {
         const gasLimit = await provider.estimateGas({
@@ -326,8 +326,7 @@ export class EVMAccount extends OrbiterAccount {
   }
 
   async waitForTransactionConfirmation(transactionHash) {
-    const provider = this.getProvider();
-    const receipt = await provider.waitForTransaction(transactionHash, 2, 2 * 60 * 1000);
+    const receipt = await this.provider.waitForTransaction(transactionHash, 2, 2 * 60 * 1000);
     return receipt;
   }
 
@@ -542,16 +541,14 @@ export class EVMAccount extends OrbiterAccount {
     spender: string,
     value: string | BigNumber
   ) {
-    const provider = this.getProvider();
-    const erc20 = new ethers.Contract(token, ERC20Abi, provider).connect(
+    const erc20 = new ethers.Contract(token, ERC20Abi, this.provider).connect(
       this.wallet
     );
     return await erc20["approve"](spender, value);
   }
 
   public async allowance(token: string, spender: string) {
-    const provider = this.getProvider();
-    const erc20 = new ethers.Contract(token, ERC20Abi, provider).connect(
+    const erc20 = new ethers.Contract(token, ERC20Abi, this.provider).connect(
       this.wallet
     );
     return await erc20["allowance"](this.wallet.address, spender);
@@ -559,12 +556,11 @@ export class EVMAccount extends OrbiterAccount {
 
   public async getBalance(address?: string, token?: string): Promise<bigint> {
     const chainConfig = this.chainConfig;
-    const provider = this.getProvider();
     if (token && token != chainConfig.nativeCurrency.address) {
       // is native
       return await this.getTokenBalance(token, address);
     } else {
-      return await provider.getBalance(address || this.wallet.address);
+      return await this.provider.getBalance(address || this.wallet.address);
     }
   }
 
@@ -572,9 +568,8 @@ export class EVMAccount extends OrbiterAccount {
     token: string,
     address?: string
   ): Promise<bigint> {
-    const provider = this.getProvider();
     try {
-      const erc20 = new ethers.Contract(token, ERC20Abi, provider);
+      const erc20 = new ethers.Contract(token, ERC20Abi, this.provider);
       return await erc20.balanceOf(address || this.wallet.address);
     } catch (error) {
       console.log('get balance error', error)
