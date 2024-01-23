@@ -1,7 +1,7 @@
 import { Controller, Get, Headers, Param, Query } from '@nestjs/common';
 import { RoutersService } from './routers.service';
 import { success, error } from 'apps/openapi/src/shared/decorators/responser.decorator';
-import { v1MakerUtils } from '@orbiter-finance/utils'
+import { equals, v1MakerUtils } from '@orbiter-finance/utils'
 import { CustomError } from '../../../shared/errors/custom.error'
 import { ChainsService } from '../chains/chains.service';
 import BigNumber from 'bignumber.js';
@@ -76,12 +76,19 @@ export class RoutersController {
         const chains = await this.chainService.getChains();
         const sourceChain = chains.find(row => row.chainId == route.srcChain);
         const targetChain = chains.find(row => row.chainId == route.tgtChain);
-        const sourceToken = sourceChain.tokens.find(t => t.address == route.srcToken);
-        const targetToken = sourceChain.tokens.find(t => t.address == route.tgtToken);
+        const sourceToken = sourceChain.tokens.find(t => equals(t.address,route.srcToken));
+        const targetToken = targetChain.tokens.find(t => equals(t.address,route.tgtToken));
+        if (!sourceToken) {
+            throw new Error(`${route.srcChain} sourceToken ${route.srcToken} not found`);
+        }
+        if (!targetToken) {
+            throw new Error(`${route.tgtChain} targetToken ${route.tgtToken} not found`);
+        }
         const toChainId = v1MakerUtils.getAmountFlag(+sourceChain.internalId, value);
         if (+toChainId != +targetChain.internalId) {
             throw new Error('vc security code error');
         }
+       
         const result = v1MakerUtils.getAmountToSend(
             +sourceChain.internalId,
             sourceToken.decimals,
