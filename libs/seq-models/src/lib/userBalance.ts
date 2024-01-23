@@ -11,6 +11,8 @@ export interface IUserBalance {
   address: string;
   chainId: string;
   balance: string;
+  protocol: string;
+  tick: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -71,3 +71,12 @@ export class ValidSourceTxError extends Error {
     this.msg = msg;
   }
 }
+export function isEvmAddress(address: string)  {
+  if (!address.startsWith('0x')) {
+    return false
+  }
+  if (address.length != 42) {
+    return false
+  }
+  return true
+}

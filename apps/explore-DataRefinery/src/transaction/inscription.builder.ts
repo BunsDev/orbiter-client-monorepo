@@ -273,7 +273,7 @@ export default class InscriptionBuilder {
       createdAt: new Date(),
       version: transfer.version,
     };
-    if (+transfer.nonce >= 9000) {
+    if (+transfer.nonce >= 100000000000000) {
       throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 9000`)
     }
 
@@ -283,7 +283,7 @@ export default class InscriptionBuilder {
     }
 
     const callData = transfer.calldata as any
-    const { p } = callData;
+    const { p, tick } = callData;
     if (p !== deployRecord.protocol) {
       throw new ValidSourceTxError(TransferOpStatus.INCORRECT_PROTOCOL, `incorrect protocol`)
     }
@@ -309,7 +309,9 @@ export default class InscriptionBuilder {
     }
     const userBalance = await this.userBalanceModel.findOne({ where: {
       address: transfer.sender,
-      chainId: transfer.chainId
+      chainId: transfer.chainId,
+      protocol: p,
+      tick: tick,
     }})
     if (!userBalance || new BigNumber(userBalance.balance).isLessThan(new BigNumber(targetAmount))) {
       throw new ValidSourceTxError(TransferOpStatus.NOT_SUFFICIENT_FUNDS, `NOT_SUFFICIENT_FUNDS`)

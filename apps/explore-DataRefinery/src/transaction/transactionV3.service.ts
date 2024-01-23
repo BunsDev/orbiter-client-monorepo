@@ -36,6 +36,7 @@ import {
   ValidSourceTxError,
   decodeV1SwapData,
   addressPadStart,
+  isEvmAddress,
 } from '../utils';
 import { MessageService } from '@orbiter-finance/rabbit-mq';
 import { parseTragetTxSecurityCode } from './bridgeTransaction.builder';
@@ -1326,6 +1327,8 @@ export class TransactionV3Service {
       !calldata.tick ||
       !calldata.p ||
       !calldata.amt ||
+      !calldata.to ||
+      !isEvmAddress(calldata.to) ||
       calldata.op != InscriptionOpType.Transfer
     ) {
       await this.transfersModel.update(
@@ -1372,6 +1375,8 @@ export class TransactionV3Service {
       where: {
         address: transfer.sender,
         chainId: transfer.chainId,
+        protocol: p,
+        tick: tick,
       },
     });
     const transferAmount = new BigNumber(calldata.amt);
