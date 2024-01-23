@@ -57,7 +57,7 @@ export class MemoryMatchingService {
           equals(bt.targetSymbol, transfer.symbol) &&
           equals(bt.targetAddress, transfer.receiver) &&
           equals(bt.targetChain, transfer.chainId) &&
-          equals(+bt.targetAmount, +transfer.amount) &&
+          equals(bt.targetAmount, transfer.amount) &&
           dayjs(transfer.timestamp).valueOf() > (dayjs(bt.sourceTime).valueOf() - 1000 * 60) &&
           responseMaker.includes(transfer.sender) && bt.version === `${transfer.version.split('-')[0]}-0`
         )
@@ -66,7 +66,7 @@ export class MemoryMatchingService {
         equals(bt.targetSymbol, transfer.symbol) &&
         equals(bt.targetAddress, transfer.receiver) &&
         equals(bt.targetChain, transfer.chainId) &&
-        equals(+bt.targetAmount, +transfer.amount) &&
+        equals(bt.targetAmount, transfer.amount) &&
         dayjs(transfer.timestamp).valueOf() > (dayjs(bt.sourceTime).valueOf() - 1000 * 60) &&
         responseMaker.includes(transfer.sender) &&
         bt.version === `${transfer.version.split('-')[0]}-0`

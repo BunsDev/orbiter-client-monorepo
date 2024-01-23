@@ -140,11 +140,13 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           transfers = EVMV5Utils.evmObRouterV1(chainConfig, transaction as any, receipt as any);
         } else if (EVMV5Utils.name === 'OrbiterRouterV3') {
           const methodId = transaction.data.substring(0, 10);
-          if (['0x29723511', '0xf9c028ec'].includes(methodId)) {
-            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
-              this.logger.error(`${transaction.hash} parseContract error:${error.message}`, error);
-              return [];
-            })
+          if (['0x29723511', '0xf9c028ec'].includes(methodId) && this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
+            try {
+              transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt)
+            } catch (error) {
+              transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
+              this.logger.error(`${this.chainConfig.name} - ${contractInfo.address} parseContract error ${error.message}`, error);
+            }
           } else {
             transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
           }
@@ -282,7 +284,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     const provider = this.getProvider();
     const data = await provider.getBlockWithTransactions(blockNumber);
     if (isEmpty(data)) {
-      throw new Error('Block isEmpty');
+      throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
     }
     return data;
   }

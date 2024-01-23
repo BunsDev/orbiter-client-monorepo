@@ -20,7 +20,7 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
       useFactory: async (configService: ConfigService) => {
         return {
           url:configService.get("CONSUL_URL"),
-          keys: configService.get('CONSUL_KEYS').split(','),
+          keys: configService.get('OPENAPI_CONSUL_KEYS').split(','),
           updateCron: '* * * * *',
         } as any;
       },
@@ -28,13 +28,15 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
     OrbiterConfigModule.forRoot(),
     SequelizeModule.forRootAsync({
       inject: [ENVConfigService],
+      name: 'bridge',
       useFactory: async (envConfig: ENVConfigService) => {
         const config: SequelizeModuleOptions = await envConfig.getAsync('DATABASE_URL');
         if (!config) {
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
-        return config;
+        config.schema = 'public';
+        return {...config,schema: 'public'};
       },
     }),
     SequelizeModule.forRootAsync({
@@ -46,8 +48,7 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
-        config.schema = 'stats';
-        return config;
+        return {...config,schema: 'stats'};
       },
     }),
     

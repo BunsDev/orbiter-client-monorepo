@@ -263,7 +263,7 @@ export class TransactionService {
     }
 
   }
-  @Interval(600000)
+  @Interval(1000 * 60 * 10)
   async matchRefundRecord() {
     const transfers = await this.transfersModel.findAll({
       raw: true,

@@ -76,3 +76,14 @@ export function decodeOrbiterCrossChainParams(hexString: string): CrossChainPara
     }
     return result
 }
+
+export function hexStringToString(hexString: string): string {
+    let str = '';
+  
+    for (let i = 0; i < hexString.length; i += 2) {
+      const byte = parseInt(hexString.substr(i, 2), 16);
+      str += String.fromCharCode(byte);
+    }
+  
+    return str;
+  }

@@ -93,12 +93,14 @@ export class StandardBuilder {
         result.targetChain = targetChain
       }
       //
-      const targetToken = this.chainConfigService.getTokenBySymbol(
-        targetChain.chainId,
-        transfer.symbol,
-      );
-      if (targetToken) {
-        result.targetToken = targetToken
+      if (targetChain) {
+        const targetToken = this.chainConfigService.getTokenBySymbol(
+          targetChain.chainId,
+          transfer.symbol,
+        );
+        if (targetToken) {
+          result.targetToken = targetToken
+        }
       }
     }
     result.targetAddress = transfer.sender;
@@ -528,8 +530,9 @@ export default class BridgeTransactionBuilder {
       createdAt: new Date(),
       version: transfer.version,
     };
-    if (+transfer.nonce >= 9000) {
-      throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 9000`)
+    // TAG: Nonce NONCE_EXCEED_MAXIMUM
+    if (+transfer.nonce >= 1000000) {
+      throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 1000000`)
     }
 
     const sourceChain = this.chainConfigService.getChainInfo(transfer.chainId);

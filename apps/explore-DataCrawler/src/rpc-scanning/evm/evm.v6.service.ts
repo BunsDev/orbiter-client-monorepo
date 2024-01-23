@@ -107,7 +107,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           const isRegister = this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower);
           if (isRegister) {
             // decode
-            if (!this.ctx.contractParser.whiteContractMethodId(this.chainId,toAddrLower,row['data'])) {
+            if (!this.ctx.contractParser.whiteContractMethodId(this.chainId, toAddrLower, row['data'])) {
               continue;
             }
           }
@@ -235,8 +235,13 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           transfers = EVMV6Utils.evmObRouterV1(chainConfig, transaction, receipt);
         } else if (contractInfo.name === 'OrbiterRouterV3') {
           const methodId = transaction.data.substring(0, 10);
-          if (['0x29723511', '0xf9c028ec'].includes(methodId)) {
-            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt)
+          if (['0x29723511', '0xf9c028ec'].includes(methodId) && this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
+            try {
+              transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt)
+            } catch (error) {
+              transfers = EVMV6Utils.evmObRouterV3(chainConfig, transaction, receipt);
+              this.logger.error(`${this.chainConfig.name} - ${contractInfo.address} parseContract error ${error.message}`, error);
+            }
           } else {
             transfers = EVMV6Utils.evmObRouterV3(chainConfig, transaction, receipt);
           }
@@ -373,7 +378,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     const provider = this.getProvider();
     const data = await provider.getBlock(blockNumber, true);
     if (isEmpty(data)) {
-      throw new Error('Block isEmpty');
+      throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
     }
     return data;
   }

@@ -12,7 +12,7 @@ import { TokenService } from './chains/token.service';
 
 @Module({
     imports:[
-        SequelizeModule.forFeature([Transfers, BridgeTransaction]),
+        SequelizeModule.forFeature([Transfers, BridgeTransaction], 'bridge'),
     ],
     controllers: [ChainsController, TokensController, RoutersController, TransactionController],
     providers: [ChainsService, RoutersService, TransactionService, TokenService],

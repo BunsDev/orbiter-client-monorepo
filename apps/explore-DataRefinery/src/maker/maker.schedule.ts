@@ -24,9 +24,11 @@ export class MakerScheduuleService {
             }
         })
         this.envConfigService.getAsync('INSCRIPTION_MAKERS').then(async(list) => {
-          const makers = list.map(e => e.toLowerCase());
-          if (makers && makers.length>0) {
-            await this.redis.sadd("v3Owners", makers)
+          if (list) {
+            const makers = list.map(e => e.toLowerCase());
+            if (makers && makers.length>0) {
+              await this.redis.sadd("v3Owners", makers)
+            }
           }
       })
     }

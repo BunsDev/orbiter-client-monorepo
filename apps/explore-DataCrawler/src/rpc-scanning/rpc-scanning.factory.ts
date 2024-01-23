@@ -138,7 +138,6 @@ export class RpcScanningFactory {
       behind: latestBlockNumber - lastScannedBlockNumber,
       processingCount: factory.dataProcessor.getProcessingCount(),
       waitBlockCount: factory.dataProcessor.getDataCount(),
-      rate: factory.getRate(),
     };
   }
   async getRpcStatus() {

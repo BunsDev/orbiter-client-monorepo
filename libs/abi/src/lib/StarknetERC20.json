@@ -55,33 +55,6 @@
     "type": "event"
   },
   {
-    "inputs": [
-      {
-        "name": "name",
-        "type": "felt"
-      },
-      {
-        "name": "symbol",
-        "type": "felt"
-      },
-      {
-        "name": "decimals",
-        "type": "felt"
-      },
-      {
-        "name": "initial_supply",
-        "type": "Uint256"
-      },
-      {
-        "name": "recipient",
-        "type": "felt"
-      }
-    ],
-    "name": "constructor",
-    "outputs": [],
-    "type": "constructor"
-  },
-  {
     "inputs": [],
     "name": "name",
     "outputs": [
@@ -165,6 +138,69 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "permittedMinter",
+    "outputs": [
+      {
+        "name": "minter",
+        "type": "felt"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "initialized",
+    "outputs": [
+      {
+        "name": "res",
+        "type": "felt"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "get_version",
+    "outputs": [
+      {
+        "name": "version",
+        "type": "felt"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "get_identity",
+    "outputs": [
+      {
+        "name": "identity",
+        "type": "felt"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "init_vector_len",
+        "type": "felt"
+      },
+      {
+        "name": "init_vector",
+        "type": "felt*"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
     "type": "function"
   },
   {
@@ -269,6 +305,36 @@
         "type": "felt"
       }
     ],
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "felt"
+      },
+      {
+        "name": "amount",
+        "type": "Uint256"
+      }
+    ],
+    "name": "permissionedMint",
+    "outputs": [],
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "account",
+        "type": "felt"
+      },
+      {
+        "name": "amount",
+        "type": "Uint256"
+      }
+    ],
+    "name": "permissionedBurn",
+    "outputs": [],
     "type": "function"
   }
 ]

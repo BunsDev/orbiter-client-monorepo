@@ -16,8 +16,7 @@ services:
         - orbiter/clients
       dockerfile:  ./apps/openapi/Dockerfile
     restart: always
-    environment:
-      CONSUL_URL: '${CONSUL_URL}'
+    env_file: .env
     ports:
       - '9005:3000'
     networks:

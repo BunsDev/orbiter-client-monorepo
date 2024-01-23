@@ -19,9 +19,6 @@ export class RpcScanningService implements RpcScanningInterface {
   public rpcLastBlockNumber: number = 0;
   protected requestTimeout = 1000 * 20;
   readonly dataProcessor: DataProcessor;
-  private blockCount: number = 0;
-  private firstStartTime: number;
-  private defaultBatchLimit: number;
 
   constructor(
     public readonly chainId: string,
@@ -31,15 +28,12 @@ export class RpcScanningService implements RpcScanningInterface {
       label: this.chainConfig.name
     });
     this.dataProcessor = new DataProcessor(this.chainId, this.logger);
-    this.firstStartTime = Date.now()
-    setTimeout(async () => {
-      this.defaultBatchLimit = await ctx.envConfigService.getAsync('DefaultBatchLimit');
-      this.logger.info(`defaultBatchLimit: ${this.defaultBatchLimit}`);
-    }, 0);
   }
-
+  get targetConfirmation() {
+    return Number(this.chainConfig.targetConfirmation || this.ctx.envConfigService.get('TargetConfirmation') || 5);
+  }
   get batchLimit(): number {
-    return Number(this.chainConfig['batchLimit'] || this.defaultBatchLimit || 100);
+    return Number(this.chainConfig['batchLimit'] || this.ctx.envConfigService['DefaultBatchLimit'] || 100);
   }
 
   get chainConfig(): IChainConfig {
@@ -48,11 +42,6 @@ export class RpcScanningService implements RpcScanningInterface {
 
   async init() {
     // TODO: Implement initialization logic if needed.
-  }
-
-  getRate() {
-    const diff = parseInt(`${(Date.now() - this.firstStartTime) / 1000}`)
-    return `${(this.blockCount / diff).toFixed(4)}/s`
   }
 
   async executeCrawlBlock() {
@@ -105,8 +94,7 @@ export class RpcScanningService implements RpcScanningInterface {
       this.dataProcessor.noAck(blockNumbers);
       throw error;
     });
-    this.blockCount += acks.length;
-    this.chainConfig.debug && this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks},  avgRate: ${this.getRate()}`);
+    this.chainConfig.debug && this.logger.debug(`executeCrawlBlock: Ack ${JSON.stringify(acks)}, NoAck ${noAcks}`);
     if (noAcks.length > 0) {
       this.dataProcessor.noAck(noAcks);
     }
@@ -138,10 +126,9 @@ export class RpcScanningService implements RpcScanningInterface {
         this.logger.info(`checkLatestHeight restart app, go back ${lastScannedBlockNumber} change ${newLastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
         lastScannedBlockNumber = newLastScannedBlockNumber;
       }
-      const targetConfirmation = +this.chainConfig.targetConfirmation || 3;
-      const safetyBlockNumber = this.rpcLastBlockNumber - targetConfirmation;
+      const safetyBlockNumber = this.rpcLastBlockNumber - this.targetConfirmation;
       this.chainConfig.debug && this.logger.debug(
-        `${this.chainConfig.name} checkLatestHeight Checking - Target Confirmation: ${targetConfirmation}, lastScannedBlockNumber: ${lastScannedBlockNumber}, safetyBlockNumber: ${safetyBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}, batchLimit: ${this.batchLimit}, nextScanBlock: ${await this.dataProcessor.getNextScanMaxBlockNumber()}`,
+        `${this.chainConfig.name} checkLatestHeight Checking - Target Confirmation: ${this.targetConfirmation}, lastScannedBlockNumber: ${lastScannedBlockNumber}, safetyBlockNumber: ${safetyBlockNumber}, rpcLastBlockNumber: ${this.rpcLastBlockNumber}, batchLimit: ${this.batchLimit}, nextScanBlock: ${await this.dataProcessor.getNextScanMaxBlockNumber()}`,
       );
 
       if (safetyBlockNumber >= lastScannedBlockNumber) {
