@@ -29,9 +29,9 @@ import { ConsulModule } from '@client-monorepo/nestjs-consul';
             inject: [ConfigService],
             useFactory: async (configService: ConfigService) => {
               return {
-                url:configService.get("CONSUL_URL"),
-                keys: configService.get('CONSUL_KEYS').split(','),
-                updateCron: '* * * * *',
+                  url: configService.get("CONSUL_URL"),
+                  keys: configService.get('CONSUL_KEYS_MAKER_API').split(','),
+                  updateCron: '* * * * *',
               } as any;
             },
           }),
