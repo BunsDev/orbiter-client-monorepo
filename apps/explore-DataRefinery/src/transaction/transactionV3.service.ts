@@ -84,6 +84,7 @@ export class TransactionV3Service {
           error,
         );
       });
+    this.bookKeeping()
     // this.matchALlVersion3_0().catch((error) => {
     //   this.logger.error(
     //     `constructor TransactionV3Service matchScheduleTask error `,
@@ -840,7 +841,6 @@ export class TransactionV3Service {
       "createdAt",
       "updatedAt";
     `;
-    console.log(sql)
     const result = await this.userBalanceModel.sequelize.query(sql, {
       transaction: t,
     });
@@ -1021,7 +1021,6 @@ export class TransactionV3Service {
         `handleCrossOverTransfer fail ${transfer.hash} Incorrect version ${transfer.version}`,
       );
     }
-
     const callData = transfer.calldata as any;
     if (
       !callData ||
@@ -1238,7 +1237,7 @@ export class TransactionV3Service {
           },
         };
         btTx = await this.bridgeTransactionModel.findOne({
-          attributes: ['id', 'sourceId'],
+          // attributes: ['id', 'sourceId', 'targetAddress', 'targetChain'],
           where,
           transaction: t2,
         });
