@@ -367,6 +367,49 @@ export class SequencerScheduleService {
       await this.handlePaidTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
     }
   }
+
+  async paidSingleCrossInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
+    const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
+    if (!sourceChain) {
+      throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
+    }
+    const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
+    if (transactionTimeValid) {
+      throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
+    }
+    const isConsume = await this.isConsumed(bridgeTx.targetChain, bridgeTx.sourceId);
+    if (isConsume) {
+      throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+    }
+    if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
+      throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+    }
+
+    const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
+    if (validDisabledPaid) {
+      throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
+    }
+    const wallets = await this.validatorService.checkMakerPrivateKey(bridgeTx);
+    if (!wallets || wallets.length <= 0) {
+      throw new Errors.MakerNotPrivetKey(`sourceId: ${bridgeTx.sourceId}  ${bridgeTx.responseMaker.join(',')}`);
+    }
+    // const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.ruleId, bridgeTx.targetSymbol, +bridgeTx.targetAmount);
+    // if (!isFluidityOK) {
+    //   throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker} - ${bridgeTx.targetSymbol}`)
+    // }
+    // start paid
+    const account = await this.accountFactoryService.createMakerAccount(
+      bridgeTx.targetMaker,
+      bridgeTx.targetChain
+    );
+    await account.connect(wallets[0].key, bridgeTx.targetMaker);
+    try {
+      await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
+      return await this.transferService.execSingleInscriptionCrossTransfer(bridgeTx, account);
+    } catch (error) {
+      await this.handlePaidTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
+    }
+  }
   async handlePaidTransactionError(error, sourceIds: string[], targetChain: string) {
     try {
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
@@ -440,6 +483,73 @@ export class SequencerScheduleService {
         return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
       }
       return await this.transferService.execBatchInscriptionTransfer(legalTransaction, account)
+    } catch (error) {
+      await this.handlePaidTransactionError(error, sourceIds, targetChain);
+    }
+  }
+
+  async paidManyCrossInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
+    const legalTransaction: BridgeTransactionModel[] = [];
+    const [targetChain, targetMaker] = queueKey.split('-');
+    //
+    const privateKey = await this.validatorService.getSenderPrivateKey(targetMaker);
+    if (!privateKey) {
+      throw new Errors.MakerNotPrivetKey(`${targetMaker} privateKey ${bridgeTxs.map(row => row.sourceId).join(',')}`);
+    }
+    for (const bridgeTx of bridgeTxs) {
+      try {
+        if (bridgeTx.version != bridgeTxs[0].version) {
+          throw new Error('The versions of batch refunds are inconsistent')
+        }
+        const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
+        if (!sourceChain) {
+          throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
+        }
+        const isConsume = await this.isConsumed(bridgeTx.targetChain, bridgeTx.sourceId);
+        if (isConsume) {
+          throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+        }
+        if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
+          throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+        }
+        const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
+        if (transactionTimeValid) {
+          throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
+        }
+        const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
+        if (validDisabledPaid) {
+          throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
+        }
+        if (targetMaker != bridgeTx.targetMaker.toLocaleLowerCase()) {
+          throw new Errors.BatchPaidSameMaker(`${bridgeTx.sourceId} expect ${targetMaker} get ${bridgeTx.targetMaker}`);
+        }
+        // const totalValue = sumBy(legalTransaction, item => +item.targetAmount);
+        // const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.ruleId, bridgeTx.targetSymbol, totalValue);
+        // if (!isFluidityOK) {
+        //   throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker} - ${bridgeTx.targetSymbol}`)
+        // }
+        legalTransaction.push(bridgeTx);
+      } catch (error) {
+        this.logger.error(`paidManyBridgeInscriptionTransaction for error ${error.message}`, error);
+      }
+    }
+    if (legalTransaction.length === 0) {
+      throw new Error('not data');
+    }
+    // send
+    const account = await this.accountFactoryService.createMakerAccount(
+      targetMaker,
+      targetChain
+    );
+
+    await account.connect(privateKey, targetMaker);
+    const sourceIds = legalTransaction.map(tx => tx.sourceId);
+    try {
+      await this.saveConsumeStatus(targetChain, sourceIds);
+      if (legalTransaction.length == 1) {
+        return await this.transferService.execSingleInscriptionCrossTransfer(legalTransaction[0], account)
+      }
+      return await this.transferService.execBatchInscriptionCrossTransfer(legalTransaction, account)
     } catch (error) {
       await this.handlePaidTransactionError(error, sourceIds, targetChain);
     }
@@ -520,22 +630,29 @@ export class SequencerScheduleService {
         if (bridgeTx.length > 1) {
           if (bridgeTx[0].version === '3-0') {
             result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey)
+          } else if (bridgeTx[0].version === '3-3') {
+            result = await this.paidManyCrossInscriptionTransaction(bridgeTx, queueKey)
           } else {
             // result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
           }
         } else {
           if (bridgeTx[0].version === '3-0') {
             result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
+          } else if (bridgeTx[0].version === '3-3') {
+            result = await this.paidSingleCrossInscriptionTransaction(bridgeTx[0], queueKey)
+            // result = await this.paidSingleBridgeTransaction(bridgeTx)
           } else {
-
             // result = await this.paidSingleBridgeTransaction(bridgeTx[0])
           }
         }
       } else {
         if (bridgeTx.version === '3-0') {
           result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx, queueKey)
-        } else {
+        } else if (bridgeTx.version === '3-3') {
+          result = await this.paidSingleCrossInscriptionTransaction(bridgeTx, queueKey)
           // result = await this.paidSingleBridgeTransaction(bridgeTx)
+        } else {
+          //
         }
       }
     } catch (error) {
