@@ -254,13 +254,12 @@ export class TransactionService {
       }
       if (result && result.errno == 0) {
         const RECEIVER_MATCH_QUEUE = this.envConfig.get('RECEIVER_MATCH_QUEUE');
-        const RECEIVER_MATCH_QUEUE_FILTER_CHAIN = this.envConfig.get('RECEIVER_MATCH_QUEUE_FILTER_CHAIN', []);
+        const RECEIVER_MATCH_QUEUE_FILTER_CHAIN = this.envConfig.get('RECEIVER_MATCH_QUEUE_FILTER_CHAIN', {});
         const receiver = payload.receiver.toLocaleLowerCase();
-        if (RECEIVER_MATCH_QUEUE_FILTER_CHAIN[receiver].length <= 0 || RECEIVER_MATCH_QUEUE_FILTER_CHAIN[receiver].includes(payload.chainId)) {
+        if (!RECEIVER_MATCH_QUEUE_FILTER_CHAIN[receiver] || RECEIVER_MATCH_QUEUE_FILTER_CHAIN[receiver].includes(payload.chainId)) {
           if (RECEIVER_MATCH_QUEUE) {
             for (const addr in RECEIVER_MATCH_QUEUE) {
               if (equals(addr, receiver)) {
-
                 for (const queue of RECEIVER_MATCH_QUEUE[addr]) {
                   this.messageService.sendToMakerClientMessage(result.data, queue)
                 }

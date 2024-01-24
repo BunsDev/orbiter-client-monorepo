@@ -44,29 +44,36 @@ export class SequencerScheduleService {
 
     const SUBSCRIBE_TX_QUEUE = this.envConfig.get("SUBSCRIBE_TX_QUEUE", []);
     SUBSCRIBE_TX_QUEUE.forEach((queueName) => {
-        this.consumerService.consumeMakerClientMessage(this.consumptionQueue.bind(this), queueName)
+      this.consumerService.consumeMakerClientMessage(this.consumptionQueue.bind(this), queueName)
     });
     this.alertService.sendMessage(`Start Maker Client ${process.env['application'] || ''}`, "TG")
   }
   @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
     const owners = this.envConfig.get("MAKERS") || [];
-    for (const owner of owners) {
-      // read db history
-      this.readDBTransactionRecords(owner.toLocaleLowerCase()).catch((error) => {
-        this.logger.error(
-          "checkDBTransactionRecords -> readDBTransactionRecords error",
-          error
-        );
-      });
+    let chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
+    if (chainIds.includes('*')) {
+      chainIds = this.chainConfigService.getAllChains().map(item => item.chainId);
+    }
+    for (const chainId of chainIds) {
+      for (const owner of owners) {
+        // read db history
+        this.readDBTransactionRecords(chainId, owner.toLocaleLowerCase()).catch((error) => {
+          this.logger.error(
+            "checkDBTransactionRecords -> readDBTransactionRecords error",
+            error
+          );
+        });
+      }
     }
   }
-  private async readDBTransactionRecords(owner: string) {
+  private async readDBTransactionRecords(chainId: string, owner: string) {
     const maxTransferTimeoutMinute = this.validatorService.getTransferGlobalTimeout();
     const where: any = {
       status: 0,
       sourceMaker: owner,
       targetId: null,
+      targetChain: chainId,
       sourceTime: {
         [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
       },
