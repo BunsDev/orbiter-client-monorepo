@@ -37,11 +37,10 @@ export class SequencerScheduleService {
     @InjectRedis() private readonly redis: Redis,
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
-    const inscMakers = this.envConfig.get("INSCRIPTION_MAKERS", []);
-    if (inscMakers.length > 0) {
-      this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
-    }
-
+    // const inscMakers = this.envConfig.get("INSCRIPTION_MAKERS", []);
+    // if (inscMakers.length > 0) {
+    //   this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
+    // }
     const SUBSCRIBE_TX_QUEUE = this.envConfig.get("SUBSCRIBE_TX_QUEUE", []);
     SUBSCRIBE_TX_QUEUE.forEach((queueName) => {
       this.consumerService.consumeMakerClientMessage(this.consumptionQueue.bind(this), queueName)
@@ -50,7 +49,7 @@ export class SequencerScheduleService {
   }
   @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
-    const owners = this.envConfig.get("MAKERS") || [];
+    const owners = this.envConfig.get("ENABLE_PAID_MAKERS") || [];
     let chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
     if (chainIds.includes('*')) {
       chainIds = this.chainConfigService.getAllChains().map(item => item.chainId);
@@ -140,7 +139,7 @@ export class SequencerScheduleService {
     if (chainIds.includes('*')) {
       chainIds = this.chainConfigService.getAllChains().map(item => item.chainId);
     }
-    const owners = this.envConfig.get("MAKERS") || [];
+    const owners = this.envConfig.get("ENABLE_PAID_MAKERS") || [];
     for (const chainId of chainIds) {
       for (const owner of owners) {
         // read db history
