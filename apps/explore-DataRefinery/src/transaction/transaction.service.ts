@@ -262,7 +262,7 @@ export class TransactionService {
               if (equals(addr, receiver)) {
 
                 for (const queue of RECEIVER_MATCH_QUEUE[addr]) {
-                  this.messageService.sendToMakerClientMessage(payload, queue)
+                  this.messageService.sendToMakerClientMessage(result.data, queue)
                 }
               }
             }
