@@ -51,7 +51,7 @@ export class MessageService {
       throw error;
     }
   }
-  async sendToMakerClientMessage(data: BridgeTransactionAttributes, queue:string) {
+  async sendToMakerClientMessage(data: any, queue:string) {
     const channel = this.connectionManager.getChannel();
     try {
       // Logger.log(`sendTransferToMakerClient ${JSON.stringify(data)}`)

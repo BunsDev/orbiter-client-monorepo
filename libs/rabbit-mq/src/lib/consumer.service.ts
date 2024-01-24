@@ -215,7 +215,7 @@ export class ConsumerService {
             channel.ack(msg);
           } catch (error: any) {
             console.error(
-              `${queue} consumeMakerClientMessage Error processing message: ${error.message}`,
+              `${queue} consumeMakerClientMessage Error processing message: ${error.message}`,msg,
               error,
             );
             channel.nack(msg,true,false);
