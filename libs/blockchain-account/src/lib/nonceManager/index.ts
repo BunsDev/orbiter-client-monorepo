@@ -49,7 +49,7 @@ export class NonceManager extends EventEmitter {
    */
   public async forceRefreshNonce() {
     try {
-      const prevNonce = this.getLocalNonce();
+      const prevNonce = await this.getLocalNonce();
       const nonce = await this.refreshNonceFun();
       console.log(`forceRefreshNonce: originNonce:${prevNonce}, network:${nonce}`);
       await this.setNonce(nonce);
