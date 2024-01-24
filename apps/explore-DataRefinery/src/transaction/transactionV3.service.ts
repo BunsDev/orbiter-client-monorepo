@@ -1476,7 +1476,10 @@ export class TransactionV3Service {
     })
     for (const transfer of allTransfers) {
       if (transfer.version === '3-3') {
-        await this.handleCrossTransfer(transfer)
+        const result = await this.handleCrossTransfer(transfer)
+        if (result && result.errno === 0) {
+          this.messageService.sendClaimTransferToMakerClient(result.data)
+        }
       } else if (transfer.version === '3-4') {
         await this.handleCrossOverTransfer(transfer)
       } else if (transfer.version === '3-5') {
