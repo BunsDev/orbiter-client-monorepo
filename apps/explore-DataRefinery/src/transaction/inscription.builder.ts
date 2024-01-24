@@ -302,10 +302,10 @@ export default class InscriptionBuilder {
       throw new ValidSourceTxError(TransferOpStatus.AMOUNT_MUST_BE_INTEGER, `cross amount must be integer and large than 0`)
     }
 
-    const fee = await this.envConfigService.getAsync('INSCRIPTION_CHARGING_RULES')
+    const fee = await this.envConfigService.getAsync('INSCRIPTION_CROSS_FEE')
 
     if (!fee) {
-      throw new ValidSourceTxError(TransferOpStatus.CHARING_RULE_NOT_FOUND, `CHARING_RULE_NOT_FOUND`)
+      throw new ValidSourceTxError(TransferOpStatus.CHARING_RULE_NOT_FOUND, `INSCRIPTION_CROSS_FEE`)
     }
     const userBalance = await this.userBalanceModel.findOne({ where: {
       address: transfer.sender,
