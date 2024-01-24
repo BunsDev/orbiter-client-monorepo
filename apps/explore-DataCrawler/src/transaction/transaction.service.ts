@@ -5,6 +5,7 @@ import Redis from 'ioredis';
 import { TransferAmountTransaction } from './transaction.interface';
 import { addressPadStart } from '../utils';
 import { ENVConfigService } from '@orbiter-finance/config';
+import _ from 'lodash'
 @Injectable()
 export class TransactionService {
     #v2Owners: string[] = [];
@@ -22,7 +23,11 @@ export class TransactionService {
         transfers: TransferAmountTransaction[],
     ) {
         if (transfers.length > 0) {
-            await this.messageSerice.sendTransactionReceiptMessage(transfers);
+          // Use shards to send transfers to avoid exceeding rabbitmq size limits
+          const sliceList = _.chunk(transfers, 100)
+          for (const trans of sliceList) {
+            await this.messageSerice.sendTransactionReceiptMessage(trans);
+          }
         }
         return transfers;
     }

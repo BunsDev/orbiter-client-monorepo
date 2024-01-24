@@ -76,6 +76,12 @@ export class TransactionV3Service {
           error,
         );
       });
+    // this.matchALlVersion3_0().catch((error) => {
+    //   this.logger.error(
+    //     `constructor TransactionV3Service matchScheduleTask error `,
+    //     error,
+    //   );
+    // })
   }
   errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
@@ -85,19 +91,19 @@ export class TransactionV3Service {
     };
   }
 
-  @Cron('0 */5 * * * *')
+  @Cron('0 */1 * * * *')
   async matchScheduleTask() {
     this.logger.info('matchScheduleTask start');
     const transfers = await this.transfersModel.findAll({
       raw: true,
       order: [['id', 'desc']],
-      limit: 500,
+      limit: 1000,
       where: {
         status: 2,
         opStatus: 0,
         version: '3-0',
         timestamp: {
-          [Op.gte]: dayjs().subtract(48, 'hour').toISOString(),
+          [Op.gte]: dayjs().subtract(24 * 30, 'hour').toISOString(),
         },
         // nonce: {
         //   [Op.lt]: 9000
@@ -113,6 +119,43 @@ export class TransactionV3Service {
         );
       });
     }
+  }
+
+  async matchALlVersion3_0() {
+    this.logger.info('matchALlVersion3_0 start');
+    let done = false
+    const limit = 500
+    do {
+      const transfers = await this.transfersModel.findAll({
+        raw: true,
+        order: [['id', 'desc']],
+        limit: limit,
+        where: {
+          status: 2,
+          opStatus: 0,
+          version: '3-0',
+          timestamp: {
+            [Op.gte]: dayjs().subtract(48, 'hour').toISOString(),
+            [Op.lte]: dayjs().subtract(1, 'hour').toISOString(),
+          },
+          // nonce: {
+          //   [Op.lt]: 9000
+          // }
+        },
+      });
+      this.logger.info(`matchALlVersion3_0 transfers.length: ${transfers.length}, ${transfers[0] ? transfers[0].id: 'null'}`);
+      for (const transfer of transfers) {
+        const result = await this.handleClaimTransfer(transfer).catch((error) => {
+          this.logger.error(
+            `TransactionV3Service matchALlVersion3_0 handleTransferBySourceTx ${transfer.hash} error`,
+            error,
+          );
+        });
+      }
+      if (transfers.length < limit) {
+        done = true
+      }
+    } while(!done)
   }
   @Cron('*/5 * * * * *')
   async fromCacheMatch() {
@@ -140,7 +183,7 @@ export class TransactionV3Service {
       }
     }
   }
-  @Cron('0 */10 * * * *')
+  @Cron('0 */1 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -337,7 +380,9 @@ export class TransactionV3Service {
         await this.incUserBalance({
           address: createdData.sourceAddress,
           chainId: createdData.targetChain,
-          value: createdData.targetAmount
+          value: createdData.targetAmount,
+          protocol: p,
+          tick: tick,
         }, t)
         // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
         this.inscriptionMemoryMatchingService
@@ -753,10 +798,10 @@ export class TransactionV3Service {
   }
 
   public async incUserBalance(
-    params: { address: string; chainId: string; value: string, createdAt?: string, updatedAt?: string},
+    params: { address: string; chainId: string; protocol: string; tick: string; value: string, createdAt?: string, updatedAt?: string},
     t: Transaction,
   ) {
-    const { address, chainId, value } = params
+    const { address, chainId, value, protocol, tick } = params
     let { updatedAt, createdAt } = params;
     const now = dayjs().format('YYYY-MM-DD HH:mm:ss.sss')
     if (!updatedAt) {
@@ -771,15 +816,17 @@ export class TransactionV3Service {
       schema = config.schema
     }
     const sql = `
-    INSERT INTO "${schema}"."user_balance" ( "address", "chainId", "balance", "createdAt", "updatedAt" )
+    INSERT INTO "${schema}"."user_balance" ( "address", "chainId", "protocol", "tick", "balance", "createdAt", "updatedAt" )
     VALUES
-      ( '${address}','${chainId}',${value},'${createdAt}','${updatedAt}' ) ON CONFLICT ( "address", "chainId" ) DO
+      ( '${address}','${chainId}','${protocol}','${tick}',${value},'${createdAt}','${updatedAt}' ) ON CONFLICT ( "address", "chainId", "protocol", "tick" ) DO
     UPDATE
       SET "balance" = EXCLUDED."balance" + "user_balance"."balance",
       "updatedAt" = EXCLUDED."updatedAt"
       RETURNING "id",
       "address",
       "chainId",
+      "protocol",
+      "tick",
       "balance",
       "createdAt",
       "updatedAt";
