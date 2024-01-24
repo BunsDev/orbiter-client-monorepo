@@ -47,7 +47,7 @@ export class SequencerScheduleService {
         this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), key)
       }
     }
-    this.alertService.sendMessage(`Start Maker Client ${process.env['application'] || ''}`)
+    this.alertService.sendMessage(`Start Maker Client ${process.env['application'] || ''}`, "TG")
   }
   @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
