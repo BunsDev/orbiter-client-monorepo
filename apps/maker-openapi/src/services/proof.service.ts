@@ -14,6 +14,7 @@ import {
     IArbitrationProof,
     IArbitrationMakerTransaction
 } from "@orbiter-finance/maker-api-seq-models";
+import { spvClientLogger } from "../utils/logger";
 
 @Injectable()
 export class ProofService {
@@ -28,6 +29,7 @@ export class ProofService {
     async proofSubmission(data: ProofSubmissionRequest) {
         try {
             if (!data?.transaction) {
+                spvClientLogger.info(`none of transaction, ${JSON.stringify(data)}`);
                 return { status: 0 };
             }
             const hash = data.transaction.toLowerCase();
@@ -71,9 +73,10 @@ export class ProofService {
                 await this.arbitrationProof.create(arbitrationProof);
                 return { status: 1 };
             }
+            spvClientLogger.info(`none of bridgeTransaction record, ${JSON.stringify(data)}`);
             return { status: 0 };
         } catch (e) {
-            console.error('proofSubmission error', data, e);
+            spvClientLogger.info(`proofSubmission error`, data, e);
             return { status: 0 };
         }
     }

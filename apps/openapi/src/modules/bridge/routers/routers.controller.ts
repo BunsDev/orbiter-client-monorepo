@@ -65,6 +65,9 @@ export class RoutersController {
     @Get("/simulation/receiveAmount")
     @success('success', 200)
     async simulationRule(@Query('line') line: string, @Query('value') value: string, @Query('nonce') nonce: string, @Query('dealer') dealer: string) {
+        if(!nonce) {
+            nonce = '1000';
+        }
         if (dealer) {
             return this.simulationDealerRule(dealer, line, value, nonce);
         }

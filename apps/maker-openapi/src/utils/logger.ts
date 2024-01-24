@@ -142,6 +142,8 @@ export const routerLogger = new Logger('router');
 
 export const arbitrationClientLogger = new Logger('arbitrationClient');
 
+export const spvClientLogger = new Logger('spvClient');
+
 export let aggLogsMap = {};
 
 setInterval(() => {
