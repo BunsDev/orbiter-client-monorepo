@@ -31,7 +31,6 @@ export class NonceManager extends EventEmitter {
     });
     if (option && !option.initNonce) {
       this.forceRefreshNonce();
-      console.log('forceRefreshNonce-');
     }
     // Start the auto-update mechanism
     this.autoUpdate();
@@ -50,7 +49,9 @@ export class NonceManager extends EventEmitter {
    */
   public async forceRefreshNonce() {
     try {
+      const prevNonce = this.getLocalNonce();
       const nonce = await this.refreshNonceFun();
+      console.log(`forceRefreshNonce: originNonce:${prevNonce}, network:${nonce}`);
       await this.setNonce(nonce);
     } catch (error) {
       // Handle er.addListener
