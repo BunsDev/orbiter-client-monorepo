@@ -1347,6 +1347,7 @@ export class TransactionV3Service {
       );
     }
     const { p, tick, to } = calldata
+    const targetTransferAddress = to.toLowerCase()
     const deployRecord = await this.deployRecordModel.findOne({
       raw: true,
       where: {
@@ -1416,7 +1417,7 @@ export class TransactionV3Service {
         ),
         this.incUserBalance(
           {
-            address: to,
+            address: targetTransferAddress,
             chainId: transfer.chainId,
             protocol: p,
             tick: tick,
