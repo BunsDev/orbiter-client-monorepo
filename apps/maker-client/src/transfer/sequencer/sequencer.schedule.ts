@@ -41,12 +41,11 @@ export class SequencerScheduleService {
     if (inscMakers.length > 0) {
       this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
     }
-    const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER", []);
-    if (subMakers && subMakers.length > 0) {
-      for (const key of subMakers) {
-        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), key)
-      }
-    }
+
+    const SUBSCRIBE_TX_QUEUE = this.envConfig.get("SUBSCRIBE_TX_QUEUE", []);
+    SUBSCRIBE_TX_QUEUE.forEach((queueName) => {
+        this.consumerService.consumeMakerClientMessage(this.consumptionQueue.bind(this), queueName)
+    });
     this.alertService.sendMessage(`Start Maker Client ${process.env['application'] || ''}`, "TG")
   }
   @Cron("0 */2 * * * *")

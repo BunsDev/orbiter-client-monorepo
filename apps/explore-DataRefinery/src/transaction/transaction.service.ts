@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
-import { BigIntToString } from '@orbiter-finance/utils';
+import { BigIntToString, equals } from '@orbiter-finance/utils';
 import { TransferAmountTransaction } from 'apps/explore-DataCrawler/src/transaction/transaction.interface';
 import { Transfers as TransfersModel, TransferOpStatus, InscriptionOpType, RefundRecord as RefundRecordModel } from '@orbiter-finance/seq-models';
 import { InjectModel } from '@nestjs/sequelize';
@@ -39,6 +39,7 @@ export class TransactionService {
     if (!this.envConfig.get('RABBITMQ_URL')) {
       throw new Error('Get RABBITMQ_URL Config fail');
     }
+
     this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
     this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
   }
@@ -250,6 +251,24 @@ export class TransactionService {
           // TAG:data-synchronization
           this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
         }
+      }
+      if (result && result.errno == 0) {
+        const RECEIVER_MATCH_QUEUE = this.envConfig.get('RECEIVER_MATCH_QUEUE');
+        const RECEIVER_MATCH_QUEUE_FILTER_CHAIN = this.envConfig.get('RECEIVER_MATCH_QUEUE_FILTER_CHAIN', []);
+        const receiver = payload.receiver.toLocaleLowerCase();
+        if (RECEIVER_MATCH_QUEUE_FILTER_CHAIN[receiver].length <= 0 || RECEIVER_MATCH_QUEUE_FILTER_CHAIN[receiver].includes(payload.chainId)) {
+          if (RECEIVER_MATCH_QUEUE) {
+            for (const addr in RECEIVER_MATCH_QUEUE) {
+              if (equals(addr, receiver)) {
+
+                for (const queue of RECEIVER_MATCH_QUEUE[addr]) {
+                  this.messageService.sendToMakerClientMessage(payload, queue)
+                }
+              }
+            }
+          }
+        }
+
       }
       return result;
     } catch (error) {
