@@ -231,13 +231,14 @@ export class TransferService {
       }
       // CHANGE 98
       for (let i = 0; i < transfers.length; i++) {
-        await this.bridgeTransactionModel.update(
-          {
-            status: BridgeTransactionStatus.PAID_SUCCESS,
-            targetMaker: wallet.address,
-            targetId: transferResult && `${transferResult.hash}#${i}`,
-            targetNonce: String(transferResult?.nonce ?? -1)
-          },
+        const updateData = {
+          status: BridgeTransactionStatus.PAID_SUCCESS,
+        }
+        if (transferResult && transferResult.hash) {
+          updateData['targetId'] = `${transferResult.hash}#${i}`;
+          updateData['targetNonce'] = transferResult?.nonce;
+        }
+        await this.bridgeTransactionModel.update(updateData,
           {
             where: {
               sourceId: transfers[i].sourceId,
@@ -253,12 +254,14 @@ export class TransferService {
         throw error;
       }
       for (let i = 0; i < transfers.length; i++) {
-        await this.bridgeTransactionModel.update(
-          {
-            status: BridgeTransactionStatus.PAID_CRASH,
-            targetId: transferResult && `${transferResult.hash}#${i}`,
-            targetNonce: String(transferResult?.nonce ?? -1)
-          },
+        const updateData = {
+          status: BridgeTransactionStatus.PAID_CRASH,
+        }
+        if (transferResult && transferResult.hash) {
+          updateData['targetId'] = `${transferResult.hash}#${i}`;
+          updateData['targetNonce'] = transferResult?.nonce;
+        }
+        await this.bridgeTransactionModel.update(updateData,
           {
             where: {
               sourceId: transfers[i].sourceId,
@@ -356,13 +359,14 @@ export class TransferService {
       })
       // CHANGE 98
       for (let i = 0; i < transfers.length; i++) {
-        await this.bridgeTransactionModel.update(
-          {
-            status: BridgeTransactionStatus.PAID_SUCCESS,
-            targetMaker: wallet.address,
-            targetId: transferResult && `${transferResult.hash}#${i}`,
-            targetNonce: String(transferResult?.nonce ?? -1)
-          },
+        const updateData = {
+          status: BridgeTransactionStatus.PAID_SUCCESS,
+        }
+        if (transferResult && transferResult.hash) {
+          updateData['targetId'] = `${transferResult.hash}#${i}`;
+          updateData['targetNonce'] = transferResult?.nonce;
+        }
+        await this.bridgeTransactionModel.update(updateData,
           {
             where: {
               sourceId: transfers[i].sourceId,
@@ -380,12 +384,14 @@ export class TransferService {
         throw error;
       }
       for (let i = 0; i < transfers.length; i++) {
-        await this.bridgeTransactionModel.update(
-          {
-            status: BridgeTransactionStatus.PAID_CRASH,
-            targetId: transferResult && `${transferResult.hash}#${i}`,
-            targetNonce: String(transferResult?.nonce ?? -1)
-          },
+        const updateData = {
+          status: BridgeTransactionStatus.PAID_CRASH,
+        }
+        if (transferResult && transferResult.hash) {
+          updateData['targetId'] = `${transferResult.hash}#${i}`;
+          updateData['targetNonce'] = transferResult?.nonce;
+        }
+        await this.bridgeTransactionModel.update(updateData,
           {
             where: {
               sourceId: transfers[i].sourceId,
