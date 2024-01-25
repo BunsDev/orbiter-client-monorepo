@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChainConfigService } from '@orbiter-finance/config';
+import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import { ArbitrumRpcScanningService } from './arbitrum/arbitrum.service';
 import { OptimisticRpcScanningService } from './optimistic/optimistic.service';
 import { BaseRpcScanningService } from './base/base.service';
@@ -15,12 +15,15 @@ import { ScrollRpcScanningService } from './scroll/scroll.service'
 import { MantaRpcScanningService } from './manta/manta.service'
 import { OPBNBScanningService } from './opbnb/opbnb.service'
 import {L1FeeRpcScanningService} from './l1FeeService/l1Fee.service'
+import { ContractParserService } from './contract-parser/ContractParser.service';
 @Injectable()
 export class RpcScanningFactory {
   public services: { [key: string]: RpcScanningService } = {}
   constructor(
     private chainConfigService: ChainConfigService,
-    private transactionService: TransactionService
+    private transactionService: TransactionService,
+    private envConfigService: ENVConfigService,
+    private contractParser:ContractParserService
   ) { }
 
   createService(chainId: string): RpcScanningService {
@@ -34,7 +37,9 @@ export class RpcScanningFactory {
     }
     const ctx: Context = {
       chainConfigService: this.chainConfigService,
-      transactionService: this.transactionService
+      transactionService: this.transactionService,
+      envConfigService: this.envConfigService,
+      contractParser: this.contractParser
     }
     let service;
     switch (key) {
@@ -133,7 +138,6 @@ export class RpcScanningFactory {
       behind: latestBlockNumber - lastScannedBlockNumber,
       processingCount: factory.dataProcessor.getProcessingCount(),
       waitBlockCount: factory.dataProcessor.getDataCount(),
-      rate: factory.getRate(),
     };
   }
   async getRpcStatus() {

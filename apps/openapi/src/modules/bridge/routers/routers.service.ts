@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { RoutersConfig } from '../bridge.interface';
 import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
 import { ChainsService } from '../chains/chains.service';
-import { padStart } from 'lodash';
+import { padStart, uniq } from 'lodash';
 
 @Injectable()
 export class RoutersService {
@@ -30,24 +30,24 @@ export class RoutersService {
         const v1RouterConfigs: RoutersConfig[] = [];
 
         // Retrieve rules from Maker V1 service
-        const v1Rules = await this.rulesService.getAll();
-
+        const v1Rules = await this.rulesService.configs;
         // Iterate through each rule and convert it to a router configuration
+        const notWhiteMakers = [];
         for (const v1Rule of v1Rules) {
             try {
                 const internalChainId = v1Rule['chain'].split('-');
                 const sourceChain = chains.find(row => row.internalId == internalChainId[0]);
                 const targetChain = chains.find(row => row.internalId == internalChainId[1]);
                 if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v1Rule['makerAddress'].toLocaleLowerCase())) {
-                    console.log(`v1Rule not white maker ${v1Rule['makerAddress'].toLocaleLowerCase()}`);
+                    notWhiteMakers.push(v1Rule['makerAddress'].toLocaleLowerCase());
                     continue;
                 }
                 if (!sourceChain || !sourceChain.tokens) {
-                    console.log(`v1Rule not find sourceChain`, v1Rule.chain);
+                    console.log(`v1Rule not find sourceChain ${internalChainId[0]}`, internalChainId);
                     continue;
                 }
                 if (!targetChain) {
-                    console.log(`v1Rule not find targetChain`, v1Rule.tgtChain);
+                    console.log(`v1Rule not find targetChain ${internalChainId[1]}`, internalChainId);
                     continue;
                 }
                 const sourceToken = sourceChain.tokens.find(t => t.symbol == v1Rule['sourceSymbol']);
@@ -122,7 +122,9 @@ export class RoutersService {
             }
 
         }
-
+        if (notWhiteMakers && notWhiteMakers.length>0) {
+            console.log(`v1Rule not white maker ${JSON.stringify(uniq(notWhiteMakers))}`);
+        }
         return v1RouterConfigs;
     }
 
@@ -151,12 +153,12 @@ export class RoutersService {
         const chains = await this.chainService.getChains();
         const WHITE_MAKERS = this.envConfigService.get("WHITE_MAKERS", []);
         // Iterate through each rule from the API response and convert it to a router configuration
-    
+        const notWhiteMakers = [];
         for (const v3Rule of result.ruleList) {
             try {
                 const { fromChain, toChain } = v3Rule;
                 if (WHITE_MAKERS.length > 0 && !WHITE_MAKERS.includes(v3Rule['recipient'].toLocaleLowerCase())) {
-                    console.log(`v3Rule not white maker `, v3Rule);
+                    notWhiteMakers.push(v3Rule['recipient'].toLocaleLowerCase());
                     continue;
                 }
                 const routerConfig: RoutersConfig = {
@@ -199,6 +201,9 @@ export class RoutersService {
                 console.error('getV3Routers error', error);
             }
 
+        }
+        if (notWhiteMakers && notWhiteMakers.length>0) {
+            console.log(`v3Rule not white maker ${JSON.stringify(uniq(notWhiteMakers))}`);
         }
         this.dealerRules[dealerAddress] = v3RouterConfigs;
         return v3RouterConfigs;

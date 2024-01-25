@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './controllers/app.controller';
 import { ProofService } from './services/proof.service';
-import { ConsulModule } from '@orbiter-finance/consul';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ProofController } from './controllers/proof.controller';
 import { TransactionController } from './controllers/transaction.controller';
@@ -18,25 +17,25 @@ import { AppService } from "./services/app.service";
 import { GlobalMiddleware } from "./middleware/globalMiddleware";
 import { HttpExceptionFilter } from "./middleware/httpExceptionFilter";
 import { APP_FILTER } from "@nestjs/core";
+import { ConsulModule } from '@client-monorepo/nestjs-consul';
 
 @Module({
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
         }),
-        ConsulModule.registerAsync({
+        ConsulModule.forRootAsync({
+            imports: [ConfigModule],
             inject: [ConfigService],
-            useFactory: (config: ConfigService) => {
-                return {
-                    name: 'maker-openapi',
-                    url: config.get("CONSUL_URL")
-                };
+            useFactory: async (configService: ConfigService) => {
+              return {
+                  url: configService.get("CONSUL_URL"),
+                  keys: configService.get('CONSUL_KEYS_MAKER_API').split(','),
+                  updateCron: '* * * * *',
+              } as any;
             },
-        }),
-        OrbiterConfigModule.forRoot({
-            chainConfigPath: "explore-server/chains.json",
-            envConfigPath: "maker-open-api/config.yaml",
-        }),
+          }),
+          OrbiterConfigModule.forRoot(),
         SequelizeModule.forRootAsync({
             inject: [ENVConfigService],
             useFactory: async (envConfig: ENVConfigService) => {

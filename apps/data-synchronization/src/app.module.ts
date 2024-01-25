@@ -3,7 +3,6 @@ import { AppController } from './app/app.controller';
 import { AppService } from './app/app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OrbiterConfigModule, ENVConfigService } from '@orbiter-finance/config';
-import { ConsulModule } from '@orbiter-finance/consul';
 import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
 import { MakerTransaction, Transaction, NetState, UserHistory } from '@orbiter-finance/v1-seq-models';
 import { join, isEmpty } from 'lodash';
@@ -13,26 +12,24 @@ import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { AlertModule } from '@orbiter-finance/alert'
 import { ScheduleModule } from '@nestjs/schedule';
+import { ConsulModule } from '@client-monorepo/nestjs-consul';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ConsulModule.registerAsync({
+    ConsulModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
+      useFactory: async (configService: ConfigService) => {
         return {
-          name: 'data-synchronization',
-          url:config.get("CONSUL_URL")
-        };
+          url:configService.get("CONSUL_URL"),
+          keys: configService.get('CONSUL_KEYS').split(','),
+          updateCron: '* * * * *',
+        } as any;
       },
     }),
-    OrbiterConfigModule.forRoot({
-      chainConfigPath: "explore-server/chains.json",
-      envConfigPath: "dataSync/config.yaml",
-      makerV1RulePath: "rules",
-      cachePath: join(__dirname,'runtime')
-    }),
+    OrbiterConfigModule.forRoot(),
     AlertModule.registerAsync({
       inject:[ENVConfigService],
       useFactory:async(configService:ENVConfigService) => {

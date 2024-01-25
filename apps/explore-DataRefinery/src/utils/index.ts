@@ -80,3 +80,36 @@ export function isEvmAddress(address: string)  {
   }
   return true
 }
+
+
+
+export class QueryStringUtils {
+  static parse(queryString: string): Record<string, string> {
+    const urlParams = new URLSearchParams(queryString);
+    const params: Record<string, string> = {};
+
+    for (const [key, value] of urlParams) {
+      params[key] = value;
+    }
+
+    return params;
+  }
+
+  static stringify(params: Record<string, string>): string {
+    const urlParams = new URLSearchParams();
+
+    for (const key in params) {
+      if (params.hasOwnProperty(key)) {
+        urlParams.append(key, params[key]);
+      }
+    }
+
+    return urlParams.toString();
+  }
+}
+
+export function decodeHex(hexString: string): string {
+  const byteArray = new Uint8Array(hexString.match(/[\da-f]{2}/gi)!.map((h) => parseInt(h, 16)));
+  const textDecoder = new TextDecoder('utf-8');
+  return textDecoder.decode(byteArray);
+}

@@ -122,12 +122,12 @@ export class MakerService {
 
     }
     async getV1MakerOwners() {
-        const v1MakerRules = this.makerV1RuleService.getAll();
+        const v1MakerRules = this.makerV1RuleService.configs || [];
         return uniq(v1MakerRules.filter(r => r.makerAddress).map(r => r.makerAddress.toLocaleLowerCase()));
     }
 
     async getV1MakerOwnerResponse() {
-        const v1MakerRules = this.makerV1RuleService.getAll();
+        const v1MakerRules:any[] = this.makerV1RuleService.configs || [];
         const list = v1MakerRules.filter(r => r.sender).map(r => r.sender.toLocaleLowerCase());
         // add fake maker
         const resutl = await this.envConfigService.getAsync("v1ResponseMaker") || [];

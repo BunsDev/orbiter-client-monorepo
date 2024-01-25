@@ -84,7 +84,7 @@ export class ConsumerService {
             channel.ack(msg);
           } catch (error: any) {
             Logger.error(`${queue} consumeDataSynchronizationMessages Error ${error.message}`, error);
-            channel.nack(msg,false,true);
+            channel.nack(msg, false, true);
           }
         }
       });
@@ -128,7 +128,7 @@ export class ConsumerService {
             channel.ack(msg);
           } catch (error: any) {
             Logger.error(`${queue} consumeScanTransferSaveDBAfterMessages Error processing message:${error.message}`, error)
-            channel.nack(msg,true,false);
+            channel.nack(msg, true, false);
           }
         }
       });
@@ -141,7 +141,7 @@ export class ConsumerService {
 
   }
 
-  async consumeMakerWaitTransferMessage(callback: (data: any) => Promise<any>, afterPrefix:string= "") {
+  async consumeMakerWaitTransferMessage(callback: (data: any) => Promise<any>, afterPrefix: string = "") {
     const queue = `makerWaitTransfer${afterPrefix}`;
     try {
       if (!this.connectionManager.getChannel()) {
@@ -174,7 +174,7 @@ export class ConsumerService {
               `${queue} consumeTransferWaitMessages Error processing message: ${error.message}`,
               error,
             );
-            channel.nack(msg,true,false);
+            channel.nack(msg, true, false);
             // channel.reject(msg);
           }
         }
@@ -186,7 +186,52 @@ export class ConsumerService {
     }
   }
 
-  async consumeMakerWaitClaimTransferMessage(callback: (data: any) => Promise<any>, afterPrefix:string= "") {
+  async consumeMakerClientMessage(callback: (data: any) => Promise<any>, queue: string) {
+    try {
+      if (!this.connectionManager.getChannel()) {
+        await sleep(500);
+        this.consumeMakerClientMessage(callback, queue);
+        return;
+      }
+      const channel = await this.connectionManager.createChannel();
+      await channel.assertQueue(queue);
+      channel.on('close', () => {
+        Logger.error(`${queue} Channel closed`);
+        this.alertService.sendMessage(`${queue} Channel closed`, 'TG');
+        this.consumeMakerClientMessage(callback, queue)
+      });
+
+      channel.on('error', (err) => {
+        Logger.error(`Channel error:${err.message}`, err.stack);
+        this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
+      });
+      channel.prefetch(10);
+      channel.consume(queue, async (msg: Message | null) => {
+        if (msg) {
+          try {
+            const messageContent = msg.content.toString();
+            const data = JSON.parse(messageContent);
+            await callback(data);
+            channel.ack(msg);
+          } catch (error: any) {
+        
+            channel.nack(msg, true, false);
+            // channel.reject(msg);
+            console.error(
+              `${queue} consumeMakerClientMessage Error processing message: ${error.message}`, msg.content.toString(),
+              error,
+            );
+          }
+        }
+      });
+    } catch (error: any) {
+      await sleep(500);
+      this.consumeMakerClientMessage(callback, queue);
+      Logger.error(`${queue} consumeMakerClientMessage error ${error.message}`, error);
+    }
+  }
+
+  async consumeMakerWaitClaimTransferMessage(callback: (data: any) => Promise<any>, afterPrefix: string = "") {
     const queue = `makerWaitClaimTransfer${afterPrefix}`;
     try {
       if (!this.connectionManager.getChannel()) {
@@ -219,7 +264,7 @@ export class ConsumerService {
               `${queue} consumeTransferWaitMessages Error processing message: ${error.message}`,
               error,
             );
-            channel.nack(msg,true,false);
+            channel.nack(msg, true, false);
           }
         }
       });

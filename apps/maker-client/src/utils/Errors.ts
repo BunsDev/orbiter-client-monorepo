@@ -53,6 +53,12 @@ export class BatchPaidSameMaker extends Error {
         this.name = 'BatchPaidSameMaker';
     }
 }
+export class DisabledSourceAddressError extends Error {
+  constructor(message: string = 'Disable source address error') {
+    super(message);
+    this.name = 'DisabledSourceAddressError';
+  }
+}
 
 
 export class PaidSourceTimeLessStartupTime extends Error {

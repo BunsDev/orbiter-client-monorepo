@@ -1,10 +1,10 @@
 import * as ethers from 'ethers6';
 import { Mutex } from 'async-mutex';
 import { RpcScanningService } from './rpc-scanning.service';
-import { ChainConfigService } from '@orbiter-finance/config';
+import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import { TransactionService } from '../transaction/transaction.service';
 import { TransferAmountTransaction } from '../transaction/transaction.interface';
-
+import { ContractParserService } from './contract-parser/ContractParser.service'
 export type Block = any;
 
 export interface TransactionResponse {
@@ -45,5 +45,7 @@ export interface RetryBlockRequestResponse {
 
 export interface Context {
    chainConfigService: ChainConfigService,
-   transactionService: TransactionService
+   transactionService: TransactionService,
+   envConfigService: ENVConfigService,
+   contractParser: ContractParserService
 }

@@ -1,7 +1,7 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Headers, Param, Query } from '@nestjs/common';
 import { RoutersService } from './routers.service';
 import { success, error } from 'apps/openapi/src/shared/decorators/responser.decorator';
-import { v1MakerUtils } from '@orbiter-finance/utils'
+import { equals, v1MakerUtils } from '@orbiter-finance/utils'
 import { CustomError } from '../../../shared/errors/custom.error'
 import { ChainsService } from '../chains/chains.service';
 import BigNumber from 'bignumber.js';
@@ -14,8 +14,9 @@ export class RoutersController {
 
     @Get()
     @success('success', 200)
-    async getRouters(@Query('dealerId') dealerId: string) {
+    async getRouters(@Query('dealerId') dealerId: string, @Headers('X-Channel-Identifier') channelHeader: string) {
         let routers = [];
+        console.log(`getRouters - channelHeader: ${channelHeader}`)
         const v1Routers = shuffle(await this.routerService.getV1Routers());
         if (dealerId) {
             try {
@@ -35,7 +36,8 @@ export class RoutersController {
     }
     @Get("/cross-chain")
     @success('success', 200)
-    async getCrossChainRouters() {
+    async getCrossChainRouters(@Headers('X-Channel-Identifier') channelHeader: string) {
+        console.log(`getRouters - channelHeader: ${channelHeader}`)
         const configs = await this.routerService.getV1Routers();
         return configs.filter(config => {
             const lines = config.line.split('-')[1].split('/');
@@ -63,6 +65,9 @@ export class RoutersController {
     @Get("/simulation/receiveAmount")
     @success('success', 200)
     async simulationRule(@Query('line') line: string, @Query('value') value: string, @Query('nonce') nonce: string, @Query('dealer') dealer: string) {
+        if(!nonce) {
+            nonce = '1000';
+        }
         if (dealer) {
             return this.simulationDealerRule(dealer, line, value, nonce);
         }
@@ -74,12 +79,19 @@ export class RoutersController {
         const chains = await this.chainService.getChains();
         const sourceChain = chains.find(row => row.chainId == route.srcChain);
         const targetChain = chains.find(row => row.chainId == route.tgtChain);
-        const sourceToken = sourceChain.tokens.find(t => t.address == route.srcToken);
-        const targetToken = sourceChain.tokens.find(t => t.address == route.tgtToken);
+        const sourceToken = sourceChain.tokens.find(t => equals(t.address,route.srcToken));
+        const targetToken = targetChain.tokens.find(t => equals(t.address,route.tgtToken));
+        if (!sourceToken) {
+            throw new Error(`${route.srcChain} sourceToken ${route.srcToken} not found`);
+        }
+        if (!targetToken) {
+            throw new Error(`${route.tgtChain} targetToken ${route.tgtToken} not found`);
+        }
         const toChainId = v1MakerUtils.getAmountFlag(+sourceChain.internalId, value);
         if (+toChainId != +targetChain.internalId) {
             throw new Error('vc security code error');
         }
+       
         const result = v1MakerUtils.getAmountToSend(
             +sourceChain.internalId,
             sourceToken.decimals,

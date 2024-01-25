@@ -3,9 +3,10 @@ import {
   TransactionReceipt,
   ZeroAddress,
   Block,
-  Network
+  Network,
+  ethers
 } from 'ethers6';
-import { isEmpty, JSONStringify } from '@orbiter-finance/utils';
+import { equals, isEmpty, JSONStringify } from '@orbiter-finance/utils';
 import { RpcScanningService } from '../rpc-scanning.service';
 import BigNumber from 'bignumber.js';
 
@@ -15,6 +16,7 @@ import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../.
 import { Orbiter6Provider } from '@orbiter-finance/blockchain-account';
 
 export class EVMRpcScanningV6Service extends RpcScanningService {
+
   #provider: Orbiter6Provider;
   getProvider() {
     const rpc = this.chainConfig.rpc[0];
@@ -46,6 +48,12 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     const contractList = this.chainConfig.contract
       ? Object.keys(this.chainConfig.contract || {}).map((addr) => addr.toLocaleLowerCase())
       : [];
+    if (this.chainConfig.contracts) {
+      for (const contract of this.chainConfig.contracts) {
+        contractList.push(contract.address);
+      }
+    }
+
     for (const row of transactions) {
       try {
         if (row['to'] == ZeroAddress) {
@@ -53,11 +61,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
         }
         const toAddrLower = (row['to'] || "").toLocaleLowerCase();
         const fromAddrLower = (row['from'] || "").toLocaleLowerCase();
-        // is to contract addr
-        if (contractList.includes(toAddrLower)) {
-          rows.push(row);
-          continue;
-        }
+        // eoa
         const senderValid = await this.isWatchAddress(fromAddrLower);
         if (senderValid) {
           rows.push(row);
@@ -68,6 +72,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           rows.push(row);
           continue;
         }
+        // end eoa
         if (row['data'] && row['data'] != '0x') {
           const calldata = row['data'].slice(10);
           if (isEmpty(calldata)) {
@@ -98,6 +103,20 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
               }
             }
           }
+          // is to contract addr
+          const isRegister = this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower);
+          if (isRegister) {
+            // decode
+            if (!this.ctx.contractParser.whiteContractMethodId(this.chainId, toAddrLower, row['data'])) {
+              continue;
+            }
+          }
+          if (contractList.includes(toAddrLower)) {
+            rows.push(row);
+            continue;
+          }
+
+
         }
       } catch (error) {
         this.logger.error(
@@ -210,19 +229,36 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           );
         }
       } else if (contractInfo) {
-        if (contractInfo.name === 'CrossInscriptions') {
+        if (contractInfo.name === 'OBSource') {
+          transfers = EVMV6Utils.evmOBSource(chainConfig, transaction, receipt);
+        } else if (contractInfo.name === 'OrbiterRouterV1') {
+          transfers = EVMV6Utils.evmObRouterV1(chainConfig, transaction, receipt);
+        } else if (contractInfo.name === 'OrbiterRouterV3') {
+          const methodId = transaction.data.substring(0, 10);
+          if (['0x29723511', '0xf9c028ec'].includes(methodId) && this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
+            try {
+              transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt)
+            } catch (error) {
+              transfers = EVMV6Utils.evmObRouterV3(chainConfig, transaction, receipt);
+              this.logger.error(`${this.chainConfig.name} - ${contractInfo.address} parseContract error ${error.message}`, error);
+            }
+          } else {
+            transfers = EVMV6Utils.evmObRouterV3(chainConfig, transaction, receipt);
+          }
+
+        } else if (contractInfo.name === 'CrossInscriptions') {
           transfers = EVMV6Utils.crossInscriptions(
             chainConfig,
             transaction,
             receipt,
           );
         } else {
-          transfers = EVMV6Utils.evmContract(
-            chainConfig,
-            contractInfo,
-            transaction,
-            receipt,
-          );
+          if (this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
+              this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);
+              return [];
+            })
+          }
         }
       } else {
         // 0x646174613a2c
@@ -285,23 +321,25 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
           });
         }
       }
-      transfers = transfers.map((tx) => {
-        tx.transactionIndex = receipt.index;
-        tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
-        tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
-        tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
-        tx.token = tx.token && tx.token.toLocaleLowerCase();
-        tx.nonce = nonce;
-        tx.receipt = receipt;
-        tx.fee = new BigNumber(fee.toString())
-          .dividedBy(transfers.length)
-          .toFixed(0);
-        tx.feeAmount = new BigNumber(tx.fee)
-          .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-          .toString();
-        tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
-        return tx;
-      });
+      if (transfers) {
+        transfers = transfers.map((tx) => {
+          tx.transactionIndex = receipt.index;
+          tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
+          tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
+          tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
+          tx.token = tx.token && tx.token.toLocaleLowerCase();
+          tx.nonce = nonce;
+          tx.receipt = receipt;
+          tx.fee = new BigNumber(fee.toString())
+            .dividedBy(transfers.length)
+            .toFixed(0);
+          tx.feeAmount = new BigNumber(tx.fee)
+            .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+            .toString();
+          tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
+          return tx;
+        });
+      }
       return await this.handleTransactionAfter(transfers);
     } catch (error) {
       this.logger.error(
@@ -340,7 +378,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     const provider = this.getProvider();
     const data = await provider.getBlock(blockNumber, true);
     if (isEmpty(data)) {
-      throw new Error('Block isEmpty');
+      throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
     }
     return data;
   }

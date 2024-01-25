@@ -4,6 +4,12 @@ export enum TransferAmountTransactionStatus {
     confirmed,
     failed,
   }
+  export interface CrossChainParams {
+    targetChain?:string;
+    targetRecipient?:string;
+    targetToken?:string;
+    targetTokenSymbol?:String;
+  }
   export interface TransferAmountTransaction {
     chainId: string;
     hash: string;
@@ -27,5 +33,6 @@ export enum TransferAmountTransactionStatus {
     version?: string;
     feeToken: string;
     receipt?: any;
+    crossChainParams?: CrossChainParams
   }
   

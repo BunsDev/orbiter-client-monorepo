@@ -1,3 +1,0 @@
-export const CONSUL_OPTIONS = 'CONSUL_OPTIONS';
-export const CONSUL_MODULE_OPTIONS = Symbol('CONSUL_MODULE_OPTIONS');
-export const CONSUL_CLIENT = Symbol('CONSUL_CLIENT');
