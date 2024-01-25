@@ -558,28 +558,20 @@ export class SequencerScheduleService {
     }
   }
 
-  async consumptionSendingQueue(bridgeTx: BridgeTransactionModel | Array<BridgeTransactionModel>, queueKey: string) {
+  async consumptionSendingQueue(bridgeTx: Array<BridgeTransactionModel>, queueKey: string) {
     let result;
     try {
-      if (Array.isArray(bridgeTx)) {
-        if (bridgeTx.length > 1) {
-          if (bridgeTx[0].version === '3-0') {
-            result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey)
-          } else {
-            result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
-          }
-        } else {
-          if (bridgeTx[0].version === '3-0') {
-            result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
-          } else {
-            result = await this.paidSingleBridgeTransaction(bridgeTx[0])
-          }
+      if (bridgeTx.length > 1) {
+        if (bridgeTx[0].version === '3-0') {
+          result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey)
+        } else if (['1-0', '2-0'].includes(bridgeTx[0].version)) {
+          result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
         }
       } else {
-        if (bridgeTx.version === '3-0') {
-          result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx, queueKey)
-        } else {
-          result = await this.paidSingleBridgeTransaction(bridgeTx)
+        if (bridgeTx[0].version === '3-0') {
+          result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
+        } else if (['1-0', '2-0'].includes(bridgeTx[0].version)) {
+          result = await this.paidSingleBridgeTransaction(bridgeTx[0])
         }
       }
     } catch (error) {
