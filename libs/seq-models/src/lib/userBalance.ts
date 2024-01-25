@@ -31,12 +31,20 @@ export class UserBalance
   id?: number;
 
   @Column({type: DataType.STRING(255)})
-  @Index({ name: 'address_chainId', using: 'btree', unique: true })
+  @Index({ name: 'address_chainId_protocol_tick', using: 'btree', unique: true })
   address: string;
 
   @Column({type: DataType.STRING(255)})
-  @Index({ name: 'address_chainId', using: 'btree', unique: true })
+  @Index({ name: 'address_chainId_protocol_tick', using: 'btree', unique: true })
   chainId: string;
+
+  @Column({type: DataType.STRING(30)})
+  @Index({ name: 'address_chainId_protocol_tick', using: 'btree', unique: true })
+  protocol: string;
+
+  @Column({type: DataType.STRING(30)})
+  @Index({ name: 'address_chainId_protocol_tick', using: 'btree', unique: true })
+  tick: string;
 
   @Column({type: DataType.DECIMAL})
   balance: string;

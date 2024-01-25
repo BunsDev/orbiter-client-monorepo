@@ -32,10 +32,9 @@ export class LoopringAccount extends OrbiterAccount {
     }
     this.accountInfo = accInfo;
     if (!this.nonceManager) {
-      this.nonceManager = new NonceManager(this.address, async () => {
+      this.nonceManager = this.createNonceManager(this.address, async () => {
         return 0;
-      });
-      await this.nonceManager.forceRefreshNonce();
+      })
     }
     return this;
   }
@@ -173,7 +172,7 @@ export class LoopringAccount extends OrbiterAccount {
   }
 
   public async waitForTransactionConfirmation(transactionHash: string) {
-    const response: { totalNum: number, transactions: any[] } = <any>await HTTPGet(`${this.chainConfig.api.url}/user/transactions?accountId=${this.accountInfo.accountId}&hashes=${transactionHash}`,{
+    const response: { totalNum: number, transactions: any[] } = <any>await HTTPGet(`${this.chainConfig.api.url}/user/transactions?accountId=${this.accountInfo.accountId}&hashes=${transactionHash}`, {
       'x-api-key': this.chainConfig.api.key,
     });
     if (response?.transactions && response.transactions.length === 1) {

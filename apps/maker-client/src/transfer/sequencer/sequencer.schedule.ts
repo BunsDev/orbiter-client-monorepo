@@ -37,36 +37,42 @@ export class SequencerScheduleService {
     @InjectRedis() private readonly redis: Redis,
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
-    const inscMakers = this.envConfig.get("INSCRIPTION_MAKERS", []);
-    if (inscMakers.length > 0) {
-      this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
-    }
-    const subMakers = this.envConfig.get("SUB_WAIT_TRANSFER_MAKER", []);
-    if (subMakers && subMakers.length > 0) {
-      for (const key of subMakers) {
-        this.consumerService.consumeMakerWaitTransferMessage(this.consumptionQueue.bind(this), key)
-      }
-    }
+    // const inscMakers = this.envConfig.get("INSCRIPTION_MAKERS", []);
+    // if (inscMakers.length > 0) {
+    //   this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
+    // }
+    const SUBSCRIBE_TX_QUEUE = this.envConfig.get("SUBSCRIBE_TX_QUEUE", []);
+    SUBSCRIBE_TX_QUEUE.forEach((queueName) => {
+      this.consumerService.consumeMakerClientMessage(this.consumptionQueue.bind(this), queueName)
+    });
+    this.alertService.sendMessage(`Start Maker Client ${process.env['application'] || ''}`, "TG")
   }
   @Cron("0 */2 * * * *")
   private checkDBTransactionRecords() {
-    const owners = this.envConfig.get("MAKERS") || [];
-    for (const owner of owners) {
-      // read db history
-      this.readDBTransactionRecords(owner.toLocaleLowerCase()).catch((error) => {
-        this.logger.error(
-          "checkDBTransactionRecords -> readDBTransactionRecords error",
-          error
-        );
-      });
+    const owners = this.envConfig.get("ENABLE_PAID_MAKERS") || [];
+    let chainIds = this.envConfig.get("ENABLE_PAID_CHAINS") || [];
+    if (chainIds.includes('*')) {
+      chainIds = this.chainConfigService.getAllChains().map(item => item.chainId);
+    }
+    for (const chainId of chainIds) {
+      for (const owner of owners) {
+        // read db history
+        this.readDBTransactionRecords(chainId, owner.toLocaleLowerCase()).catch((error) => {
+          this.logger.error(
+            "checkDBTransactionRecords -> readDBTransactionRecords error",
+            error
+          );
+        });
+      }
     }
   }
-  private async readDBTransactionRecords(owner: string) {
+  private async readDBTransactionRecords(chainId: string, owner: string) {
     const maxTransferTimeoutMinute = this.validatorService.getTransferGlobalTimeout();
     const where: any = {
       status: 0,
       sourceMaker: owner,
       targetId: null,
+      targetChain: chainId,
       sourceTime: {
         [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
       },
@@ -133,7 +139,7 @@ export class SequencerScheduleService {
     if (chainIds.includes('*')) {
       chainIds = this.chainConfigService.getAllChains().map(item => item.chainId);
     }
-    const owners = this.envConfig.get("MAKERS") || [];
+    const owners = this.envConfig.get("ENABLE_PAID_MAKERS") || [];
     for (const chainId of chainIds) {
       for (const owner of owners) {
         // read db history
@@ -219,7 +225,7 @@ export class SequencerScheduleService {
       Lock[queueKey].locked = true;
       let isBreak = false;
       if (+paidType === 2) {
-        const maxPaidTransferCount = +(this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2));
+        const maxPaidTransferCount = +(this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize));
         if (queueLength >= batchSize) {
           hashList = await this.dequeueMessages(queueKey, maxPaidTransferCount);
         } else {
@@ -235,7 +241,7 @@ export class SequencerScheduleService {
           isBreak = true;
           return;
         }
-        const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
+        const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize);
         hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? maxPaidTransferCount : 1);
       }
       if (isBreak) {
@@ -344,16 +350,12 @@ export class SequencerScheduleService {
       bridgeTx.targetMaker,
       bridgeTx.targetChain
     );
-    await account.connect(wallets[0].key, bridgeTx.targetMaker);
-    await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
     try {
+      await account.connect(wallets[0].key, bridgeTx.targetMaker);
+      await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
       return await this.transferService.execSingleTransfer(bridgeTx, account);
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
-        await this.removeConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId)
-        this.logger.error(`execSingleTransfer error PaidRollbackError ${bridgeTx.sourceId} message ${error.message}`);
-      }
-      throw error;
+      await this.handlePaidTransactionError(error, [bridgeTx.sourceChain], bridgeTx.targetChain);
     }
   }
   async paidSingleBridgeInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
@@ -394,8 +396,8 @@ export class SequencerScheduleService {
       bridgeTx.targetMaker,
       bridgeTx.targetChain
     );
-    await account.connect(wallets[0].key, bridgeTx.targetMaker);
     try {
+      await account.connect(wallets[0].key, bridgeTx.targetMaker);
       await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
       return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
     } catch (error) {
@@ -475,10 +477,9 @@ export class SequencerScheduleService {
       targetMaker,
       targetChain
     );
-
-    await account.connect(privateKey, targetMaker);
     const sourceIds = legalTransaction.map(tx => tx.sourceId);
     try {
+      await account.connect(privateKey, targetMaker);
       await this.saveConsumeStatus(targetChain, sourceIds);
       if (legalTransaction.length == 1) {
         return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
@@ -546,18 +547,14 @@ export class SequencerScheduleService {
       targetMaker,
       targetChain
     );
-
-    await account.connect(privateKey, targetMaker);
     try {
+      await account.connect(privateKey, targetMaker);
       if (maxItem[1].length == 1) {
         return await this.transferService.execSingleTransfer(maxItem[1][0], account)
       }
       return await this.transferService.execBatchTransfer(maxItem[1], account)
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
-        this.logger.error(`execBatchTransfer error PaidRollbackError ${targetChain} - ${maxItem[1].map(row => row.sourceId).join(',')} message ${error.message}`);
-      }
-      throw error;
+      await this.handlePaidTransactionError(error, [bridgeTxs[0].sourceChain], bridgeTxs[0].targetChain);
     }
   }
 
