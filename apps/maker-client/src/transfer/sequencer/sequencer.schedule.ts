@@ -350,16 +350,12 @@ export class SequencerScheduleService {
       bridgeTx.targetMaker,
       bridgeTx.targetChain
     );
-    await account.connect(wallets[0].key, bridgeTx.targetMaker);
-    await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
     try {
+      await account.connect(wallets[0].key, bridgeTx.targetMaker);
+      await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
       return await this.transferService.execSingleTransfer(bridgeTx, account);
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
-        await this.removeConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId)
-        this.logger.error(`execSingleTransfer error PaidRollbackError ${bridgeTx.sourceId} message ${error.message}`);
-      }
-      throw error;
+      await this.handlePaidTransactionError(error, [bridgeTx.sourceChain], bridgeTx.targetChain);
     }
   }
   async paidSingleBridgeInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
@@ -400,8 +396,8 @@ export class SequencerScheduleService {
       bridgeTx.targetMaker,
       bridgeTx.targetChain
     );
-    await account.connect(wallets[0].key, bridgeTx.targetMaker);
     try {
+      await account.connect(wallets[0].key, bridgeTx.targetMaker);
       await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
       return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
     } catch (error) {
@@ -481,10 +477,9 @@ export class SequencerScheduleService {
       targetMaker,
       targetChain
     );
-
-    await account.connect(privateKey, targetMaker);
     const sourceIds = legalTransaction.map(tx => tx.sourceId);
     try {
+      await account.connect(privateKey, targetMaker);
       await this.saveConsumeStatus(targetChain, sourceIds);
       if (legalTransaction.length == 1) {
         return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
@@ -552,18 +547,14 @@ export class SequencerScheduleService {
       targetMaker,
       targetChain
     );
-
-    await account.connect(privateKey, targetMaker);
     try {
+      await account.connect(privateKey, targetMaker);
       if (maxItem[1].length == 1) {
         return await this.transferService.execSingleTransfer(maxItem[1][0], account)
       }
       return await this.transferService.execBatchTransfer(maxItem[1], account)
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
-        this.logger.error(`execBatchTransfer error PaidRollbackError ${targetChain} - ${maxItem[1].map(row => row.sourceId).join(',')} message ${error.message}`);
-      }
-      throw error;
+      await this.handlePaidTransactionError(error, [bridgeTxs[0].sourceChain], bridgeTxs[0].targetChain);
     }
   }
 
