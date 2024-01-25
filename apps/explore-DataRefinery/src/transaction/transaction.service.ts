@@ -32,9 +32,9 @@ export class TransactionService {
     private envConfig: ENVConfigService,
     private makerV1RuleService: MakerV1RuleService
   ) {
-    const ruleConfigs = this.makerV1RuleService.configs;
+    const ruleConfigs = this.makerV1RuleService.configs || [];
     if (!ruleConfigs || ruleConfigs.length <= 0) {
-      throw new Error('Load ruleConfigs fail');
+      // throw new Error('Load ruleConfigs fail');
     }
     if (!this.envConfig.get('RABBITMQ_URL')) {
       throw new Error('Get RABBITMQ_URL Config fail');

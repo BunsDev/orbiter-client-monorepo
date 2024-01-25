@@ -13,7 +13,7 @@ export class ConsulService<T> {
 
 	constructor({ connection, keys, updateCron }: IConsulConfig<T>, private readonly httpService: HttpService) {
 		try {
-			this.consulURL = `${connection.protocol}://${connection.host}:${connection.port}/v1/kv/`;
+			this.consulURL = `${connection.protocol}://${connection.host}:${connection.port}/v1/kv`;
 			this.keys = keys;
 			this.token = connection.token;
 			this.planUpdate(updateCron);
