@@ -225,7 +225,7 @@ export class SequencerScheduleService {
       Lock[queueKey].locked = true;
       let isBreak = false;
       if (+paidType === 2) {
-        const maxPaidTransferCount = +(this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2));
+        const maxPaidTransferCount = +(this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize));
         if (queueLength >= batchSize) {
           hashList = await this.dequeueMessages(queueKey, maxPaidTransferCount);
         } else {
@@ -241,7 +241,7 @@ export class SequencerScheduleService {
           isBreak = true;
           return;
         }
-        const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize * 2);
+        const maxPaidTransferCount = this.envConfig.get(`${targetChain}.PaidMaxTransferCount`, batchSize);
         hashList = await this.dequeueMessages(queueKey, queueLength >= batchSize ? maxPaidTransferCount : 1);
       }
       if (isBreak) {
