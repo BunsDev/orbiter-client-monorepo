@@ -26,7 +26,6 @@ export default class XBridge extends EVMPraser {
     if (!token) {
       return [];
     }
-    console.log(calldata, '==calldata')
     txData.token = token.address;
     txData.symbol = token.symbol;
     const extraData = this.decodeToStarknet(calldata[5]);
