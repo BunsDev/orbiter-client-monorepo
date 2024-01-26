@@ -282,12 +282,12 @@ export class TransactionService {
     }
 
   }
-  @Interval(1000 * 10)
+  @Interval(1000 * 60 * 5)
   async matchRefundRecord() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
       order: [['id', 'desc']],
-      attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp'],
+      attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
         opStatus: {
