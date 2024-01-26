@@ -312,26 +312,24 @@ export class TransactionService {
         amount: transfer.amount,
         symbol: transfer.symbol,
         timestamp: {
-          [Op.lte]: dayjs(transfer.timestamp).add(10, 'minute').toISOString(),
           [Op.gte]: dayjs(transfer.timestamp).subtract(1, 'month').toISOString(),
+          [Op.lte]: dayjs(transfer.timestamp).add(10, 'minute').toISOString(),
         }
       }
       const sourceTx = await this.transfersModel.findOne({
+        raw:true,
         attributes: ['id', 'hash', 'amount', 'chainId', 'symbol', 'opStatus', 'timestamp'],
         where
       })
-      console.log(`matchRefundRecord ${transfer.hash} - `, where)
+      console.log(`matchRefundRecord ${transfer.hash} - `, where, sourceTx)
       if (sourceTx) {
         const refundRecord = await this.refundRecordModel.findOne({
           attributes: ['id'],
           where: {
             targetId: transfer.hash,
-            status: {
-              [Op.lte]: 10
-            }
           }
         });
-        if (!refundRecord) {
+        if (!refundRecord || !refundRecord.id) {
           const t = await this.refundRecordModel.sequelize.transaction();
           try {
             const createData = await this.refundRecordModel.create({
