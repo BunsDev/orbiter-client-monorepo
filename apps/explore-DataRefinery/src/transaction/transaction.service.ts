@@ -57,7 +57,7 @@ export class TransactionService {
     transfers: TransferAmountTransaction[],
   ) {
     if (transfers) {
-      this.logger.info(`batchInsertTransactionReceipt: ${transfers.map(item => item.hash).join(', ')}`);
+      // this.logger.info(`batchInsertTransactionReceipt: ${transfers.map(item => item.hash).join(', ')}`);
       for (const transfer of transfers) {
         // this.logger.debug(`handleScanBlockResult ${transfer.blockNumber}-${transfer.hash}, receipt:${JSON.stringify(transfer.receipt)}`)
         // this.logger.debug(
@@ -286,6 +286,7 @@ export class TransactionService {
   async matchRefundRecord() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
+      order: [['id', 'desc']],
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp'],
       where: {
         version: ['1-1', '2-1'],
@@ -293,10 +294,7 @@ export class TransactionService {
           [Op.not]: 99
         },
         status: 2,
-        sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328'],
-        timestamp: {
-          [Op.lte]: dayjs().subtract(60, 'minute')
-        }
+        sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328']
       },
       limit: 500
     });
