@@ -6,18 +6,20 @@ import { CustomError } from '../../../shared/errors/custom.error'
 import { ChainsService } from '../chains/chains.service';
 import BigNumber from 'bignumber.js';
 import { padStart, shuffle } from 'lodash';
+import { ENVConfigService } from '@orbiter-finance/config';
 
 @Controller('routers')
 export class RoutersController {
-    constructor(private readonly routerService: RoutersService, private readonly chainService: ChainsService) {
+    constructor(private readonly routerService: RoutersService, private readonly chainService: ChainsService, private readonly envConfigService: ENVConfigService) {
     }
 
     @Get()
     @success('success', 200)
     async getRouters(@Query('dealerId') dealerId: string, @Headers('X-Channel-Identifier') channelHeader: string) {
         let routers = [];
+        const whiteMakers = this.envConfigService.get("EXTERNAL_WHITE_MAKERS", []);
         console.log(`getRouters - channelHeader: ${channelHeader}`)
-        const v1Routers = shuffle(await this.routerService.getV1Routers());
+        const v1Routers = shuffle(await this.routerService.getV1Routers(whiteMakers));
         if (dealerId) {
             try {
                 const dealerConfigs = await this.routerService.getV3Routers(dealerId.toLocaleLowerCase()) || [];
@@ -34,10 +36,22 @@ export class RoutersController {
         }
         return routers.length <= 0 ? v1Routers : routers;
     }
+    @Get("/fe")
+    @success('success', 200)
+    async getCrossChainRoutersByOrbiterFe(@Headers('X-Channel-Identifier') channelHeader: string) {
+        console.log(`getCrossChainRoutersByOrbiterFe - channelHeader: ${channelHeader}`)
+        const whiteMakers = this.envConfigService.get("FE_WHITE_MAKERS", []);
+        const configs = await this.routerService.getV1Routers(whiteMakers);
+        return configs.filter(config => {
+            const lines = config.line.split('-')[1].split('/');
+            return lines[0] == lines[1];
+        });
+    }
+
     @Get("/cross-chain")
     @success('success', 200)
     async getCrossChainRouters(@Headers('X-Channel-Identifier') channelHeader: string) {
-        console.log(`getRouters - channelHeader: ${channelHeader}`)
+        console.log(`getCrossChainRouters - channelHeader: ${channelHeader}`)
         const configs = await this.routerService.getV1Routers();
         return configs.filter(config => {
             const lines = config.line.split('-')[1].split('/');
@@ -65,7 +79,7 @@ export class RoutersController {
     @Get("/simulation/receiveAmount")
     @success('success', 200)
     async simulationRule(@Query('line') line: string, @Query('value') value: string, @Query('nonce') nonce: string, @Query('dealer') dealer: string) {
-        if(!nonce) {
+        if (!nonce) {
             nonce = '1000';
         }
         if (dealer) {
@@ -79,8 +93,8 @@ export class RoutersController {
         const chains = await this.chainService.getChains();
         const sourceChain = chains.find(row => row.chainId == route.srcChain);
         const targetChain = chains.find(row => row.chainId == route.tgtChain);
-        const sourceToken = sourceChain.tokens.find(t => equals(t.address,route.srcToken));
-        const targetToken = targetChain.tokens.find(t => equals(t.address,route.tgtToken));
+        const sourceToken = sourceChain.tokens.find(t => equals(t.address, route.srcToken));
+        const targetToken = targetChain.tokens.find(t => equals(t.address, route.tgtToken));
         if (!sourceToken) {
             throw new Error(`${route.srcChain} sourceToken ${route.srcToken} not found`);
         }
@@ -91,7 +105,7 @@ export class RoutersController {
         if (+toChainId != +targetChain.internalId) {
             throw new Error('vc security code error');
         }
-       
+
         const result = v1MakerUtils.getAmountToSend(
             +sourceChain.internalId,
             sourceToken.decimals,

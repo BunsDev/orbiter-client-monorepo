@@ -1,6 +1,5 @@
 import { IChainConfig } from '@orbiter-finance/config';
 import { Injectable } from '@nestjs/common';
-import chains from '../../../assets/chains.json'
 import { ChainConfigService } from '@orbiter-finance/config';
 @Injectable()
 export class ChainsService {
