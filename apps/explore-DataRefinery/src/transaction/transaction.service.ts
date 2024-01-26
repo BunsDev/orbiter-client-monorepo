@@ -107,6 +107,7 @@ export class TransactionService {
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Claim)) {
               versionStr = '3-0';
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Cross)) {
+              upsertData.crossChainParams = { to: calldata.to ? calldata.to.toLowerCase(): transfer.sender }
               versionStr = '3-3';
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Transfer)) {
               upsertData.crossChainParams = { to: calldata.to ? calldata.to.toLowerCase(): ''}
