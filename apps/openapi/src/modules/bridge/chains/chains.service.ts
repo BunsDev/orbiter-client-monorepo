@@ -1,15 +1,25 @@
+import { IChainConfig } from '@orbiter-finance/config';
 import { Injectable } from '@nestjs/common';
 import chains from '../../../assets/chains.json'
 import { ChainConfigService } from '@orbiter-finance/config';
-import { ChainConfig } from '../bridge.interface'
 @Injectable()
 export class ChainsService {
     constructor(private chainConsulService: ChainConfigService) {
     }
-    async getChains(): Promise<ChainConfig[]> {
+    
+    async getChains(): Promise<IChainConfig[]> {
         const chainConfigs = await this.chainConsulService.getAllChains();
         const result: any[] = [];
         for (const config of chainConfigs) {
+            let contracts = [];
+            if (config.contracts) {
+                contracts = config.contracts.map(c=> {
+                    return {
+                        name: c.name,
+                        address: c.address
+                    }
+                })
+            }
             result.push({
                 chainId: String(config.chainId),
                 networkId: String(config.networkId),
@@ -18,6 +28,7 @@ export class ChainsService {
                 contract: config.contract,
                 nativeCurrency: config.nativeCurrency,
                 tokens: [config.nativeCurrency, ...(config?.tokens || [])],
+                contracts
             })
         }
         return result as any;

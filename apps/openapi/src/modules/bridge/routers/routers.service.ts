@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RoutersConfig } from '../bridge.interface';
-import { ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
+import { ChainConfigService, ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
 import { ChainsService } from '../chains/chains.service';
 import { padStart, uniq } from 'lodash';
 
@@ -10,7 +10,8 @@ export class RoutersService {
     constructor(
         private readonly rulesService: MakerV1RuleService,
         private readonly chainService: ChainsService,
-        private envConfigService: ENVConfigService,
+        private readonly envConfigService: ENVConfigService,
+        private readonly chainConfigService: ChainConfigService
     ) {
         setInterval(() => {
             for (const dealerId in this.dealerRules) {
@@ -26,7 +27,7 @@ export class RoutersService {
     async getV1Routers(): Promise<RoutersConfig[]> {
         // Retrieve information about available chains
         const WHITE_MAKERS = this.envConfigService.get("WHITE_MAKERS", []);
-        const chains = await this.chainService.getChains();
+        const chains = await this.chainConfigService.getAllChains();
         const v1RouterConfigs: RoutersConfig[] = [];
 
         // Retrieve rules from Maker V1 service
@@ -78,32 +79,26 @@ export class RoutersService {
                     spentTime: 60,
                 };
                 if (sourceToken.symbol != targetToken.symbol) {
-                    for (const addr in sourceChain.contract) {
-                        if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
-                            routerConfig.endpointContract = addr;
-                            break;
-                        }
+                    if (sourceChain && sourceChain.contracts) {
+                        const contract = sourceChain.contracts.find(c => c.name === 'OrbiterRouterV3');
+                        routerConfig.endpointContract = contract?.address;
                     }
-                    if (!routerConfig.endpointContract) {
+                    if (!routerConfig.endpointContract)
                         routerConfig.state = 'disabled';
-                    }
                 } else if (routerConfig.srcChain == 'SN_MAIN') {
-                    for (const addr in sourceChain.contract) {
-                        if (sourceChain.contract[addr] === 'OBSource') {
-                            routerConfig.endpointContract = addr;
-                            break;
-                        }
+                    if (sourceChain && sourceChain.contracts) {
+                        const contract = sourceChain.contracts.find(c => c.name === 'StarknetOrbiterRouter');
+                        routerConfig.endpointContract = contract?.address;
                     }
+
                     if (!routerConfig.endpointContract) {
                         routerConfig.state = 'disabled';
                     }
                 }
                 else if (routerConfig.tgtChain == 'SN_MAIN') {
-                    for (const addr in sourceChain.contract) {
-                        if (sourceChain.contract[addr] === 'OrbiterRouterV3') {
-                            routerConfig.endpointContract = addr;
-                            break;
-                        }
+                    if (sourceChain && sourceChain.contracts) {
+                        const contract = sourceChain.contracts.find(c => c.name === 'OrbiterRouterV3');
+                        routerConfig.endpointContract = contract?.address;
                     }
                     if (!routerConfig.endpointContract) {
                         routerConfig.state = 'disabled';
@@ -122,14 +117,14 @@ export class RoutersService {
             }
 
         }
-        if (notWhiteMakers && notWhiteMakers.length>0) {
+        if (notWhiteMakers && notWhiteMakers.length > 0) {
             console.log(`v1Rule not white maker ${JSON.stringify(uniq(notWhiteMakers))}`);
         }
         return v1RouterConfigs;
     }
 
     async getV3Routers(dealer: string) {
-        if (this.dealerRules[dealer] && this.dealerRules[dealer].length>0) {
+        if (this.dealerRules[dealer] && this.dealerRules[dealer].length > 0) {
             return this.dealerRules[dealer];
         }
         this.dealerRules[dealer] = [];
@@ -202,7 +197,7 @@ export class RoutersService {
             }
 
         }
-        if (notWhiteMakers && notWhiteMakers.length>0) {
+        if (notWhiteMakers && notWhiteMakers.length > 0) {
             console.log(`v3Rule not white maker ${JSON.stringify(uniq(notWhiteMakers))}`);
         }
         this.dealerRules[dealerAddress] = v3RouterConfigs;
