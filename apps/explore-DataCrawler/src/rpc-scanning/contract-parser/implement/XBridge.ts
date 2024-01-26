@@ -6,6 +6,7 @@ import { CrossChainParams, TransferAmountTransactionStatus } from 'apps/explore-
 import BigNumber from "bignumber.js";
 import OrbiterRouterV3 from "./OrbiterRouterV3";
 import { decodeOrbiterCrossChainParams } from "apps/explore-DataCrawler/src/utils";
+import { equals } from "@orbiter-finance/utils";
 
 export default class XBridge extends EVMPraser {
   get abi() {
@@ -13,18 +14,22 @@ export default class XBridge extends EVMPraser {
   }
   async bridgeToV2(contractAddress: string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
     const txData = await this.buildTransferBaseData(transaction, receipt, parsedData);
-    const orbiterRouterContractAddress = '0xc741900276cd598060b0fe6594fbe977392928f4';
+    const calldata = parsedData.args[0];
+    let token;
     if (transaction.value > 0) {
+      token = this.chainInfo.nativeCurrency;
       txData.value = transaction.value.toString();
-      txData.amount = new BigNumber(txData.value)
-        .div(Math.pow(10, this.chainInfo.nativeCurrency.decimals))
-        .toString();
-      txData.symbol = this.chainInfo.nativeCurrency.symbol;
-      txData.token = this.chainInfo.nativeCurrency.address;
     } else {
-      // token
+      token = await this.chainInfo.tokens.find(t => equals(t.address, calldata[2]));
+      txData.value = String(calldata[4]);
     }
-    const extraData = this.decodeToStarknet(parsedData.args[0][5]);
+    if (!token) {
+      return [];
+    }
+    console.log(calldata, '==calldata')
+    txData.token = token.address;
+    txData.symbol = token.symbol;
+    const extraData = this.decodeToStarknet(calldata[5]);
     try {
       const crossChainParams: CrossChainParams = decodeOrbiterCrossChainParams(extraData[1]);
       txData.crossChainParams = crossChainParams;
@@ -35,13 +40,29 @@ export default class XBridge extends EVMPraser {
     txData.selector = parsedData['selector'];
     if (receipt) {
       const orbiterRouter = new OrbiterRouterV3(this.chainInfo);
-      const events = orbiterRouter.findOrbiterRouterTransferEvent(receipt.logs as any, orbiterRouterContractAddress, extraData[0], txData.value);
-      if (events && events.length > 0 && receipt.status) {
-        txData.status = TransferAmountTransactionStatus.confirmed;
+      if (token.isNative) {
+        const contract = this.chainInfo.contracts.find(c => c.name === 'OrbiterRouterV3');
+        if (!contract) {
+          return [];
+        }
+        const events = orbiterRouter.findOrbiterRouterTransferEvent(receipt.logs as any, contract.address, extraData[0], txData.value);
+        if (events && events.length > 0 && receipt.status) {
+          txData.status = TransferAmountTransactionStatus.confirmed;
+        } else {
+          txData.status = TransferAmountTransactionStatus.failed;
+        }
+      } else {
+        const logEvent = this.findERC20TransferEvent(receipt.logs as any, txData.token, txData.receiver, txData.value);
+        if (logEvent && receipt.status) {
+          txData.status = TransferAmountTransactionStatus.confirmed;
+          txData.value = String(logEvent.args[2]);
+        } else {
+          txData.status = TransferAmountTransactionStatus.failed;
+        }
       }
-      if (!events || events.length <= 0) {
-        txData.status = TransferAmountTransactionStatus.failed;
-      }
+      txData.amount = new BigNumber(txData.value)
+        .div(Math.pow(10, token.decimals))
+        .toString();
     }
     return [txData];
   }
