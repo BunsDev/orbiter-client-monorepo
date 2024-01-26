@@ -107,10 +107,10 @@ export class TransactionService {
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Claim)) {
               versionStr = '3-0';
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Cross)) {
-              upsertData.crossChainParams = { t: calldata.to ? calldata.to.toLowerCase(): transfer.sender }
+              upsertData.crossChainParams = { targetRecipient: calldata.to ? calldata.to.toLowerCase(): transfer.sender }
               versionStr = '3-3';
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Transfer)) {
-              upsertData.crossChainParams = { t: calldata.to ? calldata.to.toLowerCase(): ''}
+              upsertData.crossChainParams = { targetRecipient: calldata.to ? calldata.to.toLowerCase(): ''}
               versionStr = '3-5';
             }
           } else if (await this.makerService.isInscriptionMakers(transfer.sender)) {
