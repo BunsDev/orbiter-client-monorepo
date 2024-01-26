@@ -42,6 +42,7 @@ export class TransactionService {
 
     this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
     this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
+    this.matchRefundRecord()
   }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],
@@ -299,6 +300,7 @@ export class TransactionService {
       },
       limit: 500
     });
+    console.log(`matchRefundRecord:${transfers.length}`)
     for (const transfer of transfers) {
       const version = transfer.version === '1-1' ? '1-0' : '2-0';
       const sourceTx = await this.transfersModel.findOne({
