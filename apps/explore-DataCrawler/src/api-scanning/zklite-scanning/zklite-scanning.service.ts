@@ -89,6 +89,9 @@ export class ZKLiteApiScanningService extends ApiScanningService {
     response: any;
     error?: any;
   }> {
+    this.logger.info(
+      `${this.chainConfig.name} address:${address} , params:${JSON.stringify(params)}`,
+    );
     const chainConfig = this.chainConfig;
     const transfers: TransferAmountTransaction[] = [];
     // const params = {

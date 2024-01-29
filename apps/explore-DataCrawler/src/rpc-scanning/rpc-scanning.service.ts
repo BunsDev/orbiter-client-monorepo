@@ -33,7 +33,8 @@ export class RpcScanningService implements RpcScanningInterface {
     return Number(this.chainConfig.targetConfirmation || this.ctx.envConfigService.get('TargetConfirmation') || 5);
   }
   get batchLimit(): number {
-    return Number(this.chainConfig['batchLimit'] || this.ctx.envConfigService.get('DefaultBatchLimit') || 100);
+    const defaultLimit = 100;
+    return this.chainConfig ? Number(this.chainConfig['batchLimit'] || this.ctx.envConfigService.get('DefaultBatchLimit') || defaultLimit) : defaultLimit;
   }
 
   get chainConfig(): IChainConfig {

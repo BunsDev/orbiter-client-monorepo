@@ -362,6 +362,7 @@ export class TransactionService {
             }
             t && await t.commit();
           } catch (error) {
+            this.logger.error(`matchRefundRecord error:${transfer.hash} msg:${error.message}`, error);
             t && await t.rollback();
           }
         };
