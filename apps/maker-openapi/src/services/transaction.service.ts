@@ -309,7 +309,7 @@ export class TransactionService {
                 }
             });
             if (arbitrationRecordCount) {
-                routerLogger.info('Challenge record exists', sourceTxHash);
+                aggregationLog(`Challenge record exists: ${sourceTxHash}`);
                 continue;
             }
             const transfer = await this.transfersModel.findOne(<any>{
