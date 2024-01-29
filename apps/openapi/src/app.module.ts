@@ -7,7 +7,7 @@ import { join } from 'lodash';
 import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { DealerModule } from './modules/dealer/dealer.module';
-import { ConsulModule } from '@client-monorepo/nestjs-consul';
+import { ConsulModule } from '@orbiter-finance/nestjs-consul';
 
 @Module({
   imports: [

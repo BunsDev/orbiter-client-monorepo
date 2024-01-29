@@ -9,7 +9,7 @@ import { AlertModule } from '@orbiter-finance/alert';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BridgeTransaction, Transfers, DeployRecord, UserBalance, RefundRecord } from "@orbiter-finance/seq-models";
-import { ConsulModule } from '@client-monorepo/nestjs-consul';
+import { ConsulModule } from '@orbiter-finance/nestjs-consul';
 
 @Module({
   imports: [

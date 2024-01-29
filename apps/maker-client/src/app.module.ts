@@ -10,7 +10,7 @@ import { isEmpty } from '@orbiter-finance/utils';
 import { AlertModule } from '@orbiter-finance/alert'
 import { TcpModule } from "@orbiter-finance/tcp";
 import { MetricModule } from './metric/metric.module'
-import { ConsulModule } from '@client-monorepo/nestjs-consul';
+import { ConsulModule } from '@orbiter-finance/nestjs-consul';
 @Module({
   imports: [
     ConfigModule.forRoot({

@@ -75,19 +75,24 @@ export class ConsulModule {
 	private static createAsyncOptionsProvider<T>(
 		options: IConsulAsyncConfig<T>,
 	): Provider {
-		const that = this;
 		return {
 			provide: ConsulService,
 			useFactory: async (...args: any[]) => {
-				const config = await options.useFactory(...args);
-				this.formatConfig(config);
-				const consulService = new ConsulService<T>(config, new HttpService());
-				if (config.keys) {
-					await consulService.update();
+				if (options.useFactory) {
+					const config = await options.useFactory(...args);
+					this.formatConfig(config);
+					const consulService = new ConsulService<T>(config, new HttpService());
+					if (config.keys) {
+						await consulService.update();
+					}
+					return consulService;
+				} else {
+					throw new Error('useFactory not found');
 				}
-				return consulService;
+
 			},
 			inject: options.inject || [],
 		};
+
 	}
 }

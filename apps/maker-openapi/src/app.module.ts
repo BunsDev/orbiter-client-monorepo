@@ -17,7 +17,7 @@ import { AppService } from "./services/app.service";
 import { GlobalMiddleware } from "./middleware/globalMiddleware";
 import { HttpExceptionFilter } from "./middleware/httpExceptionFilter";
 import { APP_FILTER } from "@nestjs/core";
-import { ConsulModule } from '@client-monorepo/nestjs-consul';
+import { ConsulModule } from '@orbiter-finance/nestjs-consul';
 
 @Module({
     imports: [

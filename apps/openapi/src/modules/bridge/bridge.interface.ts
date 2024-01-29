@@ -36,23 +36,3 @@ export interface Explorer {
 	url: string;
 	standard: string;
 }
-
-export interface ChainConfig {
-	name: string;
-	chain: string;
-	icon: string;
-	rpc: string[];
-	features: Feature[];
-	faucets: any[];
-	nativeCurrency: NativeCurrency;
-	infoURL: string;
-	shortName: string;
-	chainId: string;
-	networkId: string;
-	slip44: number;
-	ens: En;
-	explorers: Explorer[];
-	internalId: string;
-	contract: any
-	tokens:any[]
-}
