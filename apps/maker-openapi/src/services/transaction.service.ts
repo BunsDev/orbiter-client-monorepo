@@ -112,6 +112,24 @@ export class TransactionService {
         return hashList;
     }
 
+    async getChallenger(sourceTxHash: string): Promise<string> {
+        const queryStr = `
+                {
+                  createChallenges(
+                    where: {
+                        sourceTxHash: "${sourceTxHash.toLowerCase()}",
+                        challengeManager_: {
+                            challengeStatuses: CREATE
+                        }
+                    }) {
+                    challenger
+                  }
+                }
+          `;
+        const result = await this.querySubgraph(queryStr);
+        return result?.data?.createChallenges?.[0]?.challenger;
+    }
+
     async getAllRules(): Promise<{ id, chain0, chain1, chain0ResponseTime, chain1ResponseTime }[]> {
         let rules = await keyv.get('Rules');
         if (!rules) {
@@ -321,6 +339,77 @@ export class TransactionService {
             break;
         }
         return { list: dataList, startTime, endTime };
+    }
+
+    async getPendingArbitrationBySourceTxHash(sourceId: string): Promise<{ list: ArbitrationTransaction[] }> {
+        const isMainNetwork = +(await this.envConfigService.getAsync('MAIN_NETWORK')) === 1;
+        const bridgeTransactions = await this.bridgeTransactionModel.findAll({
+            attributes: ['sourceId', 'sourceChain', 'sourceAmount', 'sourceMaker',
+                'sourceAddress', 'sourceTime', 'status', 'ruleId', 'sourceSymbol', 'sourceToken',
+                'targetChain', 'targetToken', 'ebcAddress'],
+            where: {
+                status: 0,
+                sourceId: sourceId.toLowerCase(),
+                sourceChain: isMainNetwork ? ["1", "324"] : ["11155111", "300"],
+                ruleId: {
+                    [Op.not]: null
+                }
+            }
+        });
+        const dataList: ArbitrationTransaction[] = [];
+        const hashList: string[] = await this.getCreateChallengesSourceTxHashList();
+        for (const bridgeTx of bridgeTransactions) {
+            const sourceTxHash = bridgeTx.sourceId.toLowerCase();
+            if (hashList.find(item => item.toLowerCase() === sourceTxHash.toLowerCase())) {
+                continue;
+            }
+            const sourceTxTime = Math.floor(new Date(bridgeTx.sourceTime).valueOf() / 1000);
+            const mainToken = this.chainConfigService.getTokenBySymbol(String(await this.envConfigService.getAsync('MAIN_NETWORK') || 1), bridgeTx.sourceSymbol);
+            if (!mainToken?.address) {
+                routerLogger.info('MainToken not found', mainToken, await this.envConfigService.getAsync('MAIN_NETWORK') || 1, bridgeTx.sourceId, bridgeTx.sourceSymbol);
+                continue;
+            }
+            const sourceToken = this.chainConfigService.getTokenBySymbol(bridgeTx.sourceChain, bridgeTx.sourceSymbol);
+            if (!sourceToken?.decimals) {
+                routerLogger.info('SourceToken not found', sourceTxHash);
+                continue;
+            }
+            if (!bridgeTx?.targetToken) {
+                routerLogger.info('TargetToken not found', sourceTxHash);
+                continue;
+            }
+            const challenger = await this.getChallenger(sourceTxHash);
+            if (challenger) {
+                routerLogger.info(`The tx is being challenged ${sourceTxHash}`);
+                continue;
+            }
+            const transfer = await this.transfersModel.findOne(<any>{
+                where: {
+                    hash: sourceTxHash
+                }
+            });
+            if (!transfer) {
+                routerLogger.info('Transfer not found', sourceTxHash);
+                continue;
+            }
+            const arbitrationTransaction: ArbitrationTransaction = {
+                sourceChainId: Number(bridgeTx.sourceChain),
+                sourceTxHash,
+                sourceMaker: bridgeTx.sourceMaker,
+                sourceAddress: bridgeTx.sourceAddress,
+                sourceTxBlockNum: Number(transfer.blockNumber),
+                sourceTxTime,
+                sourceTxIndex: Number(transfer.transactionIndex),
+                ebcAddress: bridgeTx.ebcAddress,
+                ruleId: bridgeTx.ruleId,
+                freezeAmount1: new BigNumber(bridgeTx.sourceAmount).times(10 ** sourceToken.decimals).toFixed(0),
+                freezeToken: mainToken.address,
+                minChallengeDepositAmount: String(await this.envConfigService.getAsync("MinChallengeDepositAmount") ?? 0.005 * 10 ** sourceToken.decimals)
+            };
+            dataList.push(arbitrationTransaction);
+            break;
+        }
+        return { list: dataList };
     }
 
     async getSourceIdStatus(sourceId: string): Promise<number> {
