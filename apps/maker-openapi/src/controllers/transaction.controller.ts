@@ -8,7 +8,7 @@ export class TransactionController {
     constructor(private readonly transactionService: TransactionService) {
     }
 
-    @Get("/pendingArbitrationByHash")
+    @Get("/pendingArbitrationByHash/:hash")
     async getPendingArbitrationByHash(@Request() req, @Param("hash") hash: string) {
         // user arbitration-client need
         if (hash) {

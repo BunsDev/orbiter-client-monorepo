@@ -126,7 +126,7 @@ export class TransactionService {
                   }
                 }
           `;
-        const result = await this.querySubgraph(queryStr);
+        const result: any = await this.querySubgraph(queryStr);
         return result?.data?.createChallenges?.[0]?.challenger;
     }
 
