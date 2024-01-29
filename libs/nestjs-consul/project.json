@@ -1,22 +1,22 @@
 {
-  "name": "orbiter-nestjs-consul",
+  "name": "nestjs-consul",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/orbiter-nestjs-consul/src",
+  "sourceRoot": "libs/nestjs-consul/src",
   "projectType": "library",
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/libs/orbiter-nestjs-consul",
-        "tsConfig": "libs/orbiter-nestjs-consul/tsconfig.lib.json",
-        "packageJson": "libs/orbiter-nestjs-consul/package.json",
-        "main": "libs/orbiter-nestjs-consul/src/index.ts",
-        "assets": ["libs/orbiter-nestjs-consul/*.md"]
+        "outputPath": "dist/libs/nestjs-consul",
+        "tsConfig": "libs/nestjs-consul/tsconfig.lib.json",
+        "packageJson": "libs/nestjs-consul/package.json",
+        "main": "libs/nestjs-consul/src/index.ts",
+        "assets": ["libs/nestjs-consul/*.md"]
       }
     },
     "publish": {
-      "command": "node tools/scripts/publish.mjs orbiter-nestjs-consul {args.ver} {args.tag}",
+      "command": "node tools/scripts/publish.mjs nestjs-consul {args.ver} {args.tag}",
       "dependsOn": ["build"]
     },
     "lint": {
@@ -24,8 +24,8 @@
       "outputs": ["{options.outputFile}"],
       "options": {
         "lintFilePatterns": [
-          "libs/orbiter-nestjs-consul/**/*.ts",
-          "libs/orbiter-nestjs-consul/package.json"
+          "libs/nestjs-consul/**/*.ts",
+          "libs/nestjs-consul/package.json"
         ]
       }
     },
@@ -33,7 +33,7 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "libs/orbiter-nestjs-consul/jest.config.ts",
+        "jestConfig": "libs/nestjs-consul/jest.config.ts",
         "passWithNoTests": true
       },
       "configurations": {

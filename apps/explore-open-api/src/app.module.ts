@@ -10,7 +10,7 @@ import { isEmpty } from "@orbiter-finance/utils";
 import { BridgeTransaction, Transfers } from "@orbiter-finance/seq-models";
 import { MakerTransaction, NetState, Transaction, UserHistory } from "@orbiter-finance/v1-seq-models";
 import { ScheduleModule } from "@nestjs/schedule";
-import { ConsulModule } from '@client-monorepo/nestjs-consul';
+import { ConsulModule } from '@orbiter-finance/nestjs-consul';
 
 dayjs.extend(utc);
 
