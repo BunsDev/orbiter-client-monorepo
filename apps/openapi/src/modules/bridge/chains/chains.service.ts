@@ -26,7 +26,7 @@ export class ChainsService {
                 name: config.name,
                 contract: config.contract,
                 nativeCurrency: config.nativeCurrency,
-                tokens: [config.nativeCurrency, ...(config?.tokens || [])],
+                tokens: config?.tokens || [],
                 contracts
             })
         }
