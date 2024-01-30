@@ -7,6 +7,16 @@ import { aggregationLog } from "../utils/logger";
 export class TransactionController {
     constructor(private readonly transactionService: TransactionService) {
     }
+
+    @Get("/pendingArbitrationByHash/:hash")
+    async getPendingArbitrationByHash(@Request() req, @Param("hash") hash: string) {
+        // user arbitration-client need
+        if (hash) {
+            return HTTPResponse.success(await this.transactionService.getPendingArbitrationBySourceTxHash(hash));
+        }
+        return HTTPResponse.success(await this.transactionService.getPendingArbitration());
+    }
+
     @Get("/pendingArbitration")
     async getPendingArbitration(@Request() req) {
         // user arbitration-client need

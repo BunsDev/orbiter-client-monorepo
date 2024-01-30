@@ -16,9 +16,6 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@client-monorepo/nestjs-consul": [
-        "libs/nestjs-consul/src/index.ts"
-      ],
       "@orbiter-finance/abi": ["libs/abi/src/index.ts"],
       "@orbiter-finance/alert": ["libs/alert/src/index.ts"],
       "@orbiter-finance/arbitration-module": [
@@ -28,10 +25,10 @@
         "libs/blockchain-account/src/index.ts"
       ],
       "@orbiter-finance/config": ["libs/config/src/index.ts"],
-      "@orbiter-finance/consul": ["libs/consul/src/index.ts"],
       "@orbiter-finance/maker-api-seq-models": [
         "libs/maker-api-seq-models/src/index.ts"
       ],
+      "@orbiter-finance/nestjs-consul": ["libs/nestjs-consul/src/index.ts"],
       "@orbiter-finance/rabbit-mq": ["libs/rabbit-mq/src/index.ts"],
       "@orbiter-finance/request": ["libs/request/src/index.ts"],
       "@orbiter-finance/seq-models": ["libs/seq-models/src/index.ts"],

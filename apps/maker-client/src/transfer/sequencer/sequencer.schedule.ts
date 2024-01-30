@@ -668,40 +668,18 @@ export class SequencerScheduleService {
     }
   }
 
-  async consumptionSendingQueue(bridgeTx: BridgeTransactionModel | Array<BridgeTransactionModel>, queueKey: string) {
+  async consumptionSendingQueue(bridgeTx: Array<BridgeTransactionModel>, queueKey: string) {
     let result;
     try {
-      if (Array.isArray(bridgeTx)) {
-        if (bridgeTx.length > 1) {
           if (bridgeTx[0].version === '3-0') {
-            result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey)
+            result = bridgeTx.length>1 ? await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
           } else if (bridgeTx[0].version === '3-3') {
-            result = await this.paidManyCrossInscriptionTransaction(bridgeTx, queueKey)
-          } else {
-            result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
+            result = bridgeTx.length>1 ? await this.paidManyCrossInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleCrossInscriptionTransaction(bridgeTx[0], queueKey)
+          } else if(bridgeTx[0].version === '1-0' || bridgeTx[0].version === '2-0') {
+            result = bridgeTx.length>1 ? await this.paidManyBridgeTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeTransaction(bridgeTx[0], queueKey)
           }
-        } else {
-          if (bridgeTx[0].version === '3-0') {
-            result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
-          } else if (bridgeTx[0].version === '3-3') {
-            result = await this.paidSingleCrossInscriptionTransaction(bridgeTx[0], queueKey)
-            // result = await this.paidSingleBridgeTransaction(bridgeTx)
-          } else {
-            result = await this.paidSingleBridgeTransaction(bridgeTx[0])
-          }
-        }
-      } else {
-        if (bridgeTx.version === '3-0') {
-          result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx, queueKey)
-        } else if (bridgeTx.version === '3-3') {
-          result = await this.paidSingleCrossInscriptionTransaction(bridgeTx, queueKey)
-          // result = await this.paidSingleBridgeTransaction(bridgeTx)
-        } else {
-          result = await this.paidSingleBridgeTransaction(bridgeTx)
-        }
-      }
     } catch (error) {
-      const sourceIds = Array.isArray(bridgeTx) ? bridgeTx.map(row => row.sourceId).join(',') : bridgeTx.sourceId;
+      const sourceIds  = bridgeTx.map(row => row.sourceId).join(',');
       this.alertService.sendMessage(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, "TG")
       this.logger.error(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, error);
     }

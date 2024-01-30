@@ -12,7 +12,7 @@ import { TransactionModule } from './transaction/transaction.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { MetricModule } from './metric/metric.module';
 import { AppController } from './app.controller'
-import { ConsulModule } from '@client-monorepo/nestjs-consul'
+import { ConsulModule } from '@orbiter-finance/nestjs-consul'
 dayjs.extend(utc);
 
 @Module({

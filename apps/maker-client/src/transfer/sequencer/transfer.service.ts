@@ -161,7 +161,7 @@ export class TransferService {
       wallet
         .waitForTransactionConfirmation(transferResult.hash)
         .catch((error) => {
-          this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transfer.targetChain} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
+          this.alertService.sendMessage(`execSingleTransfer success waitForTransaction error ${transfer.targetChain} - ${transferResult.hash} ${error.message}`, [AlertMessageChannel.TG]);
           this.logger.error(
             `${transferResult.hash} waitForTransactionConfirmation error ${transfer.targetChain} ${error.message}`,
             error
@@ -278,7 +278,7 @@ export class TransferService {
       wallet
         .waitForTransactionConfirmation(transferResult.hash)
         .catch((error) => {
-          this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${targetChainId} - ${transferResult.hash}`, [AlertMessageChannel.TG]);
+          this.alertService.sendMessage(`execBatchTransfer success waitForTransaction error ${targetChainId} - ${transferResult.hash} ${error.message}`, [AlertMessageChannel.TG]);
           this.logger.error(
             `${transferResult.hash} waitForTransactionConfirmation error ${targetChainId}`,
             error

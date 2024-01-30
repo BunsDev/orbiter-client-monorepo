@@ -20,7 +20,7 @@ export class ApiScanningService {
     protected readonly chainId: string,
     protected readonly ctx: Context,
   ) {
-    this.logger = logger.createLoggerByName(`API-${this.chainId}`);
+    this.logger = logger.createLoggerByName(`APIScan-${this.chainId}`);
   }
 
   // Get chain configuration

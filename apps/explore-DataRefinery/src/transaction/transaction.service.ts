@@ -42,6 +42,7 @@ export class TransactionService {
 
     this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
     this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
+    this.matchRefundRecord()
   }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],
@@ -56,7 +57,7 @@ export class TransactionService {
     transfers: TransferAmountTransaction[],
   ) {
     if (transfers) {
-      this.logger.info(`batchInsertTransactionReceipt: ${transfers.map(item => item.hash).join(', ')}`);
+      // this.logger.info(`batchInsertTransactionReceipt: ${transfers.map(item => item.hash).join(', ')}`);
       for (const transfer of transfers) {
         // this.logger.debug(`handleScanBlockResult ${transfer.blockNumber}-${transfer.hash}, receipt:${JSON.stringify(transfer.receipt)}`)
         // this.logger.debug(
@@ -292,55 +293,54 @@ export class TransactionService {
     }
 
   }
-  @Interval(1000 * 60 * 10)
+  @Interval(1000 * 60 * 5)
   async matchRefundRecord() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
-      attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp'],
+      order: [['id', 'desc']],
+      attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
         opStatus: {
           [Op.not]: 99
         },
         status: 2,
-        sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328'],
-        timestamp: {
-          [Op.lte]: dayjs().subtract(60, 'minute')
-        }
+        sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328']
       },
-      limit: 500
+      limit: 50
     });
+    console.log(`matchRefundRecord:${transfers.length}`)
     for (const transfer of transfers) {
       const version = transfer.version === '1-1' ? '1-0' : '2-0';
-      const sourceTx = await this.transfersModel.findOne({
-        attributes: ['id', 'hash', 'amount', 'chainId', 'symbol', 'opStatus', 'timestamp'],
-        where: {
-          version: version,
-          status: 2,
-          opStatus: {
-            [Op.not]: 99
-          },
-          chainId: transfer.chainId,
-          sender: transfer.receiver,
-          amount: transfer.amount,
-          symbol: transfer.symbol,
-          timestamp: {
-            [Op.lte]: dayjs(transfer.timestamp).add(10, 'minute').toISOString(),
-            [Op.gte]: dayjs(transfer.timestamp).subtract(1, 'month').toISOString(),
-          }
+      const where = {
+        version: version,
+        status: 2,
+        opStatus: {
+          [Op.not]: 99
+        },
+        chainId: transfer.chainId,
+        sender: transfer.receiver,
+        amount: transfer.amount,
+        symbol: transfer.symbol,
+        timestamp: {
+          [Op.gte]: dayjs(transfer.timestamp).subtract(1, 'month').toISOString(),
+          [Op.lte]: dayjs(transfer.timestamp).add(10, 'minute').toISOString(),
         }
+      }
+      const sourceTx = await this.transfersModel.findOne({
+        raw:true,
+        attributes: ['id', 'hash', 'amount', 'chainId', 'symbol', 'opStatus', 'timestamp'],
+        where
       })
+      console.log(`matchRefundRecord ${transfer.hash} - `, where, sourceTx)
       if (sourceTx) {
         const refundRecord = await this.refundRecordModel.findOne({
           attributes: ['id'],
           where: {
             targetId: transfer.hash,
-            status: {
-              [Op.lte]: 10
-            }
           }
         });
-        if (!refundRecord) {
+        if (!refundRecord || !refundRecord.id) {
           const t = await this.refundRecordModel.sequelize.transaction();
           try {
             const createData = await this.refundRecordModel.create({
@@ -352,7 +352,8 @@ export class TransactionService {
               sourceTime: sourceTx.timestamp,
               reason: sourceTx.opStatus.toString(),
               status: TransferOpStatus.REFUND,
-              targetAmount: transfer.amount
+              targetAmount: transfer.amount,
+              createdAt: new Date(),
             }, {
               transaction: t
             })
@@ -360,7 +361,8 @@ export class TransactionService {
               throw new Error('refund record create fail')
             }
             const [rows] = await this.transfersModel.update({
-              opStatus: TransferOpStatus.REFUND
+              opStatus: TransferOpStatus.REFUND,
+              updatedAt: new Date()
             }, {
               where: {
                 id: [transfer.id, sourceTx.id],
@@ -371,6 +373,7 @@ export class TransactionService {
             }
             t && await t.commit();
           } catch (error) {
+            this.logger.error(`matchRefundRecord error:${transfer.hash} msg:${error.message}`, error);
             t && await t.rollback();
           }
         };

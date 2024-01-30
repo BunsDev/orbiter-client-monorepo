@@ -12,7 +12,7 @@ import { MessageService, ConsumerService } from '@orbiter-finance/rabbit-mq';
 import { RabbitMqModule } from '@orbiter-finance/rabbit-mq'
 import { AlertModule } from '@orbiter-finance/alert'
 import { ScheduleModule } from '@nestjs/schedule';
-import { ConsulModule } from '@client-monorepo/nestjs-consul';
+import { ConsulModule } from '@orbiter-finance/nestjs-consul';
 @Module({
   imports: [
     ConfigModule.forRoot({

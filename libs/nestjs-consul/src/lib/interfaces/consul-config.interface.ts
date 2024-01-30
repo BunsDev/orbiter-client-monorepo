@@ -3,7 +3,7 @@ import { ModuleMetadata, Type } from '@nestjs/common';
 
 export interface IConsulConfig<T = any> {
 	url?:string;
-	keys?: IConsulKeys<T>[];
+	keys: IConsulKeys<T>[];
 	updateCron?: string;
 	connection?: IConsulConnection;
 }
