@@ -180,28 +180,6 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
-        if (result && result.errno == 0) {
-          const sendTransferToMakerClientChainsV1 = this.envConfig.get("SendTransferToMakerClientChainsV1", "").split(',');
-          if (sendTransferToMakerClientChainsV1[0] == '*' || sendTransferToMakerClientChainsV1.includes(payload.chainId)) {
-            let isPush = false;
-            const sendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
-            if (sendTransferToMakerClientQueue) {
-              for (const queue in sendTransferToMakerClientQueue) {
-                const addressList = sendTransferToMakerClientQueue[queue].split(",");
-                if (addressList.includes(payload.receiver)) {
-                  this.messageService.sendTransferToMakerClient(result.data, `1_0_${queue}`)
-                  isPush = true;
-                  break;
-                }
-              }
-            }
-            if (!isPush) {
-              this.logger.info('push:', result?.data?.sourceId);
-              this.messageService.sendTransferToMakerClient(result.data)
-            }
-          }
-
-        }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
@@ -213,18 +191,6 @@ export class TransactionService {
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
-        if (result && result.errno == 0) {
-          const SendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
-          if (SendTransferToMakerClientQueue) {
-            for (const queue in SendTransferToMakerClientQueue) {
-              const addressList = SendTransferToMakerClientQueue[queue].split(",");
-              if (addressList.includes(payload.receiver)) {
-                this.messageService.sendTransferToMakerClient(result.data, `2_0_${queue}`)
-                break;
-              }
-            }
-          }
-        }
       } else if (payload.version === '2-1') {
         result = await this.transactionV2Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
@@ -256,15 +222,7 @@ export class TransactionService {
       } else {
         this.logger.error(`${payload.hash} ${payload.version} executeMatch result: No result returned`);
       }
-      // sync td
-      if (payload.version === '1-1' || payload.version === '1-0') {
-        const SyncV1TDClientChains = this.envConfig.get("SyncV1TDClientChains", "").split(',');
-        if (result && result.errno === 0 && (SyncV1TDClientChains.includes(payload.chainId) || SyncV1TDClientChains[0] == '*')) {
-          // TAG:data-synchronization
-          this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
-        }
-      }
-      if (result && result.errno == 0) {
+      if (result && result.errno == 0 && ['1-0', '2-0', '3-0'].includes(payload.version)) {
         const RECEIVER_MATCH_QUEUE = this.envConfig.get('RECEIVER_MATCH_QUEUE');
         const RECEIVER_MATCH_QUEUE_FILTER_CHAIN = this.envConfig.get('RECEIVER_MATCH_QUEUE_FILTER_CHAIN', {});
         const receiver = payload.receiver.toLocaleLowerCase();
@@ -279,7 +237,6 @@ export class TransactionService {
             }
           }
         }
-
       }
       return result;
     } catch (error) {
