@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import dayjs from 'dayjs';
 import { equals } from '@orbiter-finance/utils';
+import { Mutex } from "async-mutex";
 import {
   BridgeTransactionAttributes,
   BridgeTransaction as BridgeTransactionModel,
   Transfers as TransfersModel,
+  TransfersAttributes,
   TransferOpStatus,
   BridgeTransactionStatus,
   InscriptionOpType,
@@ -20,9 +22,10 @@ import {
   MakerV1RuleService,
   Token,
 } from '@orbiter-finance/config';
-import { Op, where, fn, literal, Transaction } from 'sequelize';
+import { Op, where, fn, literal, Transaction, Filterable, WhereOptions } from 'sequelize';
 import { Cron } from '@nestjs/schedule';
 import { InscriptionMemoryMatchingService } from './inscription-memory-matching.service';
+import { InscriptionCrossMemoryMatchingService } from './inscription-cross-memory-matching.service';
 import { Sequelize } from 'sequelize-typescript';
 import { OrbiterLogger } from '@orbiter-finance/utils';
 import { LoggerDecorator } from '@orbiter-finance/utils';
@@ -33,12 +36,14 @@ import {
   ValidSourceTxError,
   decodeV1SwapData,
   addressPadStart,
+  isEvmAddress,
 } from '../utils';
 import { MessageService } from '@orbiter-finance/rabbit-mq';
 import { parseTragetTxSecurityCode } from './bridgeTransaction.builder';
 import BigNumber from 'bignumber.js';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
+import { MakerService } from '../maker/maker.service'
 export interface handleTransferReturn {
   errno: number;
   errmsg?: string;
@@ -48,6 +53,7 @@ export interface handleTransferReturn {
 export class TransactionV3Service {
   @LoggerDecorator()
   private readonly logger: OrbiterLogger;
+  private readonly mutexMap: { [key in string]: Mutex } = {}
   constructor(
     @InjectModel(TransfersModel)
     private transfersModel: typeof TransfersModel,
@@ -59,29 +65,28 @@ export class TransactionV3Service {
     private userBalanceModel: typeof UserBalanceModel,
     protected chainConfigService: ChainConfigService,
     protected inscriptionMemoryMatchingService: InscriptionMemoryMatchingService,
+    protected inscriptionCrossMemoryMatchingService: InscriptionCrossMemoryMatchingService,
     private sequelize: Sequelize,
     protected envConfigService: ENVConfigService,
     protected makerV1RuleService: MakerV1RuleService,
     protected inscriptionBuilder: InscriptionBuilder,
     private messageService: MessageService,
+    private makerService: MakerService,
     @InjectRedis() private readonly redis: Redis,
   ) {
-    this.matchScheduleTask()
-      .then((_res) => {
-        this.matchSenderScheduleTask();
-      })
-      .catch((error) => {
-        this.logger.error(
-          `constructor TransactionV3Service matchScheduleTask error `,
-          error,
-        );
-      });
-    // this.matchALlVersion3_0().catch((error) => {
-    //   this.logger.error(
-    //     `constructor TransactionV3Service matchScheduleTask error `,
-    //     error,
-    //   );
-    // })
+    if (this.envConfigService.get('START_VERSION') && this.envConfigService.get('START_VERSION').includes('3-0')) {
+      this.matchScheduleTask()
+        .then((_res) => {
+          this.matchSenderScheduleTask();
+        })
+        .catch((error) => {
+          this.logger.error(
+            `constructor TransactionV3Service matchScheduleTask error `,
+            error,
+          );
+        });
+      this.bookKeeping()
+    }
   }
   errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
@@ -93,7 +98,7 @@ export class TransactionV3Service {
 
   @Cron('0 */1 * * * *')
   async matchScheduleTask() {
-    this.logger.info('matchScheduleTask start');
+    this.logger.info('v3 matchScheduleTask start');
     const transfers = await this.transfersModel.findAll({
       raw: true,
       order: [['id', 'desc']],
@@ -143,7 +148,7 @@ export class TransactionV3Service {
           // }
         },
       });
-      this.logger.info(`matchALlVersion3_0 transfers.length: ${transfers.length}, ${transfers[0] ? transfers[0].id: 'null'}`);
+      this.logger.info(`matchALlVersion3_0 transfers.length: ${transfers.length}, ${transfers[0] ? transfers[0].id : 'null'}`);
       for (const transfer of transfers) {
         const result = await this.handleClaimTransfer(transfer).catch((error) => {
           this.logger.error(
@@ -155,7 +160,7 @@ export class TransactionV3Service {
       if (transfers.length < limit) {
         done = true
       }
-    } while(!done)
+    } while (!done)
   }
   @Cron('*/5 * * * * *')
   async fromCacheMatch() {
@@ -249,8 +254,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleDeployTransfer fail ${
-          transfer.hash
+        `handleDeployTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -325,8 +329,7 @@ export class TransactionV3Service {
           },
         );
         return this.errorBreakResult(
-          `ValidClaimTransfer update transferId: ${
-            transfer.id
+          `ValidClaimTransfer update transferId: ${transfer.id
           } result: ${JSON.stringify(r)}`,
         );
       } else {
@@ -445,8 +448,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleMintTransfer fail ${
-          transfer.hash
+        `handleMintTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -470,8 +472,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleMintTransfer fail ${
-          transfer.hash
+        `handleMintTransfer fail ${transfer.hash
         } Incorrect from chain : ${JSON.stringify(callData)}`,
       );
     }
@@ -708,8 +709,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleDeployTransfer fail ${
-          transfer.hash
+        `handleDeployTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -729,8 +729,8 @@ export class TransactionV3Service {
         `handleDeployTransfer fail ${transfer.hash} Incorrect InscriptionOpType: ${callData.op}, must be ${InscriptionOpType.Deploy}`,
       );
     }
-    const makers = await this.envConfigService.getAsync('MAKERS');
-    if (!makers.map((e) => e.toLocaleLowerCase()).includes(transfer.receiver)) {
+    const isInscriptionMaker = await this.makerService.isInscriptionMakers(transfer.receiver)
+    if (!isInscriptionMaker) {
       await this.transfersModel.update(
         {
           opStatus: TransferOpStatus.INVALID_DEPLOY_MAKER,
@@ -742,8 +742,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleDeployTransfer fail ${
-          transfer.hash
+        `handleDeployTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -768,8 +767,7 @@ export class TransactionV3Service {
     });
     if (deployRecord) {
       return this.errorBreakResult(
-        `handleDeployTransfer fail ${
-          transfer.hash
+        `handleDeployTransfer fail ${transfer.hash
         } already deploy : ${JSON.stringify(callData)}`,
       );
     }
@@ -798,22 +796,22 @@ export class TransactionV3Service {
   }
 
   public async incUserBalance(
-    params: { address: string; chainId: string; protocol: string; tick: string; value: string, createdAt?: string, updatedAt?: string},
+    params: { address: string; chainId: string; protocol: string; tick: string; value: string, createdAt?: string, updatedAt?: string },
     t: Transaction,
   ) {
     const { address, chainId, value, protocol, tick } = params
     let { updatedAt, createdAt } = params;
-    const now = dayjs().format('YYYY-MM-DD HH:mm:ss.sss')
+    const now = dayjs().format('YYYY-MM-DD HH:mm:ss.sss');
     if (!updatedAt) {
-      updatedAt = now
+      updatedAt = now;
     }
     if (!createdAt) {
-      createdAt = now
+      createdAt = now;
     }
-    const config = await this.envConfigService.getAsync('DATABASE_URL')
-    let schema = 'public'
+    const config = await this.envConfigService.getAsync('DATABASE_URL');
+    let schema = 'public';
     if (config.schema) {
-      schema = config.schema
+      schema = config.schema;
     }
     const sql = `
     INSERT INTO "${schema}"."user_balance" ( "address", "chainId", "protocol", "tick", "balance", "createdAt", "updatedAt" )
@@ -830,8 +828,10 @@ export class TransactionV3Service {
       "balance",
       "createdAt",
       "updatedAt";
-    `
-    const result = await this.userBalanceModel.sequelize.query(sql, { transaction: t })
+    `;
+    const result = await this.userBalanceModel.sequelize.query(sql, {
+      transaction: t,
+    });
     return result;
   }
   public async handleCrossTransfer(transfer: TransfersModel) {
@@ -841,11 +841,636 @@ export class TransactionV3Service {
         `handleCrossTransfer fail ${transfer.hash} Incorrect status ${transfer.status}`,
       );
     }
+    if (transfer.version != '3-3') {
+      return this.errorBreakResult(
+        `handleCrossTransfer fail ${transfer.hash} Incorrect version ${transfer.version}`,
+      );
+    }
+    const callData = transfer.calldata as any;
+    if (
+      !callData ||
+      !callData.op ||
+      !callData.p ||
+      !callData.tick ||
+      !callData.amt ||
+      !/^[1-9]\d*(\.\d+)?$/.test(callData.amt) ||
+      callData.op != InscriptionOpType.Cross ||
+      new BigNumber(callData.amt).decimalPlaces() !== 0
+    ) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP_PARAMS,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleCrossTransfer fail ${transfer.hash
+        } Incorrect params : ${JSON.stringify(callData)}`,
+      );
+    }
+    const { tick, p } = callData;
+    const deployTick = await this.deployRecordModel.findOne({
+      raw: true,
+      where: {
+        to: transfer.receiver,
+        protocol: p,
+        tick: tick,
+      },
+    });
+    if (!deployTick) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.DEPLOY_RECORD_NOT_FOUND,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleCrossTransfer fail ${transfer.hash} deployTick not found`,
+      );
+    }
+    const sourceBT = await this.bridgeTransactionModel.findOne({
+      attributes: ['id', 'status', 'targetChain'],
+      where: {
+        sourceChain: transfer.chainId,
+        sourceId: transfer.hash,
+      },
+    });
+    if (sourceBT && sourceBT.status >= 90) {
+      return this.errorBreakResult(
+        `${transfer.hash} The transaction exists, the status is greater than 90, and it is inoperable.`,
+        sourceBT.status,
+      );
+    }
+    let createdData: BridgeTransactionAttributes;
+    try {
+      createdData = await this.inscriptionBuilder.buildCross(transfer, deployTick);
+    } catch (error) {
+      if (error instanceof ValidSourceTxError) {
+        this.logger.error(
+          `ValidCrossTransferError hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`,
+        );
+        const r = await this.transfersModel.update(
+          {
+            opStatus: error.opStatus,
+          },
+          {
+            where: {
+              id: transfer.id,
+            },
+          },
+        );
+        return this.errorBreakResult(
+          `ValidCrossTransfer update transferId: ${transfer.id
+          } result: ${JSON.stringify(r)}`,
+        );
+      } else {
+        console.error(error);
+        this.logger.error(`ValidCrossTransferError throw`, error);
+        throw error;
+      }
+    }
+    const t = await this.sequelize.transaction();
+    try {
+      if (sourceBT && sourceBT.id) {
+        sourceBT.targetChain = createdData.targetChain;
+        await sourceBT.update(createdData, {
+          where: { id: sourceBT.id },
+          transaction: t,
+        });
+        createdData = sourceBT.toJSON();
+      } else {
+        const createRow = await this.bridgeTransactionModel.create(
+          createdData,
+          {
+            transaction: t,
+          },
+        );
+        if (!createRow || !createRow.id) {
+          throw new Error(
+            `${transfer.hash} Create Inscription Cross Bridge Transaction Fail`,
+          );
+        }
+        createdData = createRow.toJSON();
+        await this.incUserBalance(
+          {
+            address: createdData.sourceAddress,
+            chainId: createdData.sourceChain,
+            protocol: p,
+            tick: tick,
+            value: `-${createdData.targetAmount}`,
+          },
+          t,
+        );
+        // this.logger.info(`Create bridgeTransaction ${createdData.sourceId}`);
+        this.inscriptionCrossMemoryMatchingService
+          .addBridgeTransaction(createRow.toJSON())
+          .catch((error) => {
+            this.logger.error(
+              `${sourceBT.sourceId} addBridgeTransaction error`,
+              error,
+            );
+          });
+      }
+      if (transfer.opStatus != 1) {
+        await this.transfersModel.update(
+          {
+            opStatus: TransferOpStatus.VALID,
+          },
+          {
+            where: {
+              chainId: transfer.chainId,
+              hash: transfer.hash,
+            },
+            transaction: t,
+          },
+        );
+      }
+      await t.commit();
+      return { errno: 0, data: createdData };
+    } catch (error) {
+      this.logger.error(`handleCrossTransfer ${transfer.hash} error`, error);
+      t && (await t.rollback());
+      throw error;
+    }
   }
   public async handleCrossOverTransfer(transfer: TransfersModel) {
-    const { calldata } = transfer;
+    if (transfer.version != '3-4') {
+      return this.errorBreakResult(
+        `handleCrossOverTransfer fail ${transfer.hash} Incorrect version ${transfer.version}`,
+      );
+    }
+    const callData = transfer.calldata as any;
+    if (
+      !callData ||
+      !callData.op ||
+      !callData.p ||
+      !callData.tick ||
+      !callData.amt ||
+      !/^[1-9]\d*(\.\d+)?$/.test(callData.amt) ||
+      !callData.fc ||
+      callData.op !== InscriptionOpType.CrossOver
+    ) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP_PARAMS,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleCrossOverTransfer fail ${transfer.hash
+        } Incorrect params : ${JSON.stringify(callData)}`,
+      );
+    }
+    const { tick, amt, fc, p } = callData;
+    const deployRecord = await this.deployRecordModel.findOne({
+      raw: true,
+      where: {
+        to: transfer.sender,
+        protocol: p,
+        tick: tick
+      }
+    })
+    if (!deployRecord) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.DEPLOY_RECORD_NOT_FOUND,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleTransferTransfer fail ${transfer.hash} deployTick nof found`,
+      );
+    }
+    const fromChainInternalId = +fc;
+    const chainInfo = this.chainConfigService.getChainInfo(fromChainInternalId);
+    if (!chainInfo) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INCORRECT_FC,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleCrossOverTransfer fail ${transfer.hash
+        } Incorrect from chain : ${JSON.stringify(callData)}`,
+      );
+    }
+    let t1;
+    try {
+      const memoryBT =
+        await this.inscriptionCrossMemoryMatchingService.matchV3GetBridgeTransactions(
+          transfer,
+          chainInfo,
+        );
+      if (memoryBT && memoryBT.id) {
+        //
+        t1 = await this.sequelize.transaction();
+        const [rowCount] = await this.bridgeTransactionModel.update(
+          {
+            targetId: transfer.hash,
+            status:
+              transfer.status == 3
+                ? BridgeTransactionStatus.PAID_CRASH
+                : BridgeTransactionStatus.BRIDGE_SUCCESS,
+            targetTime: transfer.timestamp,
+            targetFee: transfer.feeAmount,
+            targetFeeSymbol: transfer.feeToken,
+            targetNonce: transfer.nonce,
+            targetMaker: transfer.sender,
+          },
+          {
+            where: {
+              id: memoryBT.id,
+              status: [
+                0,
+                BridgeTransactionStatus.READY_PAID,
+                BridgeTransactionStatus.PAID_CRASH,
+                BridgeTransactionStatus.PAID_SUCCESS,
+              ],
+              sourceTime: {
+                [Op.gt]: dayjs(transfer.timestamp)
+                  .subtract(120, 'minute')
+                  .toISOString(),
+                [Op.lt]: dayjs(transfer.timestamp)
+                  .add(5, 'minute')
+                  .toISOString(),
+              },
+            },
+            transaction: t1,
+          },
+        );
+        if (rowCount != 1) {
+          throw new Error(
+            `The number of modified rows(${rowCount}) in bridgeTransactionModel is incorrect`,
+          );
+        }
+        // source status 1 ，dest status = 0
+        const [updateTransferRows] = await this.transfersModel.update(
+          {
+            opStatus: BridgeTransactionStatus.BRIDGE_SUCCESS,
+          },
+          {
+            where: {
+              opStatus: [0, 1],
+              hash: {
+                [Op.in]: [transfer.hash, memoryBT.sourceId],
+              },
+            },
+            transaction: t1,
+          },
+        );
+        if (updateTransferRows != 2) {
+          throw new Error(
+            'Failed to modify the opStatus status of source and target transactions',
+          );
+        }
+        await this.incUserBalance({
+          address: memoryBT.targetAddress,
+          chainId: memoryBT.targetChain,
+          value: memoryBT.targetAmount,
+          tick: tick,
+          protocol: p
+        }, t1)
+        await t1.commit();
+        this.inscriptionCrossMemoryMatchingService.removeTransferMatchCache(
+          memoryBT.sourceId,
+        );
+        this.inscriptionCrossMemoryMatchingService.removeTransferMatchCache(
+          transfer.hash,
+        );
+        this.logger.info(
+          `match inscription cross success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
+        );
+        return {
+          errno: 0,
+          data: memoryBT,
+          errmsg: 'memory success',
+        };
+      }
+    } catch (error) {
+      if (
+        error?.message &&
+        error.message.indexOf('The number of modified') !== -1
+      ) {
+        this.logger.warn(
+          `handleCrossOverTransfer ${transfer.hash} ${error.message}`,
+        );
+      } else {
+        this.logger.error(
+          `handleCrossOverTransfer matchV3GetBridgeTransactions match error ${transfer.hash} `,
+          error,
+        );
+      }
+      t1 && (await t1.rollback());
+    }
+
+    // db match
+    const result = {
+      errmsg: '',
+      data: null,
+      errno: 0,
+    };
+    const t2 = await this.sequelize.transaction();
+    try {
+      let btTx = await this.bridgeTransactionModel.findOne({
+        attributes: ['id', 'sourceId'],
+        where: {
+          targetChain: transfer.chainId,
+          targetId: transfer.hash,
+        },
+        transaction: t2,
+      });
+      if (!btTx || !btTx.id) {
+        const where = {
+          status: [
+            0,
+            BridgeTransactionStatus.READY_PAID,
+            BridgeTransactionStatus.PAID_CRASH,
+            BridgeTransactionStatus.PAID_SUCCESS,
+          ],
+          sourceChain: chainInfo.chainId,
+          targetId: null,
+          targetSymbol: tick,
+          targetAddress: transfer.receiver,
+          targetChain: transfer.chainId,
+          targetAmount: amt,
+          sourceNonce: transfer.value,
+          version: '3-3',
+          responseMaker: {
+            [Op.contains]: [transfer.sender],
+          },
+        };
+        btTx = await this.bridgeTransactionModel.findOne({
+          // attributes: ['id', 'sourceId', 'targetAddress', 'targetChain'],
+          where,
+          transaction: t2,
+        });
+      }
+      if (btTx && btTx.id) {
+        btTx.targetId = transfer.hash;
+        btTx.status =
+          transfer.status == 3
+            ? BridgeTransactionStatus.PAID_CRASH
+            : BridgeTransactionStatus.BRIDGE_SUCCESS;
+        btTx.targetTime = transfer.timestamp;
+        btTx.targetFee = transfer.feeAmount;
+        btTx.targetFeeSymbol = transfer.feeToken;
+        btTx.targetNonce = transfer.nonce;
+        btTx.targetMaker = transfer.sender;
+        await btTx.save({
+          transaction: t2,
+        });
+        await this.transfersModel.update(
+          {
+            opStatus: BridgeTransactionStatus.BRIDGE_SUCCESS,
+          },
+          {
+            where: {
+              opStatus: [0, 1],
+              hash: {
+                [Op.in]: [btTx.sourceId, btTx.targetId],
+              },
+            },
+            transaction: t2,
+          },
+        );
+        await this.incUserBalance({
+          address: btTx.targetAddress,
+          chainId: btTx.targetChain,
+          protocol: p,
+          tick: tick,
+          value: btTx.targetAmount,
+        }, t2)
+        this.inscriptionCrossMemoryMatchingService.removeTransferMatchCache(
+          btTx.sourceId,
+        );
+        this.inscriptionCrossMemoryMatchingService.removeTransferMatchCache(
+          btTx.targetId,
+        );
+        this.logger.info(
+          `match inscription cross success from db ${btTx.sourceId}  /  ${btTx.targetId}`,
+        );
+        result.errno = 0;
+        result.errmsg = 'success';
+      } else {
+        this.inscriptionCrossMemoryMatchingService
+          .addTransferMatchCache(transfer)
+          .catch((error) => {
+            this.logger.error(
+              `${transfer.hash} addTransferMatchCache error `,
+              error,
+            );
+          });
+        result.errno = 1001;
+        result.errmsg = 'bridgeTransaction not found';
+      }
+      await t2.commit();
+      result.data = btTx;
+      return result;
+    } catch (error) {
+      t2 && (await t2.rollback());
+      throw error;
+    }
   }
   public async handleTransferTransfer(transfer: TransfersModel) {
-    const { calldata } = transfer;
+    const calldata = transfer.calldata as any;
+    if (transfer.status != 2) {
+      return this.errorBreakResult(
+        `handleTransferTransfer fail ${transfer.hash} Incorrect status ${transfer.status}`,
+      );
+    }
+    if (transfer.version != '3-5') {
+      return this.errorBreakResult(
+        `handleTransferTransfer fail ${transfer.hash} Incorrect version ${transfer.version}`,
+      );
+    }
+    if (
+      !calldata ||
+      !calldata.op ||
+      !calldata.tick ||
+      !calldata.p ||
+      !calldata.amt ||
+      !calldata.to ||
+      !isEvmAddress(calldata.to) ||
+      calldata.op != InscriptionOpType.Transfer
+    ) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.INVALID_OP_PARAMS,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleTransferTransfer fail ${transfer.hash
+        } Incorrect params : ${JSON.stringify(calldata)}`,
+      );
+    }
+    const { p, tick, to } = calldata
+    const targetTransferAddress = to.toLowerCase()
+    const deployRecord = await this.deployRecordModel.findOne({
+      raw: true,
+      where: {
+        to: transfer.receiver,
+        protocol: p,
+        tick: tick
+      }
+    })
+    if (!deployRecord) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.DEPLOY_RECORD_NOT_FOUND,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleTransferTransfer fail ${transfer.hash} deployTick nof found`,
+      );
+    }
+    const sourceUserBalance = await this.userBalanceModel.findOne({
+      where: {
+        address: transfer.sender,
+        chainId: transfer.chainId,
+        protocol: p,
+        tick: tick,
+      },
+    });
+    const transferAmount = new BigNumber(calldata.amt);
+    if (
+      !sourceUserBalance ||
+      new BigNumber(sourceUserBalance.balance).isLessThan(
+        transferAmount,
+      )
+    ) {
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.NOT_SUFFICIENT_FUNDS,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(
+        `handleTransferTransfer fail ${transfer.hash
+        } NOT_SUFFICIENT_FUNDS : ${JSON.stringify(calldata)}`,
+      );
+    }
+    const t = await this.userBalanceModel.sequelize.transaction();
+    try {
+      const incR = await Promise.all([
+        this.incUserBalance(
+          {
+            address: transfer.sender,
+            chainId: transfer.chainId,
+            protocol: p,
+            tick: tick,
+            value: `-${transferAmount.toString()}`,
+          },
+          t,
+        ),
+        this.incUserBalance(
+          {
+            address: targetTransferAddress,
+            chainId: transfer.chainId,
+            protocol: p,
+            tick: tick,
+            value: transferAmount.toString(),
+          },
+          t,
+        ),
+      ]);
+      await this.transfersModel.update(
+        {
+          opStatus: TransferOpStatus.MATCHED,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+          transaction: t,
+        },
+      );
+      await t.commit()
+    } catch (error) {
+      await t.rollback();
+    }
+  }
+  @Cron('0 */1 * * * *')
+  public async bookKeeping() {
+    const inscriptionChains = await this.envConfigService.getAsync('INSCRIPTION_SUPPORT_CHAINS') as [string]
+    if (!inscriptionChains) {
+      return console.warn('not config inscriptionChains');
+    }
+    for (const chainId of inscriptionChains) {
+      if (!this.mutexMap[chainId]) {
+        this.mutexMap[chainId] = new Mutex()
+      }
+      const mutex = this.mutexMap[chainId]
+      if (mutex.isLocked()) {
+        return
+      }
+      mutex.runExclusive(async () => {
+        await this.bookKeepingByChain(chainId)
+      })
+    }
+  }
+  public async bookKeepingByChain(chainId: string) {
+    if (!chainId) {
+      throw new Error('chainId must not be null')
+    }
+    const endTime = dayjs().add(-1, 'minute').format('YYYY-MM-DD HH:mm:ss');
+    const where: WhereOptions<TransfersAttributes> = {
+      timestamp: { [Op.lte]: endTime },
+      version: ['3-3', '3-4', '3-5'],
+      opStatus: [0],
+      chainId: chainId,
+    }
+    const allTransfers = await this.transfersModel.findAll({
+      raw: true,
+      where: where,
+      limit: 1000,
+      order: [['timestamp', 'asc'], ['blockNumber', 'asc'], ['transactionIndex', 'asc']]
+    })
+    for (const transfer of allTransfers) {
+      if (transfer.version === '3-3') {
+        const result = await this.handleCrossTransfer(transfer)
+        if (result && result.errno === 0) {
+          this.messageService.sendClaimTransferToMakerClient(result.data)
+        }
+      } else if (transfer.version === '3-4') {
+        await this.handleCrossOverTransfer(transfer)
+      } else if (transfer.version === '3-5') {
+        await this.handleTransferTransfer(transfer)
+      }
+    }
   }
 }

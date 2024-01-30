@@ -22,12 +22,14 @@ from './bridgeTransaction.builder';
 
 import InscriptionBuilder, { InscriptionStandardBuilder } from './inscription.builder'
 import { InscriptionMemoryMatchingService } from './inscription-memory-matching.service'
+import { InscriptionCrossMemoryMatchingService } from './inscription-cross-memory-matching.service'
 @Module({
   imports: [SequelizeModule.forFeature([Transfers, BridgeTransaction, DeployRecord, UserBalance, RefundRecord]), MakerModule],
   providers: [
     InscriptionBuilder,
     InscriptionStandardBuilder,
     InscriptionMemoryMatchingService,
+    InscriptionCrossMemoryMatchingService,
     BridgeTransactionBuilder,
     TransactionV3Service,
     TransactionV2Service,

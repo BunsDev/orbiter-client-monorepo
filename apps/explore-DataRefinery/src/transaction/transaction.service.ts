@@ -32,8 +32,8 @@ export class TransactionService {
     private envConfig: ENVConfigService,
     private makerV1RuleService: MakerV1RuleService
   ) {
-    const ruleConfigs = this.makerV1RuleService.configs;
-    if (!ruleConfigs || ruleConfigs.length <= 0) {
+    const ruleConfigs = this.makerV1RuleService.configs || [];
+    if (!ruleConfigs || ruleConfigs.length <= 0 && (this.envConfig.get('START_VERSION').includes('1-0') || this.envConfig.get('START_VERSION').includes('2-0'))) {
       throw new Error('Load ruleConfigs fail');
     }
     if (!this.envConfig.get('RABBITMQ_URL')) {
@@ -107,11 +107,19 @@ export class TransactionService {
               versionStr = '3-2';
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Claim)) {
               versionStr = '3-0';
+            } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Cross)) {
+              upsertData.crossChainParams = { targetRecipient: calldata.to ? calldata.to.toLowerCase(): transfer.sender }
+              versionStr = '3-3';
+            } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Transfer)) {
+              upsertData.crossChainParams = { targetRecipient: calldata.to ? calldata.to.toLowerCase(): ''}
+              versionStr = '3-5';
             }
           } else if (await this.makerService.isInscriptionMakers(transfer.sender)) {
             versionStr = '3-1' // All maker transfers out of tx are 3-1 by default
             if (calldata && calldata.op && calldata.op === InscriptionOpType.Mint) {
               versionStr = '3-1';
+            } if (calldata && calldata.op && calldata.op === InscriptionOpType.CrossOver) {
+              versionStr = '3-4';
             }
           }
         } else if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
@@ -172,28 +180,6 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
-        if (result && result.errno == 0) {
-          const sendTransferToMakerClientChainsV1 = this.envConfig.get("SendTransferToMakerClientChainsV1", "").split(',');
-          if (sendTransferToMakerClientChainsV1[0] == '*' || sendTransferToMakerClientChainsV1.includes(payload.chainId)) {
-            let isPush = false;
-            const sendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
-            if (sendTransferToMakerClientQueue) {
-              for (const queue in sendTransferToMakerClientQueue) {
-                const addressList = sendTransferToMakerClientQueue[queue].split(",");
-                if (addressList.includes(payload.receiver)) {
-                  this.messageService.sendTransferToMakerClient(result.data, `1_0_${queue}`)
-                  isPush = true;
-                  break;
-                }
-              }
-            }
-            if (!isPush) {
-              this.logger.info('push:', result?.data?.sourceId);
-              this.messageService.sendTransferToMakerClient(result.data)
-            }
-          }
-
-        }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
@@ -205,18 +191,6 @@ export class TransactionService {
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
-        if (result && result.errno == 0) {
-          const SendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
-          if (SendTransferToMakerClientQueue) {
-            for (const queue in SendTransferToMakerClientQueue) {
-              const addressList = SendTransferToMakerClientQueue[queue].split(",");
-              if (addressList.includes(payload.receiver)) {
-                this.messageService.sendTransferToMakerClient(result.data, `2_0_${queue}`)
-                break;
-              }
-            }
-          }
-        }
       } else if (payload.version === '2-1') {
         result = await this.transactionV2Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
@@ -234,6 +208,9 @@ export class TransactionService {
         result = this.transactionV3Service.handleMintTransfer(payload);
       } else if (payload.version === '3-2') {
         result = this.transactionV3Service.handleDeployTransfer(payload);
+      }else if (['3-3','3-4', '3-5'].includes(payload.version)) {
+        // nothing to do
+        result = { errno: 0 }
       } else {
         this.logger.error(`${payload.hash} incorrect version ${payload.version}`);
       }
@@ -245,15 +222,7 @@ export class TransactionService {
       } else {
         this.logger.error(`${payload.hash} ${payload.version} executeMatch result: No result returned`);
       }
-      // sync td
-      if (payload.version === '1-1' || payload.version === '1-0') {
-        const SyncV1TDClientChains = this.envConfig.get("SyncV1TDClientChains", "").split(',');
-        if (result && result.errno === 0 && (SyncV1TDClientChains.includes(payload.chainId) || SyncV1TDClientChains[0] == '*')) {
-          // TAG:data-synchronization
-          this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
-        }
-      }
-      if (result && result.errno == 0) {
+      if (result && result.errno == 0 && ['1-0', '2-0', '3-0'].includes(payload.version)) {
         const RECEIVER_MATCH_QUEUE = this.envConfig.get('RECEIVER_MATCH_QUEUE');
         const RECEIVER_MATCH_QUEUE_FILTER_CHAIN = this.envConfig.get('RECEIVER_MATCH_QUEUE_FILTER_CHAIN', {});
         const receiver = payload.receiver.toLocaleLowerCase();
@@ -268,7 +237,6 @@ export class TransactionService {
             }
           }
         }
-
       }
       return result;
     } catch (error) {

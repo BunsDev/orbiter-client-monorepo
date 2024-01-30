@@ -18,7 +18,7 @@ export class ConsulService<T> {
 			throw new Error('consul connection null');
 		}
 		try {
-			this.consulURL = `${connection.protocol}://${connection.host}:${connection.port}/v1/kv/`;
+			this.consulURL = `${connection.protocol}://${connection.host}:${connection.port}/v1/kv`;
 			this.keys = keys;
 			this.token = connection.token;
 			this.planUpdate(updateCron);

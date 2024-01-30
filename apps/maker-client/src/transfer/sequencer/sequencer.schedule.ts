@@ -37,10 +37,7 @@ export class SequencerScheduleService {
     @InjectRedis() private readonly redis: Redis,
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
-    // const inscMakers = this.envConfig.get("INSCRIPTION_MAKERS", []);
-    // if (inscMakers.length > 0) {
-    //   this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
-    // }
+ 
     const SUBSCRIBE_TX_QUEUE = this.envConfig.get("SUBSCRIBE_TX_QUEUE", []);
     SUBSCRIBE_TX_QUEUE.forEach((queueName) => {
       this.consumerService.consumeMakerClientMessage(this.consumptionQueue.bind(this), queueName)
@@ -305,7 +302,7 @@ export class SequencerScheduleService {
     return isMemberExist > 0;
   }
 
-  async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel) {
+  async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
     const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
     if (isDisabledSourceAddress) {
       throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
@@ -404,6 +401,49 @@ export class SequencerScheduleService {
       await this.handlePaidTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
     }
   }
+
+  async paidSingleCrossInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
+    const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
+    if (!sourceChain) {
+      throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
+    }
+    const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
+    if (transactionTimeValid) {
+      throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
+    }
+    const isConsume = await this.isConsumed(bridgeTx.targetChain, bridgeTx.sourceId);
+    if (isConsume) {
+      throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+    }
+    if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
+      throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+    }
+
+    const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
+    if (validDisabledPaid) {
+      throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
+    }
+    const wallets = await this.validatorService.checkMakerPrivateKey(bridgeTx);
+    if (!wallets || wallets.length <= 0) {
+      throw new Errors.MakerNotPrivetKey(`sourceId: ${bridgeTx.sourceId}  ${bridgeTx.responseMaker.join(',')}`);
+    }
+    // const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.ruleId, bridgeTx.targetSymbol, +bridgeTx.targetAmount);
+    // if (!isFluidityOK) {
+    //   throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker} - ${bridgeTx.targetSymbol}`)
+    // }
+    // start paid
+    const account = await this.accountFactoryService.createMakerAccount(
+      bridgeTx.targetMaker,
+      bridgeTx.targetChain
+    );
+    await account.connect(wallets[0].key, bridgeTx.targetMaker);
+    try {
+      await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
+      return await this.transferService.execSingleInscriptionCrossTransfer(bridgeTx, account);
+    } catch (error) {
+      await this.handlePaidTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
+    }
+  }
   async handlePaidTransactionError(error, sourceIds: string[], targetChain: string) {
     try {
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
@@ -489,6 +529,73 @@ export class SequencerScheduleService {
       await this.handlePaidTransactionError(error, sourceIds, targetChain);
     }
   }
+
+  async paidManyCrossInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
+    const legalTransaction: BridgeTransactionModel[] = [];
+    const [targetChain, targetMaker] = queueKey.split('-');
+    //
+    const privateKey = await this.validatorService.getSenderPrivateKey(targetMaker);
+    if (!privateKey) {
+      throw new Errors.MakerNotPrivetKey(`${targetMaker} privateKey ${bridgeTxs.map(row => row.sourceId).join(',')}`);
+    }
+    for (const bridgeTx of bridgeTxs) {
+      try {
+        if (bridgeTx.version != bridgeTxs[0].version) {
+          throw new Error('The versions of batch refunds are inconsistent')
+        }
+        const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
+        if (!sourceChain) {
+          throw new Error(`${bridgeTx.sourceId} - ${bridgeTx.sourceChain} sourceChain not found`);
+        }
+        const isConsume = await this.isConsumed(bridgeTx.targetChain, bridgeTx.sourceId);
+        if (isConsume) {
+          throw new Errors.RepeatConsumptionError(`${bridgeTx.sourceId}`);
+        }
+        if (bridgeTx.targetId || Number(bridgeTx.status) != 0) {
+          throw new Errors.AlreadyPaid(`${bridgeTx.sourceId} ${bridgeTx.targetId} targetId | ${bridgeTx.status} status`);
+        }
+        const transactionTimeValid = await this.validatorService.transactionTimeValid(bridgeTx.targetChain, bridgeTx.sourceTime);
+        if (transactionTimeValid) {
+          throw new Errors.MakerPaidTimeExceeded(`${bridgeTx.sourceId}`)
+        }
+        const validDisabledPaid = await this.validatorService.validDisabledPaid(bridgeTx.targetChain);
+        if (validDisabledPaid) {
+          throw new Errors.MakerDisabledPaid(`${bridgeTx.sourceId}`)
+        }
+        if (targetMaker != bridgeTx.targetMaker.toLocaleLowerCase()) {
+          throw new Errors.BatchPaidSameMaker(`${bridgeTx.sourceId} expect ${targetMaker} get ${bridgeTx.targetMaker}`);
+        }
+        // const totalValue = sumBy(legalTransaction, item => +item.targetAmount);
+        // const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.ruleId, bridgeTx.targetSymbol, totalValue);
+        // if (!isFluidityOK) {
+        //   throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker} - ${bridgeTx.targetSymbol}`)
+        // }
+        legalTransaction.push(bridgeTx);
+      } catch (error) {
+        this.logger.error(`paidManyBridgeInscriptionTransaction for error ${error.message}`, error);
+      }
+    }
+    if (legalTransaction.length === 0) {
+      throw new Error('not data');
+    }
+    // send
+    const account = await this.accountFactoryService.createMakerAccount(
+      targetMaker,
+      targetChain
+    );
+
+    await account.connect(privateKey, targetMaker);
+    const sourceIds = legalTransaction.map(tx => tx.sourceId);
+    try {
+      await this.saveConsumeStatus(targetChain, sourceIds);
+      if (legalTransaction.length == 1) {
+        return await this.transferService.execSingleInscriptionCrossTransfer(legalTransaction[0], account)
+      }
+      return await this.transferService.execBatchInscriptionCrossTransfer(legalTransaction, account)
+    } catch (error) {
+      await this.handlePaidTransactionError(error, sourceIds, targetChain);
+    }
+  }
   async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
     const legalTransaction = [];
     const [targetChain, targetMaker] = queueKey.split('-');
@@ -561,21 +668,15 @@ export class SequencerScheduleService {
   async consumptionSendingQueue(bridgeTx: Array<BridgeTransactionModel>, queueKey: string) {
     let result;
     try {
-      if (bridgeTx.length > 1) {
-        if (bridgeTx[0].version === '3-0') {
-          result = await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey)
-        } else if (['1-0', '2-0'].includes(bridgeTx[0].version)) {
-          result = await this.paidManyBridgeTransaction(bridgeTx, queueKey)
-        }
-      } else {
-        if (bridgeTx[0].version === '3-0') {
-          result = await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
-        } else if (['1-0', '2-0'].includes(bridgeTx[0].version)) {
-          result = await this.paidSingleBridgeTransaction(bridgeTx[0])
-        }
-      }
+          if (bridgeTx[0].version === '3-0') {
+            result = bridgeTx.length>1 ? await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
+          } else if (bridgeTx[0].version === '3-3') {
+            result = bridgeTx.length>1 ? await this.paidManyCrossInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleCrossInscriptionTransaction(bridgeTx[0], queueKey)
+          } else if(bridgeTx[0].version === '1-0' || bridgeTx[0].version === '2-0') {
+            result = bridgeTx.length>1 ? await this.paidManyBridgeTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeTransaction(bridgeTx[0], queueKey)
+          }
     } catch (error) {
-      const sourceIds = Array.isArray(bridgeTx) ? bridgeTx.map(row => row.sourceId).join(',') : bridgeTx.sourceId;
+      const sourceIds  = bridgeTx.map(row => row.sourceId).join(',');
       this.alertService.sendMessage(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, "TG")
       this.logger.error(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, error);
     }
