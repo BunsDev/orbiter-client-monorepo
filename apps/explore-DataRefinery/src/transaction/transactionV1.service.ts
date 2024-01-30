@@ -38,16 +38,18 @@ export class TransactionV1Service {
     protected bridgeTransactionBuilder: BridgeTransactionBuilder,
     private messageService: MessageService,
   ) {
-    this.matchScheduleTask()
-      .then((_res) => {
-        this.matchSenderScheduleTask();
-      })
-      .catch((error) => {
-        this.logger.error(
-          `constructor matchScheduleTask error `,
-          error,
-        );
-      });
+    if (this.envConfigService.get('START_VERSION') && this.envConfigService.get('START_VERSION').includes('1-0')) {
+      this.matchScheduleTask()
+        .then((_res) => {
+          this.matchSenderScheduleTask();
+        })
+        .catch((error) => {
+          this.logger.error(
+            `constructor matchScheduleTask error `,
+            error,
+          );
+        });
+    }
   }
   async fuzzyMatching() {
     const btList = await this.bridgeTransactionModel.findAll({
@@ -371,7 +373,7 @@ export class TransactionV1Service {
       });
       if (!btTx || !btTx.id) {
         const where = {
-          status: [0,BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
+          status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
           targetId: null,
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,

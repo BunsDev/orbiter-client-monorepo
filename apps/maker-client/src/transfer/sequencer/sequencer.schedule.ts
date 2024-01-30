@@ -37,10 +37,7 @@ export class SequencerScheduleService {
     @InjectRedis() private readonly redis: Redis,
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
-    // const inscMakers = this.envConfig.get("INSCRIPTION_MAKERS", []);
-    // if (inscMakers.length > 0) {
-    //   this.consumerService.consumeMakerWaitClaimTransferMessage(this.consumptionQueue.bind(this))
-    // }
+ 
     const SUBSCRIBE_TX_QUEUE = this.envConfig.get("SUBSCRIBE_TX_QUEUE", []);
     SUBSCRIBE_TX_QUEUE.forEach((queueName) => {
       this.consumerService.consumeMakerClientMessage(this.consumptionQueue.bind(this), queueName)

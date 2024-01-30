@@ -34,16 +34,19 @@ export class TransactionV2Service {
     protected makerService: MakerService,
     protected envConfigService: ENVConfigService,
   ) {
-    this.matchScheduleUserSendTask()
-      .then((_) => {
-        this.matchScheduleMakerSendTask();
-      })
-      .catch((error) => {
-        this.logger.error(
-          `constructor matchScheduleUserSendTask error`,
-          error,
-        );
-      });
+
+    if (this.envConfigService.get('START_VERSION') && this.envConfigService.get('START_VERSION').includes('2-0')) {
+      this.matchScheduleUserSendTask()
+        .then((_) => {
+          this.matchScheduleMakerSendTask();
+        })
+        .catch((error) => {
+          this.logger.error(
+            `constructor matchScheduleUserSendTask error`,
+            error,
+          );
+        });
+    }
   }
   @Cron('0 */5 * * * *')
   async matchScheduleUserSendTask() {
@@ -143,7 +146,7 @@ export class TransactionV2Service {
       ebcAddress: null,
       targetChain: null,
       ruleId: null,
-      status:BridgeTransactionStatus.PENDING_PAID,
+      status: BridgeTransactionStatus.PENDING_PAID,
       targetAmount: null,
       sourceMaker: transfer.receiver,
       sourceAddress: transfer.sender,
@@ -423,7 +426,7 @@ export class TransactionV2Service {
       });
       if (!btTx || !btTx.id) {
         const where = {
-          status: [0, BridgeTransactionStatus.READY_PAID,BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
+          status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,
           targetChain: transfer.chainId,

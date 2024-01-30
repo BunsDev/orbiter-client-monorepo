@@ -74,23 +74,19 @@ export class TransactionV3Service {
     private makerService: MakerService,
     @InjectRedis() private readonly redis: Redis,
   ) {
-    this.matchScheduleTask()
-      .then((_res) => {
-        this.matchSenderScheduleTask();
-      })
-      .catch((error) => {
-        this.logger.error(
-          `constructor TransactionV3Service matchScheduleTask error `,
-          error,
-        );
-      });
-    this.bookKeeping()
-    // this.matchALlVersion3_0().catch((error) => {
-    //   this.logger.error(
-    //     `constructor TransactionV3Service matchScheduleTask error `,
-    //     error,
-    //   );
-    // })
+    if (this.envConfigService.get('START_VERSION') && this.envConfigService.get('START_VERSION').includes('3-0')) {
+      this.matchScheduleTask()
+        .then((_res) => {
+          this.matchSenderScheduleTask();
+        })
+        .catch((error) => {
+          this.logger.error(
+            `constructor TransactionV3Service matchScheduleTask error `,
+            error,
+          );
+        });
+      this.bookKeeping()
+    }
   }
   errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
     this.logger.error(errmsg);
@@ -102,7 +98,7 @@ export class TransactionV3Service {
 
   @Cron('0 */1 * * * *')
   async matchScheduleTask() {
-    this.logger.info('matchScheduleTask start');
+    this.logger.info('v3 matchScheduleTask start');
     const transfers = await this.transfersModel.findAll({
       raw: true,
       order: [['id', 'desc']],
@@ -152,7 +148,7 @@ export class TransactionV3Service {
           // }
         },
       });
-      this.logger.info(`matchALlVersion3_0 transfers.length: ${transfers.length}, ${transfers[0] ? transfers[0].id: 'null'}`);
+      this.logger.info(`matchALlVersion3_0 transfers.length: ${transfers.length}, ${transfers[0] ? transfers[0].id : 'null'}`);
       for (const transfer of transfers) {
         const result = await this.handleClaimTransfer(transfer).catch((error) => {
           this.logger.error(
@@ -164,7 +160,7 @@ export class TransactionV3Service {
       if (transfers.length < limit) {
         done = true
       }
-    } while(!done)
+    } while (!done)
   }
   @Cron('*/5 * * * * *')
   async fromCacheMatch() {
@@ -258,8 +254,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleDeployTransfer fail ${
-          transfer.hash
+        `handleDeployTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -334,8 +329,7 @@ export class TransactionV3Service {
           },
         );
         return this.errorBreakResult(
-          `ValidClaimTransfer update transferId: ${
-            transfer.id
+          `ValidClaimTransfer update transferId: ${transfer.id
           } result: ${JSON.stringify(r)}`,
         );
       } else {
@@ -454,8 +448,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleMintTransfer fail ${
-          transfer.hash
+        `handleMintTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -479,8 +472,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleMintTransfer fail ${
-          transfer.hash
+        `handleMintTransfer fail ${transfer.hash
         } Incorrect from chain : ${JSON.stringify(callData)}`,
       );
     }
@@ -717,8 +709,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleDeployTransfer fail ${
-          transfer.hash
+        `handleDeployTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -751,8 +742,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleDeployTransfer fail ${
-          transfer.hash
+        `handleDeployTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -777,8 +767,7 @@ export class TransactionV3Service {
     });
     if (deployRecord) {
       return this.errorBreakResult(
-        `handleDeployTransfer fail ${
-          transfer.hash
+        `handleDeployTransfer fail ${transfer.hash
         } already deploy : ${JSON.stringify(callData)}`,
       );
     }
@@ -807,7 +796,7 @@ export class TransactionV3Service {
   }
 
   public async incUserBalance(
-    params: { address: string; chainId: string; protocol: string; tick: string; value: string, createdAt?: string, updatedAt?: string},
+    params: { address: string; chainId: string; protocol: string; tick: string; value: string, createdAt?: string, updatedAt?: string },
     t: Transaction,
   ) {
     const { address, chainId, value, protocol, tick } = params
@@ -879,8 +868,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleCrossTransfer fail ${
-          transfer.hash
+        `handleCrossTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -940,8 +928,7 @@ export class TransactionV3Service {
           },
         );
         return this.errorBreakResult(
-          `ValidCrossTransfer update transferId: ${
-            transfer.id
+          `ValidCrossTransfer update transferId: ${transfer.id
           } result: ${JSON.stringify(r)}`,
         );
       } else {
@@ -1030,7 +1017,7 @@ export class TransactionV3Service {
       !/^[1-9]\d*(\.\d+)?$/.test(callData.amt) ||
       !callData.fc ||
       callData.op !== InscriptionOpType.CrossOver
-      ) {
+    ) {
       await this.transfersModel.update(
         {
           opStatus: TransferOpStatus.INVALID_OP_PARAMS,
@@ -1042,8 +1029,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleCrossOverTransfer fail ${
-          transfer.hash
+        `handleCrossOverTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(callData)}`,
       );
     }
@@ -1085,8 +1071,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleCrossOverTransfer fail ${
-          transfer.hash
+        `handleCrossOverTransfer fail ${transfer.hash
         } Incorrect from chain : ${JSON.stringify(callData)}`,
       );
     }
@@ -1340,8 +1325,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleTransferTransfer fail ${
-          transfer.hash
+        `handleTransferTransfer fail ${transfer.hash
         } Incorrect params : ${JSON.stringify(calldata)}`,
       );
     }
@@ -1396,8 +1380,7 @@ export class TransactionV3Service {
         },
       );
       return this.errorBreakResult(
-        `handleTransferTransfer fail ${
-          transfer.hash
+        `handleTransferTransfer fail ${transfer.hash
         } NOT_SUFFICIENT_FUNDS : ${JSON.stringify(calldata)}`,
       );
     }
@@ -1442,8 +1425,11 @@ export class TransactionV3Service {
     }
   }
   @Cron('0 */1 * * * *')
-  public async bookKeeping () {
+  public async bookKeeping() {
     const inscriptionChains = await this.envConfigService.getAsync('INSCRIPTION_SUPPORT_CHAINS') as [string]
+    if (!inscriptionChains) {
+      return console.warn('not config inscriptionChains');
+    }
     for (const chainId of inscriptionChains) {
       if (!this.mutexMap[chainId]) {
         this.mutexMap[chainId] = new Mutex()
