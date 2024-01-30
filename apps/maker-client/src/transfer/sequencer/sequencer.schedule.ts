@@ -677,10 +677,10 @@ export class SequencerScheduleService {
           }
     } catch (error) {
       const sourceIds  = bridgeTx.map(row => row.sourceId).join(',');
-      this.alertService.sendMessage(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, "TG")
-      this.logger.error(`${queueKey} consumptionSendingQueue error sourceIds: ${sourceIds} ${error.message}`, error);
+      this.alertService.sendMessage(`${queueKey} transfer fail ${error.name} sourceIds: ${sourceIds} ${error.message}`, "TG")
+      this.logger.error(`${queueKey} transfer fail ${error.name} sourceIds: ${sourceIds} ${error.message}`, error);
     }
-    this.logger.info(`${queueKey} consumptionSendingQueue info ${JSONStringify(result)}`);
+    this.logger.info(`${queueKey} transfer info ${JSONStringify(result)}`);
     return result;
   }
   async consumptionQueue(tx: BridgeTransactionModel) {
