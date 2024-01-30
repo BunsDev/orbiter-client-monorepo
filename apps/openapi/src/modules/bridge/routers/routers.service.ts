@@ -3,6 +3,7 @@ import { RoutersConfig } from '../bridge.interface';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
 import { ChainsService } from '../chains/chains.service';
 import { padStart, uniq } from 'lodash';
+import BigNumber from 'bignumber.js';
 
 @Injectable()
 export class RoutersService {
@@ -61,6 +62,7 @@ export class RoutersService {
                     continue;
                 }
                 const withholdingFee = +v1Rule['tradingFee'];
+                const minAmount = new BigNumber(v1Rule['minPrice']).plus(withholdingFee);
                 const routerConfig: RoutersConfig = {
                     line: '',
                     endpoint: v1Rule['makerAddress'],
@@ -70,7 +72,7 @@ export class RoutersService {
                     srcToken: sourceToken.address,
                     tgtToken: targetToken.address,
                     maxAmt: String(v1Rule['maxPrice']),
-                    minAmt: String(+v1Rule['minPrice'] + withholdingFee),
+                    minAmt:minAmount.toString(),
                     tradeFee: String(+v1Rule['gasFee'] * 1000),
                     withholdingFee: String(withholdingFee),
                     vc: String(+internalChainId[1] + 9000),
@@ -156,6 +158,7 @@ export class RoutersService {
                     continue;
                 }
                 const withholdingFee = +v3Rule['tradingFee'];
+                const minAmount = new BigNumber(fromChain['minPrice']).plus(withholdingFee);
                 const routerConfig: RoutersConfig = {
                     line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
                     endpoint: v3Rule['recipient'],
@@ -165,7 +168,7 @@ export class RoutersService {
                     srcToken: fromChain['tokenAddress'],
                     tgtToken: toChain['tokenAddress'],
                     maxAmt: String(fromChain['maxPrice'] || "0"),
-                    minAmt: String(+fromChain['minPrice'] + withholdingFee),
+                    minAmt: minAmount.toString(),
                     tradeFee: v3Rule['gasFee'],
                     withholdingFee: String(withholdingFee),
                     vc: `${padStart(v3Rule.dealerId, 2, "0")}${v3Rule['ebcId']}${padStart(toChain.id, 2, "0")}`,
