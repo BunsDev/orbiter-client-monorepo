@@ -33,8 +33,8 @@ export class TransactionService {
     private makerV1RuleService: MakerV1RuleService
   ) {
     const ruleConfigs = this.makerV1RuleService.configs || [];
-    if (!ruleConfigs || ruleConfigs.length <= 0) {
-      // throw new Error('Load ruleConfigs fail');
+    if (!ruleConfigs || ruleConfigs.length <= 0 && (this.envConfig.get('START_VERSION').includes('1-0') || this.envConfig.get('START_VERSION').includes('2-0'))) {
+      throw new Error('Load ruleConfigs fail');
     }
     if (!this.envConfig.get('RABBITMQ_URL')) {
       throw new Error('Get RABBITMQ_URL Config fail');
