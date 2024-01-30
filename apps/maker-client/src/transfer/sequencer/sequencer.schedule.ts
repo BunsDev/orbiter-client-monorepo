@@ -305,7 +305,7 @@ export class SequencerScheduleService {
     return isMemberExist > 0;
   }
 
-  async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel) {
+  async paidSingleBridgeTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
     const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(bridgeTx.sourceAddress);
     if (isDisabledSourceAddress) {
       throw new Errors.DisabledSourceAddressError(`sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`);
