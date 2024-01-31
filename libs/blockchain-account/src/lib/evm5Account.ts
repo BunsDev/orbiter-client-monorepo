@@ -1,11 +1,4 @@
-import { Orbiter6Provider } from '@orbiter-finance/blockchain-account';
-import {
-  ethers,
-  Interface,
-  isError,
-  JsonRpcProvider,
-  type Wallet,
-} from "ethers6";
+import { Orbiter5Provider } from '@orbiter-finance/blockchain-account';
 import { NonceManager } from './nonceManager';
 import { ERC20Abi, OrbiterRouterV3 } from '@orbiter-finance/abi'
 import {
@@ -15,26 +8,28 @@ import { OrbiterAccount } from "./orbiterAccount";
 import BigNumber from "bignumber.js";
 import {
   TransactionFailedError,
-  TransactionRequest,
   TransactionResponse,
   TransactionSendConfirmFail,
+  TransactionRequest,
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-export class EVMAccount extends OrbiterAccount {
+import { Contract, Wallet } from 'ethers';
+import { Interface } from 'ethers/lib/utils';
+export class EVM5Account extends OrbiterAccount {
   protected wallet: Wallet;
-  #provider: JsonRpcProvider;
+  #provider: Orbiter5Provider;
   public nonceManager: NonceManager;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
-  get provider(): JsonRpcProvider {
+  get provider(): Orbiter5Provider {
     const rpc = this.chainConfig.rpc[0];
-    return new Orbiter6Provider(rpc)
+    return new Orbiter5Provider(rpc)
   }
  
   async connect(privateKey: string, _address?: string) {
-    this.wallet = new ethers.Wallet(privateKey).connect(this.provider);
+    this.wallet = new Wallet(privateKey).connect(this.provider);
     if (_address) {
       if (!equals(_address, this.wallet.address)) {
         throw new Error('The connected wallet address is inconsistent with the private key address')
@@ -42,7 +37,8 @@ export class EVMAccount extends OrbiterAccount {
     }
     this.address = this.wallet.address;
     this.nonceManager = this.createNonceManager(this.address, async () => {
-      const nonce = await this.wallet.getNonce("pending");
+      const nonce = await this.wallet.getTransactionCount('pending');
+    //   const nonce = await this.wallet.getNonce("pending");
       return Number(nonce);
     })
     return this;
@@ -94,8 +90,8 @@ export class EVMAccount extends OrbiterAccount {
     if (!transactionRequest.gasLimit) {
       try {
         const gasLimit = await provider.estimateGas({
-          from: transactionRequest.from,
-          to: transactionRequest.to,
+          from: transactionRequest.from as any,
+          to: transactionRequest.to as any,
           data: transactionRequest.data,
           value: transactionRequest.value,
         });
@@ -313,62 +309,8 @@ export class EVMAccount extends OrbiterAccount {
     return receipt;
   }
 
-  // public async sendTransaction(
-  //   to: string,
-  //   transactionRequest: TransactionRequest = {}
-  // ): Promise<TransactionResponse> {
-  //   const serialIds =
-  //     typeof transactionRequest.serialId === "string"
-  //       ? [transactionRequest.serialId]
-  //       : transactionRequest.serialId;
-  //   this.chainConfig.debug && this.logger.debug(`sendTransaction serialIds: ${JSONStringify(serialIds)}`)
-  //   const chainConfig = this.chainConfig;
-  //   const provider = this.getProvider();
-  //   const chainId: number | undefined = Number(
-  //     transactionRequest.chainId || chainConfig.chainId
-  //   );
-
-  //   const tx: TransactionRequest = {
-  //     chainId,
-  //     ...transactionRequest,
-  //     from: this.wallet.address,
-  //     to,
-  //   };
-  //   const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
-  //   let txHash;
-  //   try {
-  //     tx.nonce = nonce;
-  //     if (tx.value) {
-  //       tx.value = new BigNumber(String(tx.value)).toFixed(0);
-  //     }
-  //     this.logger.info(
-  //       `${chainConfig.name} sendTransaction:${JSONStringify(tx)}`
-  //     );
-  //     const signedTx = await this.wallet.signTransaction(tx);
-  //     txHash = keccak256(signedTx);
-  //     const response = await provider.broadcastTransaction(signedTx);
-  //     this.logger.info(
-  //       `${chainConfig.name} sendTransaction txHash:${txHash}`
-  //     );
-  //     //
-  //     submit();
-  //     return response;
-  //   } catch (error) {
-  //     rollback();
-  //     this.logger.error(
-  //       `broadcastTransaction tx error:${txHash} - ${error.message}`,
-  //       error
-  //     );
-  //     // rollback()
-  //     if (isError(error, "NONCE_EXPIRED")) {
-  //       throw new TransactionSendConfirmFail(error.message);
-  //     }
-  //     throw new TransactionFailedError(error.message);
-  //   }
-  // }
-
   public async sendTransaction(
-    transactionRequest: TransactionRequest
+    transactionRequest: any
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
     // const provider = this.getProvider();
@@ -430,91 +372,14 @@ export class EVMAccount extends OrbiterAccount {
         `${chainConfig.name} - [${transactionRequest.nonce}] - sendTransaction txHash: ${response.hash}`
       );
       await nonceResult.submit();
-      return response;
+      return response as any;
     } catch (error) {
       await nonceResult.rollback();
       this.logger.error(
         `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}， rpc: ${this.chainConfig.rpc[0]}`,
         error
       );
-      if (isError(error, "NONCE_EXPIRED")) {
-        this.logger.error(`sendTransaction NONCE_EXPIRED from:${transactionRequest.from}, to:${transactionRequest.to},nonce:${transactionRequest.nonce}, value:${transactionRequest.value}`);
-        throw new TransactionSendConfirmFail(error.message);
-      }
-      throw new TransactionFailedError(error.message);
-    }
-  }
-  public async mintInscription(
-    transactionRequest: TransactionRequest
-  ): Promise<TransactionResponse> {
-    const chainConfig = this.chainConfig;
-    // const provider = this.getProvider();
-    let nonceResult;
-    try {
-      nonceResult = await this.nonceManager.getNextNonce();
-      if (nonceResult.localNonce > nonceResult.networkNonce + 20) {
-        throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
-      }
-      if (transactionRequest.value)
-        transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
-      transactionRequest.from = this.wallet.address;
-      transactionRequest.chainId = chainConfig.chainId;
-      transactionRequest.nonce = nonceResult.nonce;
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 2000 * 60);
-      try {
-        const populateTransaction = await this.wallet.populateTransaction(transactionRequest);
-        if (populateTransaction.nonce > transactionRequest.nonce) {
-          transactionRequest.nonce = populateTransaction.nonce;
-        }
-        if (!transactionRequest.gasLimit) {
-          transactionRequest.gasLimit = populateTransaction.gasLimit;
-        }
-        if (!transactionRequest.gasPrice) {
-          transactionRequest.gasPrice = populateTransaction.gasPrice;
-        }
-        if (!transactionRequest.maxFeePerGas) {
-          transactionRequest.maxFeePerGas = populateTransaction.maxFeePerGas;
-        }
-        if (!transactionRequest.maxPriorityFeePerGas) {
-          transactionRequest.maxPriorityFeePerGas = populateTransaction.maxPriorityFeePerGas;
-        }
-      } catch (error) {
-        console.error(error);
-        this.logger.error(
-          `${chainConfig.name} sendTransaction before populateTransaction error:${JSONStringify(transactionRequest)}, message: ${error.message}`, error
-        );
-      }
-      this.logger.info(
-        `${chainConfig.name} sendTransaction before:${JSONStringify(transactionRequest)}`
-      );
-    } catch (error) {
-      console.error(error);
-      nonceResult && await nonceResult.rollback();
-      this.logger.error(
-        `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)},Nonce: ${transactionRequest.nonce}, message: ${error.message}`, error
-      );
-      throw new TransactionSendConfirmFail(error.message);
-    }
-    if (!nonceResult) {
-      throw new TransactionSendConfirmFail(`Nonce not obtained`);
-    }
-    try {
-      // const signedTx = await this.wallet.signTransaction(transactionRequest);
-      // txHash = keccak256(signedTx);
-      // response = await provider.broadcastTransaction(signedTx);
-      const response = await this.wallet.sendTransaction(transactionRequest);
-      this.logger.info(
-        `${chainConfig.name} - [${transactionRequest.nonce}] - sendTransaction txHash: ${response.hash}`
-      );
-      await nonceResult.submit();
-      return response;
-    } catch (error) {
-      await nonceResult.rollback();
-      this.logger.error(
-        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}`,
-        error
-      );
-      if (isError(error, "NONCE_EXPIRED")) {
+      if (error.message.includes("NONCE_EXPIRED")) {
         this.logger.error(`sendTransaction NONCE_EXPIRED from:${transactionRequest.from}, to:${transactionRequest.to},nonce:${transactionRequest.nonce}, value:${transactionRequest.value}`);
         throw new TransactionSendConfirmFail(error.message);
       }
@@ -527,14 +392,14 @@ export class EVMAccount extends OrbiterAccount {
     spender: string,
     value: string | BigNumber
   ) {
-    const erc20 = new ethers.Contract(token, ERC20Abi, this.provider).connect(
+    const erc20 = new Contract(token, ERC20Abi, this.provider).connect(
       this.wallet
     );
     return await erc20["approve"](spender, value);
   }
 
   public async allowance(token: string, spender: string) {
-    const erc20 = new ethers.Contract(token, ERC20Abi, this.provider).connect(
+    const erc20 = new Contract(token, ERC20Abi, this.provider).connect(
       this.wallet
     );
     return await erc20["allowance"](this.wallet.address, spender);
@@ -546,7 +411,8 @@ export class EVMAccount extends OrbiterAccount {
       // is native
       return await this.getTokenBalance(token, address);
     } else {
-      return await this.provider.getBalance(address || this.wallet.address);
+      const balance = await this.provider.getBalance(address || this.wallet.address);
+      return balance.toBigInt();
     }
   }
 
@@ -555,8 +421,8 @@ export class EVMAccount extends OrbiterAccount {
     address?: string
   ): Promise<bigint> {
     try {
-      const erc20 = new ethers.Contract(token, ERC20Abi, this.provider);
-      return await erc20.balanceOf(address || this.wallet.address);
+      const erc20 = new Contract(token, ERC20Abi, this.provider);
+      return BigInt(await erc20.balanceOf(address || this.wallet.address));
     } catch (error) {
       console.log('get balance error', error)
     }

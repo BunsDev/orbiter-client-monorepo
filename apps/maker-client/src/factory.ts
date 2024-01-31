@@ -1,3 +1,4 @@
+import { EVM5Account } from './../../../libs/blockchain-account/src/lib/evm5Account';
 import { Injectable } from "@nestjs/common";
 import { AlertService } from "@orbiter-finance/alert";
 import {
@@ -103,6 +104,10 @@ export class AccountFactoryService {
           toChainId,
           ctx
         );
+        break;
+      case 38:
+      case 538:
+        wallet = new EVM5Account(toChainId, ctx);
         break;
       default:
         if (chainConfig.service && chainConfig.service['rpc'] && chainConfig.service['rpc'].includes('EVMRpcScanning')) {
