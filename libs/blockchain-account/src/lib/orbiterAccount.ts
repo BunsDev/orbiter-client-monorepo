@@ -78,7 +78,7 @@ export class OrbiterAccount extends EventEmitter {
   public createNonceManager(address: string, getNonceFun: Function) {
     const store = new Keyv({
       store: new KeyvFile({
-        filename: path.join(process.cwd(), "runtime", "nonce", `${address}.json`), // the file path to store the data
+        filename: path.join(process.cwd(), "runtime", "nonce", `${this.chainId}-${address}.json`), // the file path to store the data
         expiredCheckDelay: 24 * 3600 * 1000, // ms, check and remove expired data in each ms
         writeDelay: 100, // ms, batch write to disk in a specific duration, enhance write perfor
       }),
