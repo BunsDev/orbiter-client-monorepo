@@ -273,7 +273,7 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     try {
       if (tos.length !== values.length) {
-        throw new TransactionSendConfirmFail(
+        throw new Error(
           "to and values are inconsistent in length"
         );
       }
@@ -281,7 +281,7 @@ export class EVMAccount extends OrbiterAccount {
         (addr) => chainConfig.contract[addr] === "OrbiterRouterV3"
       );
       if (!router) {
-        throw new TransactionSendConfirmFail(
+        throw new Error(
           "transferTokens router not config"
         );
       }
