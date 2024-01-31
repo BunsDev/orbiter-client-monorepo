@@ -1,6 +1,6 @@
 import { Account, Contract, cairo, RpcProvider } from 'starknet';
 import { equals, sleep, addressPadStart } from '@orbiter-finance/utils';
-import { TransactionRequest, TransactionSendBeforeError, TransferResponse } from "./IAccount.interface";
+import { TransactionRequest, TransactionSendConfirmFail, TransferResponse } from "./IAccount.interface";
 import { OrbiterAccount } from "./orbiterAccount";
 import {NonceManager} from './nonceManager';
 import {StarknetERC20} from '@orbiter-finance/abi'
@@ -92,50 +92,49 @@ export class StarknetAccount extends OrbiterAccount {
       invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
     }
     if (!invocationList.length) {
-      throw new TransactionSendBeforeError('Not Invocation Length');
+      throw new TransactionSendConfirmFail('Not Invocation Length');
     }
     const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
     if (!nonce && nonce != 0) {
-      throw new TransactionSendBeforeError('Not Find Nonce Params');
+      throw new TransactionSendConfirmFail('Not Find Nonce Params');
     }
     const transactionDetail = {
       nonce: nonce,
       maxFee: BigInt(0.009 * 10 ** 18)
     };
-    try {
-      const suggestedMaxFee = await this.account.getSuggestedMaxFee(
-        {
-          type: "INVOKE_FUNCTION",
-          payload: invocationList
-        } as any,
-        transactionDetail
-      );
-      if (suggestedMaxFee > transactionDetail.maxFee) {
-        transactionDetail.maxFee = suggestedMaxFee;
-      }
-    } catch (error: any) {
-      rollback();
-      if (error.message.indexOf('Invalid transaction nonce. Expected:') !== -1
-        && error.message.indexOf('got:') !== -1) {
-        const arr: string[] = error.message.split(', got: ');
-        const nonce1 = arr[0].replace(/[^0-9]/g, "");
-        const nonce2 = arr[1].replace(/[^0-9]/g, "");
-        this.logger.error(`starknet signTransfer error: ${nonce} != ${nonce1}, ${nonce} != ${nonce2}`);
-      } else if (error.message.indexOf('ContractAddress(PatriciaKey(StarkFelt') !== -1 &&
-        error.message.indexOf('Expected: Nonce(StarkFelt') !== -1) {
-        this.logger.error(`starknet signTransfer error: ${error.message}`);
-      } else {
-        throw new Error(error.message);
-      }
-    }
-
+    // try {
+    //   const suggestedMaxFee = await this.account.getSuggestedMaxFee(
+    //     {
+    //       type: "INVOKE_FUNCTION",
+    //       payload: invocationList
+    //     } as any,
+    //     transactionDetail
+    //   );
+    //   if (suggestedMaxFee > transactionDetail.maxFee) {
+    //     transactionDetail.maxFee = suggestedMaxFee;
+    //   }
+    // } catch (error: any) {
+    //   rollback();
+    //   if (error.message.indexOf('Invalid transaction nonce. Expected:') !== -1
+    //     && error.message.indexOf('got:') !== -1) {
+    //     const arr: string[] = error.message.split(', got: ');
+    //     const nonce1 = arr[0].replace(/[^0-9]/g, "");
+    //     const nonce2 = arr[1].replace(/[^0-9]/g, "");
+    //     this.logger.error(`starknet signTransfer error: ${nonce} != ${nonce1}, ${nonce} != ${nonce2}`);
+    //   } else if (error.message.indexOf('ContractAddress(PatriciaKey(StarkFelt') !== -1 &&
+    //     error.message.indexOf('Expected: Nonce(StarkFelt') !== -1) {
+    //     this.logger.error(`starknet signTransfer error: ${error.message}`);
+    //   } else {
+    //     throw new TransactionSendConfirmFail(error.message);
+    //   }
+    // }
     // accessLogger.info(`transactionDetail: ${JSON.stringify(transactionDetail)}`);
     const trx = await this.account.execute(invocationList, <any>null, transactionDetail);
     submit();
     if (!trx || !trx.transaction_hash) {
       throw new Error(`Starknet Failed to send transaction hash does not exist`);
     }
-    await sleep(1000);
+    // await sleep(1000);
     const hash = addressPadStart(trx.transaction_hash, 66);
     this.logger.info(`${ this.chainConfig.name } sendTransaction txHash:${hash}`);
     return {
