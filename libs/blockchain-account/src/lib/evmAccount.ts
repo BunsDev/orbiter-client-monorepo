@@ -99,7 +99,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.value = 0n;
       transactionRequest.from = this.wallet.address;
       // get erc20 getLimit
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
@@ -205,7 +205,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.value = value as any;
       transactionRequest.from = this.wallet.address;
       // get getLimit
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
@@ -255,7 +255,7 @@ export class EVMAccount extends OrbiterAccount {
         tos,
         values,
       ]);
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
@@ -317,7 +317,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.to = router;
       transactionRequest.value = "0x0";
       transactionRequest.chainId = Number(this.chainConfig.networkId);
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
@@ -448,7 +448,7 @@ export class EVMAccount extends OrbiterAccount {
     } catch (error) {
       await nonceResult.rollback();
       this.logger.error(
-        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}`,
+        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}， rpc: ${this.provider.getUrl()}`,
         error
       );
       if (isError(error, "NONCE_EXPIRED")) {
