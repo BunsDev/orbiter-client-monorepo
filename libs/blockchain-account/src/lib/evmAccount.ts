@@ -32,7 +32,7 @@ export class EVMAccount extends OrbiterAccount {
   }
   get provider(): JsonRpcProvider{
     const rpc = this.chainConfig.rpc[0];
-    if (this.chainId === '42766') {
+    if (this.chainId == '42766') {
       return new Orbiter5Provider(rpc) as any;
     } else {
       return new Orbiter6Provider(rpc)
@@ -413,7 +413,7 @@ export class EVMAccount extends OrbiterAccount {
       if (transactionRequest.value)
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
       transactionRequest.from = this.wallet.address;
-      transactionRequest.chainId = chainConfig.chainId;
+      transactionRequest.chainId = +chainConfig.chainId;
       transactionRequest.nonce = nonceResult.nonce;
       await promiseWithTimeout(this.getGasPrice(transactionRequest), 2000 * 60);
       try {
@@ -440,7 +440,7 @@ export class EVMAccount extends OrbiterAccount {
         );
       }
       this.logger.info(
-        `${chainConfig.name} sendTransaction before:${JSONStringify(transactionRequest)}`
+        `${chainConfig.name} sendTransaction before:${JSONStringify(transactionRequest)}, rpc: ${this.chainConfig.rpc[0]}`
       );
     } catch (error) {
       console.error(error);
