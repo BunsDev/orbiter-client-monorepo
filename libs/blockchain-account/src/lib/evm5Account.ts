@@ -334,13 +334,13 @@ export class EVM5Account extends OrbiterAccount {
         if (populateTransaction.nonce > transactionRequest.nonce) {
           transactionRequest.nonce = populateTransaction.nonce;
         }
-        if (!transactionRequest.gasLimit) {
+        if (!transactionRequest.gasLimit && populateTransaction.gasLimit) {
           transactionRequest.gasLimit = populateTransaction.gasLimit;
         }
-        if (!transactionRequest.gasPrice) {
+        if (!transactionRequest.gasPrice && populateTransaction.gasPrice) {
           transactionRequest.gasPrice = populateTransaction.gasPrice;
         }
-        if (transactionRequest.type ==2) {
+        if (transactionRequest.type ==2 && populateTransaction.maxFeePerGas && populateTransaction.maxPriorityFeePerGas) {
             if (!transactionRequest.maxFeePerGas) {
                 transactionRequest.maxFeePerGas = populateTransaction.maxFeePerGas;
                 }
