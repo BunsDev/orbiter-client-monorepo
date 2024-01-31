@@ -340,12 +340,15 @@ export class EVM5Account extends OrbiterAccount {
         if (!transactionRequest.gasPrice) {
           transactionRequest.gasPrice = populateTransaction.gasPrice;
         }
-        if (!transactionRequest.maxFeePerGas) {
-          transactionRequest.maxFeePerGas = populateTransaction.maxFeePerGas;
+        if (transactionRequest.type ==2) {
+            if (!transactionRequest.maxFeePerGas) {
+                transactionRequest.maxFeePerGas = populateTransaction.maxFeePerGas;
+                }
+                if (!transactionRequest.maxPriorityFeePerGas) {
+                transactionRequest.maxPriorityFeePerGas = populateTransaction.maxPriorityFeePerGas;
+                }
         }
-        if (!transactionRequest.maxPriorityFeePerGas) {
-          transactionRequest.maxPriorityFeePerGas = populateTransaction.maxPriorityFeePerGas;
-        }
+  
       } catch (error) {
         console.error('sendTransaction error', error);
         this.logger.error(
