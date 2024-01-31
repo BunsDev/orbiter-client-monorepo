@@ -2,8 +2,8 @@ import { Account, Contract, cairo, RpcProvider } from 'starknet';
 import { equals, sleep, addressPadStart } from '@orbiter-finance/utils';
 import { TransactionRequest, TransactionSendConfirmFail, TransferResponse } from "./IAccount.interface";
 import { OrbiterAccount } from "./orbiterAccount";
-import {NonceManager} from './nonceManager';
-import {StarknetERC20} from '@orbiter-finance/abi'
+import { NonceManager } from './nonceManager';
+import { StarknetERC20 } from '@orbiter-finance/abi'
 export class StarknetAccount extends OrbiterAccount {
   public account: Account;
   public provider: RpcProvider;
@@ -82,17 +82,21 @@ export class StarknetAccount extends OrbiterAccount {
     const provider = this.getProviderV4();
     const invocationList: any[] = [];
     for (let i = 0; i < tos.length; i++) {
-      const recipient = tos[i];
-      if (new RegExp(/^0x[a-fA-F0-9]{40}$/).test(recipient)) {
-        this.logger.error(`Receive address format error: ${recipient}`);
-        continue;
+      try {
+        const recipient = tos[i];
+        if (new RegExp(/^0x[a-fA-F0-9]{40}$/).test(recipient)) {
+          this.logger.error(`Receive address format error: ${recipient}`);
+          continue;
+        }
+        const amount = String(values[i]);
+        const ethContract = new Contract(StarknetERC20, token, provider);
+        invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
+      } catch (error) {
+        this.logger.error(`starknet transferTokens error:  to ${tos[i]}, amount ${values[i]}`);
       }
-      const amount = String(values[i]);
-      const ethContract = new Contract(StarknetERC20, token, provider);
-      invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
     }
     if (!invocationList.length) {
-      throw new TransactionSendConfirmFail('Not Invocation Length');
+      throw new Error('Not Invocation Length');
     }
     const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
     if (!nonce && nonce != 0) {
@@ -136,7 +140,7 @@ export class StarknetAccount extends OrbiterAccount {
     }
     // await sleep(1000);
     const hash = addressPadStart(trx.transaction_hash, 66);
-    this.logger.info(`${ this.chainConfig.name } sendTransaction txHash:${hash}`);
+    this.logger.info(`${this.chainConfig.name} sendTransaction txHash:${hash}`);
     return {
       hash,
       from: this.address,
