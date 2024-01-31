@@ -674,6 +674,8 @@ export class SequencerScheduleService {
 
   async consumptionSendingQueue(bridgeTx: Array<BridgeTransactionModel>, queueKey: string) {
     let result;
+    const [chainId, makerAddr] = queueKey.split('-');
+    const chainInfo = this.chainConfigService.getChainInfo(chainId);
     try {
       if (bridgeTx[0].version === '3-0') {
         result = bridgeTx.length > 1 ? await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
@@ -684,8 +686,8 @@ export class SequencerScheduleService {
       }
     } catch (error) {
       const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
-      this.alertService.sendMessage(`${queueKey} transfer fail ${error.name} sourceIds: ${sourceIds} ${error.message}`, "TG")
-      this.logger.error(`${queueKey} transfer fail ${error.name} sourceIds: ${sourceIds} ${error.message}`, error);
+      this.alertService.sendMessage(`${chainInfo.name}(${chainId}) - maker ${makerAddr} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, "TG")
+      this.logger.error(`${chainInfo.name}(${chainId}) - maker ${makerAddr} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, error);
     }
     this.logger.info(`${queueKey} transfer info ${JSONStringify(result)}`);
     return result;
