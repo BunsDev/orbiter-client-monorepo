@@ -37,7 +37,7 @@ export class SequencerScheduleService {
     @InjectRedis() private readonly redis: Redis,
     private readonly consumerService: ConsumerService) {
     this.checkDBTransactionRecords();
- 
+
     const SUBSCRIBE_TX_QUEUE = this.envConfig.get("SUBSCRIBE_TX_QUEUE", []);
     SUBSCRIBE_TX_QUEUE.forEach((queueName) => {
       this.consumerService.consumeMakerClientMessage(this.consumptionQueue.bind(this), queueName)
@@ -328,11 +328,17 @@ export class SequencerScheduleService {
     if (!wallets || wallets.length <= 0) {
       throw new Errors.MakerNotPrivetKey(`sourceId: ${bridgeTx.sourceId}  ${bridgeTx.responseMaker.join(',')}`);
     }
-    const isFluidityOK = await this.validatorService.checkMakerFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
-    if (!isFluidityOK) {
-      throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker}`)
+    try {
+      const isFluidityOK = await this.validatorService.checkMakerFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
+      if (!isFluidityOK) {
+        throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker}`)
+      }
+    } catch (error) {
+      this.logger.error(`checkMakerFluidity error sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`, error);
+      if (error instanceof Errors.InsufficientLiquidity) {
+        throw error;
+      }
     }
-
     const success = await this.validatorService.validatingValueMatches(
       bridgeTx.sourceSymbol,
       bridgeTx.sourceAmount,
@@ -445,6 +451,7 @@ export class SequencerScheduleService {
     }
   }
   async handlePaidTransactionError(error, sourceIds: string[], targetChain: string) {
+    this.logger.error(`PaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
     try {
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         await this.removeConsumeStatus(targetChain, sourceIds);
@@ -668,15 +675,15 @@ export class SequencerScheduleService {
   async consumptionSendingQueue(bridgeTx: Array<BridgeTransactionModel>, queueKey: string) {
     let result;
     try {
-          if (bridgeTx[0].version === '3-0') {
-            result = bridgeTx.length>1 ? await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
-          } else if (bridgeTx[0].version === '3-3') {
-            result = bridgeTx.length>1 ? await this.paidManyCrossInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleCrossInscriptionTransaction(bridgeTx[0], queueKey)
-          } else if(bridgeTx[0].version === '1-0' || bridgeTx[0].version === '2-0') {
-            result = bridgeTx.length>1 ? await this.paidManyBridgeTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeTransaction(bridgeTx[0], queueKey)
-          }
+      if (bridgeTx[0].version === '3-0') {
+        result = bridgeTx.length > 1 ? await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
+      } else if (bridgeTx[0].version === '3-3') {
+        result = bridgeTx.length > 1 ? await this.paidManyCrossInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleCrossInscriptionTransaction(bridgeTx[0], queueKey)
+      } else if (bridgeTx[0].version === '1-0' || bridgeTx[0].version === '2-0') {
+        result = bridgeTx.length > 1 ? await this.paidManyBridgeTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeTransaction(bridgeTx[0], queueKey)
+      }
     } catch (error) {
-      const sourceIds  = bridgeTx.map(row => row.sourceId).join(',');
+      const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
       this.alertService.sendMessage(`${queueKey} transfer fail ${error.name} sourceIds: ${sourceIds} ${error.message}`, "TG")
       this.logger.error(`${queueKey} transfer fail ${error.name} sourceIds: ${sourceIds} ${error.message}`, error);
     }

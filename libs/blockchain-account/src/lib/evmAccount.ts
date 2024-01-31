@@ -22,20 +22,21 @@ import {
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-import { Orbiter6Provider } from './provider'
-import Keyv from "keyv";
-import KeyvFile from "keyv-file";
-import path from "path";
+import { Orbiter5Provider, Orbiter6Provider } from './provider'
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
-  #provider: Orbiter6Provider;
+  #provider: JsonRpcProvider;
   public nonceManager: NonceManager;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
-  get provider(): Orbiter6Provider {
+  get provider(): JsonRpcProvider{
     const rpc = this.chainConfig.rpc[0];
-    return new Orbiter6Provider(rpc)
+    if (this.chainId === '42766') {
+      return new Orbiter5Provider(rpc) as any;
+    } else {
+      return new Orbiter6Provider(rpc)
+    }
   }
   // getProvider() {
   //   try {
@@ -92,17 +93,20 @@ export class EVMAccount extends OrbiterAccount {
           `The sender ${token} has insufficient balance`
         );
       }
-      const ifa = new Interface(ERC20Abi);
-      const data = ifa.encodeFunctionData("transfer", [to, value]);
-      transactionRequest.data = data;
-      transactionRequest.to = token;
-      transactionRequest.value = 0n;
-      transactionRequest.from = this.wallet.address;
       // get erc20 getLimit
       // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
-      throw new TransactionSendConfirmFail(error.message);
+      this.logger.error(`${this.chainConfig.name} transferToken getBalance error ${error.message}`, error)
+      if (error instanceof TransactionSendConfirmFail) {
+        throw error;
+      }
     }
+    const ifa = new Interface(ERC20Abi);
+    const data = ifa.encodeFunctionData("transfer", [to, value]);
+    transactionRequest.data = data;
+    transactionRequest.to = token;
+    transactionRequest.value = 0n;
+    transactionRequest.from = this.wallet.address;
     const tx = await this.sendTransaction(transactionRequest);
     return {
       hash: tx.hash,
@@ -201,14 +205,17 @@ export class EVMAccount extends OrbiterAccount {
           "The sender has insufficient balance"
         );
       }
-      transactionRequest.to = to;
-      transactionRequest.value = value as any;
-      transactionRequest.from = this.wallet.address;
       // get getLimit
       // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
-      throw new TransactionSendConfirmFail(error.message);
+      this.logger.error(`${this.chainConfig.name} transftransferers getBalance error ${error.message}`, error)
+      if (error instanceof TransactionSendConfirmFail) {
+        throw error;
+      }
     }
+    transactionRequest.to = to;
+    transactionRequest.value = value as any;
+    transactionRequest.from = this.wallet.address;
     const response = await this.sendTransaction(transactionRequest);
     return response;
   }
@@ -238,13 +245,21 @@ export class EVMAccount extends OrbiterAccount {
         (accumulator, currentValue) => accumulator + currentValue,
         0n
       );
-      //
-      const balance = await this.getBalance();
-      if (balance < totalValue) {
-        throw new TransactionSendConfirmFail(
-          "The sender has insufficient balance"
-        );
+      try {
+        //
+        const balance = await this.getBalance();
+        if (balance < totalValue) {
+          throw new TransactionSendConfirmFail(
+            "The sender has insufficient balance"
+          );
+        }
+      } catch (error) {
+        this.logger.error(`${this.chainConfig.name} transfers getBalance error ${error.message}`, error)
+        if (error instanceof TransactionSendConfirmFail) {
+          throw error;
+        }
       }
+
       if (!OrbiterRouterV3) {
         throw new TransactionSendConfirmFail("OrbiterRouterV3 ABI Not Found");
       }
@@ -448,7 +463,7 @@ export class EVMAccount extends OrbiterAccount {
     } catch (error) {
       await nonceResult.rollback();
       this.logger.error(
-        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}， rpc: ${this.provider.getUrl()}`,
+        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}， rpc: ${this.chainConfig.rpc[0]}`,
         error
       );
       if (isError(error, "NONCE_EXPIRED")) {
