@@ -67,9 +67,11 @@ export class NonceManager extends EventEmitter {
       const lastUsage = await this.getLastUsageTime();
       let nonce = await this.store.get("nonce");
       // Check if it's time to refresh the nonce
-      if (Date.now() - lastUsage > FIVE_MINUTES_MS) {
-        await this.handleAutoUpdate(nonce);
-      }
+      // if (Date.now() - lastUsage > FIVE_MINUTES_MS) {
+      //   await this.forceRefreshNonce();
+      // } else {
+      this.handleAutoUpdate(nonce);
+      // }
     } catch (error) {
       console.error(`autoUpdate error`, error);
       // Handle error during auto-update
@@ -138,11 +140,8 @@ export class NonceManager extends EventEmitter {
           // Update the nonce if the network nonce is greater
           if (networkNonce > nonce) {
             nonce = networkNonce;
-            await this.store.set("nonce", nonce);
-          } else {
-            // Check nonce integrity or handle as needed
+            this.setNonce(nonce)
           }
-
           // Resolve with nonce details and functions to submit and rollback
           resolve({
             nonce,
