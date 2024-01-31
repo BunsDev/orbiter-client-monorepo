@@ -140,7 +140,7 @@ export class TransferService {
       }
       await transaction.commit();
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
+      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         await transaction.rollback()
         throw error;
       }
@@ -249,7 +249,7 @@ export class TransferService {
       }
       await transaction.commit();
     } catch (error) {
-      if (error instanceof Errors.PaidRollbackError) {
+      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         await transaction.rollback()
         throw error;
       }
@@ -523,7 +523,7 @@ export class TransferService {
         await transaction.commit();
       } catch (error) {
 
-        if (error instanceof Errors.PaidRollbackError) {
+        if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
           await transaction.rollback()
           throw error;
         }

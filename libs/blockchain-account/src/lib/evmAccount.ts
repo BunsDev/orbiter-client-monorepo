@@ -197,7 +197,7 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     try {
       if (tos.length !== values.length) {
-        throw new TransactionSendConfirmFail(
+        throw new Error(
           "to and values are inconsistent in length"
         );
       }
@@ -313,60 +313,6 @@ export class EVMAccount extends OrbiterAccount {
     return receipt;
   }
 
-  // public async sendTransaction(
-  //   to: string,
-  //   transactionRequest: TransactionRequest = {}
-  // ): Promise<TransactionResponse> {
-  //   const serialIds =
-  //     typeof transactionRequest.serialId === "string"
-  //       ? [transactionRequest.serialId]
-  //       : transactionRequest.serialId;
-  //   this.chainConfig.debug && this.logger.debug(`sendTransaction serialIds: ${JSONStringify(serialIds)}`)
-  //   const chainConfig = this.chainConfig;
-  //   const provider = this.getProvider();
-  //   const chainId: number | undefined = Number(
-  //     transactionRequest.chainId || chainConfig.chainId
-  //   );
-
-  //   const tx: TransactionRequest = {
-  //     chainId,
-  //     ...transactionRequest,
-  //     from: this.wallet.address,
-  //     to,
-  //   };
-  //   const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
-  //   let txHash;
-  //   try {
-  //     tx.nonce = nonce;
-  //     if (tx.value) {
-  //       tx.value = new BigNumber(String(tx.value)).toFixed(0);
-  //     }
-  //     this.logger.info(
-  //       `${chainConfig.name} sendTransaction:${JSONStringify(tx)}`
-  //     );
-  //     const signedTx = await this.wallet.signTransaction(tx);
-  //     txHash = keccak256(signedTx);
-  //     const response = await provider.broadcastTransaction(signedTx);
-  //     this.logger.info(
-  //       `${chainConfig.name} sendTransaction txHash:${txHash}`
-  //     );
-  //     //
-  //     submit();
-  //     return response;
-  //   } catch (error) {
-  //     rollback();
-  //     this.logger.error(
-  //       `broadcastTransaction tx error:${txHash} - ${error.message}`,
-  //       error
-  //     );
-  //     // rollback()
-  //     if (isError(error, "NONCE_EXPIRED")) {
-  //       throw new TransactionSendConfirmFail(error.message);
-  //     }
-  //     throw new TransactionFailedError(error.message);
-  //   }
-  // }
-
   public async sendTransaction(
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
@@ -375,6 +321,7 @@ export class EVMAccount extends OrbiterAccount {
     let nonceResult;
     try {
       nonceResult = await this.nonceManager.getNextNonce();
+      this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
       if (nonceResult.localNonce > nonceResult.networkNonce + 20) {
         throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
       }

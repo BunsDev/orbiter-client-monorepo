@@ -9,13 +9,14 @@ import Keyv from "keyv";
 import KeyvFile from "keyv-file";
 import path from "path";
 import { NonceManager } from "./nonceManager";
+import { camelCase } from "lodash";
 
 export class OrbiterAccount extends EventEmitter {
   public address: string;
   public logger!: OrbiterLogger;
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
     super();
-    this.logger = logger.createLoggerByName(`account-${chainId}`);
+    this.logger = logger.createLoggerByName(`account-${camelCase(this.chainConfig.name)}`);
   }
 
   get chainConfig(): IChainConfig {
