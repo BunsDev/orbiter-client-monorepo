@@ -12,7 +12,7 @@ import {
   StarknetChainId,
 } from './starknet.interface';
 import BigNumber from 'bignumber.js';
-import { RpcProvider, RPC, CallData, Contract, shortString } from 'starknet';
+import { RpcProvider, RPC, CallData, Contract, shortString, addAddressPadding } from 'starknet';
 import { TransferAmountTransaction, TransferAmountTransactionStatus } from '../../transaction/transaction.interface';
 import { addressPadStart } from '../../utils';
 import { StarknetAccountCairo1 } from '@orbiter-finance/abi';
@@ -109,8 +109,8 @@ export class StarknetRpcScanningService extends RpcScanningService {
       return [];
     }
     const toAddress = addressPadStart(transaction.calldata[1].toLocaleLowerCase(), 66);
-    if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddress)) {
-      const contractInfo = this.getChainConfigContract(toAddress);
+    if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddress) || transaction.calldata.includes('0xe704db07356df9a2ba8cd2a131e0192b9d9d9ddb518eb3bd4e8fb4a1f0901c')) {
+      let contractInfo = this.getChainConfigContract('0x058680be0cf3f29c7a33474a218e5fed1ad213051cb2e9eac501a26852d64ca2');
       const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
       const transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
         this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);

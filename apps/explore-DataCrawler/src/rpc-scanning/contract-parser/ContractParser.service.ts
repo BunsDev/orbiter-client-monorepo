@@ -12,6 +12,7 @@ export class ContractParserService {
   constructor(
     private chainConfigService: ChainConfigService
   ) {
+    this.registerContractByChains()
     setInterval(() => {
       this.registerContractByChains()
     }, 2000 * 60)
