@@ -52,7 +52,8 @@ export class RoutersController {
     @success('success', 200)
     async getCrossChainRouters(@Headers('X-Channel-Identifier') channelHeader: string) {
         console.log(`getCrossChainRouters - channelHeader: ${channelHeader}`)
-        const configs = await this.routerService.getV1Routers();
+        const whiteMakers = this.envConfigService.get("EXTERNAL_WHITE_MAKERS", []);
+        const configs = await this.routerService.getV1Routers(whiteMakers);
         return configs.filter(config => {
             const lines = config.line.split('-')[1].split('/');
             return lines[0] == lines[1];
@@ -61,7 +62,8 @@ export class RoutersController {
     @Get("/swap")
     @success('success', 200)
     async getSwapRouters() {
-        const configs = await this.routerService.getV1Routers();
+        const whiteMakers = this.envConfigService.get("EXTERNAL_WHITE_MAKERS", []);
+        const configs = await this.routerService.getV1Routers(whiteMakers);
         return configs.filter(config => {
             const lines = config.line.split('-')[1].split('/');
             return lines[0] != lines[1];
