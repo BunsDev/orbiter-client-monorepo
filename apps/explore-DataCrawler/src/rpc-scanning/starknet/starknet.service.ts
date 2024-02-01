@@ -109,7 +109,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
       return [];
     }
     const toAddress = addressPadStart(transaction.calldata[1].toLocaleLowerCase(), 66);
-    if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddress) || transaction.calldata.includes('0xe704db07356df9a2ba8cd2a131e0192b9d9d9ddb518eb3bd4e8fb4a1f0901c')) {
+    if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddress) || transaction.calldata.includes('0x58680be0cf3f29c7a33474a218e5fed1ad213051cb2e9eac501a26852d64ca2')) {
       let contractInfo = this.getChainConfigContract('0x058680be0cf3f29c7a33474a218e5fed1ad213051cb2e9eac501a26852d64ca2');
       const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
       const transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
