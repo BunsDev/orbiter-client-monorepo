@@ -12,7 +12,6 @@ export class TokenService {
         const result =  {};
         for (const chain of chains) {
             const tokens = [
-                chain.nativeCurrency
             ];
             if (chain.tokens) {
                 tokens.push(...chain.tokens);
