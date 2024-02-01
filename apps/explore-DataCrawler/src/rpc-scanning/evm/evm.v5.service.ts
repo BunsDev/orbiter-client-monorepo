@@ -128,11 +128,14 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       const tokenInfo = this.getChainConfigToken(transaction.to);
       const contractInfo = this.getChainConfigContract(transaction.to);
       if (tokenInfo) {
-        transfers = EVMV5Utils.evmStandardTokenTransfer(
-          chainConfig,
-          transaction as any,
-          receipt as any,
-        );
+        if (EVMV5Utils.isERC20Transfer(transaction.data)) {
+            transfers = EVMV5Utils.evmStandardTokenTransfer(
+              chainConfig,
+              transaction as any,
+              receipt as any,
+            )
+        }
+
       } else if (contractInfo) {
         if (contractInfo.name === 'OBSource') {
           transfers = EVMV5Utils.evmOBSource(chainConfig, transaction as any, receipt as any);
@@ -370,7 +373,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
           const isRegister = this.ctx.contractParser.existRegisterContract(this.chainId, toAddrLower);
           if (isRegister) {
             // decode
-            if (!this.ctx.contractParser.whiteContractMethodId(this.chainId,toAddrLower,row['data'])) {
+            if (!this.ctx.contractParser.whiteContractMethodId(this.chainId, toAddrLower, row['data'])) {
               continue;
             }
           }
