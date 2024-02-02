@@ -21,10 +21,11 @@ import {
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
+import { EVMNonceManager } from './nonceManager/evmNonceManager';
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   #provider: JsonRpcProvider;
-  public nonceManager: NonceManager;
+  public nonceManager: NonceManager | EVMNonceManager;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
@@ -41,7 +42,7 @@ export class EVMAccount extends OrbiterAccount {
       }
     }
     this.address = this.wallet.address;
-    this.nonceManager = this.createNonceManager(this.address, async () => {
+    this.nonceManager = this.createEVMNonceManager(this.address, async () => {
       const nonce = await this.wallet.getNonce("pending");
       return Number(nonce);
     })
