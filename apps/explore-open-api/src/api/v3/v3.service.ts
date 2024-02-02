@@ -671,10 +671,12 @@ export class V3Service {
                 'sourceAmount', 'targetAmount', 'sourceTime', 'targetTime', 'tradeFee'],
             raw: true,
             where: {
-                dealerAddress,
+                dealerAddress: dealerAddress.toLowerCase(),
                 status: 99,
-                [Op.gte]: dayjs(beginTime).toISOString(),
-                [Op.lte]: dayjs(endTime).toISOString(),
+                sourceTime: {
+                    [Op.gte]: dayjs(beginTime).toISOString(),
+                    [Op.lte]: dayjs(endTime).toISOString(),
+                }
             },
             order: [['sourceTime', 'DESC']],
         });
