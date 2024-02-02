@@ -41,7 +41,7 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error('The connected wallet address is inconsistent with the private key address')
       }
     }
-    if (!this.nonceManager || this.wallet.address != this.address) {
+    if (!this.nonceManager || !equals(this.wallet.address,this.address)) {
       this.nonceManager = this.createEVMNonceManager(this.address, async () => {
         const nonce = await this.wallet.getNonce("pending");
         return Number(nonce);
@@ -321,6 +321,7 @@ export class EVMAccount extends OrbiterAccount {
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
     // const provider = this.getProvider();
+    this.logger.info(`sendTransaction transactionRequest:${JSONStringify(transactionRequest)}`)
     const nonceResult = await this.nonceManager.getNextNonce();
     if (!nonceResult) {
       throw new TransactionSendConfirmFail('nonceResult nof found');
@@ -379,6 +380,7 @@ export class EVMAccount extends OrbiterAccount {
       this.logger.info(
         `${chainConfig.name} - [${transactionRequest.nonce}] - sendTransaction txHash: ${response.hash}`
       );
+      await nonceResult.submit();
       return response;
     } catch (error) {
       this.logger.error(
