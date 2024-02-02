@@ -667,7 +667,8 @@ export class V3Service {
             return null;
         }
         const bridgeTransactionList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll(<any>{
-            attributes: ['sourceChain', 'targetChain', 'sourceId', 'targetId', 'sourceAddress', 'targetMaker', 'sourceTime', 'targetTime', 'tradeFee'],
+            attributes: ['sourceChain', 'targetChain', 'sourceId', 'targetId', 'sourceAddress', 'targetMaker',
+                'sourceAmount', 'targetAmount', 'sourceTime', 'targetTime', 'tradeFee'],
             raw: true,
             where: {
                 dealerAddress,
@@ -685,11 +686,13 @@ export class V3Service {
                 sourceChain: sourceChainInfo?.name,
                 sourceHash: bridgeTransaction.sourceId,
                 sourceTime: bridgeTransaction.sourceTime,
+                sourceAmount: bridgeTransaction.sourceAmount,
                 userAddress: bridgeTransaction.sourceAddress,
 
                 targetChain: targetChainInfo?.name,
                 targetHash: bridgeTransaction.targetId,
                 targetTime: bridgeTransaction.targetTime,
+                targetAmount: bridgeTransaction.targetAmount,
                 makerAddress: bridgeTransaction.targetMaker,
                 tradeFee: bridgeTransaction.tradeFee
             });
