@@ -451,7 +451,6 @@ export class EVMAccount extends OrbiterAccount {
       this.logger.info(
         `${chainConfig.name} - [${transactionRequest.nonce}] - sendTransaction txHash: ${response.hash}`
       );
-      await nonceResult.submit();
       return response;
     } catch (error) {
       await nonceResult.rollback();
