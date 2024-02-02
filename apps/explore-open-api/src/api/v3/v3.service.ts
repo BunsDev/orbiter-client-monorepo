@@ -651,6 +651,52 @@ export class V3Service {
     return calculateAmountByLarge(tradingPair, amount);
   }
 
+    async getTradeFeeByDealerAddress(dealerAddress: string, begin: string, end: string) {
+        if (!new RegExp(/^0x[a-fA-F0-9]{40}$/).test(dealerAddress)) {
+            return null;
+        }
+        if(dealerAddress.toLowerCase() !== "0xf3c19d4921da3b1389545586bda674f8b13bcfd7"){
+            return null;
+        }
+        const beginTime = +begin;
+        const endTime = +end;
+        if (!beginTime || !endTime) {
+            return null;
+        }
+        if (endTime - beginTime > 1000 * 60 * 60 * 24 * 62) {
+            return null;
+        }
+        const bridgeTransactionList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll(<any>{
+            attributes: ['sourceChain', 'targetChain', 'sourceId', 'targetId', 'sourceAddress', 'targetMaker', 'sourceTime', 'targetTime', 'tradeFee'],
+            raw: true,
+            where: {
+                dealerAddress,
+                status: 99,
+                [Op.gte]: dayjs(beginTime).toISOString(),
+                [Op.lte]: dayjs(endTime).toISOString(),
+            },
+            order: [['sourceTime', 'DESC']],
+        });
+        const dataList: any[] = [];
+        for (const bridgeTransaction of bridgeTransactionList) {
+            const sourceChainInfo = V2Service.chainList.find(item => +item.chainId === +bridgeTransaction.sourceChain);
+            const targetChainInfo = V2Service.chainList.find(item => +item.chainId === +bridgeTransaction.targetChain);
+            dataList.push({
+                sourceChain: sourceChainInfo?.name,
+                sourceHash: bridgeTransaction.sourceId,
+                sourceTime: bridgeTransaction.sourceTime,
+                userAddress: bridgeTransaction.sourceAddress,
+
+                targetChain: targetChainInfo?.name,
+                targetHash: bridgeTransaction.targetId,
+                targetTime: bridgeTransaction.targetTime,
+                makerAddress: bridgeTransaction.targetMaker,
+                tradeFee: bridgeTransaction.tradeFee
+            });
+        }
+        return dataList;
+    }
+
   convertV3ChainList(chainRels) {
     const chainList = this.chainConfigService.getAllChains();
     const v3ChainList = [];
