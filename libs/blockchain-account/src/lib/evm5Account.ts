@@ -320,10 +320,10 @@ export class EVM5Account extends OrbiterAccount {
             throw new TransactionSendConfirmFail('nonceResult nof found');
         }
         this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
-        if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
-            throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
-        }
         try {
+            if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+                throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+            }
             const valueStr = new BigNumber(String(transactionRequest.value)).toFixed(0);
             if (transactionRequest.value)
                 transactionRequest.value = ethers.BigNumber.from(valueStr)
