@@ -18,6 +18,7 @@ import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { Redis } from 'ioredis';
 import { TransactionSendConfirmFail } from "@orbiter-finance/blockchain-account";
 import { LockData } from './sequencer.interface';
+import { truncateEthAddress } from '../../utils';
 
 @Injectable()
 export class SequencerScheduleService {
@@ -451,7 +452,7 @@ export class SequencerScheduleService {
     }
   }
   async handlePaidTransactionError(error, sourceIds: string[], targetChain: string) {
-    this.logger.error(`PaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
+    // this.logger.error(`PaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
     try {
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         await this.removeConsumeStatus(targetChain, sourceIds);
@@ -686,7 +687,7 @@ export class SequencerScheduleService {
       }
     } catch (error) {
       const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
-      this.alertService.sendMessage(`${chainInfo.name}(${chainId}) - maker ${makerAddr} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, "TG")
+      this.alertService.sendMessage(`${chainInfo.name}(${chainId}) - maker ${truncateEthAddress(makerAddr)} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, "TG")
       this.logger.error(`${chainInfo.name}(${chainId}) - maker ${makerAddr} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, error);
     }
     this.logger.info(`${queueKey} transfer info ${JSONStringify(result)}`);
