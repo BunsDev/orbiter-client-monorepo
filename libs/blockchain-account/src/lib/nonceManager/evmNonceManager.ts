@@ -30,6 +30,7 @@ export class EVMNonceManager extends EventEmitter {
             }
         });
         if (option && !option.initNonce) {
+            console.log('init nonce not found -> forceRefreshNonce')
             this.forceRefreshNonce();
         }
         // Start the auto-update mechanism
