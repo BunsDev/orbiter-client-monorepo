@@ -376,6 +376,7 @@ export class EVM5Account extends OrbiterAccount {
             this.logger.info(
                 `${chainConfig.name} - [${transactionRequest.nonce}] - sendTransaction txHash: ${response.hash}`
             );
+            await nonceResult.submit();
             return response as any;
         } catch (error) {
             await nonceResult.rollback();

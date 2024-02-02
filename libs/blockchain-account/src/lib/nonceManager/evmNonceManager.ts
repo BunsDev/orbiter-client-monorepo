@@ -149,6 +149,7 @@ export class EVMNonceManager extends EventEmitter {
                         networkNonce,
                         localNonce,
                         submit: async () => {
+                            release();
                         },
                         rollback: async () => {
                             await this.setNonce(useNonce);
