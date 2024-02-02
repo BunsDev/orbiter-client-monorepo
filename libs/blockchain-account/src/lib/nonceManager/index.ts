@@ -111,7 +111,7 @@ export class NonceManager extends EventEmitter {
    */
   public async getLocalNonce() {
     const nonce = await this.store.get("nonce");
-    return nonce;
+    return +nonce;
   }
 
   /**
@@ -131,29 +131,29 @@ export class NonceManager extends EventEmitter {
         try {
           // Get the network nonce and the local nonce from the store
           const networkNonce = await this.refreshNonceFun();
-          let nonce = await this.store.get("nonce").then(nonce => +nonce);
-          const localNonce = nonce;
+          const localNonce = await this.getLocalNonce();
+          let useNonce = localNonce;
           if (+localNonce > (+networkNonce + 20)) {
-            this.emit("noncesExceed", { localNonce: nonce, networkNonce });
+            this.emit("noncesExceed", { localNonce, networkNonce, useNonce });
             throw new Error(`noncesExceed localNonce: ${localNonce}, networkNonce:${networkNonce}`);
           }
           // Update the nonce if the network nonce is greater
-          if (networkNonce > nonce) {
-            nonce = networkNonce;
-            this.setNonce(nonce)
+          if (networkNonce > localNonce) {
+            useNonce = networkNonce;
+            this.setNonce(networkNonce)
           }
           // Resolve with nonce details and functions to submit and rollback
           resolve({
-            nonce,
+            nonce: useNonce,
             networkNonce,
             localNonce,
             submit: async () => {
               await this.setLastUsageTime(Date.now());
-              await this.setNonce(nonce + 1);
+              await this.setNonce(useNonce + 1);
               release();
             },
             rollback: async () => {
-              await this.setNonce(nonce);
+              await this.setNonce(useNonce);
               release();
             },
           });

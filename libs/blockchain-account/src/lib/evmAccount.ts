@@ -381,11 +381,11 @@ export class EVMAccount extends OrbiterAccount {
       await nonceResult.submit();
       return response;
     } catch (error) {
-      await nonceResult.rollback();
       this.logger.error(
         `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}， rpc: ${this.chainConfig.rpc[0]}`,
         error
       );
+      await nonceResult.rollback();
       if (isError(error, "NONCE_EXPIRED")) {
         this.logger.error(`sendTransaction NONCE_EXPIRED from:${transactionRequest.from}, to:${transactionRequest.to},nonce:${transactionRequest.nonce}, value:${transactionRequest.value}`);
         throw new TransactionSendConfirmFail(error.message);
