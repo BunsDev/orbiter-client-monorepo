@@ -33,7 +33,7 @@ export class EVMAccount extends OrbiterAccount {
     const rpc = this.chainConfig.rpc[0];
     return new Orbiter6Provider(rpc)
   }
- 
+
   async connect(privateKey: string, _address?: string) {
     this.wallet = new ethers.Wallet(privateKey).connect(this.provider);
     if (_address) {
@@ -41,11 +41,13 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error('The connected wallet address is inconsistent with the private key address')
       }
     }
+    if (!this.nonceManager || this.wallet.address != this.address) {
+      this.nonceManager = this.createEVMNonceManager(this.address, async () => {
+        const nonce = await this.wallet.getNonce("pending");
+        return Number(nonce);
+      })
+    }
     this.address = this.wallet.address;
-    this.nonceManager = this.createEVMNonceManager(this.address, async () => {
-      const nonce = await this.wallet.getNonce("pending");
-      return Number(nonce);
-    })
     return this;
   }
 
@@ -320,13 +322,13 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     // const provider = this.getProvider();
     const nonceResult = await this.nonceManager.getNextNonce();
-    if(!nonceResult) {
+    if (!nonceResult) {
       throw new TransactionSendConfirmFail('nonceResult nof found');
     }
     this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
 
     try {
-      if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce>=20) {
+      if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
         throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
       }
       if (transactionRequest.value)
