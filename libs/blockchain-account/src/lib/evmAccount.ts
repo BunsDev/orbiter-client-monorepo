@@ -323,7 +323,7 @@ export class EVMAccount extends OrbiterAccount {
       throw new TransactionSendConfirmFail('nonceResult nof found');
     }
     this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
-    if (nonceResult && +nonceResult.localNonce > +nonceResult.networkNonce + 20) {
+    if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce>=20) {
       throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
     }
     try {
@@ -364,21 +364,17 @@ export class EVMAccount extends OrbiterAccount {
       );
     } catch (error) {
       console.error(error);
-      nonceResult && await nonceResult.rollback();
+      await nonceResult.rollback();
       this.logger.error(
         `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)},Nonce: ${transactionRequest.nonce}, message: ${error.message}`, error
       );
       throw new TransactionSendConfirmFail(error.message);
-    }
-    if (!nonceResult) {
-      throw new TransactionSendConfirmFail(`Nonce not obtained`);
     }
     try {
       const response = await this.wallet.sendTransaction(transactionRequest);
       this.logger.info(
         `${chainConfig.name} - [${transactionRequest.nonce}] - sendTransaction txHash: ${response.hash}`
       );
-      await nonceResult.submit();
       return response;
     } catch (error) {
       this.logger.error(

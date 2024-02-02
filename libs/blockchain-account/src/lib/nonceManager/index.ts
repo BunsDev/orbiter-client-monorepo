@@ -133,7 +133,7 @@ export class NonceManager extends EventEmitter {
           const networkNonce = await this.refreshNonceFun();
           const localNonce = await this.getLocalNonce();
           let useNonce = localNonce;
-          if (+localNonce > (+networkNonce + 20)) {
+          if (+localNonce - networkNonce >= 20) {
             this.emit("noncesExceed", { localNonce, networkNonce, useNonce });
             throw new Error(`noncesExceed localNonce: ${localNonce}, networkNonce:${networkNonce}`);
           }
