@@ -319,14 +319,14 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     // const provider = this.getProvider();
     const nonceResult = await this.nonceManager.getNextNonce();
+    if(!nonceResult) {
+      throw new TransactionSendConfirmFail('nonceResult nof found');
+    }
     this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
     if (nonceResult && +nonceResult.localNonce > +nonceResult.networkNonce + 20) {
       throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
     }
     try {
-      if(!nonceResult) {
-        throw new TransactionSendConfirmFail('nonceResult nof found');
-      }
       if (transactionRequest.value)
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
       transactionRequest.from = this.wallet.address;
