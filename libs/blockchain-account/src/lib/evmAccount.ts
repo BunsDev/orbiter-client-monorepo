@@ -160,7 +160,7 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     }
-    if (await this.ctx.envConfigService.getAsync('defaultUseLastBlockAvgGasPrice') || chainCustomConfig?.useLastBlockAvgGasPrice) {
+    if (await this.ctx.envConfigService.getAsync('DefaultUseLastBlockAvgGasPrice') || chainCustomConfig?.useLastBlockAvgGasPrice) {
       await this.getLastBlockAvgGasPrice(transactionRequest);
     }
     return transactionRequest;
