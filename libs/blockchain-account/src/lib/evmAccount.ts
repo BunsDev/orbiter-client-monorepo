@@ -171,6 +171,7 @@ export class EVMAccount extends OrbiterAccount {
     const height = await provider.getBlockNumber();
     const block: any = await provider.getBlock(height, true);
     const transactionList: any[] = block?.prefetchedTransactions || [];
+    const logs = [];
     if (transactionRequest.type === 2) {
       let blockMaxFeePerGas = new BigNumber(0);
       let blockMaxPriorityFeePerGas = new BigNumber(0);
@@ -189,19 +190,19 @@ export class EVMAccount extends OrbiterAccount {
         blockGasLimit = blockGasLimit.dividedBy(count);
       }
       if (new BigNumber(String(transactionRequest.maxFeePerGas)).lt(blockMaxFeePerGas)) {
-        this.logger.info(`${this.chainConfig.name} use blockMaxFeePerGas ${
+        logs.push(`blockMaxFeePerGas ${
           String(new BigNumber(String(transactionRequest.maxFeePerGas)).dividedBy(10 ** 9))
-        } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`);
+        } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`)
         transactionRequest.maxFeePerGas = BigInt(blockMaxFeePerGas.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).lt(blockMaxPriorityFeePerGas)) {
-        this.logger.info(`${this.chainConfig.name} use blockMaxPriorityFeePerGas ${
+        logs.push(`blockMaxPriorityFeePerGas ${
           String(new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).dividedBy(10 ** 9))
         } gWei < ${String(blockMaxPriorityFeePerGas.dividedBy(10 ** 9))} gWei`);
         transactionRequest.maxPriorityFeePerGas = BigInt(blockMaxPriorityFeePerGas.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
-        this.logger.info(`${this.chainConfig.name} use blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
+        logs.push(`blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
         transactionRequest.gasLimit = BigInt(blockGasLimit.toFixed(0));
       }
     } else {
@@ -219,16 +220,17 @@ export class EVMAccount extends OrbiterAccount {
         blockGasLimit = blockGasLimit.dividedBy(count);
       }
       if (new BigNumber(String(transactionRequest.gasPrice)).lt(blockGasPrice)) {
-        this.logger.info(`${this.chainConfig.name} use blockGasPrice ${
+        logs.push(`blockGasPrice ${
           String(new BigNumber(String(transactionRequest.gasPrice)).dividedBy(10 ** 9))
         } gWei < ${String(blockGasPrice.dividedBy(10 ** 9))} gWei`);
         transactionRequest.gasPrice = BigInt(blockGasPrice.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
-        this.logger.info(`${this.chainConfig.name} use blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
+        logs.push(`blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`)
         transactionRequest.gasLimit = BigInt(blockGasLimit.toFixed(0));
       }
     }
+    logs.length && this.logger.info(`${this.chainConfig.name} ${logs.join(', ')}`);
   }
 
   async transfer(
