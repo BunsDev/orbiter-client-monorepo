@@ -76,7 +76,7 @@ export class ValidatorService {
       return false;
     }
     if (BigInt(balance.toString())<=BigInt(value.toString())) {
-      throw new Errors.InsufficientLiquidity(`checkMakerFluidity ${value}/${balance}`);
+      throw new Errors.InsufficientLiquidity(`checkMakerFluidity ${value}/${balance} ${targetToken.symbol}`);
     }
     return true;
   }
