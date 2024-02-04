@@ -124,7 +124,7 @@ export class EVMAccount extends OrbiterAccount {
     const feeData = await provider.getFeeData();
     // calc gas
     const feePerGasRedouble = Number(chainCustomConfig.FeePerGasRedouble || 1);
-    if (isEIP1559) {
+    if (isEIP1559 || (typeof isEIP1559 === "undefined" && feeData.maxFeePerGas)) {
       transactionRequest.type = 2;
       const priorityFeePerGasRedouble = Number(chainCustomConfig.PriorityFeePerGasRedouble || 1);
       // maxFeePerGas
