@@ -118,13 +118,15 @@ export class EVMAccount extends OrbiterAccount {
           }
         }
       }
-
     }
-    const isEIP1559 = chainCustomConfig['EIP1559'];
+    let isEIP1559 = chainCustomConfig['EIP1559'];
     const feeData = await provider.getFeeData();
     // calc gas
+    if (isEIP1559 == undefined && feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
+      isEIP1559 = true;
+    }
     const feePerGasRedouble = Number(chainCustomConfig.FeePerGasRedouble || 1);
-    if (isEIP1559 || (typeof isEIP1559 === "undefined" && feeData.maxFeePerGas)) {
+    if (isEIP1559) {
       transactionRequest.type = 2;
       const priorityFeePerGasRedouble = Number(chainCustomConfig.PriorityFeePerGasRedouble || 1);
       // maxFeePerGas
