@@ -336,9 +336,6 @@ export class EVM5Account extends OrbiterAccount {
                 transactionRequest.value = ethers.BigNumber.from(valueStr)
             transactionRequest.from = this.wallet.address;
             transactionRequest.chainId = +chainConfig.chainId;
-            if (transactionRequest.chainId == 42766) {
-                delete transactionRequest.chainId;
-            }
             transactionRequest.nonce = nonceResult.nonce;
             await promiseWithTimeout(this.getGasPrice(transactionRequest), 2000 * 60);
             try {

@@ -407,9 +407,6 @@ export class EVMAccount extends OrbiterAccount {
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
       transactionRequest.from = this.wallet.address;
       transactionRequest.chainId = +chainConfig.chainId;
-      if (transactionRequest.chainId == 42766) {
-        delete transactionRequest.chainId;
-      }
       transactionRequest.nonce = nonceResult.nonce;
       await promiseWithTimeout(this.getGasPrice(transactionRequest), 2000 * 60);
       try {
