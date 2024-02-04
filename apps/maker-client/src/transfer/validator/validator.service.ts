@@ -63,20 +63,21 @@ export class ValidatorService {
   public async checkMakerInscriptionFluidity(protocol:string,tick:string, total:number) {
     return true;
   }
-  public async checkMakerFluidity(chainId:string, wallet:string, token:string, amount:number):Promise<boolean>{
+  public async checkMakerFluidity(chainId:string, wallet:string, token:string, minAmount:number):Promise<boolean>{
     const account = await this.accountFactoryService.createMakerAccount(
       wallet,
       chainId
     ).connect(this.getSenderPrivateKey(wallet), wallet);
     const targetToken = this.chainConfigService.getTokenByChain(chainId, token);
-    const value = new BigNumber(+amount * 10 **targetToken.decimals).toFixed(0);
+    // const value = new BigNumber(+amount * 10 **targetToken.decimals).toFixed(0);
     const balance = await account.getBalance(wallet, token);
     if (!balance) {
       console.error(`${chainId} ${token} ${wallet} getBalance fail ${balance}`)
       return false;
     }
-    if (BigInt(balance.toString())<=BigInt(value.toString())) {
-      throw new Errors.InsufficientLiquidity(`checkMakerFluidity ${value}/${balance}`);
+    const balanceEther = new BigNumber(balance.toString()).div(10**targetToken.decimals).toNumber();
+    if (BigInt(balanceEther.toString())<=BigInt(minAmount.toString())) {
+      throw new Errors.InsufficientLiquidity(`checkMakerFluidity ${minAmount}/${balanceEther}`);
     }
     return true;
   }
