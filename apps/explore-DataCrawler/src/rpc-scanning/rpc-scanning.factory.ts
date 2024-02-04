@@ -14,7 +14,7 @@ import { MantleRpcScanningService } from './mantle/mantle.service'
 import { ScrollRpcScanningService } from './scroll/scroll.service'
 import { MantaRpcScanningService } from './manta/manta.service'
 import { OPBNBScanningService } from './opbnb/opbnb.service'
-import {L1FeeRpcScanningService} from './l1FeeService/l1Fee.service'
+import { L1FeeRpcScanningService } from './l1FeeService/l1Fee.service'
 import { ContractParserService } from './contract-parser/ContractParser.service';
 @Injectable()
 export class RpcScanningFactory {
@@ -23,7 +23,7 @@ export class RpcScanningFactory {
     private chainConfigService: ChainConfigService,
     private transactionService: TransactionService,
     private envConfigService: ENVConfigService,
-    private contractParser:ContractParserService
+    private contractParser: ContractParserService
   ) { }
 
   createService(chainId: string): RpcScanningService {
@@ -55,12 +55,13 @@ export class RpcScanningFactory {
           ctx
         );
         break;
-        case 'L1FeeRpcScanningService':
-          service = new L1FeeRpcScanningService(
-            chainId,
-            ctx
-          );
-          break;
+      case 'L1FeeRpcScanningService':
+      case 'L1FeeEVMRpcScanningV6Service':
+        service = new L1FeeRpcScanningService(
+          chainId,
+          ctx
+        );
+        break;
       case 'MantaRpcScanningService':
         service = new MantaRpcScanningService(
           chainId,

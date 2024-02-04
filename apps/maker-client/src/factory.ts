@@ -116,7 +116,7 @@ export class AccountFactoryService {
         break;
     }
     if (!wallet) {
-      throw new Error(`${toChainId}-${chainConfig.internalId} Chain Not implemented`);
+      throw new Error(`${toChainId}-${chainConfig.name} Chain WalletAccount Not implemented`);
     }
     wallet.on("noncesExceed", ({ localNonce, networkNonce }) => {
       this.alertService.sendMessage(`Nonces exceeded 10 - Local: ${localNonce}, Network: ${networkNonce}`, 'TG');
