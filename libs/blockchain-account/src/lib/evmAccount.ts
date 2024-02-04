@@ -124,7 +124,7 @@ export class EVMAccount extends OrbiterAccount {
     const feeData = await provider.getFeeData();
     // calc gas
     const feePerGasRedouble = Number(chainCustomConfig.FeePerGasRedouble || 1);
-    if (isEIP1559) {
+    if (isEIP1559 || (typeof isEIP1559 === "undefined" && feeData.maxFeePerGas)) {
       transactionRequest.type = 2;
       const priorityFeePerGasRedouble = Number(chainCustomConfig.PriorityFeePerGasRedouble || 1);
       // maxFeePerGas
@@ -160,8 +160,77 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     }
-    // console.log('transactionRequest :', transactionRequest);
+    if (await this.ctx.envConfigService.getAsync('DefaultUseLastBlockAvgGasPrice') || chainCustomConfig?.useLastBlockAvgGasPrice) {
+      await this.getLastBlockAvgGasPrice(transactionRequest);
+    }
     return transactionRequest;
+  }
+
+  async getLastBlockAvgGasPrice(transactionRequest: TransactionRequest) {
+    const provider = this.provider;
+    const height = await provider.getBlockNumber();
+    const block: any = await provider.getBlock(height, true);
+    const transactionList: any[] = block?.prefetchedTransactions || [];
+    const logs = [];
+    if (transactionRequest.type === 2) {
+      let blockMaxFeePerGas = new BigNumber(0);
+      let blockMaxPriorityFeePerGas = new BigNumber(0);
+      let blockGasLimit = new BigNumber(0);
+      let count = 0;
+      for (const tx of transactionList) {
+        if (!tx.maxFeePerGas || !tx.maxPriorityFeePerGas || !tx.gasLimit || +tx.data) continue;
+        blockMaxFeePerGas = blockMaxFeePerGas.plus(String(tx.maxFeePerGas));
+        blockMaxPriorityFeePerGas = blockMaxPriorityFeePerGas.plus(String(tx.maxPriorityFeePerGas));
+        blockGasLimit = blockGasLimit.plus(String(tx.gasLimit));
+        count++;
+      }
+      if (count) {
+        blockMaxFeePerGas = blockMaxFeePerGas.dividedBy(count) || new BigNumber(0);
+        blockMaxPriorityFeePerGas = blockMaxPriorityFeePerGas.dividedBy(count) || new BigNumber(0);
+        blockGasLimit = blockGasLimit.dividedBy(count);
+      }
+      if (new BigNumber(String(transactionRequest.maxFeePerGas)).lt(blockMaxFeePerGas)) {
+        logs.push(`blockMaxFeePerGas ${
+          String(new BigNumber(String(transactionRequest.maxFeePerGas)).dividedBy(10 ** 9))
+        } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`)
+        transactionRequest.maxFeePerGas = BigInt(blockMaxFeePerGas.toFixed(0));
+      }
+      if (new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).lt(blockMaxPriorityFeePerGas)) {
+        logs.push(`blockMaxPriorityFeePerGas ${
+          String(new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).dividedBy(10 ** 9))
+        } gWei < ${String(blockMaxPriorityFeePerGas.dividedBy(10 ** 9))} gWei`);
+        transactionRequest.maxPriorityFeePerGas = BigInt(blockMaxPriorityFeePerGas.toFixed(0));
+      }
+      if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
+        logs.push(`blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
+        transactionRequest.gasLimit = BigInt(blockGasLimit.toFixed(0));
+      }
+    } else {
+      let blockGasPrice = new BigNumber(0);
+      let blockGasLimit = new BigNumber(0);
+      let count = 0;
+      for (const tx of transactionList) {
+        if (!tx.gasPrice || !tx.gasLimit || +tx.data) continue;
+        blockGasPrice = blockGasPrice.plus(String(tx.gasPrice));
+        blockGasLimit = blockGasLimit.plus(String(tx.gasLimit));
+        count++;
+      }
+      if (count) {
+        blockGasPrice = blockGasPrice.dividedBy(count) || new BigNumber(0);
+        blockGasLimit = blockGasLimit.dividedBy(count);
+      }
+      if (new BigNumber(String(transactionRequest.gasPrice)).lt(blockGasPrice)) {
+        logs.push(`blockGasPrice ${
+          String(new BigNumber(String(transactionRequest.gasPrice)).dividedBy(10 ** 9))
+        } gWei < ${String(blockGasPrice.dividedBy(10 ** 9))} gWei`);
+        transactionRequest.gasPrice = BigInt(blockGasPrice.toFixed(0));
+      }
+      if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
+        logs.push(`blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`)
+        transactionRequest.gasLimit = BigInt(blockGasLimit.toFixed(0));
+      }
+    }
+    logs.length && this.logger.info(`${this.chainConfig.name} ${logs.join(', ')}`);
   }
 
   async transfer(

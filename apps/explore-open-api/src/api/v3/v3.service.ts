@@ -239,6 +239,9 @@ export class V3Service {
         where[Op.or] = [{ version: '2-0' }, { version: '2-1' }];
       }
     }
+    if(params.length >= 11 && params[10]) {
+        where['dealerAddress'] = params[10].toLowerCase();
+    }
     const dataList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll({
       attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceSymbol', 'status', 'sourceTime',
         'targetTime', 'sourceAddress', 'targetAddress', 'sourceMaker', 'targetMaker', 'sourceSymbol', 'targetSymbol', 'sourceToken', 'targetToken'],
