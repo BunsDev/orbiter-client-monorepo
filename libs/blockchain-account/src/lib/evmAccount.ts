@@ -189,20 +189,19 @@ export class EVMAccount extends OrbiterAccount {
         blockGasLimit = blockGasLimit.dividedBy(count);
       }
       if (new BigNumber(String(transactionRequest.maxFeePerGas)).lt(blockMaxFeePerGas)) {
-        this.logger.info(`use blockMaxFeePerGas ${
+        this.logger.info(`${this.chainConfig.name} use blockMaxFeePerGas ${
           String(new BigNumber(String(transactionRequest.maxFeePerGas)).dividedBy(10 ** 9))
         } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`);
         transactionRequest.maxFeePerGas = BigInt(blockMaxFeePerGas.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).lt(blockMaxPriorityFeePerGas)) {
-        this.logger.info(`use blockMaxPriorityFeePerGas ${
+        this.logger.info(`${this.chainConfig.name} use blockMaxPriorityFeePerGas ${
           String(new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).dividedBy(10 ** 9))
         } gWei < ${String(blockMaxPriorityFeePerGas.dividedBy(10 ** 9))} gWei`);
         transactionRequest.maxPriorityFeePerGas = BigInt(blockMaxPriorityFeePerGas.toFixed(0));
       }
-
       if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
-        this.logger.info(`use blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
+        this.logger.info(`${this.chainConfig.name} use blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
         transactionRequest.gasLimit = BigInt(blockGasLimit.toFixed(0));
       }
     } else {
@@ -220,13 +219,13 @@ export class EVMAccount extends OrbiterAccount {
         blockGasLimit = blockGasLimit.dividedBy(count);
       }
       if (new BigNumber(String(transactionRequest.gasPrice)).lt(blockGasPrice)) {
-        this.logger.info(`use blockGasPrice ${
+        this.logger.info(`${this.chainConfig.name} use blockGasPrice ${
           String(new BigNumber(String(transactionRequest.gasPrice)).dividedBy(10 ** 9))
         } gWei < ${String(blockGasPrice.dividedBy(10 ** 9))} gWei`);
         transactionRequest.gasPrice = BigInt(blockGasPrice.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
-        this.logger.info(`use blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
+        this.logger.info(`${this.chainConfig.name} use blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
         transactionRequest.gasLimit = BigInt(blockGasLimit.toFixed(0));
       }
     }
