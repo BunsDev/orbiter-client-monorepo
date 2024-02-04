@@ -77,7 +77,7 @@ export class ValidatorService {
     }
     const balanceEther = new BigNumber(balance.toString()).div(10**targetToken.decimals).toNumber();
     if (BigInt(balanceEther.toString())<=BigInt(minAmount.toString())) {
-      throw new Errors.InsufficientLiquidity(`checkMakerFluidity ${minAmount}/${balanceEther}`);
+      throw new Errors.InsufficientLiquidity(`checkMakerFluidity ${minAmount}/${balanceEther} ${targetToken.symbol}`);
     }
     return true;
   }

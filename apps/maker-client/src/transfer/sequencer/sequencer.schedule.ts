@@ -332,7 +332,7 @@ export class SequencerScheduleService {
     try {
       const isFluidityOK = await this.validatorService.checkMakerFluidity(bridgeTx.targetChain, bridgeTx.targetMaker, bridgeTx.targetToken, +bridgeTx.targetAmount);
       if (!isFluidityOK) {
-        throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker}`)
+        throw new Errors.InsufficientLiquidity(`targetAmount: ${bridgeTx.targetAmount} ${bridgeTx.targetSymbol}`)
       }
     } catch (error) {
       this.logger.error(`checkMakerFluidity error sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`, error);
@@ -393,7 +393,7 @@ export class SequencerScheduleService {
     }
     const isFluidityOK = await this.validatorService.checkMakerInscriptionFluidity(bridgeTx.ruleId, bridgeTx.targetSymbol, +bridgeTx.targetAmount);
     if (!isFluidityOK) {
-      throw new Errors.InsufficientLiquidity(`${bridgeTx.targetChain} - ${bridgeTx.targetMaker} - ${bridgeTx.targetSymbol}`)
+      throw new Errors.InsufficientLiquidity(`targetAmount: ${bridgeTx.targetAmount} ${bridgeTx.targetSymbol}`)
     }
     // start paid
     const account = await this.accountFactoryService.createMakerAccount(
@@ -655,7 +655,8 @@ export class SequencerScheduleService {
     const targetToken = maxItem[0];
     const isFluidityOK = await this.validatorService.checkMakerFluidity(targetChain, targetMaker, targetToken, totalValue)
     if (!isFluidityOK) {
-      throw new Errors.InsufficientLiquidity(`${targetChain} - ${targetMaker} - ${targetToken}`)
+      throw new Errors.InsufficientLiquidity(`targetAmount: ${totalValue} ${bridgeTxs[0].targetSymbol}`)
+      // throw new Errors.InsufficientLiquidity(`${targetChain} - ${targetMaker} - ${targetToken}`)
     }
     // send
     const account = await this.accountFactoryService.createMakerAccount(
