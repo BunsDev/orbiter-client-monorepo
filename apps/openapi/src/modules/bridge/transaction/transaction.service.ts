@@ -40,12 +40,13 @@ export class TransactionService {
             if (transaction.opStatus >= 90) {
                 // success
                 const bridgeTransaction = await this.bridgeTransactionModel.findOne({
-                    attributes: ['targetChain', 'targetId', 'targetAmount', 'targetSymbol'],
+                    attributes: ['targetChain', 'targetId', 'targetAmount', 'targetSymbol', 'status'],
                     where: {
                         sourceId: transaction.hash
                     }
                 });
                 if (bridgeTransaction) {
+                    transaction['opStatus'] = bridgeTransaction.status;
                     transaction['targetId'] = bridgeTransaction.targetId;
                     transaction['targetAmount'] = bridgeTransaction.targetAmount;
                     transaction['targetSymbol'] = bridgeTransaction.targetSymbol;
@@ -59,6 +60,7 @@ export class TransactionService {
                     }
                 });
                 if (refundRecord) {
+                    transaction['opStatus'] = refundRecord.status;
                     transaction['targetId'] = refundRecord.targetId;
                     transaction['targetAmount'] = refundRecord.targetAmount;
                     transaction['targetSymbol'] = refundRecord.sourceSymbol;
