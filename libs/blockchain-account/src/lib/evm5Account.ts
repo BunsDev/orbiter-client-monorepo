@@ -36,7 +36,7 @@ export class EVM5Account extends OrbiterAccount {
                 throw new Error('The connected wallet address is inconsistent with the private key address')
             }
         }
-        if (!this.nonceManager || !equals(this.wallet.address,this.address)) {
+        if (!this.nonceManager || !equals(this.wallet.address, this.address)) {
             this.nonceManager = this.createNonceManager(this.address, async () => {
                 const nonce = await this.wallet.getTransactionCount('pending');
                 return Number(nonce);
@@ -116,8 +116,12 @@ export class EVM5Account extends OrbiterAccount {
             }
 
         }
-        const isEIP1559 = chainCustomConfig['EIP1559'];
+        let isEIP1559 = chainCustomConfig['EIP1559'];
         const feeData = await provider.getFeeData();
+        // calc gas
+        if (isEIP1559 == undefined && feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
+            isEIP1559 = true;
+        }
         // calc gas
         const feePerGasRedouble = Number(chainCustomConfig.FeePerGasRedouble || 1);
         if (isEIP1559) {
