@@ -1193,7 +1193,7 @@ export class TransactionV3Service {
     const t2 = await this.sequelize.transaction();
     try {
       let btTx = await this.bridgeTransactionModel.findOne({
-        attributes: ['id', 'sourceId'],
+        // attributes: ['id', 'sourceId'],
         where: {
           targetChain: transfer.chainId,
           targetId: transfer.hash,
