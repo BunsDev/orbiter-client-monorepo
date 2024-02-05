@@ -3,11 +3,11 @@ import { Module } from '@nestjs/common';
 import { BridgeModule } from './modules/bridge/bridge.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ENVConfigService, OrbiterConfigModule } from '@orbiter-finance/config';
-import { join } from 'lodash';
-import { Transfers, BridgeTransaction } from '@orbiter-finance/seq-models';
 import { SequelizeModule, SequelizeModuleOptions } from '@nestjs/sequelize';
 import { DealerModule } from './modules/dealer/dealer.module';
 import { ConsulModule } from '@orbiter-finance/nestjs-consul';
+import { Transfers, BridgeTransaction, RefundRecord } from '@orbiter-finance/seq-models';
+import TransactionSource from './models/TransactionSource.model';
 
 @Module({
   imports: [
@@ -36,7 +36,7 @@ import { ConsulModule } from '@orbiter-finance/nestjs-consul';
           process.exit(1);
         }
         config.schema = 'public';
-        return {...config,schema: 'public'};
+        return {...config,schema: 'public',models:[Transfers,BridgeTransaction,RefundRecord]};
       },
     }),
     SequelizeModule.forRootAsync({
@@ -48,7 +48,7 @@ import { ConsulModule } from '@orbiter-finance/nestjs-consul';
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
         }
-        return {...config,schema: 'stats'};
+        return {...config,schema: 'stats', models:[TransactionSource]};
       },
     }),
     

@@ -1,7 +1,8 @@
+import { OrbiterLogger } from '@orbiter-finance/utils';
 import { Controller, Get, Headers, Param, Query } from '@nestjs/common';
 import { RoutersService } from './routers.service';
 import { success, error } from 'apps/openapi/src/shared/decorators/responser.decorator';
-import { equals, v1MakerUtils } from '@orbiter-finance/utils'
+import { LoggerDecorator, equals, v1MakerUtils } from '@orbiter-finance/utils'
 import { CustomError } from '../../../shared/errors/custom.error'
 import { ChainsService } from '../chains/chains.service';
 import BigNumber from 'bignumber.js';
@@ -10,12 +11,17 @@ import { ENVConfigService } from '@orbiter-finance/config';
 
 @Controller('routers')
 export class RoutersController {
+    @LoggerDecorator()
+    private readonly logger: OrbiterLogger;
     constructor(private readonly routerService: RoutersService, private readonly chainService: ChainsService, private readonly envConfigService: ENVConfigService) {
     }
 
     @Get()
     @success('success', 200)
     async getRouters(@Query('dealerId') dealerId: string, @Headers('X-Channel-Identifier') channelHeader: string) {
+        if (channelHeader) {
+            this.logger.info(`getRouters channelHeader ${channelHeader}`)
+        }
         let routers = [];
         const whiteMakers = this.envConfigService.get("EXTERNAL_WHITE_MAKERS", []);
         console.log(`getRouters - channelHeader: ${channelHeader}`)
@@ -52,6 +58,9 @@ export class RoutersController {
     @success('success', 200)
     async getCrossChainRouters(@Headers('X-Channel-Identifier') channelHeader: string) {
         console.log(`getCrossChainRouters - channelHeader: ${channelHeader}`)
+        if (channelHeader) {
+            this.logger.info(`getCrossChainRouters channelHeader ${channelHeader}`)
+        }
         const whiteMakers = this.envConfigService.get("EXTERNAL_WHITE_MAKERS", []);
         const configs = await this.routerService.getV1Routers(whiteMakers);
         return configs.filter(config => {
