@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Transfers, BridgeTransaction, RefundRecord } from '@orbiter-finance/seq-models';
 import { Op } from 'sequelize';
-
+import dayjs from 'dayjs';
 @Injectable()
 export class TransactionService {
     constructor(
@@ -19,7 +19,10 @@ export class TransactionService {
             raw: true,
             attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceMaker', 'targetMaker', 'sourceAddress', 'targetAddress', 'sourceSymbol', 'targetSymbol', 'status', 'sourceTime', 'targetTime', 'ruleId'],
             where: {
-                sourceId: hash
+                sourceId: hash,
+                sourceTime: {
+                    [Op.gte]: dayjs().subtract(1, 'month').toISOString()
+                }
             }
         })
     }
@@ -29,6 +32,9 @@ export class TransactionService {
             attributes: ['chainId', 'hash', 'sender', 'receiver', 'amount', 'symbol', 'timestamp', 'status', 'opStatus'],
             where: {
                 hash,
+                timestamp: {
+                    [Op.gte]: dayjs().subtract(1, 'month').toISOString()
+                }
             }
         });
 
