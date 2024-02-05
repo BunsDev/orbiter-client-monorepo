@@ -43,7 +43,7 @@ import { ConsulModule } from '@orbiter-finance/nestjs-consul';
       inject: [ENVConfigService],
       name:"stats",
       useFactory: async (envConfig: ENVConfigService) => {
-        const config: SequelizeModuleOptions = await envConfig.getAsync('DATABASE_URL');
+        const config: SequelizeModuleOptions = await envConfig.getAsync('DATABASE_STATS_URL');
         if (!config) {
           console.error('Missing configuration DATABASE_URL');
           process.exit(1);
