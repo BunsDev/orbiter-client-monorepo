@@ -52,8 +52,8 @@ export class AppController {
     async version(@Request() req) {
         ipRegister(req.ip);
         return HTTPResponse.success({
-            UserVersion: '1.0.0',
-            MakerVersion: '1.0.0'
+            UserVersion: '2.0.0',
+            MakerVersion: '2.0.0'
         });
     }
 }
