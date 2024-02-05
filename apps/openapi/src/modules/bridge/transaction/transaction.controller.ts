@@ -13,14 +13,16 @@ export class TransactionController {
     @Get("/cross-chain/:hash")
     @success('success', 200)
     async queryCrossChainTransaction(@Param("hash") hash: string, @Req() request: Request) {
-        this.logger.info(`queryCrossChainTransaction ip:${request['ip']}， hash:${hash}`)
+        const headers = request['headers'];
+        this.logger.info(`queryCrossChainTransaction ip:${JSON.stringify(headers)}， hash:${hash}`)
         const transaction = await this.transactionService.getCrossChainTransaction(hash);
         return transaction
     }
     @Get("/status/:hash")
     @success('success', 200)
     async queryTransaction(@Param("hash") hash: string, @Req() request: Request) {
-        this.logger.info(`queryTransaction ip:${request['ip']}， hash:${hash}`)
+        const headers = request['headers'];
+        this.logger.info(`queryTransaction ip:${JSON.stringify(headers)}， hash:${hash}`)
         const transaction = await this.transactionService.getTransferByHash(hash);
         return transaction
     }
