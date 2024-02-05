@@ -96,6 +96,7 @@ export class AccountFactoryService {
       case 526:
       case 529:
       case 530:
+      case 539:
         wallet = new EVMAccount(toChainId, ctx);
         break;
       case 512:
