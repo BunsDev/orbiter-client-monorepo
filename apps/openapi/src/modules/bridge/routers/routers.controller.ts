@@ -18,7 +18,7 @@ export class RoutersController {
 
     @Get()
     @success('success', 200)
-    async getRouters(@Query('dealerId') dealerId: string, @Headers('X-Channel-Identifier') channelHeader: string) {
+    async getRouters(@Query('dealerId') dealerId: string, @Headers('x-channel-identifier') channelHeader: string) {
         if (channelHeader) {
             this.logger.info(`getRouters channelHeader ${channelHeader}`)
         }
@@ -44,7 +44,7 @@ export class RoutersController {
     }
     @Get("/fe")
     @success('success', 200)
-    async getCrossChainRoutersByOrbiterFe(@Headers('X-Channel-Identifier') channelHeader: string) {
+    async getCrossChainRoutersByOrbiterFe(@Headers('x-channel-identifier') channelHeader: string) {
         console.log(`getCrossChainRoutersByOrbiterFe - channelHeader: ${channelHeader}`)
         const whiteMakers = this.envConfigService.get("FE_WHITE_MAKERS", []);
         const configs = await this.routerService.getV1Routers(whiteMakers);
@@ -56,7 +56,7 @@ export class RoutersController {
 
     @Get("/cross-chain")
     @success('success', 200)
-    async getCrossChainRouters(@Headers('X-Channel-Identifier') channelHeader: string) {
+    async getCrossChainRouters(@Headers('x-channel-identifier') channelHeader: string) {
         console.log(`getCrossChainRouters - channelHeader: ${channelHeader}`)
         if (channelHeader) {
             this.logger.info(`getCrossChainRouters channelHeader ${channelHeader}`)
