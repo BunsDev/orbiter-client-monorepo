@@ -7,7 +7,7 @@ import {
   TransactionReceipt,
   TransactionReceiptParams,
 } from 'ethers6';
-export default class OrbiterProvider extends JsonRpcProvider {
+export default class Orbiter6Provider extends JsonRpcProvider {
   #url!: string;
   constructor(
     url?: string | FetchRequest,

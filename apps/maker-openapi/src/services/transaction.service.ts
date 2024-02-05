@@ -301,7 +301,7 @@ export class TransactionService {
             const challenger = await this.getChallenge(sourceTxHash);
             if (challenger) {
                 aggregationLog(`The tx is being challenged ${sourceTxHash}`);
-                continue;
+                break;
             }
             const arbitrationRecordCount: number = <any>await this.arbitrationRecord.count(<any>{
                 where: {

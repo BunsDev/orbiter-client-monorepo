@@ -79,8 +79,24 @@ export class RefundRecord
     })
     sourceSymbol: string;
 
+
     @Column({ allowNull: true, type: DataType.DATE })
     sourceTime: Date;
+
+    @Column({ allowNull: true, type: DataType.STRING(255) })
+    @Index({
+        name: 'refund_record_source_maker_idx',
+        using: 'btree',
+        unique: false,
+    })
+    sourceMaker: string;
+    @Column({ allowNull: true, type: DataType.STRING(255) })
+    @Index({
+        name: 'refund_record_targetMaker_idx',
+        using: 'btree',
+        unique: false,
+    })
+    targetMaker: string;
 
 }
 

@@ -374,7 +374,7 @@ export class TransactionV1Service {
       if (!btTx || !btTx.id) {
         const where = {
           status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
-          targetId: null,
+          // targetId: null,
           targetSymbol: transfer.symbol,
           targetAddress: transfer.receiver,
           targetChain: transfer.chainId,

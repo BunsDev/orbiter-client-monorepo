@@ -1,3 +1,4 @@
+import { EVM5Account } from './../../../libs/blockchain-account/src/lib/evm5Account';
 import { Injectable } from "@nestjs/common";
 import { AlertService } from "@orbiter-finance/alert";
 import {
@@ -94,8 +95,10 @@ export class AccountFactoryService {
       case 524:
       case 525:
       case 526:
+      case 528:
       case 529:
       case 530:
+      case 535:
       case 539:
         wallet = new EVMAccount(toChainId, ctx);
         break;
@@ -105,6 +108,10 @@ export class AccountFactoryService {
           ctx
         );
         break;
+      case 38:
+      case 538:
+        wallet = new EVM5Account(toChainId, ctx);
+        break;
       default:
         if (chainConfig.service && chainConfig.service['rpc'] && chainConfig.service['rpc'].includes('EVMRpcScanning')) {
           wallet = new EVMAccount(toChainId, ctx);
@@ -112,7 +119,7 @@ export class AccountFactoryService {
         break;
     }
     if (!wallet) {
-      throw new Error(`${toChainId}-${chainConfig.internalId} Chain Not implemented`);
+      throw new Error(`${toChainId}-${chainConfig.name} Chain WalletAccount Not implemented`);
     }
     wallet.on("noncesExceed", ({ localNonce, networkNonce }) => {
       this.alertService.sendMessage(`Nonces exceeded 10 - Local: ${localNonce}, Network: ${networkNonce}`, 'TG');

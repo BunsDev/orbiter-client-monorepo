@@ -1,9 +1,8 @@
+import { Orbiter6Provider } from '@orbiter-finance/blockchain-account';
 import {
   ethers,
   Interface,
   isError,
-  keccak256,
-  Network,
   JsonRpcProvider,
   type Wallet,
 } from "ethers6";
@@ -22,47 +21,18 @@ import {
   TransferResponse,
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-import { Orbiter6Provider } from './provider'
-import Keyv from "keyv";
-import KeyvFile from "keyv-file";
-import path from "path";
+import { EVMNonceManager } from './nonceManager/evmNonceManager';
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
-  #provider: Orbiter6Provider;
-  public nonceManager: NonceManager;
+  #provider: JsonRpcProvider;
+  public nonceManager: NonceManager | EVMNonceManager;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
-  get provider(): Orbiter6Provider {
+  get provider(): JsonRpcProvider {
     const rpc = this.chainConfig.rpc[0];
     return new Orbiter6Provider(rpc)
   }
-  // getProvider() {
-  //   try {
-  //     const rpc = this.chainConfig.rpc[0];
-  //     this.#provider = new Orbiter6Provider(rpc)
-  //     return this.#provider;
-  //   } catch (error) {
-  //     this.logger.error(`${this.chainConfig.chainId} - ${this.chainConfig.name} ${this.chainConfig.rpc[0]} getProvider error`, error)
-  //   }
-  //   // const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
-  //   // if (!this.#provider) {
-  //   //   const provider = new Orbiter6Provider(rpc,
-  //   //     network, {
-  //   //     staticNetwork: network,
-  //   //   });
-  //   //   this.#provider = provider;
-  //   // }
-  //   // if (this.#provider && this.#provider.getUrl() != rpc) {
-  //   //   this.logger.info(
-  //   //     `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
-  //   //   );
-  //   //   this.#provider = new Orbiter6Provider(rpc, network, {
-  //   //     staticNetwork: network
-  //   //   });
-  //   // }
-  //   // return this.#provider;
-  // }
 
   async connect(privateKey: string, _address?: string) {
     this.wallet = new ethers.Wallet(privateKey).connect(this.provider);
@@ -71,11 +41,13 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error('The connected wallet address is inconsistent with the private key address')
       }
     }
+    if (!this.nonceManager || !equals(this.wallet.address,this.address)) {
+      this.nonceManager = this.createEVMNonceManager(this.address, async () => {
+        const nonce = await this.wallet.getNonce("pending");
+        return Number(nonce);
+      })
+    }
     this.address = this.wallet.address;
-    this.nonceManager = this.createNonceManager(this.address, async () => {
-      const nonce = await this.wallet.getNonce("pending");
-      return Number(nonce);
-    })
     return this;
   }
 
@@ -92,17 +64,20 @@ export class EVMAccount extends OrbiterAccount {
           `The sender ${token} has insufficient balance`
         );
       }
-      const ifa = new Interface(ERC20Abi);
-      const data = ifa.encodeFunctionData("transfer", [to, value]);
-      transactionRequest.data = data;
-      transactionRequest.to = token;
-      transactionRequest.value = 0n;
-      transactionRequest.from = this.wallet.address;
       // get erc20 getLimit
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
-      throw new TransactionSendConfirmFail(error.message);
+      this.logger.error(`${this.chainConfig.name} transferToken getBalance error ${error.message}`, error)
+      if (error instanceof TransactionSendConfirmFail) {
+        throw error;
+      }
     }
+    const ifa = new Interface(ERC20Abi);
+    const data = ifa.encodeFunctionData("transfer", [to, value]);
+    transactionRequest.data = data;
+    transactionRequest.to = token;
+    transactionRequest.value = 0n;
+    transactionRequest.from = this.wallet.address;
     const tx = await this.sendTransaction(transactionRequest);
     return {
       hash: tx.hash,
@@ -143,11 +118,13 @@ export class EVMAccount extends OrbiterAccount {
           }
         }
       }
-
     }
-    const isEIP1559 = chainCustomConfig['EIP1559'];
+    let isEIP1559 = chainCustomConfig['EIP1559'];
     const feeData = await provider.getFeeData();
     // calc gas
+    if (isEIP1559 == undefined && feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
+      isEIP1559 = true;
+    }
     const feePerGasRedouble = Number(chainCustomConfig.FeePerGasRedouble || 1);
     if (isEIP1559) {
       transactionRequest.type = 2;
@@ -185,8 +162,77 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error(`gasPrice Fee fail, gasPrice:${transactionRequest.gasPrice}, feeData: ${JSON.stringify(feeData)}`)
       }
     }
-    // console.log('transactionRequest :', transactionRequest);
+    if (await this.ctx.envConfigService.getAsync('DefaultUseLastBlockAvgGasPrice') || chainCustomConfig?.useLastBlockAvgGasPrice) {
+      await this.getLastBlockAvgGasPrice(transactionRequest);
+    }
     return transactionRequest;
+  }
+
+  async getLastBlockAvgGasPrice(transactionRequest: TransactionRequest) {
+    const provider = this.provider;
+    const height = await provider.getBlockNumber();
+    const block: any = await provider.getBlock(height, true);
+    const transactionList: any[] = block?.prefetchedTransactions || [];
+    const logs = [];
+    if (transactionRequest.type === 2) {
+      let blockMaxFeePerGas = new BigNumber(0);
+      let blockMaxPriorityFeePerGas = new BigNumber(0);
+      let blockGasLimit = new BigNumber(0);
+      let count = 0;
+      for (const tx of transactionList) {
+        if (!tx.maxFeePerGas || !tx.maxPriorityFeePerGas || !tx.gasLimit || +tx.data) continue;
+        blockMaxFeePerGas = blockMaxFeePerGas.plus(String(tx.maxFeePerGas));
+        blockMaxPriorityFeePerGas = blockMaxPriorityFeePerGas.plus(String(tx.maxPriorityFeePerGas));
+        blockGasLimit = blockGasLimit.plus(String(tx.gasLimit));
+        count++;
+      }
+      if (count) {
+        blockMaxFeePerGas = blockMaxFeePerGas.dividedBy(count) || new BigNumber(0);
+        blockMaxPriorityFeePerGas = blockMaxPriorityFeePerGas.dividedBy(count) || new BigNumber(0);
+        blockGasLimit = blockGasLimit.dividedBy(count);
+      }
+      if (new BigNumber(String(transactionRequest.maxFeePerGas)).lt(blockMaxFeePerGas)) {
+        logs.push(`blockMaxFeePerGas ${
+          String(new BigNumber(String(transactionRequest.maxFeePerGas)).dividedBy(10 ** 9))
+        } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`)
+        transactionRequest.maxFeePerGas = BigInt(blockMaxFeePerGas.toFixed(0));
+      }
+      if (new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).lt(blockMaxPriorityFeePerGas)) {
+        logs.push(`blockMaxPriorityFeePerGas ${
+          String(new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).dividedBy(10 ** 9))
+        } gWei < ${String(blockMaxPriorityFeePerGas.dividedBy(10 ** 9))} gWei`);
+        transactionRequest.maxPriorityFeePerGas = BigInt(blockMaxPriorityFeePerGas.toFixed(0));
+      }
+      if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
+        logs.push(`blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`);
+        transactionRequest.gasLimit = BigInt(blockGasLimit.toFixed(0));
+      }
+    } else {
+      let blockGasPrice = new BigNumber(0);
+      let blockGasLimit = new BigNumber(0);
+      let count = 0;
+      for (const tx of transactionList) {
+        if (!tx.gasPrice || !tx.gasLimit || +tx.data) continue;
+        blockGasPrice = blockGasPrice.plus(String(tx.gasPrice));
+        blockGasLimit = blockGasLimit.plus(String(tx.gasLimit));
+        count++;
+      }
+      if (count) {
+        blockGasPrice = blockGasPrice.dividedBy(count) || new BigNumber(0);
+        blockGasLimit = blockGasLimit.dividedBy(count);
+      }
+      if (new BigNumber(String(transactionRequest.gasPrice)).lt(blockGasPrice)) {
+        logs.push(`blockGasPrice ${
+          String(new BigNumber(String(transactionRequest.gasPrice)).dividedBy(10 ** 9))
+        } gWei < ${String(blockGasPrice.dividedBy(10 ** 9))} gWei`);
+        transactionRequest.gasPrice = BigInt(blockGasPrice.toFixed(0));
+      }
+      if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
+        logs.push(`blockGasLimit ${String(transactionRequest.gasLimit)} < ${String(blockGasLimit)}`)
+        transactionRequest.gasLimit = BigInt(blockGasLimit.toFixed(0));
+      }
+    }
+    logs.length && this.logger.info(`${this.chainConfig.name} ${logs.join(', ')}`);
   }
 
   async transfer(
@@ -201,14 +247,17 @@ export class EVMAccount extends OrbiterAccount {
           "The sender has insufficient balance"
         );
       }
-      transactionRequest.to = to;
-      transactionRequest.value = value as any;
-      transactionRequest.from = this.wallet.address;
       // get getLimit
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
-      throw new TransactionSendConfirmFail(error.message);
+      this.logger.error(`${this.chainConfig.name} transftransferers getBalance error ${error.message}`, error)
+      if (error instanceof TransactionSendConfirmFail) {
+        throw error;
+      }
     }
+    transactionRequest.to = to;
+    transactionRequest.value = value as any;
+    transactionRequest.from = this.wallet.address;
     const response = await this.sendTransaction(transactionRequest);
     return response;
   }
@@ -222,7 +271,7 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     try {
       if (tos.length !== values.length) {
-        throw new TransactionSendConfirmFail(
+        throw new Error(
           "to and values are inconsistent in length"
         );
       }
@@ -238,13 +287,21 @@ export class EVMAccount extends OrbiterAccount {
         (accumulator, currentValue) => accumulator + currentValue,
         0n
       );
-      //
-      const balance = await this.getBalance();
-      if (balance < totalValue) {
-        throw new TransactionSendConfirmFail(
-          "The sender has insufficient balance"
-        );
+      try {
+        //
+        const balance = await this.getBalance();
+        if (balance < totalValue) {
+          throw new TransactionSendConfirmFail(
+            "The sender has insufficient balance"
+          );
+        }
+      } catch (error) {
+        this.logger.error(`${this.chainConfig.name} transfers getBalance error ${error.message}`, error)
+        if (error instanceof TransactionSendConfirmFail) {
+          throw error;
+        }
       }
+
       if (!OrbiterRouterV3) {
         throw new TransactionSendConfirmFail("OrbiterRouterV3 ABI Not Found");
       }
@@ -255,7 +312,7 @@ export class EVMAccount extends OrbiterAccount {
         tos,
         values,
       ]);
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
@@ -273,7 +330,7 @@ export class EVMAccount extends OrbiterAccount {
     const chainConfig = this.chainConfig;
     try {
       if (tos.length !== values.length) {
-        throw new TransactionSendConfirmFail(
+        throw new Error(
           "to and values are inconsistent in length"
         );
       }
@@ -281,7 +338,7 @@ export class EVMAccount extends OrbiterAccount {
         (addr) => chainConfig.contract[addr] === "OrbiterRouterV3"
       );
       if (!router) {
-        throw new TransactionSendConfirmFail(
+        throw new Error(
           "transferTokens router not config"
         );
       }
@@ -317,7 +374,7 @@ export class EVMAccount extends OrbiterAccount {
       transactionRequest.to = router;
       transactionRequest.value = "0x0";
       transactionRequest.chainId = Number(this.chainConfig.networkId);
-      await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
+      // await promiseWithTimeout(this.getGasPrice(transactionRequest), 1000 * 30);
     } catch (error) {
       throw new TransactionSendConfirmFail(error.message);
     }
@@ -330,75 +387,26 @@ export class EVMAccount extends OrbiterAccount {
     return receipt;
   }
 
-  // public async sendTransaction(
-  //   to: string,
-  //   transactionRequest: TransactionRequest = {}
-  // ): Promise<TransactionResponse> {
-  //   const serialIds =
-  //     typeof transactionRequest.serialId === "string"
-  //       ? [transactionRequest.serialId]
-  //       : transactionRequest.serialId;
-  //   this.chainConfig.debug && this.logger.debug(`sendTransaction serialIds: ${JSONStringify(serialIds)}`)
-  //   const chainConfig = this.chainConfig;
-  //   const provider = this.getProvider();
-  //   const chainId: number | undefined = Number(
-  //     transactionRequest.chainId || chainConfig.chainId
-  //   );
-
-  //   const tx: TransactionRequest = {
-  //     chainId,
-  //     ...transactionRequest,
-  //     from: this.wallet.address,
-  //     to,
-  //   };
-  //   const { nonce, submit, rollback } = await this.nonceManager.getNextNonce();
-  //   let txHash;
-  //   try {
-  //     tx.nonce = nonce;
-  //     if (tx.value) {
-  //       tx.value = new BigNumber(String(tx.value)).toFixed(0);
-  //     }
-  //     this.logger.info(
-  //       `${chainConfig.name} sendTransaction:${JSONStringify(tx)}`
-  //     );
-  //     const signedTx = await this.wallet.signTransaction(tx);
-  //     txHash = keccak256(signedTx);
-  //     const response = await provider.broadcastTransaction(signedTx);
-  //     this.logger.info(
-  //       `${chainConfig.name} sendTransaction txHash:${txHash}`
-  //     );
-  //     //
-  //     submit();
-  //     return response;
-  //   } catch (error) {
-  //     rollback();
-  //     this.logger.error(
-  //       `broadcastTransaction tx error:${txHash} - ${error.message}`,
-  //       error
-  //     );
-  //     // rollback()
-  //     if (isError(error, "NONCE_EXPIRED")) {
-  //       throw new TransactionSendConfirmFail(error.message);
-  //     }
-  //     throw new TransactionFailedError(error.message);
-  //   }
-  // }
-
   public async sendTransaction(
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
     // const provider = this.getProvider();
-    let nonceResult;
+    this.logger.info(`sendTransaction transactionRequest:${JSONStringify(transactionRequest)}`)
+    const nonceResult = await this.nonceManager.getNextNonce();
+    if (!nonceResult) {
+      throw new TransactionSendConfirmFail('nonceResult nof found');
+    }
+    this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
+
     try {
-      nonceResult = await this.nonceManager.getNextNonce();
-      if (nonceResult.localNonce > nonceResult.networkNonce + 20) {
+      if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
         throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
       }
       if (transactionRequest.value)
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
       transactionRequest.from = this.wallet.address;
-      transactionRequest.chainId = chainConfig.chainId;
+      transactionRequest.chainId = +chainConfig.chainId;
       transactionRequest.nonce = nonceResult.nonce;
       await promiseWithTimeout(this.getGasPrice(transactionRequest), 2000 * 60);
       try {
@@ -425,18 +433,15 @@ export class EVMAccount extends OrbiterAccount {
         );
       }
       this.logger.info(
-        `${chainConfig.name} sendTransaction before:${JSONStringify(transactionRequest)}`
+        `${chainConfig.name} sendTransaction before:${JSONStringify(transactionRequest)}, rpc: ${this.chainConfig.rpc[0]}`
       );
     } catch (error) {
       console.error(error);
-      nonceResult && await nonceResult.rollback();
+      await nonceResult.rollback();
       this.logger.error(
         `${chainConfig.name} sendTransaction before error:${JSONStringify(transactionRequest)},Nonce: ${transactionRequest.nonce}, message: ${error.message}`, error
       );
       throw new TransactionSendConfirmFail(error.message);
-    }
-    if (!nonceResult) {
-      throw new TransactionSendConfirmFail(`Nonce not obtained`);
     }
     try {
       const response = await this.wallet.sendTransaction(transactionRequest);
@@ -446,11 +451,11 @@ export class EVMAccount extends OrbiterAccount {
       await nonceResult.submit();
       return response;
     } catch (error) {
-      await nonceResult.rollback();
       this.logger.error(
-        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}`,
+        `broadcastTransaction tx error:${transactionRequest.nonce} - ${error.message}， rpc: ${this.chainConfig.rpc[0]}`,
         error
       );
+      await nonceResult.rollback();
       if (isError(error, "NONCE_EXPIRED")) {
         this.logger.error(`sendTransaction NONCE_EXPIRED from:${transactionRequest.from}, to:${transactionRequest.to},nonce:${transactionRequest.nonce}, value:${transactionRequest.value}`);
         throw new TransactionSendConfirmFail(error.message);

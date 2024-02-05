@@ -3,6 +3,7 @@ import { RoutersConfig } from '../bridge.interface';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService } from '@orbiter-finance/config';
 import { ChainsService } from '../chains/chains.service';
 import { padStart, uniq } from 'lodash';
+import BigNumber from 'bignumber.js';
 
 @Injectable()
 export class RoutersService {
@@ -60,6 +61,8 @@ export class RoutersService {
                     console.log(`v1Rule not find targetToken`, v1Rule);
                     continue;
                 }
+                const withholdingFee = +v1Rule['tradingFee'];
+                const minAmount = new BigNumber(v1Rule['minPrice']).plus(withholdingFee);
                 const routerConfig: RoutersConfig = {
                     line: '',
                     endpoint: v1Rule['makerAddress'],
@@ -69,9 +72,9 @@ export class RoutersService {
                     srcToken: sourceToken.address,
                     tgtToken: targetToken.address,
                     maxAmt: String(v1Rule['maxPrice']),
-                    minAmt: String(v1Rule['minPrice']),
+                    minAmt:minAmount.toString(),
                     tradeFee: String(+v1Rule['gasFee'] * 1000),
-                    withholdingFee: String(v1Rule['tradingFee']),
+                    withholdingFee: String(withholdingFee),
                     vc: String(+internalChainId[1] + 9000),
                     state: 'available',
                     compRatio: 1,
@@ -154,6 +157,8 @@ export class RoutersService {
                     notWhiteMakers.push(v3Rule['recipient'].toLocaleLowerCase());
                     continue;
                 }
+                const withholdingFee = +v3Rule['tradingFee'];
+                const minAmount = new BigNumber(fromChain['minPrice']).plus(withholdingFee);
                 const routerConfig: RoutersConfig = {
                     line: `${fromChain['chainId']}/${toChain['chainId']}-${fromChain['symbol']}/${toChain['symbol']}`,
                     endpoint: v3Rule['recipient'],
@@ -163,9 +168,9 @@ export class RoutersService {
                     srcToken: fromChain['tokenAddress'],
                     tgtToken: toChain['tokenAddress'],
                     maxAmt: String(fromChain['maxPrice'] || "0"),
-                    minAmt: String(fromChain['minPrice'] || "0"),
+                    minAmt: minAmount.toString(),
                     tradeFee: v3Rule['gasFee'],
-                    withholdingFee: v3Rule['tradingFee'],
+                    withholdingFee: String(withholdingFee),
                     vc: `${padStart(v3Rule.dealerId, 2, "0")}${v3Rule['ebcId']}${padStart(toChain.id, 2, "0")}`,
                     state: 'available',
                     compRatio: v3Rule['_compensationRatio'], // 1000000

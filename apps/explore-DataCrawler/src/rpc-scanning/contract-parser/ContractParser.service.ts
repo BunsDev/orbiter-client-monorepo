@@ -4,7 +4,6 @@ import { TransferAmountTransaction, ContractRegistry, ContractParser } from './C
 import { ChainConfigService } from '@orbiter-finance/config';
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import implementParses from './implement/'
-import { isEmpty } from 'lodash';
 import { equals } from '@orbiter-finance/utils';
 import { id } from 'ethers6';
 @Injectable()
@@ -13,18 +12,25 @@ export class ContractParserService {
   constructor(
     private chainConfigService: ChainConfigService
   ) {
+    this.registerContractByChains()
+    setInterval(() => {
+      this.registerContractByChains()
+    }, 2000 * 60)
+  }
+  registerContractByChains() {
     const chains = this.chainConfigService.getAllChains();
     for (const chain of chains) {
       for (const contract of chain.contracts) {
         const implementClass = implementParses[contract.name];
-        if (implementClass) {
-          this.registerContract(`${chain.chainId}-${contract.name}`, new implementClass(chain));
+        const registerName = `${chain.chainId}-${contract.name}`;
+        if (implementClass && !this.contractRegistry[registerName]) {
+          this.registerContract(registerName, new implementClass(chain));
         }
       }
     }
   }
-  registerContract(contractName: string, instance: ContractParser) {
-    this.contractRegistry[contractName] = instance;
+  registerContract(registerName: string, instance: ContractParser) {
+    this.contractRegistry[registerName] = instance;
   }
   existRegisterContract(chainId: string, contractAddress: string) {
     const chain = this.chainConfigService.getChainInfo(chainId);

@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ECode } from "../api.interface";
 import { V3Service } from "./v3.service";
 import { V2Service } from "../v2/v2.service";
@@ -63,4 +63,11 @@ export class V3Controller {
     }
     return { id, jsonrpc, error: { code: ECode.MethodNotFound, message: 'Method not found' } };
   }
+
+    @Get('/dealer')
+    async dealer(@Query("dealerAddress") dealerAddress: string,
+                 @Query("beginTime") beginTime: string,
+                 @Query("endTime") endTime: string) {
+        return { code: 0, result: await this.v3Service.getTradeFeeByDealerAddress(dealerAddress, beginTime, endTime) };
+    }
 }

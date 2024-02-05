@@ -239,6 +239,9 @@ export class V3Service {
         where[Op.or] = [{ version: '2-0' }, { version: '2-1' }];
       }
     }
+    if(params.length >= 11 && params[10]) {
+        where['dealerAddress'] = params[10].toLowerCase();
+    }
     const dataList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll({
       attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceSymbol', 'status', 'sourceTime',
         'targetTime', 'sourceAddress', 'targetAddress', 'sourceMaker', 'targetMaker', 'sourceSymbol', 'targetSymbol', 'sourceToken', 'targetToken'],
@@ -650,6 +653,57 @@ export class V3Service {
     }
     return calculateAmountByLarge(tradingPair, amount);
   }
+
+    async getTradeFeeByDealerAddress(dealerAddress: string, begin: string, end: string) {
+        if (!new RegExp(/^0x[a-fA-F0-9]{40}$/).test(dealerAddress)) {
+            return null;
+        }
+        if(dealerAddress.toLowerCase() !== "0xf3c19d4921da3b1389545586bda674f8b13bcfd7"){
+            return null;
+        }
+        const beginTime = +begin;
+        const endTime = +end;
+        if (!beginTime || !endTime) {
+            return null;
+        }
+        if (endTime - beginTime > 1000 * 60 * 60 * 24 * 62) {
+            return null;
+        }
+        const bridgeTransactionList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll(<any>{
+            attributes: ['sourceChain', 'sourceSymbol', 'targetSymbol', 'targetChain', 'sourceId', 'targetId', 'sourceAddress', 'targetMaker',
+                'sourceAmount', 'targetAmount', 'sourceTime', 'targetTime', 'tradeFee'],
+            raw: true,
+            where: {
+                dealerAddress: dealerAddress.toLowerCase(),
+                status: 99,
+                sourceTime: {
+                    [Op.gte]: dayjs(beginTime).toISOString(),
+                    [Op.lte]: dayjs(endTime).toISOString(),
+                }
+            },
+            order: [['sourceTime', 'DESC']],
+        });
+        const dataList: any[] = [];
+        for (const bridgeTransaction of bridgeTransactionList) {
+            const sourceChainInfo = V2Service.chainList.find(item => +item.chainId === +bridgeTransaction.sourceChain);
+            const targetChainInfo = V2Service.chainList.find(item => +item.chainId === +bridgeTransaction.targetChain);
+            dataList.push({
+                sourceChain: sourceChainInfo?.name,
+                sourceHash: bridgeTransaction.sourceId,
+                sourceTime: bridgeTransaction.sourceTime,
+                sourceAmount: `${bridgeTransaction.sourceAmount} ${bridgeTransaction.sourceSymbol}`,
+                userAddress: bridgeTransaction.sourceAddress,
+
+                targetChain: targetChainInfo?.name,
+                targetHash: bridgeTransaction.targetId,
+                targetTime: bridgeTransaction.targetTime,
+                targetAmount: `${bridgeTransaction.targetAmount} ${bridgeTransaction.targetSymbol}`,
+                makerAddress: bridgeTransaction.targetMaker,
+                tradeFee: `${bridgeTransaction.tradeFee} ${bridgeTransaction.sourceSymbol}`
+            });
+        }
+        return dataList;
+    }
 
   convertV3ChainList(chainRels) {
     const chainList = this.chainConfigService.getAllChains();

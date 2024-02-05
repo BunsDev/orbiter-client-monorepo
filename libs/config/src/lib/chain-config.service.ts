@@ -32,11 +32,7 @@ export class ChainConfigService {
                 ) == -1
             ) {
                 chain.tokens.unshift({
-                    id: chain.nativeCurrency.id,
-                    name: chain.nativeCurrency.name,
-                    symbol: chain.nativeCurrency.symbol,
-                    decimals: chain.nativeCurrency.decimals,
-                    address: chain.nativeCurrency.address,
+                    ...chain.nativeCurrency,
                     isNative: true,
                 });
             }

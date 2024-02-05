@@ -40,7 +40,7 @@ export class V2Schedule {
       targetChainId: string,
       sourceSymbol: string,
       targetSymbol: string
-    }[] = <any[]>this.makerV1RuleService.getAll();
+    }[] = <any[]>this.makerV1RuleService.configs || [];
     let tradingPairs: ITradingPair[] = [];
     const isMainNet = chainList.find(item => +item.internalId === 1);
     for (const rule of rules) {

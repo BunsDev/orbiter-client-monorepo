@@ -108,10 +108,10 @@ export class TransactionService {
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Claim)) {
               versionStr = '3-0';
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Cross)) {
-              upsertData.crossChainParams = { targetRecipient: calldata.to ? calldata.to.toLowerCase(): transfer.sender }
+              upsertData.crossChainParams = { targetRecipient: calldata.to ? calldata.to.toLowerCase() : transfer.sender }
               versionStr = '3-3';
             } else if ((calldata && calldata.op && calldata.op === InscriptionOpType.Transfer)) {
-              upsertData.crossChainParams = { targetRecipient: calldata.to ? calldata.to.toLowerCase(): ''}
+              upsertData.crossChainParams = { targetRecipient: calldata.to ? calldata.to.toLowerCase() : '' }
               versionStr = '3-5';
             }
           } else if (await this.makerService.isInscriptionMakers(transfer.sender)) {
@@ -180,28 +180,6 @@ export class TransactionService {
       let result;
       if (payload.version === '1-0') {
         result = await this.transactionV1Service.handleTransferBySourceTx(payload);
-        if (result && result.errno == 0) {
-          const sendTransferToMakerClientChainsV1 = this.envConfig.get("SendTransferToMakerClientChainsV1", "").split(',');
-          if (sendTransferToMakerClientChainsV1[0] == '*' || sendTransferToMakerClientChainsV1.includes(payload.chainId)) {
-            let isPush = false;
-            const sendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
-            if (sendTransferToMakerClientQueue) {
-              for (const queue in sendTransferToMakerClientQueue) {
-                const addressList = sendTransferToMakerClientQueue[queue].split(",");
-                if (addressList.includes(payload.receiver)) {
-                  this.messageService.sendTransferToMakerClient(result.data, `1_0_${queue}`)
-                  isPush = true;
-                  break;
-                }
-              }
-            }
-            if (!isPush) {
-              this.logger.info('push:', result?.data?.sourceId);
-              this.messageService.sendTransferToMakerClient(result.data)
-            }
-          }
-
-        }
       } else if (payload.version === '1-1') {
         result = await this.transactionV1Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
@@ -213,18 +191,6 @@ export class TransactionService {
       } else if (payload.version === '2-0') {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
-        if (result && result.errno == 0) {
-          const SendTransferToMakerClientQueue = this.envConfig.get("SendTransferToMakerClientQueue");
-          if (SendTransferToMakerClientQueue) {
-            for (const queue in SendTransferToMakerClientQueue) {
-              const addressList = SendTransferToMakerClientQueue[queue].split(",");
-              if (addressList.includes(payload.receiver)) {
-                this.messageService.sendTransferToMakerClient(result.data, `2_0_${queue}`)
-                break;
-              }
-            }
-          }
-        }
       } else if (payload.version === '2-1') {
         result = await this.transactionV2Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
@@ -242,7 +208,7 @@ export class TransactionService {
         result = this.transactionV3Service.handleMintTransfer(payload);
       } else if (payload.version === '3-2') {
         result = this.transactionV3Service.handleDeployTransfer(payload);
-      }else if (['3-3','3-4', '3-5'].includes(payload.version)) {
+      } else if (['3-3', '3-4', '3-5'].includes(payload.version)) {
         // nothing to do
         result = { errno: 0 }
       } else {
@@ -256,15 +222,7 @@ export class TransactionService {
       } else {
         this.logger.error(`${payload.hash} ${payload.version} executeMatch result: No result returned`);
       }
-      // sync td
-      if (payload.version === '1-1' || payload.version === '1-0') {
-        const SyncV1TDClientChains = this.envConfig.get("SyncV1TDClientChains", "").split(',');
-        if (result && result.errno === 0 && (SyncV1TDClientChains.includes(payload.chainId) || SyncV1TDClientChains[0] == '*')) {
-          // TAG:data-synchronization
-          this.messageService.sendMessageToDataSynchronization({ type: '2', data: payload })
-        }
-      }
-      if (result && result.errno == 0) {
+      if (result && result.errno == 0 && ['1-0', '2-0', '3-0'].includes(payload.version)) {
         const RECEIVER_MATCH_QUEUE = this.envConfig.get('RECEIVER_MATCH_QUEUE');
         const RECEIVER_MATCH_QUEUE_FILTER_CHAIN = this.envConfig.get('RECEIVER_MATCH_QUEUE_FILTER_CHAIN', {});
         const receiver = payload.receiver.toLocaleLowerCase();
@@ -279,7 +237,6 @@ export class TransactionService {
             }
           }
         }
-
       }
       return result;
     } catch (error) {
@@ -304,13 +261,99 @@ export class TransactionService {
         opStatus: {
           [Op.not]: 99
         },
+        timestamp: {
+          [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
+          [Op.lte]: dayjs().subtract(10, 'minute').toISOString(),
+        },
         status: 2,
         sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328']
       },
-      limit: 50
+      limit: 100
     });
     console.log(`matchRefundRecord:${transfers.length}`)
     for (const transfer of transfers) {
+      this.matchRefundRecordHandle(transfer);
+    }
+  }
+  @Interval(1000 * 60 * 8)
+  async matchRefundRecordMakerAddr() {
+    const transfers = await this.transfersModel.findAll({
+      raw: true,
+      order: [['id', 'desc']],
+      attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
+      where: {
+        version: ['1-1', '2-1'],
+        opStatus: {
+          [Op.not]: 99
+        },
+        timestamp: {
+          [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
+          [Op.lte]: dayjs().subtract(30, 'minute').toISOString(),
+        },
+        status: 2,
+        // sender: ['0x80c67432656d59144ceff962e8faf8926599bcf8', '0xe4edb277e41dc89ab076a1f049f4a3efa700bce8', '0x41d3d33156ae7c62c094aae2995003ae63f587b3', '']
+      },
+      limit: 500
+    });
+    console.log(`matchRefundRecordMakerAddr:${transfers.length}`)
+    for (const transfer of transfers) {
+      this.matchRefundRecordHandle(transfer);
+    }
+  }
+  async matchRefundRecordHandle(transfer: TransfersModel) {
+
+    const refundRecord = await this.refundRecordModel.findOne({
+      attributes: ['id', 'sourceId'],
+      where: {
+        targetId: transfer.hash
+      }
+    })
+    if (refundRecord) {
+      const t = await this.refundRecordModel.sequelize.transaction();
+      try {
+        const sourceTx = await this.transfersModel.findOne({
+          raw: true,
+          attributes: ['id', 'hash', 'amount', 'chainId', 'symbol', 'opStatus', 'timestamp'],
+          where: {
+            hash: refundRecord.sourceId
+          },
+          transaction: t
+        })
+        if (!sourceTx) {
+          throw new Error(`matchRefundRecord1 sourceTx not found ${refundRecord.sourceId}`)
+        }
+        refundRecord.sourceAmount = sourceTx.amount;
+        refundRecord.sourceChain = sourceTx.chainId;
+        refundRecord.sourceSymbol = sourceTx.symbol;
+        refundRecord.sourceMaker = sourceTx.receiver;
+        refundRecord.sourceTime = sourceTx.timestamp;
+        refundRecord.targetAmount = transfer.amount;
+        refundRecord.status = TransferOpStatus.REFUND;
+        refundRecord.reason = sourceTx.opStatus.toString();
+        refundRecord.targetAmount = transfer.amount;
+        await refundRecord.save({
+          transaction: t
+        })
+        const [rows] = await this.transfersModel.update({
+          opStatus: TransferOpStatus.REFUND,
+          updatedAt: new Date()
+        }, {
+          where: {
+            id: [transfer.id, sourceTx.id],
+          }
+        });
+        if (rows != 2) {
+          throw new Error(`matchRefundRecord1 match refund change status rows fail ${rows}/2`)
+        }
+        t && await t.commit();
+      } catch (error) {
+        this.logger.error(`matchRefundRecord1 error:${transfer.hash} msg:${error.message}`, error);
+        t && await t.rollback();
+      }
+
+    }
+    if (!refundRecord) {
+
       const version = transfer.version === '1-1' ? '1-0' : '2-0';
       const where = {
         version: version,
@@ -323,16 +366,15 @@ export class TransactionService {
         amount: transfer.amount,
         symbol: transfer.symbol,
         timestamp: {
-          [Op.gte]: dayjs(transfer.timestamp).subtract(1, 'month').toISOString(),
+          // [Op.gte]: dayjs(transfer.timestamp).subtract(1, 'month').toISOString(),
           [Op.lte]: dayjs(transfer.timestamp).add(10, 'minute').toISOString(),
         }
       }
       const sourceTx = await this.transfersModel.findOne({
-        raw:true,
+        raw: true,
         attributes: ['id', 'hash', 'amount', 'chainId', 'symbol', 'opStatus', 'timestamp'],
         where
       })
-      console.log(`matchRefundRecord ${transfer.hash} - `, where, sourceTx)
       if (sourceTx) {
         const refundRecord = await this.refundRecordModel.findOne({
           attributes: ['id'],
@@ -369,11 +411,11 @@ export class TransactionService {
               }
             });
             if (rows != 2) {
-              throw new Error(`match refund change status rows fail ${rows}/2`)
+              throw new Error(`matchRefundRecord2 match refund change status rows fail ${rows}/2`)
             }
             t && await t.commit();
           } catch (error) {
-            this.logger.error(`matchRefundRecord error:${transfer.hash} msg:${error.message}`, error);
+            this.logger.error(`matchRefundRecord2 error:${transfer.hash} msg:${error.message}`, error);
             t && await t.rollback();
           }
         };
