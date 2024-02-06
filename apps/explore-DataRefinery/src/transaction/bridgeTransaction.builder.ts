@@ -544,20 +544,23 @@ export default class BridgeTransactionBuilder {
       transfer.token,
     );
     let builderData: BuilderData = await this.standardBuilder.build(transfer);
-    if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.evmRouterV3ContractBuilder.build(transfer);
-    } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.evmRouterV1ContractBuilder.build(transfer)
-    } else if (this.loopringBuilder.check(transfer)) {
-      builderData = await this.loopringBuilder.build(transfer)
-    } else if (this.evmOBSourceContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.evmOBSourceContractBuilder.build(transfer)
-    } else if (this.starknetOBSourceContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.starknetOBSourceContractBuilder.build(transfer)
-    } else if (this.zksyncLiteBuilder.check(transfer)) {
-      builderData = await this.zksyncLiteBuilder.build(transfer)
+    try {
+      if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
+        builderData = await this.evmRouterV3ContractBuilder.build(transfer);
+      } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
+        builderData = await this.evmRouterV1ContractBuilder.build(transfer)
+      } else if (this.loopringBuilder.check(transfer)) {
+        builderData = await this.loopringBuilder.build(transfer)
+      } else if (this.evmOBSourceContractBuilder.check(transfer, sourceChain)) {
+        builderData = await this.evmOBSourceContractBuilder.build(transfer)
+      } else if (this.starknetOBSourceContractBuilder.check(transfer, sourceChain)) {
+        builderData = await this.starknetOBSourceContractBuilder.build(transfer)
+      } else if (this.zksyncLiteBuilder.check(transfer)) {
+        builderData = await this.zksyncLiteBuilder.build(transfer)
+      }
+    } catch (error) {
+      this.logger.error(`bridgeTransaction.builder error:${error.message}`, error);
     }
-
     if (!builderData.targetToken && builderData.targetChain) {
       const targetToken = this.chainConfigService.getTokenBySymbol(
         builderData.targetChain.chainId,
