@@ -301,7 +301,6 @@ export class TransactionService {
     }
   }
   async matchRefundRecordHandle(transfer: TransfersModel) {
-
     const refundRecord = await this.refundRecordModel.findOne({
       attributes: ['id', 'sourceId'],
       where: {
@@ -353,13 +352,12 @@ export class TransactionService {
 
     }
     if (!refundRecord) {
-
       const version = transfer.version === '1-1' ? '1-0' : '2-0';
       const where = {
         version: version,
         status: 2,
         opStatus: {
-          [Op.not]: 99
+          [Op.in]: [2,3,4,5,6]
         },
         chainId: transfer.chainId,
         sender: transfer.receiver,
