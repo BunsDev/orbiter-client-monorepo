@@ -39,6 +39,7 @@ export class RpcScanningSchedule {
       return;
     }
     // this.logger.info(`chains: ${JSON.stringify(chains)}`);
+    const alert: string[] = [];
     for (const chain of chains) {
       if (!chain.service) {
         // this.logger.error(`${chain.name} service not config`);
@@ -67,11 +68,12 @@ export class RpcScanningSchedule {
           reScanMutex: new Mutex(),
           service: scanner,
         });
-        this.logger.info(
-          `CREATE RPC SCAN SERVICE ${chain.name}`,
-        );
-        this.alertService.sendMessage(`CREATE RPC SCAN SERVICE ${chain.name}`, 'TG')
+        alert.push(`CREATE RPC SCAN SERVICE ${chain.name}`)
       }
+    }
+    if (alert.length > 0) {
+      this.logger.info(alert.join('\n'));
+      this.alertService.sendMessage(alert.join('\n'), 'TG')
     }
   }
   @Interval(1000)
@@ -79,6 +81,7 @@ export class RpcScanningSchedule {
     if (Date.now() % 60 === 0) {
       if (this.scanService.size <= 0) {
         this.logger.warn('RPC chain scanning service not created zero');
+        this.alertService.sendMessage('RPC chain scanning service not created zero')
       }
     }
 
@@ -88,6 +91,7 @@ export class RpcScanningSchedule {
       }
       scanner.reScanMutex.runExclusive(async () => {
         await scanner.service.executeCrawlBlock().catch(error => {
+          this.alertService.sendMessage(`${scanner.id} executeCrawlBlock error:${error.message}`, error);
           this.logger.error(
             `executeCrawlBlock error `,
             error,
@@ -107,6 +111,7 @@ export class RpcScanningSchedule {
         scanner.mutex.runExclusive(async () => {
           // scanner.service.logger.info(`rpc scan scanSchedule start`)
           const result = await scanner.service.checkLatestHeight().catch((error) => {
+            this.alertService.sendMessage(`${scanner.id} RPC checkLatestHeight error:${error.message}`, error);
             this.logger.error(
               `rpc scan bootstrap error`,
               error,
