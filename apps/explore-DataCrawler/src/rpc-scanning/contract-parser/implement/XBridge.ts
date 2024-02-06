@@ -39,7 +39,7 @@ export default class XBridge extends EVMPraser {
     txData.selector = parsedData['selector'];
     if (receipt) {
       const orbiterRouter = new OrbiterRouterV3(this.chainInfo);
-      if (token.isNative) {
+      if (token.address == this.chainInfo.nativeCurrency.address) {
         const contract = this.chainInfo.contracts.find(c => c.name === 'OrbiterRouterV3');
         if (!contract) {
           return [];

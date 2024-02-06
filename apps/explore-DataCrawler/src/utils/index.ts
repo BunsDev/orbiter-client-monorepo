@@ -68,7 +68,7 @@ export function decodeOrbiterCrossChainParams(hexString: string): CrossChainPara
                         result.targetChain = data[field];
                         break;
                     case 't':
-                        result.targetRecipient = data[field];
+                        result.targetRecipient = String(data[field] || "").toLocaleLowerCase();
                         break;
                 }
             }
