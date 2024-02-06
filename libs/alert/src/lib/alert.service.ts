@@ -11,7 +11,7 @@ export class AlertService {
     constructor(
         @Inject("AlertModuleOpts") private readonly opts: AlertModuleOpts,) {
     }
-    async sendMessage(message: string, channels?: AlertMessageChannel[] | AlertMessageChannel | string | string[]) {
+    async sendMessage(message: string, channels?: AlertMessageChannel[] | AlertMessageChannel | string | string[], level:string = '') {
         if (!channels) {
             channels = Object.values<any>(MessageChannel);
         }
@@ -20,7 +20,7 @@ export class AlertService {
         }
 
         if (channels.includes(AlertMessageChannel.TG)) {
-            this.sendTelegram('', message);
+            this.sendTelegram(level, message);
         }
         if (channels.includes(AlertMessageChannel.EMAIL)) {
             this.sendEmail(message);

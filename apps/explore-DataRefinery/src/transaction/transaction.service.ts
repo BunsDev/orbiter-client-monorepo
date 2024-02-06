@@ -258,9 +258,7 @@ export class TransactionService {
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
-        opStatus: {
-          [Op.not]: 99
-        },
+        opStatus:0,
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
           [Op.lte]: dayjs().subtract(2, 'minute').toISOString(),
@@ -283,9 +281,7 @@ export class TransactionService {
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
-        opStatus: {
-          [Op.not]: 99
-        },
+        opStatus: 0,
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
           [Op.lte]: dayjs().subtract(30, 'minute').toISOString(),
