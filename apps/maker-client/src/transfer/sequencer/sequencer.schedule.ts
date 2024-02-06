@@ -75,19 +75,19 @@ export class SequencerScheduleService {
         [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
       },
     };
-    const enablePaidChains: string[] = this.envConfig.get("ENABLE_PAID_CHAINS");
-    if (!enablePaidChains) {
-      this.logger.warn('ENABLE_PAID_CHAINS not found');
-      return;
-    }
+    // const enablePaidChains: string[] = this.envConfig.get("ENABLE_PAID_CHAINS");
+    // if (!enablePaidChains) {
+    //   this.logger.warn('ENABLE_PAID_CHAINS not found');
+    //   return;
+    // }
     const enablePaidVersion: string[] = this.envConfig.get("ENABLE_PAID_VERSION");
     if (!enablePaidVersion) {
       this.logger.warn('ENABLE_PAID_VERSION not found');
       return;
     }
-    if (!enablePaidChains.includes('*')) {
-      where['targetChain'] = enablePaidChains;
-    }
+    // if (!enablePaidChains.includes('*')) {
+    //   where['targetChain'] = enablePaidChains;
+    // }
     if (!enablePaidVersion.includes('*')) {
       where['version'] = enablePaidVersion;
     }
