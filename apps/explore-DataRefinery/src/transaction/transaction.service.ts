@@ -250,7 +250,7 @@ export class TransactionService {
     }
 
   }
-  @Interval(1000 * 60 * 5)
+  @Interval(1000 * 60 * 2)
   async matchRefundRecord() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -263,7 +263,7 @@ export class TransactionService {
         },
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
-          [Op.lte]: dayjs().subtract(10, 'minute').toISOString(),
+          [Op.lte]: dayjs().subtract(2, 'minute').toISOString(),
         },
         status: 2,
         sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328']
@@ -275,7 +275,7 @@ export class TransactionService {
       this.matchRefundRecordHandle(transfer);
     }
   }
-  @Interval(1000 * 60 * 8)
+  @Interval(1000 * 60 * 5)
   async matchRefundRecordMakerAddr() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
