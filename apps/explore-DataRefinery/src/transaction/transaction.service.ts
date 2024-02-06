@@ -272,10 +272,10 @@ export class TransactionService {
     });
     console.log(`matchRefundRecord:${transfers.length}`)
     for (const transfer of transfers) {
-      this.matchRefundRecordHandle(transfer);
+      await this.matchRefundRecordHandle(transfer);
     }
   }
-  @Interval(1000 * 60 * 5)
+  @Interval(1000 * 60 * 10)
   async matchRefundRecordMakerAddr() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -293,11 +293,11 @@ export class TransactionService {
         status: 2,
         // sender: ['0x80c67432656d59144ceff962e8faf8926599bcf8', '0xe4edb277e41dc89ab076a1f049f4a3efa700bce8', '0x41d3d33156ae7c62c094aae2995003ae63f587b3', '']
       },
-      limit: 500
+      limit: 100
     });
     console.log(`matchRefundRecordMakerAddr:${transfers.length}`)
     for (const transfer of transfers) {
-      this.matchRefundRecordHandle(transfer);
+      await this.matchRefundRecordHandle(transfer);
     }
   }
   async matchRefundRecordHandle(transfer: TransfersModel) {
