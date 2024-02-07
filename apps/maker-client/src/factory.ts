@@ -113,9 +113,15 @@ export class AccountFactoryService {
         wallet = new EVM5Account(toChainId, ctx);
         break;
       default:
-        if (chainConfig.service && chainConfig.service['rpc'] && chainConfig.service['rpc'].includes('EVMRpcScanning')) {
-          wallet = new EVMAccount(toChainId, ctx);
+        const features = chainConfig.features;
+        if (features) {
+          if (features.find(f => f.name == 'evm-account5')) {
+            wallet = new EVM5Account(toChainId, ctx);
+          } else if (features.find(f => f.name == 'evm-rpc')) {
+            wallet = new EVMAccount(toChainId, ctx);
+          }
         }
+
         break;
     }
     if (!wallet) {
