@@ -250,7 +250,7 @@ export class TransactionService {
     }
 
   }
-  @Interval(1000 * 60 * 5)
+  @Interval(1000 * 60 * 2)
   async matchRefundRecord() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -258,12 +258,10 @@ export class TransactionService {
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
-        opStatus: {
-          [Op.not]: 99
-        },
+        opStatus:0,
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
-          [Op.lte]: dayjs().subtract(10, 'minute').toISOString(),
+          [Op.lte]: dayjs().subtract(2, 'minute').toISOString(),
         },
         status: 2,
         sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328']
@@ -272,10 +270,10 @@ export class TransactionService {
     });
     console.log(`matchRefundRecord:${transfers.length}`)
     for (const transfer of transfers) {
-      this.matchRefundRecordHandle(transfer);
+      await this.matchRefundRecordHandle(transfer);
     }
   }
-  @Interval(1000 * 60 * 8)
+  @Interval(1000 * 60 * 10)
   async matchRefundRecordMakerAddr() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -283,9 +281,7 @@ export class TransactionService {
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
-        opStatus: {
-          [Op.not]: 99
-        },
+        opStatus: 0,
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
           [Op.lte]: dayjs().subtract(30, 'minute').toISOString(),
@@ -293,15 +289,14 @@ export class TransactionService {
         status: 2,
         // sender: ['0x80c67432656d59144ceff962e8faf8926599bcf8', '0xe4edb277e41dc89ab076a1f049f4a3efa700bce8', '0x41d3d33156ae7c62c094aae2995003ae63f587b3', '']
       },
-      limit: 500
+      limit: 100
     });
     console.log(`matchRefundRecordMakerAddr:${transfers.length}`)
     for (const transfer of transfers) {
-      this.matchRefundRecordHandle(transfer);
+      await this.matchRefundRecordHandle(transfer);
     }
   }
   async matchRefundRecordHandle(transfer: TransfersModel) {
-
     const refundRecord = await this.refundRecordModel.findOne({
       attributes: ['id', 'sourceId'],
       where: {
@@ -353,13 +348,12 @@ export class TransactionService {
 
     }
     if (!refundRecord) {
-
       const version = transfer.version === '1-1' ? '1-0' : '2-0';
       const where = {
         version: version,
         status: 2,
         opStatus: {
-          [Op.not]: 99
+          [Op.in]: [2,3,4,5,6]
         },
         chainId: transfer.chainId,
         sender: transfer.receiver,

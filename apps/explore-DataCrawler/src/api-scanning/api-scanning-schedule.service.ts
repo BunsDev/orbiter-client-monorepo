@@ -36,6 +36,7 @@ export class ApiScanningSchedule {
     if (isEmpty(chains)) {
       return;
     }
+    const alert: string[] = [];
     for (const chain of chains) {
       if (SCAN_CHAINS[0] != '*') {
         if (!SCAN_CHAINS.includes(chain.chainId)) {
@@ -61,8 +62,12 @@ export class ApiScanningSchedule {
           mutex: new Mutex(),
           service: scanner,
         });
-        this.alertService.sendMessage(`CREATE API SCAN SERVICE ${chain.name}`, 'TG')
+        alert.push(`CREATE API SCAN SERVICE ${chain.name}`);
       }
+    }
+    if (alert.length > 0) {
+      this.logger.info(alert.join('\n'));
+      this.alertService.sendMessage(alert.join('\n'), 'TG')
     }
     this.execute();
   }

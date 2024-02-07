@@ -3,7 +3,8 @@ import { padStart } from 'lodash';
 import RLP from 'rlp'
 import { utils } from 'ethers';
 import BigNumber from 'bignumber.js';
-
+import { SchedulerRegistry } from '@nestjs/schedule'
+import { CronJob } from 'cron'
 export function addressPadStart(address: string, length: number) {
     if (!address) {
         return address;
@@ -112,4 +113,15 @@ export function decodeHex(hexString: string): string {
   const byteArray = new Uint8Array(hexString.match(/[\da-f]{2}/gi)!.map((h) => parseInt(h, 16)));
   const textDecoder = new TextDecoder('utf-8');
   return textDecoder.decode(byteArray);
+}
+
+export function addJob(schedulerRegistry: SchedulerRegistry, name: string, cronTime: string, handle: () => void) {
+  const job = new CronJob(cronTime, handle)
+  schedulerRegistry.addCronJob(name, job as any);
+  job.start()
+}
+
+export function addInterval(schedulerRegistry: SchedulerRegistry, name: string, intervalTime: number, handle: () => void) {
+  const interval = setInterval(handle, intervalTime)
+  schedulerRegistry.addInterval(name, interval)
 }
