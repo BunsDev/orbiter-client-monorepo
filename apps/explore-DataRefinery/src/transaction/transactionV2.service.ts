@@ -54,7 +54,7 @@ export class TransactionV2Service {
 
     }
   }
-  @Cron('0 */5 * * * *')
+  // @Cron('0 */5 * * * *')
   async matchScheduleUserSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -79,7 +79,7 @@ export class TransactionV2Service {
       this.logger.info(`handleTransferBySourceTx result:${JSON.stringify(result)}`)
     }
   }
-  @Cron('*/5 * * * * *')
+  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '2-1') {
@@ -90,7 +90,7 @@ export class TransactionV2Service {
       }
     }
   }
-  @Cron('0 */10 * * * *')
+  // @Cron('0 */10 * * * *')
   async matchScheduleMakerSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
