@@ -39,10 +39,11 @@ export class TransactionService {
     if (!this.envConfig.get('RABBITMQ_URL')) {
       throw new Error('Get RABBITMQ_URL Config fail');
     }
-
-    this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
-    this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
-    this.matchRefundRecord()
+    if (!this.envConfig.get('LOCAL_DEBUG_PROD')) {
+      this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
+      this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
+      this.matchRefundRecord()
+    }
   }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],
@@ -258,7 +259,7 @@ export class TransactionService {
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
-        opStatus:0,
+        opStatus: 0,
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
           [Op.lte]: dayjs().subtract(2, 'minute').toISOString(),
@@ -353,7 +354,7 @@ export class TransactionService {
         version: version,
         status: 2,
         opStatus: {
-          [Op.in]: [2,3,4,5,6]
+          [Op.in]: [2, 3, 4, 5, 6]
         },
         chainId: transfer.chainId,
         sender: transfer.receiver,
