@@ -354,7 +354,7 @@ export class TransactionService {
         version: version,
         status: 2,
         opStatus: {
-          [Op.in]: [2, 3, 4, 5, 6]
+          [Op.in]: [2, 3, 4, 5, 6,81]
         },
         chainId: transfer.chainId,
         sender: transfer.receiver,
