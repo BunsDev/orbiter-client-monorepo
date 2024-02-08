@@ -374,7 +374,10 @@ export class TransactionService {
         const refundRecord = await this.refundRecordModel.findOne({
           attributes: ['id'],
           where: {
-            targetId: transfer.hash,
+            [Op.or]: [
+              { targetId: transfer.hash },
+              { sourceId: sourceTx.hash }
+            ]
           }
         });
         if (!refundRecord || !refundRecord.id) {
@@ -410,10 +413,55 @@ export class TransactionService {
             }
             t && await t.commit();
           } catch (error) {
+            console.error(error);
             this.logger.error(`matchRefundRecord2 error:${transfer.hash} msg:${error.message}`, error);
             t && await t.rollback();
           }
-        };
+        } else {
+          if (refundRecord.targetId && refundRecord.status ==TransferOpStatus.REFUND) {
+            throw new Error(`${transfer.hash} / ${sourceTx.hash} A matching record already exists`)
+          }
+          const t = await this.refundRecordModel.sequelize.transaction();
+          try {
+            const createData = await this.refundRecordModel.update({
+              targetId: transfer.hash,
+              sourceAmount: sourceTx.amount,
+              sourceChain: sourceTx.chainId,
+              sourceId: sourceTx.hash,
+              sourceSymbol: sourceTx.symbol,
+              sourceTime: sourceTx.timestamp,
+              reason: sourceTx.opStatus.toString(),
+              status: TransferOpStatus.REFUND,
+              targetAmount: transfer.amount,
+              createdAt: new Date(),
+            },{
+              where: {
+                sourceId: sourceTx.hash
+              },
+              transaction: t
+
+            });
+            if (!createData) {
+              throw new Error('refund record create fail')
+            }
+            const [rows] = await this.transfersModel.update({
+              opStatus: TransferOpStatus.REFUND,
+              updatedAt: new Date()
+            }, {
+              where: {
+                id: [transfer.id, sourceTx.id],
+              }
+            });
+            if (rows != 2) {
+              throw new Error(`matchRefundRecord2 match refund change status rows fail ${rows}/2`)
+            }
+            t && await t.commit();
+          } catch (error) {
+            console.error(error);
+            this.logger.error(`matchRefundRecord2 error:${transfer.hash} msg:${error.message}`, error);
+            t && await t.rollback();
+          }
+        }
       }
     }
   }
