@@ -27,7 +27,7 @@ export class ConsumerService {
       });
 
       channel.on('error', (err) => {
-        Logger.error(`${queue} Channel error:${err.message}`, err.stack);
+        Logger.error(`consumeScanTransferReceiptMessages ${queue} Channel error:${err.message}`, err.stack);
         this.alertService.sendMessage(`Channel error:${err.message}`, 'TG');
       });
 
@@ -69,7 +69,7 @@ export class ConsumerService {
       });
 
       channel.on('error', (err) => {
-        Logger.error(`${queue} Channel error:${err.message}`, err.stack);
+        Logger.error(`consumeDataSynchronizationMessages ${queue} Channel error:${err.message}`, err.stack);
         this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
       });
 
@@ -112,7 +112,7 @@ export class ConsumerService {
       });
 
       channel.on('error', (err) => {
-        Logger.error(`${queue} Channel error:${err.message}`, err.stack);
+        Logger.error(`consumeScanTransferSaveDBAfterMessages ${queue} Channel error:${err.message}`, err.stack);
         this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
       });
       channel.prefetch(10);
@@ -158,7 +158,7 @@ export class ConsumerService {
       });
 
       channel.on('error', (err) => {
-        Logger.error(`Channel error:${err.message}`, err.stack);
+        Logger.error(`consumeMakerWaitTransferMessage Channel error:${err.message}`, err.stack);
         this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
       });
       channel.prefetch(10);
@@ -202,7 +202,7 @@ export class ConsumerService {
       });
 
       channel.on('error', (err) => {
-        Logger.error(`Channel error:${err.message}`, err.stack);
+        Logger.error(`consumeMakerClientMessage Channel error:${err.message}`, err.stack);
         this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
       });
       channel.prefetch(10);
@@ -248,7 +248,7 @@ export class ConsumerService {
       });
 
       channel.on('error', (err) => {
-        Logger.error(`Channel error:${err.message}`, err.stack);
+        Logger.error(`consumeMakerWaitClaimTransferMessage Channel error:${err.message}`, err.stack);
         this.alertService.sendMessage(`${queue} Channel error:${err.message}`, 'TG');
       });
       channel.prefetch(10);

@@ -23,7 +23,8 @@ import {
   Token,
 } from '@orbiter-finance/config';
 import { Op, where, fn, literal, Transaction, Filterable, WhereOptions } from 'sequelize';
-import { Cron } from '@nestjs/schedule';
+import { Cron, SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob, CronTime } from 'cron'
 import { InscriptionMemoryMatchingService } from './inscription-memory-matching.service';
 import { InscriptionCrossMemoryMatchingService } from './inscription-cross-memory-matching.service';
 import { Sequelize } from 'sequelize-typescript';
@@ -37,6 +38,8 @@ import {
   decodeV1SwapData,
   addressPadStart,
   isEvmAddress,
+  addInterval,
+  addJob,
 } from '../utils';
 import { MessageService } from '@orbiter-finance/rabbit-mq';
 import { parseTragetTxSecurityCode } from './bridgeTransaction.builder';
@@ -73,6 +76,7 @@ export class TransactionV3Service {
     private messageService: MessageService,
     private makerService: MakerService,
     @InjectRedis() private readonly redis: Redis,
+    private schedulerRegistry: SchedulerRegistry
   ) {
     if (this.envConfigService.get('START_VERSION') && this.envConfigService.get('START_VERSION').includes('3-0')) {
       this.matchScheduleTask()
@@ -86,6 +90,10 @@ export class TransactionV3Service {
           );
         });
       this.bookKeeping()
+      addJob(this.schedulerRegistry, 'bookKeeping', '0 */1 * * * *', this.bookKeeping.bind(this))
+      addJob(this.schedulerRegistry, 'v3-matchScheduleTask', '0 */1 * * * *', this.matchScheduleTask.bind(this))
+      addJob(this.schedulerRegistry, 'v3-fromCacheMatch', '*/5 * * * *', this.fromCacheMatch.bind(this))
+      addJob(this.schedulerRegistry, 'v3-matchSenderScheduleTask', '0 */1 * * * *', this.matchSenderScheduleTask.bind(this))
     }
   }
   errorBreakResult(errmsg: string, errno: number = 1): handleTransferReturn {
@@ -96,7 +104,7 @@ export class TransactionV3Service {
     };
   }
 
-  @Cron('0 */1 * * * *')
+  // @Cron('0 */1 * * * *')
   async matchScheduleTask() {
     this.logger.info('v3 matchScheduleTask start');
     const transfers = await this.transfersModel.findAll({
@@ -162,7 +170,7 @@ export class TransactionV3Service {
       }
     } while (!done)
   }
-  @Cron('*/5 * * * * *')
+  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.inscriptionMemoryMatchingService.transfers) {
       if (transfer.version === '3-1') {
@@ -188,7 +196,7 @@ export class TransactionV3Service {
       }
     }
   }
-  @Cron('0 */1 * * * *')
+  // @Cron('0 */1 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -1424,7 +1432,7 @@ export class TransactionV3Service {
       await t.rollback();
     }
   }
-  @Cron('0 */1 * * * *')
+  // @Cron('0 */1 * * * *')
   public async bookKeeping() {
     const inscriptionChains = await this.envConfigService.getAsync('INSCRIPTION_SUPPORT_CHAINS') as [string]
     if (!inscriptionChains) {

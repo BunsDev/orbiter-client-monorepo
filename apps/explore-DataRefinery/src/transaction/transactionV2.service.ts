@@ -6,7 +6,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService } from '@orbiter-finance/config';
 import BigNumber from 'bignumber.js';
 import { Op } from 'sequelize';
-import { Cron } from '@nestjs/schedule';
+import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { Sequelize } from 'sequelize-typescript';
 import { MemoryMatchingService } from './memory-matching.service';
 import { MakerService } from '../maker/maker.service';
@@ -14,7 +14,7 @@ import { V3RuleInterface, V3TokenInterface } from './transaction.interface'
 import { ethers } from 'ethers6';
 import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
 import { padStart, uniq } from 'lodash';
-import { TransactionID } from '../utils';
+import { TransactionID, addJob } from '../utils';
 export interface handleTransferReturn {
   errno: number;
   errmsg?: string;
@@ -33,6 +33,8 @@ export class TransactionV2Service {
     protected memoryMatchingService: MemoryMatchingService,
     protected makerService: MakerService,
     protected envConfigService: ENVConfigService,
+    private schedulerRegistry: SchedulerRegistry
+
   ) {
 
     if (this.envConfigService.get('START_VERSION') && this.envConfigService.get('START_VERSION').includes('2-0')) {
@@ -46,9 +48,13 @@ export class TransactionV2Service {
             error,
           );
         });
+      addJob(this.schedulerRegistry, 'v2-matchScheduleUserSendTask', '0 */5 * * * *', this.matchScheduleUserSendTask.bind(this))
+      addJob(this.schedulerRegistry, 'v2-fromCacheMatch', '*/5 * * * * *', this.fromCacheMatch.bind(this))
+      addJob(this.schedulerRegistry, 'v2-matchScheduleMakerSendTask', '0 */10 * * * *', this.matchScheduleMakerSendTask.bind(this))
+
     }
   }
-  @Cron('0 */5 * * * *')
+  // @Cron('0 */5 * * * *')
   async matchScheduleUserSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -73,7 +79,7 @@ export class TransactionV2Service {
       this.logger.info(`handleTransferBySourceTx result:${JSON.stringify(result)}`)
     }
   }
-  @Cron('*/5 * * * * *')
+  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '2-1') {
@@ -84,7 +90,7 @@ export class TransactionV2Service {
       }
     }
   }
-  @Cron('0 */10 * * * *')
+  // @Cron('0 */10 * * * *')
   async matchScheduleMakerSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,

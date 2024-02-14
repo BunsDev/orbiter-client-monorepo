@@ -75,19 +75,19 @@ export class SequencerScheduleService {
         [Op.gte]: dayjs().subtract(maxTransferTimeoutMinute, "minute").toISOString(),
       },
     };
-    const enablePaidChains: string[] = this.envConfig.get("ENABLE_PAID_CHAINS");
-    if (!enablePaidChains) {
-      this.logger.warn('ENABLE_PAID_CHAINS not found');
-      return;
-    }
+    // const enablePaidChains: string[] = this.envConfig.get("ENABLE_PAID_CHAINS");
+    // if (!enablePaidChains) {
+    //   this.logger.warn('ENABLE_PAID_CHAINS not found');
+    //   return;
+    // }
     const enablePaidVersion: string[] = this.envConfig.get("ENABLE_PAID_VERSION");
     if (!enablePaidVersion) {
       this.logger.warn('ENABLE_PAID_VERSION not found');
       return;
     }
-    if (!enablePaidChains.includes('*')) {
-      where['targetChain'] = enablePaidChains;
-    }
+    // if (!enablePaidChains.includes('*')) {
+    //   where['targetChain'] = enablePaidChains;
+    // }
     if (!enablePaidVersion.includes('*')) {
       where['version'] = enablePaidVersion;
     }
@@ -456,11 +456,11 @@ export class SequencerScheduleService {
     try {
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         await this.removeConsumeStatus(targetChain, sourceIds);
-        try {
-          this.alertService.sendMessage(`PaidTransactionError ${targetChain} - ${sourceIds.join(',')} message: ${error.message}`, "TG")
-        } catch (error) {
-          console.error('handlePaidTransactionError sendAlertMessage error:', error);
-        }
+        // try {
+        //   // this.alertService.sendMessage(`PaidTransactionError ${targetChain} - ${sourceIds.join(',')} message: ${error.message}`, "TG")
+        // } catch (error) {
+        //   console.error('handlePaidTransactionError sendAlertMessage error:', error);
+        // }
       }
     } catch (cleanupError) {
       this.logger.error(`handlePaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);

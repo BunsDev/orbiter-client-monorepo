@@ -5,7 +5,7 @@ import { BridgeTransactionAttributes, BridgeTransaction as BridgeTransactionMode
 import { InjectModel } from '@nestjs/sequelize';
 import { ChainConfigService, ENVConfigService, MakerV1RuleService, Token } from '@orbiter-finance/config';
 import { Op } from 'sequelize';
-import { Cron } from '@nestjs/schedule';
+import { Cron, SchedulerRegistry } from '@nestjs/schedule';
 import { MemoryMatchingService } from './memory-matching.service';
 import { Sequelize } from 'sequelize-typescript';
 import { OrbiterLogger } from '@orbiter-finance/utils';
@@ -13,7 +13,7 @@ import { LoggerDecorator } from '@orbiter-finance/utils';
 import { utils } from 'ethers'
 import { validateAndParseAddress } from 'starknet'
 import BridgeTransactionBuilder from './bridgeTransaction.builder'
-import { ValidSourceTxError, decodeV1SwapData, addressPadStart } from '../utils';
+import { ValidSourceTxError, decodeV1SwapData, addressPadStart, addJob } from '../utils';
 import { MessageService } from '@orbiter-finance/rabbit-mq'
 import { parseTragetTxSecurityCode } from './bridgeTransaction.builder'
 export interface handleTransferReturn {
@@ -37,6 +37,7 @@ export class TransactionV1Service {
     protected makerV1RuleService: MakerV1RuleService,
     protected bridgeTransactionBuilder: BridgeTransactionBuilder,
     private messageService: MessageService,
+    private schedulerRegistry: SchedulerRegistry
   ) {
     if (this.envConfigService.get('START_VERSION') && this.envConfigService.get('START_VERSION').includes('1-0')) {
       this.matchScheduleTask()
@@ -49,6 +50,9 @@ export class TransactionV1Service {
             error,
           );
         });
+      addJob(this.schedulerRegistry, 'v1-matchScheduleTask', '0 */5 * * * *', this.matchScheduleTask.bind(this))
+      addJob(this.schedulerRegistry, 'v1-fromCacheMatch', '*/5 * * * * *', this.fromCacheMatch.bind(this))
+      addJob(this.schedulerRegistry, 'v1-matchSenderScheduleTask', '0 */10 * * * *', this.matchSenderScheduleTask.bind(this))
     }
   }
   async fuzzyMatching() {
@@ -89,7 +93,7 @@ export class TransactionV1Service {
       index++;
     }
   }
-  @Cron('0 */5 * * * *')
+  // @Cron('0 */5 * * * *')
   async matchScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -120,7 +124,7 @@ export class TransactionV1Service {
       }
     }
   }
-  @Cron('*/5 * * * * *')
+  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '1-1') {
@@ -136,7 +140,7 @@ export class TransactionV1Service {
       }
     }
   }
-  @Cron('0 */10 * * * *')
+  // @Cron('0 */10 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,

@@ -34,7 +34,7 @@ export interface IChainConfig {
     };
     router: { [key: string]: string };
     debug: boolean;
-    features: Array<string>;
+    features: Array<any>;
     nativeCurrency: Token;
     targetConfirmation?: number;
     watch: Array<string>;

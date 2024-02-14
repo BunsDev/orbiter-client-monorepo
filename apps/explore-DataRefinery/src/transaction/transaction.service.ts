@@ -39,10 +39,11 @@ export class TransactionService {
     if (!this.envConfig.get('RABBITMQ_URL')) {
       throw new Error('Get RABBITMQ_URL Config fail');
     }
-
-    this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
-    this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
-    this.matchRefundRecord()
+    if (!this.envConfig.get('LOCAL_DEBUG_PROD')) {
+      this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
+      this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
+      this.matchRefundRecord()
+    }
   }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],
@@ -258,9 +259,7 @@ export class TransactionService {
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
-        opStatus: {
-          [Op.not]: 99
-        },
+        opStatus: 0,
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
           [Op.lte]: dayjs().subtract(10, 'minute').toISOString(),
@@ -272,10 +271,10 @@ export class TransactionService {
     });
     console.log(`matchRefundRecord:${transfers.length}`)
     for (const transfer of transfers) {
-      this.matchRefundRecordHandle(transfer);
+      await this.matchRefundRecordHandle(transfer);
     }
   }
-  @Interval(1000 * 60 * 8)
+  @Interval(1000 * 60 * 10)
   async matchRefundRecordMakerAddr() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -283,9 +282,7 @@ export class TransactionService {
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
-        opStatus: {
-          [Op.not]: 99
-        },
+        opStatus: 0,
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
           [Op.lte]: dayjs().subtract(30, 'minute').toISOString(),
@@ -293,15 +290,14 @@ export class TransactionService {
         status: 2,
         // sender: ['0x80c67432656d59144ceff962e8faf8926599bcf8', '0xe4edb277e41dc89ab076a1f049f4a3efa700bce8', '0x41d3d33156ae7c62c094aae2995003ae63f587b3', '']
       },
-      limit: 500
+      limit: 100
     });
     console.log(`matchRefundRecordMakerAddr:${transfers.length}`)
     for (const transfer of transfers) {
-      this.matchRefundRecordHandle(transfer);
+      await this.matchRefundRecordHandle(transfer);
     }
   }
   async matchRefundRecordHandle(transfer: TransfersModel) {
-
     const refundRecord = await this.refundRecordModel.findOne({
       attributes: ['id', 'sourceId'],
       where: {
@@ -353,13 +349,12 @@ export class TransactionService {
 
     }
     if (!refundRecord) {
-
       const version = transfer.version === '1-1' ? '1-0' : '2-0';
       const where = {
         version: version,
         status: 2,
         opStatus: {
-          [Op.not]: 99
+          [Op.in]: [2, 3, 4, 5, 6,81]
         },
         chainId: transfer.chainId,
         sender: transfer.receiver,
@@ -379,7 +374,10 @@ export class TransactionService {
         const refundRecord = await this.refundRecordModel.findOne({
           attributes: ['id'],
           where: {
-            targetId: transfer.hash,
+            [Op.or]: [
+              { targetId: transfer.hash },
+              { sourceId: sourceTx.hash }
+            ]
           }
         });
         if (!refundRecord || !refundRecord.id) {
@@ -415,10 +413,55 @@ export class TransactionService {
             }
             t && await t.commit();
           } catch (error) {
+            console.error(error);
             this.logger.error(`matchRefundRecord2 error:${transfer.hash} msg:${error.message}`, error);
             t && await t.rollback();
           }
-        };
+        } else {
+          if (refundRecord.targetId && refundRecord.status ==TransferOpStatus.REFUND) {
+            throw new Error(`${transfer.hash} / ${sourceTx.hash} A matching record already exists`)
+          }
+          const t = await this.refundRecordModel.sequelize.transaction();
+          try {
+            const createData = await this.refundRecordModel.update({
+              targetId: transfer.hash,
+              sourceAmount: sourceTx.amount,
+              sourceChain: sourceTx.chainId,
+              sourceId: sourceTx.hash,
+              sourceSymbol: sourceTx.symbol,
+              sourceTime: sourceTx.timestamp,
+              reason: sourceTx.opStatus.toString(),
+              status: TransferOpStatus.REFUND,
+              targetAmount: transfer.amount,
+              createdAt: new Date(),
+            },{
+              where: {
+                sourceId: sourceTx.hash
+              },
+              transaction: t
+
+            });
+            if (!createData) {
+              throw new Error('refund record create fail')
+            }
+            const [rows] = await this.transfersModel.update({
+              opStatus: TransferOpStatus.REFUND,
+              updatedAt: new Date()
+            }, {
+              where: {
+                id: [transfer.id, sourceTx.id],
+              }
+            });
+            if (rows != 2) {
+              throw new Error(`matchRefundRecord2 match refund change status rows fail ${rows}/2`)
+            }
+            t && await t.commit();
+          } catch (error) {
+            console.error(error);
+            this.logger.error(`matchRefundRecord2 error:${transfer.hash} msg:${error.message}`, error);
+            t && await t.rollback();
+          }
+        }
       }
     }
   }

@@ -544,20 +544,29 @@ export default class BridgeTransactionBuilder {
       transfer.token,
     );
     let builderData: BuilderData = await this.standardBuilder.build(transfer);
-    if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.evmRouterV3ContractBuilder.build(transfer);
-    } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.evmRouterV1ContractBuilder.build(transfer)
-    } else if (this.loopringBuilder.check(transfer)) {
-      builderData = await this.loopringBuilder.build(transfer)
-    } else if (this.evmOBSourceContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.evmOBSourceContractBuilder.build(transfer)
-    } else if (this.starknetOBSourceContractBuilder.check(transfer, sourceChain)) {
-      builderData = await this.starknetOBSourceContractBuilder.build(transfer)
-    } else if (this.zksyncLiteBuilder.check(transfer)) {
-      builderData = await this.zksyncLiteBuilder.build(transfer)
+    try {
+      if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
+        const data = await this.evmRouterV3ContractBuilder.build(transfer);
+        Object.assign(builderData, data || {});
+      } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
+        const data = await this.evmRouterV1ContractBuilder.build(transfer)
+        Object.assign(builderData, data || {});
+      } else if (this.loopringBuilder.check(transfer)) {
+        const data = builderData = await this.loopringBuilder.build(transfer)
+        Object.assign(builderData, data || {});
+      } else if (this.evmOBSourceContractBuilder.check(transfer, sourceChain)) {
+        const data = builderData = await this.evmOBSourceContractBuilder.build(transfer)
+        Object.assign(builderData, data || {});
+      } else if (this.starknetOBSourceContractBuilder.check(transfer, sourceChain)) {
+        const data = await this.starknetOBSourceContractBuilder.build(transfer)
+        Object.assign(builderData, data || {});
+      } else if (this.zksyncLiteBuilder.check(transfer)) {
+       const data= builderData = await this.zksyncLiteBuilder.build(transfer)
+       Object.assign(builderData, data || {});
+      }
+    } catch (error) {
+      this.logger.error(`bridgeTransaction.builder error:${error.message}`, error);
     }
-
     if (!builderData.targetToken && builderData.targetChain) {
       const targetToken = this.chainConfigService.getTokenBySymbol(
         builderData.targetChain.chainId,
@@ -595,7 +604,7 @@ export default class BridgeTransactionBuilder {
       });
     }
     if (!rule) {
-      const errMsg = `sourceChain.internalId: ${sourceChain.internalId}, targetChain.internalId:${targetChain.internalId}, sourceToken.symbol:${sourceToken.symbol}, targetToken.symbol:${targetToken.symbol}, transfer.receiver:${transfer.receiver}`
+      const errMsg = `Rule Not Found sourceChain.internalId: ${sourceChain.internalId}, targetChain.internalId:${targetChain.internalId}, sourceToken.symbol:${sourceToken.symbol}, targetToken.symbol:${targetToken.symbol}, transfer.receiver:${transfer.receiver}`
       throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, errMsg)
     }
     if (builderDataTargetAddress) {
