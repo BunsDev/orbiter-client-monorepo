@@ -181,6 +181,9 @@ export class EVMAccount extends OrbiterAccount {
       let count = 0;
       for (const tx of transactionList) {
         if (!tx.maxFeePerGas || !tx.maxPriorityFeePerGas || !tx.gasLimit || +tx.data) continue;
+        if (new BigNumber(String(tx.maxPriorityFeePerGas)).gt(500000000000)) {
+          continue;
+        }
         blockMaxFeePerGas = blockMaxFeePerGas.plus(String(tx.maxFeePerGas));
         blockMaxPriorityFeePerGas = blockMaxPriorityFeePerGas.plus(String(tx.maxPriorityFeePerGas));
         blockGasLimit = blockGasLimit.plus(String(tx.gasLimit));
