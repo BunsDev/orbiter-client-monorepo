@@ -9,6 +9,7 @@ export enum TransferAmountTransactionStatus {
     targetRecipient?:string;
     targetToken?:string;
     targetTokenSymbol?:String;
+    data?: string
   }
   export interface TransferAmountTransaction {
     chainId: string;

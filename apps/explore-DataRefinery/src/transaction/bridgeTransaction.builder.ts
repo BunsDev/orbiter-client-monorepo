@@ -648,6 +648,9 @@ export default class BridgeTransactionBuilder {
       transfer.symbol,
       dayjs(transfer.timestamp).valueOf(),
     );
+    if (createdData.sourceChain == 'SN_MAIN' && transfer.crossChainParams && transfer.crossChainParams['data']) {
+      createdData.transactionId = `${createdData.transactionId}_${transfer.crossChainParams['data']}`;
+    }
     createdData.withholdingFee = rule.tradingFee;
     createdData.responseMaker = [rule.sender.toLocaleLowerCase()];
     const v1ResponseMaker = this.envConfigService.get("v1ResponseMaker");

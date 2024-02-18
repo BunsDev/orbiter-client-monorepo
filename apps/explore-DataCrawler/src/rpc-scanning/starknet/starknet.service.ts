@@ -240,8 +240,12 @@ export class StarknetRpcScanningService extends RpcScanningService {
           .div(Math.pow(10, this.chainConfig.nativeCurrency.decimals))
           .toString();
         transfer.status = this.getStatus(receipt);
+        receipt.version= transaction.version;
         transfer.receipt = receipt;
-
+        if(!transfer.crossChainParams) {
+          transfer.crossChainParams = {}
+        }
+        transfer.crossChainParams.data = transaction.version;
         if (transfer.status === TransferAmountTransactionStatus.confirmed) {
           // 0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9 = transfer event topic
           const events = receipt.events.filter(
