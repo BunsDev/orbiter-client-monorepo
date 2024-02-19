@@ -164,22 +164,52 @@ export class TransactionV2Service {
     const { dealerId, ebcId, targetChainIdIndex } = this.parseSecurityCode(
       transfer.value,
     );
-    if (+transfer.nonce > 9999) {
-      await this.transfersModel.update(
-        {
-          opStatus: 5,
-        },
-        {
-          where: {
-            id: transfer.id,
+    if (ebcId === 0 || dealerId === 0 || targetChainIdIndex === 0) {
+      const diffHours = dayjs().diff(transfer.timestamp, 'hours');
+      if (diffHours > 24) {
+        await this.transfersModel.update(
+          {
+            opStatus: 4,
           },
-        },
-      );
-      return this.errorBreakResult(`${transfer.hash} Exceeded the maximum nonce value ${transfer.nonce} / 9999`,)
+          {
+            where: {
+              hash: transfer.hash,
+            },
+          },
+        );
+      }
+
+      return this.errorBreakResult(`${transfer.hash} Rule Not Found`)
     }
+    // if (+transfer.nonce > 9999) {
+    //   await this.transfersModel.update(
+    //     {
+    //       opStatus: 5,
+    //     },
+    //     {
+    //       where: {
+    //         id: transfer.id,
+    //       },
+    //     },
+    //   );
+    //   return this.errorBreakResult(`${transfer.hash} Exceeded the maximum nonce value ${transfer.nonce} / 9999`,)
+    // }
     const txTimestamp = dayjs(transfer.timestamp).unix();
     const result = await this.makerService.getV2RuleByTransfer(transfer, +dealerId, +ebcId, +targetChainIdIndex);
     if (!result) {
+      const diffHours = dayjs().diff(transfer.timestamp, 'hours');
+      if (diffHours > 24) {
+        await this.transfersModel.update(
+          {
+            opStatus: 4,
+          },
+          {
+            where: {
+              hash: transfer.hash,
+            },
+          },
+        );
+      }
       return this.errorBreakResult(`${transfer.hash} getV2RuleByTransfer result not found`)
     }
     this.logger.info(`handleTransferBySourceTx ${transfer.hash}  dealerId: ${dealerId}, ebcId: ${ebcId}. targetChainIdIndex: ${targetChainIdIndex}, txTimestamp: ${txTimestamp}, owners: ${transfer.receiver}`);
@@ -189,11 +219,25 @@ export class TransactionV2Service {
     const { ebc, dealer, sourceToken, targetToken, rule } = result.data;
     const targetTokenAddrSub = `0x${targetToken.tokenAddress.substring(26).toLocaleLowerCase()}`;
     if (!ethers.isAddress(targetTokenAddrSub)) {
+      
       return this.errorBreakResult(`${transfer.hash} targetTokenAddrSub ${targetTokenAddrSub} isAddress error`)
     }
     // get config center
     const configCenterTargetToken = await this.chainConfigService.getTokenByChain(targetToken.chainId, targetTokenAddrSub);
     if (!configCenterTargetToken) {
+      const diffHours = dayjs().diff(transfer.timestamp, 'hours');
+      if (diffHours > 24) {
+        await this.transfersModel.update(
+          {
+            opStatus: 3,
+          },
+          {
+            where: {
+              hash: transfer.hash,
+            },
+          },
+        );
+      }
       return this.errorBreakResult(`${transfer.hash} configCenterTargetToken ${targetToken.chainId} - ${targetTokenAddrSub} not found`)
     }
     createdData.targetMaker = createdData.sourceMaker;
