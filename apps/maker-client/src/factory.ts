@@ -120,8 +120,6 @@ export class AccountFactoryService {
           } else if (features.find(f => f.name == 'evm-rpc')) {
             wallet = new EVMAccount(toChainId, ctx);
           }
-        } else {
-          wallet = new EVMAccount(toChainId, ctx);
         }
 
         break;
