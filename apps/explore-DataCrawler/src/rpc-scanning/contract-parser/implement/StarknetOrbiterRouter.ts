@@ -4,7 +4,7 @@ import { TransferAmountTransactionStatus } from 'apps/explore-DataCrawler/src/tr
 import { IChainConfig } from "@orbiter-finance/config";
 import BigNumber from 'bignumber.js';
 import { addressPadStart, equals } from '@orbiter-finance/utils';
-import { RpcProvider, RPC, CallData, Contract, shortString,getChecksumAddress,uint256 } from 'starknet';
+import { RpcProvider, RPC, CallData, Contract, shortString, getChecksumAddress, uint256 } from 'starknet';
 import { decodeOrbiterCrossChainParams } from '../../../utils';
 export class StarknetOrbiterRouter extends StarknetPraser {
     parse(contractAddress: string, [transaction, receipt]: any[]): TransferAmountTransaction[] {
@@ -35,6 +35,10 @@ export class StarknetOrbiterRouter extends StarknetPraser {
                     equals(t.address, token),
                 );
                 if (tokenInfo) {
+                    if (receipt) {
+                        receipt.version = transaction.version;
+                        crossParams.data = transaction.version;
+                    }
                     const amount = new BigNumber(value)
                         .div(Math.pow(10, tokenInfo.decimals))
                         .toString();
@@ -58,7 +62,7 @@ export class StarknetOrbiterRouter extends StarknetPraser {
                         selector: null,
                         signature: null,
                         contract: contractAddress,
-                        crossChainParams:crossParams,
+                        crossChainParams: crossParams,
                         receipt: receipt,
                     };
                     transfers.push(transfer);

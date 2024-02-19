@@ -561,8 +561,8 @@ export default class BridgeTransactionBuilder {
         const data = await this.starknetOBSourceContractBuilder.build(transfer)
         Object.assign(builderData, data || {});
       } else if (this.zksyncLiteBuilder.check(transfer)) {
-       const data= builderData = await this.zksyncLiteBuilder.build(transfer)
-       Object.assign(builderData, data || {});
+        const data = builderData = await this.zksyncLiteBuilder.build(transfer)
+        Object.assign(builderData, data || {});
       }
     } catch (error) {
       this.logger.error(`bridgeTransaction.builder error:${error.message}`, error);
@@ -648,6 +648,9 @@ export default class BridgeTransactionBuilder {
       transfer.symbol,
       dayjs(transfer.timestamp).valueOf(),
     );
+    if (createdData.sourceChain == 'SN_MAIN' && transfer.crossChainParams && transfer.crossChainParams['data'] && +transfer.crossChainParams['data'] > 0) {
+      createdData.transactionId = `${createdData.transactionId}_${+transfer.crossChainParams['data']}`;
+    }
     createdData.withholdingFee = rule.tradingFee;
     createdData.responseMaker = [rule.sender.toLocaleLowerCase()];
     const v1ResponseMaker = this.envConfigService.get("v1ResponseMaker");
