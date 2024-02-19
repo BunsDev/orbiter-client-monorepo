@@ -130,7 +130,10 @@ export class V3Service {
       throw new Error('Invalid params');
     }
 
-    const where = { sourceAddress: address };
+    const where = {
+      [Op.or]: [{ sourceAddress: address }, { targetAddress: address }],
+      status: 99
+    };
     const dataList: BridgeTransactionAttributes[] = <any[]>await this.BridgeTransactionModel.findAll(<any>{
       attributes: ['sourceId', 'targetId', 'sourceChain', 'targetChain', 'sourceAmount', 'targetAmount', 'sourceSymbol', 'status', 'sourceTime',
         'targetTime', 'sourceAddress', 'targetAddress', 'sourceMaker', 'targetMaker'],
