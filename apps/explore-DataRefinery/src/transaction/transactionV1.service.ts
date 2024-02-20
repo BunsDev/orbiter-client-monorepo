@@ -301,7 +301,7 @@ export class TransactionV1Service {
               id: memoryBT.id,
               status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
               sourceTime: {
-                [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
+                [Op.gt]: dayjs(transfer.timestamp).subtract(4320, 'minute').toISOString(),
                 [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
               }
             },
