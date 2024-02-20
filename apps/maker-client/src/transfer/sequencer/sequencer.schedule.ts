@@ -123,7 +123,9 @@ export class SequencerScheduleService {
     if (records.length > 0) {
       this.logger.info(`DB message ${records.map(item => item.sourceId).join(', ')}`);
       for (const tx of records) {
-        this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId, tx).catch(error => {
+        this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId, tx).then(result => {
+          this.logger.info(`enqueueMessage complete ${tx.sourceId}`)
+        }).catch(error => {
           this.logger.error(
             `[readDBTransactionRecords] enqueueMessage handle error ${tx.sourceId}`, error
           );
@@ -206,6 +208,9 @@ export class SequencerScheduleService {
       }
     }
     if (Lock[queueKey].locked == true) {
+      if (Date.now() - Lock[queueKey].prevTime >= 1000 * 60 * 2) {
+        this.logger.error(`${queueKey} Lock time exceeds 2 minutes`);
+      }
       return;
     }
     try {
@@ -249,6 +254,7 @@ export class SequencerScheduleService {
       for (let i = hashList.length - 1; i >= 0; i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
         if (isConsumed) {
+          this.logger.info(`${queueKey} ready consumptionSendingQueue Already consumed, delete ${hashList[i]}`);
           hashList.splice(i, 1);
         }
       }
@@ -259,16 +265,19 @@ export class SequencerScheduleService {
         const tx = await this.dequeueMessageData(hash);
         if (tx) records.push(tx);
       }
-      this.logger.info(`record: ${records.map(item => item.sourceId).join(', ')}`);
+      this.logger.info(`${queueKey} ready consumptionSendingQueue: ${records.map(item => item.sourceId).join(', ')}`);
       Lock[queueKey].prevTime = Date.now();
-      await this.consumptionSendingQueue(records, queueKey)
+      const result = await this.consumptionSendingQueue(records, queueKey)
       Lock[queueKey].prevTime = Date.now();
+      this.logger.info(`${queueKey} consumptionSendingQueue complete: ${records.map(item => item.sourceId).join(', ')}  hash  ${JSONStringify(result)}`);
     } catch (error) {
       this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
-      this.logger.error(`readQueueExecByKey error: message ${error.message}`, error);
+      this.logger.error(`${queueKey} readQueueExecByKey error: message ${error.message}`, error);
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         for (const tx of records) {
-          this.enqueueMessage(queueKey, tx.sourceId, tx);
+           this.enqueueMessage(queueKey, tx.sourceId, tx).catch(error=> {
+            this.logger.error(`execBatchTransfer error PaidRollbackError enqueueMessage ${tx.sourceId} error ${error.message}`);
+           })
         }
         this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
       }
@@ -686,13 +695,14 @@ export class SequencerScheduleService {
       } else if (bridgeTx[0].version === '1-0' || bridgeTx[0].version === '2-0') {
         result = bridgeTx.length > 1 ? await this.paidManyBridgeTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeTransaction(bridgeTx[0], queueKey)
       }
+      this.logger.info(`${queueKey} transfer info ${JSONStringify(result)}`);
+      return result;
     } catch (error) {
       const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
       this.alertService.sendMessage(`${chainInfo.name}(${chainId}) - maker ${truncateEthAddress(makerAddr)} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, "TG")
       this.logger.error(`${chainInfo.name}(${chainId}) - maker ${makerAddr} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, error);
+      throw error;
     }
-    this.logger.info(`${queueKey} transfer info ${JSONStringify(result)}`);
-    return result;
   }
   async consumptionQueue(tx: BridgeTransactionModel) {
     const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(tx.sourceAddress);
