@@ -531,7 +531,7 @@ export default class BridgeTransactionBuilder {
       version: transfer.version,
     };
     // TAG: Nonce NONCE_EXCEED_MAXIMUM
-    if (+transfer.nonce >= 1000000) {
+    if (+transfer.nonce >= 999999) {
       throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 1000000`)
     }
 

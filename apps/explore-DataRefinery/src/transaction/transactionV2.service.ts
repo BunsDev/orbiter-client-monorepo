@@ -54,7 +54,6 @@ export class TransactionV2Service {
 
     }
   }
-  // @Cron('0 */5 * * * *')
   async matchScheduleUserSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -79,7 +78,6 @@ export class TransactionV2Service {
       this.logger.info(`handleTransferBySourceTx result:${JSON.stringify(result)}`)
     }
   }
-  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '2-1') {
@@ -90,7 +88,6 @@ export class TransactionV2Service {
       }
     }
   }
-  // @Cron('0 */10 * * * *')
   async matchScheduleMakerSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -161,12 +158,12 @@ export class TransactionV2Service {
       createdAt: new Date(),
       version: transfer.version,
     };
-    const { dealerId, ebcId, targetChainIdIndex } = this.parseSecurityCode(
-      transfer.value,
-    );
+    // let dealerId,ebcId,targetChainIdIndex;
+    const code = this.getSecurityCode(transfer);
+    let { dealerId, ebcId, targetChainIdIndex } = this.parseSecurityCode(code);
     if (ebcId === 0 || dealerId === 0 || targetChainIdIndex === 0) {
-      const diffHours = dayjs().diff(transfer.timestamp, 'hours');
-      if (diffHours > 24) {
+      const diffMinute = dayjs().diff(transfer.timestamp, 'minute');
+      if (diffMinute > 10) {
         await this.transfersModel.update(
           {
             opStatus: 4,
@@ -181,24 +178,24 @@ export class TransactionV2Service {
 
       return this.errorBreakResult(`${transfer.hash} Rule Not Found`)
     }
-    // if (+transfer.nonce > 9999) {
-    //   await this.transfersModel.update(
-    //     {
-    //       opStatus: 5,
-    //     },
-    //     {
-    //       where: {
-    //         id: transfer.id,
-    //       },
-    //     },
-    //   );
-    //   return this.errorBreakResult(`${transfer.hash} Exceeded the maximum nonce value ${transfer.nonce} / 9999`,)
-    // }
+    if (+transfer.nonce > 999999) {
+      await this.transfersModel.update(
+        {
+          opStatus: 5,
+        },
+        {
+          where: {
+            id: transfer.id,
+          },
+        },
+      );
+      return this.errorBreakResult(`${transfer.hash} Exceeded the maximum nonce value ${transfer.nonce} / 9999`,)
+    }
     const txTimestamp = dayjs(transfer.timestamp).unix();
     const result = await this.makerService.getV2RuleByTransfer(transfer, +dealerId, +ebcId, +targetChainIdIndex);
     if (!result) {
-      const diffHours = dayjs().diff(transfer.timestamp, 'hours');
-      if (diffHours > 24) {
+      const diffMinute = dayjs().diff(transfer.timestamp, 'minute');
+      if (diffMinute > 10) {
         await this.transfersModel.update(
           {
             opStatus: 4,
@@ -339,7 +336,7 @@ export class TransactionV2Service {
       // chain0 to chain1
       const withholdingFee = new BigNumber(rule.chain0WithholdingFee).div(10 ** sourceToken.decimals).toString();
       const result = this.getResponseIntent(
-        transfer.value,
+        transfer,
         new BigNumber(rule.chain0TradeFee).toFixed(0),
         new BigNumber(rule.chain0WithholdingFee).toFixed(0),
         transfer.nonce,
@@ -361,7 +358,7 @@ export class TransactionV2Service {
       // chain to chain0
       const withholdingFee = new BigNumber(rule.chain1WithholdingFee).div(10 ** sourceToken.decimals).toString();
       const result = this.getResponseIntent(
-        transfer.value,
+        transfer,
         new BigNumber(rule.chain1TradeFee).toFixed(0),
         new BigNumber(rule.chain1WithholdingFee).toFixed(0),
         transfer.nonce,
@@ -540,17 +537,16 @@ export class TransactionV2Service {
     }
   }
 
-  private getSecurityCode(value: string): string {
+  private getSecurityCode(transfer: Transfers): string {
+    const value = transfer.crossChainParams && transfer.crossChainParams['targetChain'] ? transfer.crossChainParams['targetChain'] : transfer.value;
     const code = value.substring(value.length - 5, value.length);
-    // const code = new BigNumber(value).mod(100000).toString();
-    return code;
+    return code
   }
-  private parseSecurityCode(value: string): {
+  private parseSecurityCode(code: string): {
     dealerId: number;
     ebcId: number;
     targetChainIdIndex: number;
   } {
-    const code = this.getSecurityCode(value);
     const dealerId = Number(code.substring(0, 2));
     const ebcId = Number(code[2]);
     const targetChainIdIndex = Number(code.substring(3));
@@ -558,18 +554,20 @@ export class TransactionV2Service {
   }
 
   private getResponseIntent(
-    amount: string,
+    transfer:Transfers,
     tradeFee: string,
     withholdingFee: string,
     targetSafeCode: string,
   ) {
-    const securityCode = this.getSecurityCode(amount);
+    const securityCode = this.getSecurityCode(transfer);
+    const amount = transfer.value;
     const tradeAmount =
       BigInt(amount) - BigInt(securityCode) - BigInt(withholdingFee);
     //  tradeAmount valid max and min
     const tradingFee = (tradeAmount * BigInt(tradeFee)) / 1000000n;
     const responseAmount = ((tradeAmount - tradingFee) / 10000n) * 10000n;
     const responseAmountStr = responseAmount.toString();
+    const targetSafeCodeLength = String(targetSafeCode).length
     const result = {
       code: 0,
       value: amount,
@@ -579,8 +577,8 @@ export class TransactionV2Service {
       responseAmountOrigin: responseAmountStr,
       responseAmount: `${responseAmountStr.substring(
         0,
-        responseAmountStr.length - 4,
-      )}${padStart(targetSafeCode, 4, '0')}`,
+        responseAmountStr.length - targetSafeCodeLength,
+      )}${padStart(targetSafeCode,targetSafeCodeLength, '0')}`,
     };
     return result;
   }
