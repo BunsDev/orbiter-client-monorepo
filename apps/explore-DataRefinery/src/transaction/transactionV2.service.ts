@@ -252,7 +252,7 @@ export class TransactionV2Service {
     const responseMaker = this.envConfigService.get("PAID_RESPONSE_MAKER");
     if (responseMaker) {
       for (const fakeAddr in responseMaker) {
-        if (responseMaker[fakeAddr].includes(createdData.sourceMaker)) {
+        if (responseMaker[fakeAddr].includes(createdData.sourceMaker.toLocaleLowerCase())) {
           createdData.responseMaker.push(fakeAddr.toLocaleLowerCase());
         }
       }
