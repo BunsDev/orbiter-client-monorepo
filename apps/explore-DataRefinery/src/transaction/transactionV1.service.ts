@@ -200,17 +200,20 @@ export class TransactionV1Service {
     } catch (error) {
       if (error instanceof ValidSourceTxError) {
         this.logger.error(`ValidSourceTxError hash: ${transfer.hash}, chainId:${transfer.chainId} => ${error.message}`);
-        const r = await this.transfersModel.update(
-          {
-            opStatus: error.opStatus,
-          },
-          {
-            where: {
-              id: transfer.id,
+        const diffMinute = dayjs().diff(transfer.timestamp, 'minute');
+        if (diffMinute > 5 || [TransferOpStatus.BALANCED_LIQUIDITY, TransferOpStatus.AMOUNT_TOO_SMALL, TransferOpStatus].includes(error.opStatus)) {
+          const r = await this.transfersModel.update(
+            {
+              opStatus: error.opStatus,
             },
-          },
-        );
-        return this.errorBreakResult(`ValidSourceTxError update transferId: ${transfer.id} result: ${JSON.stringify(r)}`)
+            {
+              where: {
+                id: transfer.id,
+              },
+            },
+          );
+        }
+        return this.errorBreakResult(`ValidSourceTxError update transferId: ${transfer.id} hash:${transfer.hash} result: ${error.message}`)
       } else {
         console.error(error);
         this.logger.error(`ValidSourceTxError throw`, error)
