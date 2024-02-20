@@ -114,6 +114,11 @@ export class ValidatorService {
     targetSymbol: string,
     targetAmount: string
   ) {
+    if(sourceSymbol.toLocaleLowerCase() === targetSymbol.toLocaleLowerCase()) {
+      if(+targetAmount>+sourceAmount) {
+        return false;
+      }
+    }
     const sourceAmountValue = await this.chainLinkService.getChainLinkPrice(
       sourceAmount,
       sourceSymbol,

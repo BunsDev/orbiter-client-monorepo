@@ -335,7 +335,7 @@ export class SequencerScheduleService {
         throw new Errors.InsufficientLiquidity(`targetAmount: ${bridgeTx.targetAmount} ${bridgeTx.targetSymbol}`)
       }
     } catch (error) {
-      this.logger.error(`checkMakerFluidity error sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`, error);
+      this.logger.error(`checkMakerFluidity ${bridgeTx.targetSymbol} error sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`, error);
       if (error instanceof Errors.InsufficientLiquidity) {
         throw error;
       }
