@@ -24,7 +24,7 @@ export class ErrorTracker {
         const errorCountInWindow = this.errorCounts.get(errorMsg);
         if (errorCountInWindow > this.errorThreshold) {
             console.error(`Error "${errorMsg}" occurred ${errorCountInWindow} times in the last exceeding threshold.`);
-            this.operationAvailable = false; // Mark operation as not available
+            // this.operationAvailable = false; // Mark operation as not available
             // You can perform other actions here, such as sending notifications
             setTimeout(() => {
                 this.markOperationAvailable(); // Restore operation after recovery time

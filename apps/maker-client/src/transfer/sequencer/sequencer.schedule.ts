@@ -155,7 +155,7 @@ export class SequencerScheduleService {
           }
         }
         if (SequencerScheduleService.Lock[queueKey].locked == false) {
-          this.readQueueExecByKey(queueKey);
+          // this.readQueueExecByKey(queueKey);
         }
       }
     }
@@ -254,7 +254,7 @@ export class SequencerScheduleService {
       for (let i = hashList.length - 1; i >= 0; i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
         if (isConsumed) {
-          this.logger.info(`${queueKey} ready consumptionSendingQueue Already consumed, delete ${hashList[i]}`);
+          this.logger.error(`${queueKey} ready consumptionSendingQueue Already consumed, delete ${hashList[i]}`);
           hashList.splice(i, 1);
         }
       }
@@ -265,7 +265,10 @@ export class SequencerScheduleService {
         const tx = await this.dequeueMessageData(hash);
         if (tx) records.push(tx);
       }
-
+      if (records.length<=0) {
+        this.logger.error (`${queueKey} ready consumptionSendingQueue Delete ALL Empty`);
+        return
+      }
       this.logger.info(`${queueKey} ready consumptionSendingQueue: ${records.map(item => item.sourceId).join(', ')}`);
       Lock[queueKey].prevTime = Date.now();
       const result = await this.consumptionSendingQueue(records, queueKey)
@@ -688,6 +691,10 @@ export class SequencerScheduleService {
     let result;
     const [chainId, makerAddr] = queueKey.split('-');
     const chainInfo = this.chainConfigService.getChainInfo(chainId);
+    const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
+    if (sourceIds.length<=0) {
+      return;
+    }
     try {
       if (bridgeTx[0].version === '3-0') {
         result = bridgeTx.length > 1 ? await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
@@ -699,9 +706,8 @@ export class SequencerScheduleService {
       this.logger.info(`${queueKey} transfer info ${JSONStringify(result)}`);
       return result;
     } catch (error) {
-      const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
-      this.alertService.sendMessage(`TO ${chainInfo.name}(${chainId}) - maker ${truncateEthAddress(makerAddr)} ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, "TG")
-      this.logger.error(`${chainInfo.name}(${chainId}) - maker ${makerAddr} ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, error);
+      this.alertService.sendMessage(`TO CHAIN ${chainInfo.name}(${chainId}) - Maker:${truncateEthAddress(makerAddr)} ErrorName:${error.name} SourceHash: ${sourceIds} Message ${error.message}`, "TG")
+      this.logger.error(`TO CHAIN ${chainInfo.name}(${chainId}) - Maker:${makerAddr} ErrorName:${error.name} SourceHash: ${sourceIds} Message ${error.message}`, error);
       throw error;
     }
   }
