@@ -212,7 +212,7 @@ export class TransferService {
       );
       if (result[0] != sourecIds.length) {
         throw new Error(
-          `The number of successful modifications is inconsistent ${sourecIds.join(',')}`
+          `The number of successful modifications is inconsistent ${result[0]}!=${sourecIds.length}`
         );
       }
     } catch (error) {
@@ -335,7 +335,7 @@ export class TransferService {
       );
       if (result[0] != calldata[0].length) {
         throw new Error(
-          `The number of successful modifications is inconsistent ${calldata[0].join(',')}`
+          `The number of successful modifications is inconsistent ${result[0]}!=${calldata[0].length}`
         );
       }
       const targetChain = this.chainConfigService.getChainInfo(targetChainId);
@@ -605,7 +605,7 @@ export class TransferService {
       );
       if (result[0] != calldata[0].length) {
         throw new Error(
-          `The number of successful modifications is inconsistent ${calldata[0].join(',')}`
+          `The number of successful modifications is inconsistent ${result[0]}!=${calldata[0].length}`
         );
       }
       const targetChain = this.chainConfigService.getChainInfo(targetChainId);
