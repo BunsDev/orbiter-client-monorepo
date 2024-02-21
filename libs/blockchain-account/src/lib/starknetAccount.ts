@@ -133,23 +133,31 @@ export class StarknetAccount extends OrbiterAccount {
     //   }
     // }
     // accessLogger.info(`transactionDetail: ${JSON.stringify(transactionDetail)}`);
-    const trx = await this.account.execute(invocationList, <any>null, transactionDetail);
-    submit();
-    if (!trx || !trx.transaction_hash) {
-      throw new Error(`Starknet Failed to send transaction hash does not exist`);
+    try {
+      const trx = await this.account.execute(invocationList, <any>null, transactionDetail);
+      submit();
+      if (!trx || !trx.transaction_hash) {
+        throw new Error(`Starknet Failed to send transaction hash does not exist`);
+      }
+      // await sleep(1000);
+      const hash = addressPadStart(trx.transaction_hash, 66);
+      this.logger.info(`${this.chainConfig.name} sendTransaction txHash:${hash}`);
+      return {
+        hash,
+        from: this.address,
+        // to: tos.join(','),
+        // value: BigInt(value),
+        fee: BigInt(transactionDetail.maxFee),
+        nonce: nonce,
+        token
+      };
+    } catch (error) {
+      if (error.message.includes('An unexpected error occurred') || error.message.includes('StarkNet Alpha throughput limit reached') || error.message.includes('Bad Gateway')) {
+        throw new TransactionSendConfirmFail(error.message);
+      } else {
+        throw error;
+      }
     }
-    // await sleep(1000);
-    const hash = addressPadStart(trx.transaction_hash, 66);
-    this.logger.info(`${this.chainConfig.name} sendTransaction txHash:${hash}`);
-    return {
-      hash,
-      from: this.address,
-      // to: tos.join(','),
-      // value: BigInt(value),
-      fee: BigInt(transactionDetail.maxFee),
-      nonce: nonce,
-      token
-    };
   }
 
   public async getBalance(address?: string, token?: string): Promise<bigint> {

@@ -472,7 +472,7 @@ export class SequencerScheduleService {
         // }
       }
     } catch (cleanupError) {
-      this.logger.error(`handlePaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
+      this.logger.error(`handlePaidTransactionError ${targetChain} - ${sourceIds} message ${error.message}`, error);
     }
     throw error;
   }
