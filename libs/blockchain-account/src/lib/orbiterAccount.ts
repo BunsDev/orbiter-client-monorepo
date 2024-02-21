@@ -11,13 +11,15 @@ import path from "path";
 import { NonceManager } from "./nonceManager";
 import { camelCase } from "lodash";
 import { EVMNonceManager } from "./nonceManager/evmNonceManager";
-
+import { ErrorTracker } from './ErrorTracker';
 export class OrbiterAccount extends EventEmitter {
   public address: string;
   public logger!: OrbiterLogger;
+  public errorTracker: ErrorTracker;
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
     super();
     this.logger = logger.createLoggerByName(`account-${camelCase(this.chainConfig.name)}`);
+    this.errorTracker = new ErrorTracker(30);
   }
 
   get chainConfig(): IChainConfig {

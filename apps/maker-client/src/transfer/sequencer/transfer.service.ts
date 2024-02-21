@@ -112,6 +112,9 @@ export class TransferService {
     // transfer.targetAddress = '0xEFc6089224068b20197156A91D50132b2A47b908';
     let transferResult: TransferResponse;
     try {
+      if (!wallet.errorTracker.isOperationAvailable) {
+        throw new Error('Blockchain RPC status is not available')
+      }
       const transferAmount = new BigNumber(transfer.targetAmount).times(
         10 ** transferToken.decimals
       );
@@ -217,6 +220,9 @@ export class TransferService {
       throw error;
     }
     try {
+      if (!wallet.errorTracker.isOperationAvailable) {
+        throw new Error('Blockchain RPC status is not available')
+      }
       if (transferToken.isNative) {
         transferResult = await wallet.transfers(
           toAddressList,
