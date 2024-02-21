@@ -155,7 +155,7 @@ export class SequencerScheduleService {
           }
         }
         if (SequencerScheduleService.Lock[queueKey].locked == false) {
-          // this.readQueueExecByKey(queueKey);
+          this.readQueueExecByKey(queueKey);
         }
       }
     }
