@@ -153,7 +153,11 @@ export class StarknetAccount extends OrbiterAccount {
       };
     } catch (error) {
       // const errmsg = error.message;
-      const dataMsg = error.data || '';
+      this.logger.error(
+        `broadcastTransaction tx error:${transactionDetail.nonce} - ${error.message}， rpc: ${this.chainConfig.rpc[0]}`,
+        error
+      );
+      const dataMsg = error.data || error.message;
       if (dataMsg.includes('StarkNet Alpha throughput limit reached')) {
         throw new TransactionSendConfirmFail(error.message);
       } else {
