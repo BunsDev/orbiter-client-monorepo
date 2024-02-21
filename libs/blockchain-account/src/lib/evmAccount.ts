@@ -32,9 +32,9 @@ export class EVMAccount extends OrbiterAccount {
   get provider(): JsonRpcProvider {
     const rpc = this.chainConfig.rpc[0];
     const provider = new Orbiter6Provider(rpc);
-    provider.on('error',(error) => {
-      console.log(error);
-      this.logger.error(`${this.chainConfig.name} provider error ${error.message}`, error);
+    provider.on('error', (error) => {
+      this.logger.error(`${this.chainConfig.name} provider6 error ${error.message}`, error);
+      this.errorTracker.trackError('provider');
     })
     return provider;
   }
@@ -46,7 +46,7 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error('The connected wallet address is inconsistent with the private key address')
       }
     }
-    if (!this.nonceManager || !equals(this.wallet.address,this.address)) {
+    if (!this.nonceManager || !equals(this.wallet.address, this.address)) {
       this.nonceManager = this.createEVMNonceManager(this.address, async () => {
         const nonce = await this.wallet.getNonce("pending");
         return Number(nonce);
@@ -200,15 +200,13 @@ export class EVMAccount extends OrbiterAccount {
         blockGasLimit = blockGasLimit.dividedBy(count);
       }
       if (new BigNumber(String(transactionRequest.maxFeePerGas)).lt(blockMaxFeePerGas)) {
-        logs.push(`blockMaxFeePerGas ${
-          String(new BigNumber(String(transactionRequest.maxFeePerGas)).dividedBy(10 ** 9))
-        } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`)
+        logs.push(`blockMaxFeePerGas ${String(new BigNumber(String(transactionRequest.maxFeePerGas)).dividedBy(10 ** 9))
+          } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`)
         transactionRequest.maxFeePerGas = BigInt(blockMaxFeePerGas.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).lt(blockMaxPriorityFeePerGas)) {
-        logs.push(`blockMaxPriorityFeePerGas ${
-          String(new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).dividedBy(10 ** 9))
-        } gWei < ${String(blockMaxPriorityFeePerGas.dividedBy(10 ** 9))} gWei`);
+        logs.push(`blockMaxPriorityFeePerGas ${String(new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).dividedBy(10 ** 9))
+          } gWei < ${String(blockMaxPriorityFeePerGas.dividedBy(10 ** 9))} gWei`);
         transactionRequest.maxPriorityFeePerGas = BigInt(blockMaxPriorityFeePerGas.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
@@ -230,9 +228,8 @@ export class EVMAccount extends OrbiterAccount {
         blockGasLimit = blockGasLimit.dividedBy(count);
       }
       if (new BigNumber(String(transactionRequest.gasPrice)).lt(blockGasPrice)) {
-        logs.push(`blockGasPrice ${
-          String(new BigNumber(String(transactionRequest.gasPrice)).dividedBy(10 ** 9))
-        } gWei < ${String(blockGasPrice.dividedBy(10 ** 9))} gWei`);
+        logs.push(`blockGasPrice ${String(new BigNumber(String(transactionRequest.gasPrice)).dividedBy(10 ** 9))
+          } gWei < ${String(blockGasPrice.dividedBy(10 ** 9))} gWei`);
         transactionRequest.gasPrice = BigInt(blockGasPrice.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {

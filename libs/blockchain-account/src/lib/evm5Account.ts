@@ -28,8 +28,8 @@ export class EVM5Account extends OrbiterAccount {
         const rpc = this.chainConfig.rpc[0];
         const provider = new Orbiter5Provider(rpc);
         provider.on('error',(error) => {
-            console.log(error);
-            this.logger.error(`${this.chainConfig.name} provider error ${error.message}`, error);
+            this.logger.error(`${this.chainConfig.name} provider5 error ${error.message}`, error);
+            this.errorTracker.trackError('provider');
           })
           return provider;
     }
