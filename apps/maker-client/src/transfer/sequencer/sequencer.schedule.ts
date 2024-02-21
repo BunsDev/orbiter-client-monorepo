@@ -265,14 +265,15 @@ export class SequencerScheduleService {
         const tx = await this.dequeueMessageData(hash);
         if (tx) records.push(tx);
       }
+
       this.logger.info(`${queueKey} ready consumptionSendingQueue: ${records.map(item => item.sourceId).join(', ')}`);
       Lock[queueKey].prevTime = Date.now();
       const result = await this.consumptionSendingQueue(records, queueKey)
       Lock[queueKey].prevTime = Date.now();
       this.logger.info(`${queueKey} consumptionSendingQueue complete: ${records.map(item => item.sourceId).join(', ')}  hash  ${JSONStringify(result)}`);
     } catch (error) {
-      this.alertService.sendMessage(`PaidError ${error.name} ${error.message}`, "TG")
-      this.logger.error(`PaidError ${error.name} queueKey ${queueKey} readQueueExecByKey error: message ${error.message}`, error);
+      // this.alertService.sendMessage(`PaidError ${error.name} ${error.message} hash: ${records.map(item => item.sourceId).join(', ')}`, "TG")
+      this.logger.error(`PaidError ${error.name} queueKey ${queueKey} readQueueExecByKey error: message ${error.message}, hash: ${records.map(item => item.sourceId).join(', ')}`, error);
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         for (const tx of records) {
            this.enqueueMessage(queueKey, tx.sourceId, tx).catch(error=> {
