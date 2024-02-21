@@ -265,6 +265,9 @@ export class SequencerScheduleService {
         const tx = await this.dequeueMessageData(hash);
         if (tx) records.push(tx);
       }
+      if (!records.length) {
+        return;
+      }
 
       this.logger.info(`${queueKey} ready consumptionSendingQueue: ${records.map(item => item.sourceId).join(', ')}`);
       Lock[queueKey].prevTime = Date.now();
