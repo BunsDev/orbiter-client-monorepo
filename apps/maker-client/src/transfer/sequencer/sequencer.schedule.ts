@@ -271,15 +271,15 @@ export class SequencerScheduleService {
       Lock[queueKey].prevTime = Date.now();
       this.logger.info(`${queueKey} consumptionSendingQueue complete: ${records.map(item => item.sourceId).join(', ')}  hash  ${JSONStringify(result)}`);
     } catch (error) {
-      this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
-      this.logger.error(`${queueKey} readQueueExecByKey error: message ${error.message}`, error);
+      this.alertService.sendMessage(`PaidError ${error.name} ${error.message}`, "TG")
+      this.logger.error(`PaidError ${error.name} queueKey ${queueKey} readQueueExecByKey error: message ${error.message}`, error);
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         for (const tx of records) {
            this.enqueueMessage(queueKey, tx.sourceId, tx).catch(error=> {
-            this.logger.error(`execBatchTransfer error PaidRollbackError enqueueMessage ${tx.sourceId} error ${error.message}`);
+            this.logger.error(`PaidError error ${error.name} enqueueMessage ${tx.sourceId} error ${error.message}`);
            })
         }
-        this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
+        this.logger.error(`PaidError error ${error.name} ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
       }
     } finally {
       Lock[queueKey].locked = false;
