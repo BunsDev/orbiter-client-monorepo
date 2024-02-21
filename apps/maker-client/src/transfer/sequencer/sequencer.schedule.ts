@@ -699,8 +699,8 @@ export class SequencerScheduleService {
       return result;
     } catch (error) {
       const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
-      this.alertService.sendMessage(`${chainInfo.name}(${chainId}) - maker ${truncateEthAddress(makerAddr)} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, "TG")
-      this.logger.error(`${chainInfo.name}(${chainId}) - maker ${makerAddr} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, error);
+      this.alertService.sendMessage(`TO ${chainInfo.name}(${chainId}) - maker ${truncateEthAddress(makerAddr)} ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, "TG")
+      this.logger.error(`${chainInfo.name}(${chainId}) - maker ${makerAddr} ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, error);
       throw error;
     }
   }
