@@ -152,7 +152,9 @@ export class StarknetAccount extends OrbiterAccount {
         token
       };
     } catch (error) {
-      if (error.message.includes('An unexpected error occurred') || error.message.includes('StarkNet Alpha throughput limit reached') || error.message.includes('Bad Gateway')) {
+      // const errmsg = error.message;
+      const dataMsg = error.data || '';
+      if (dataMsg.includes('StarkNet Alpha throughput limit reached')) {
         throw new TransactionSendConfirmFail(error.message);
       } else {
         throw error;
