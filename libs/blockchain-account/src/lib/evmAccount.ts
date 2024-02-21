@@ -31,7 +31,12 @@ export class EVMAccount extends OrbiterAccount {
   }
   get provider(): JsonRpcProvider {
     const rpc = this.chainConfig.rpc[0];
-    return new Orbiter6Provider(rpc)
+    const provider = new Orbiter6Provider(rpc);
+    provider.on('error',(error) => {
+      console.log(error);
+      this.logger.error(`${this.chainConfig.name} provider error ${error.message}`, error);
+    })
+    return provider;
   }
 
   async connect(privateKey: string, _address?: string) {
