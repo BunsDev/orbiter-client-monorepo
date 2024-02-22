@@ -37,7 +37,7 @@ export class MetricController extends PrometheusController {
                     chainId
                 );
                 if (account && account.nonceManager) {
-                    result[`${chainId}-${owner}`] = account.nonceManager.getLocalNonce();
+                    result[`${chainId}-${owner}`] = await account.nonceManager.getLocalNonce();
                 }
 
             }
