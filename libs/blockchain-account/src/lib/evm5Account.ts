@@ -338,8 +338,8 @@ export class EVM5Account extends OrbiterAccount {
             //     throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
             // }
             if (+nonceResult.localNonce - nonceResult.networkNonce >= 20) {
-                this.emit("noncesExceed",nonceResult);
-                throw new NonceISTooDifferent(`noncesExceed localNonce: ${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}`);
+                this.emit("NonceISTooDifferent",nonceResult);
+                throw new NonceISTooDifferent(`NonceISTooDifferent localNonce: ${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}`);
               }
             const valueStr = new BigNumber(String(transactionRequest.value)).toFixed(0);
             if (transactionRequest.value)

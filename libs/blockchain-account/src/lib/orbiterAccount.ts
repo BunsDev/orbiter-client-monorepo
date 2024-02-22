@@ -92,9 +92,6 @@ export class OrbiterAccount extends EventEmitter {
     const nonceManager = new NonceManager(async () => {
       return await getNonceFun();
     }, store);
-    nonceManager.on("noncesExceed", (data) => {
-      this.emit('noncesExceed', data)
-    });
     return nonceManager;
   }
   public createEVMNonceManager(address: string, getNonceFun: Function) {
@@ -110,9 +107,6 @@ export class OrbiterAccount extends EventEmitter {
       return await getNonceFun();
     }, store, {
       beforeCommit: true
-    });
-    nonceManager.on("noncesExceed", (data) => {
-      this.emit('noncesExceed', data)
     });
     return nonceManager;
   }
