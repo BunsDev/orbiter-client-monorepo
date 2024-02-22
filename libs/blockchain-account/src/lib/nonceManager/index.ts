@@ -22,7 +22,7 @@ export class NonceManager extends EventEmitter {
         // Initialize nonce based on the maximum of refreshNonce, stored nonce, and initNonce
         const refreshNonce = await this.refreshNonceFun();
         const nonce = (await this.store.get("nonce")) || 0;
-        const initNonce = option.initNonce || 0;
+        const initNonce = (option && option.initNonce) || 0;
         const maxNonce = Math.max(refreshNonce, nonce, initNonce);
 
         // Update nonce if needed
