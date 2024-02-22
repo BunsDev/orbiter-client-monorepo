@@ -34,6 +34,10 @@ export class EVMAccount extends OrbiterAccount {
     provider.on('error', (error) => {
       this.logger.error(`${this.chainConfig.name} provider6 error ${error.message}`, error);
       this.errorTracker.trackError('provider');
+      if(!this.errorTracker.isOperationAvailable) {
+        provider.destroy()
+        this.logger.error(`${this.chainConfig.name} provider6 The instance is unavailable and will be destroyed.${provider.destroyed}`);
+      }
     })
     return provider;
   }
