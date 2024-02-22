@@ -9,7 +9,7 @@ import { TransactionRequest, TransferResponse, ZKSpaceSendTokenRequest } from '.
 import {NonceManager} from './nonceManager';
 
 export class ZkSpaceAccount extends OrbiterAccount {
-  private nonceManager: NonceManager;
+  // private nonceManager: NonceManager;
   private wallet: Wallet;
 
   async connect(privateKey: string, address: string) {

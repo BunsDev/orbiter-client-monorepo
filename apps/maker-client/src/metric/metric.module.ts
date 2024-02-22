@@ -4,6 +4,8 @@ import { MetricController } from './metric.controller';
 import { PrometheusModule } from "@willsoto/nestjs-prometheus";
 import { MetricService } from './metric.service';
 import { TransferModule } from '../transfer/transfer.module'
+import { AccountFactoryService } from '../factory'
+
 @Module({
   imports: [
     TransferModule,
@@ -15,6 +17,7 @@ import { TransferModule } from '../transfer/transfer.module'
   ],
   controllers: [MetricController],
   providers: [
+    AccountFactoryService,
     MetricService,
     makeGaugeProvider({
       name: "pending_transfer",

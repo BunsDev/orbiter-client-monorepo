@@ -27,11 +27,11 @@ export class SequencerScheduleService {
   private readonly applicationStartupTime: number = Date.now();
   static Lock: { [key: string]: LockData } = {}
   constructor(
+    private readonly envConfig: ENVConfigService,
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
     @InjectModel(BridgeTransactionModel)
     private readonly bridgeTransactionModel: typeof BridgeTransactionModel,
-    private readonly envConfig: ENVConfigService,
     private alertService: AlertService,
     private accountFactoryService: AccountFactoryService,
     private transferService: TransferService,

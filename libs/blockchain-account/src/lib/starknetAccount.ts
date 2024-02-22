@@ -7,7 +7,7 @@ import { StarknetERC20 } from '@orbiter-finance/abi'
 export class StarknetAccount extends OrbiterAccount {
   public account: Account;
   public provider: RpcProvider;
-  private nonceManager: NonceManager;
+  // private nonceManager: NonceManager;
 
   /**
    * connection wallet

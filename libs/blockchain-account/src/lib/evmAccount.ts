@@ -6,7 +6,6 @@ import {
   JsonRpcProvider,
   type Wallet,
 } from "ethers6";
-import { NonceManager } from './nonceManager';
 import { ERC20Abi, OrbiterRouterV3 } from '@orbiter-finance/abi'
 import {
   Context,
@@ -19,13 +18,13 @@ import {
   TransactionResponse,
   TransactionSendConfirmFail,
   TransferResponse,
+  NonceISTooDifferent
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-import { EVMNonceManager } from './nonceManager/evmNonceManager';
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
   #provider: JsonRpcProvider;
-  public nonceManager: NonceManager | EVMNonceManager;
+  // public nonceManager: NonceManager | EVMNonceManager;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
@@ -403,10 +402,14 @@ export class EVMAccount extends OrbiterAccount {
       throw new TransactionSendConfirmFail('nonceResult nof found');
     }
     this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
-
+       
     try {
-      if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
-        throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+      // if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+      //   throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+      // }
+      if (+nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+        this.emit("noncesExceed",nonceResult);
+        throw new NonceISTooDifferent(`noncesExceed localNonce: ${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}`);
       }
       if (transactionRequest.value)
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);

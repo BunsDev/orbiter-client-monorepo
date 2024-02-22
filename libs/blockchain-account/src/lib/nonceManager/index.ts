@@ -4,13 +4,17 @@ import { EventEmitter } from 'events';
 
 const FIVE_MINUTES_MS = 1000 * 60 * 5;
 
+export interface Options {
+  initNonce?:number;
+  beforeCommit?:boolean;
+}
 export class NonceManager extends EventEmitter {
   private readonly mutex = new Mutex();
 
   constructor(
     private readonly refreshNonceFun: Function,
     private readonly store: Keyv,
-    option: { initNonce?: number } = {}
+    private readonly option?: Options
   ) {
     super();
     this.mutex.acquire().then(async (release) => {
@@ -29,7 +33,7 @@ export class NonceManager extends EventEmitter {
         release();
       }
     });
-    if (option && !option.initNonce) {
+    if (!option || !option.initNonce) {
       this.forceRefreshNonce();
     }
     // Start the auto-update mechanism
@@ -142,14 +146,20 @@ export class NonceManager extends EventEmitter {
             useNonce = networkNonce;
             this.setNonce(networkNonce)
           }
+          if (this.option && this.option.beforeCommit) {
+            await this.setLastUsageTime(Date.now());
+            await this.setNonce(useNonce + 1);
+          }
           // Resolve with nonce details and functions to submit and rollback
           resolve({
             nonce: useNonce,
             networkNonce,
             localNonce,
             submit: async () => {
-              await this.setLastUsageTime(Date.now());
-              await this.setNonce(useNonce + 1);
+              if (!this.option || !this.option.beforeCommit) {
+                await this.setLastUsageTime(Date.now());
+                await this.setNonce(useNonce + 1);
+              }
               release();
             },
             rollback: async () => {

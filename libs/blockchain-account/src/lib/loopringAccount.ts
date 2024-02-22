@@ -19,7 +19,7 @@ export class LoopringAccount extends OrbiterAccount {
   private client: ExchangeAPI;
   private accountInfo;
   private privateKey;
-  public nonceManager: NonceManager;
+  // public nonceManager: NonceManager;
 
   async connect(privateKey: string, address: string) {
     this.privateKey = privateKey;

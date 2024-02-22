@@ -12,6 +12,7 @@ import {
     TransactionSendConfirmFail,
     TransactionRequest,
     TransferResponse,
+    NonceISTooDifferent
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
 import { Contract, Wallet } from 'ethers';
@@ -20,7 +21,7 @@ import { Interface } from 'ethers/lib/utils';
 export class EVM5Account extends OrbiterAccount {
     protected wallet: Wallet;
     #provider: Orbiter5Provider;
-    public nonceManager: NonceManager;
+    // public nonceManager: NonceManager;
     constructor(protected chainId: string, protected readonly ctx: Context) {
         super(chainId, ctx);
     }
@@ -333,9 +334,13 @@ export class EVM5Account extends OrbiterAccount {
         }
         this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
         try {
-            if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
-                throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
-            }
+            // if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+            //     throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+            // }
+            if (+nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+                this.emit("noncesExceed",nonceResult);
+                throw new NonceISTooDifferent(`noncesExceed localNonce: ${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}`);
+              }
             const valueStr = new BigNumber(String(transactionRequest.value)).toFixed(0);
             if (transactionRequest.value)
                 transactionRequest.value = ethers.BigNumber.from(valueStr)
