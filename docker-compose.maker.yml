@@ -23,7 +23,7 @@ services:
     #   ENV_VAR_PATH: '${ENV_VAR_PATH}'
     #   ENV_RULES_PATH: '${ENV_RULES_PATH}'
     ports:
-      - '8000:8000'
+      - '8000:3000'
     networks:
       - orbiter-network
     volumes:
