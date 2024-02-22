@@ -106,9 +106,6 @@ export class TransactionV1Service {
         timestamp: {
           [Op.gte]: dayjs().subtract(48, 'hour').toISOString(),
         },
-        // nonce: {
-        //   [Op.lt]: 9000
-        // }
       },
     });
     for (const transfer of transfers) {
@@ -279,10 +276,19 @@ export class TransactionV1Service {
   }
 
   public async handleTransferByDestTx(transfer: TransfersModel): Promise<handleTransferReturn> {
-    if (transfer.version != '1-1') {
-      throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
-    }
     let t1;
+    let version = '99-99';
+    switch(transfer.version) {
+      case '1-1':
+        version='1-0';
+        break;
+        case '2-1':
+          version='2-0';
+          break;
+    }
+    if (version) {
+        throw new Error(`handleTransferByDestTx is not supported ${version}`)
+    }
     try {
       const memoryBT =
         await this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
@@ -302,6 +308,7 @@ export class TransactionV1Service {
           {
             where: {
               id: memoryBT.id,
+              version:version,
               status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
               sourceTime: {
                 [Op.gt]: dayjs(transfer.timestamp).subtract(4320, 'minute').toISOString(),
@@ -386,6 +393,7 @@ export class TransactionV1Service {
           targetAddress: transfer.receiver,
           targetChain: transfer.chainId,
           targetAmount: transfer.amount,
+          version,
           responseMaker: {
             [Op.contains]: [transfer.sender],
           },

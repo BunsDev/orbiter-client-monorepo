@@ -19,7 +19,7 @@ export class OrbiterAccount extends EventEmitter {
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
     super();
     this.logger = logger.createLoggerByName(`account-${camelCase(this.chainConfig.name)}`);
-    this.errorTracker = new ErrorTracker(30);
+    this.errorTracker = new ErrorTracker(10);
   }
 
   get chainConfig(): IChainConfig {

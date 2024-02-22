@@ -1,33 +1,38 @@
 export class ErrorTracker {
-    private errorCounts: Map<string, number> = new Map();
-    private errorThreshold: number;
+    private errorCounts: Map<string, { count: number, timestamp: number }> = new Map();
     private operationAvailable: boolean = true;
-    private recoveryTime: number = 300000; // Default recovery time is 5 minutes
 
-    constructor(threshold: number, recoveryTime: number = 1000 * 60 * 2) {
-        this.errorThreshold = threshold;
-        this.recoveryTime = recoveryTime;
+    constructor(private errorThreshold: number, private windowSize: number = 1000 * 60, private recoveryTime: number = 1000 * 60 * 2) {
     }
 
     trackError(errorMsg: string) {
         if (!this.operationAvailable) {
+            console.log('Current status is unavailable', this.errorCounts.get(errorMsg));
             return; // If operation is not available, return directly
         }
-        // Update error count for the specific error message
-        if (this.errorCounts.has(errorMsg)) {
-            this.errorCounts.set(errorMsg, this.errorCounts.get(errorMsg)! + 1);
-        } else {
-            this.errorCounts.set(errorMsg, 1);
+
+        // Initialize error count and timestamp for the specific error message
+        if (!this.errorCounts.has(errorMsg)) {
+            this.errorCounts.set(errorMsg, { count: 0, timestamp: Date.now() });
         }
 
-        // Check if the total error count exceeds the threshold in the time window
-        const errorCountInWindow = this.errorCounts.get(errorMsg);
-        if (errorCountInWindow > this.errorThreshold) {
-            console.error(`Error "${errorMsg}" occurred ${errorCountInWindow} times in the last exceeding threshold.`);
-            // this.operationAvailable = false; // Mark operation as not available
-            // You can perform other actions here, such as sending notifications
+        // Update error count and timestamp for the specific error message
+        const errorInfo = this.errorCounts.get(errorMsg)!;
+        errorInfo.count++;
+        const now = Date.now();
+        // If the current time exceeds the time window, reset the count and timestamp
+        if (now - errorInfo.timestamp > this.windowSize) {
+            errorInfo.count = 1;
+            errorInfo.timestamp = now;
+        }
+
+        // If the error count exceeds the threshold within the time window, mark the operation as unavailable
+        if (errorInfo.count >= this.errorThreshold) {
+            console.error(`Error "${errorMsg}" occurred ${errorInfo.count} times in the last ${this.windowSize / 1000} seconds, exceeding threshold.`);
+            this.operationAvailable = false; // Mark operation as not available
+            // Restore the operation after the recovery time
             setTimeout(() => {
-                this.markOperationAvailable(); // Restore operation after recovery time
+                this.markOperationAvailable();
             }, this.recoveryTime);
         }
     }
