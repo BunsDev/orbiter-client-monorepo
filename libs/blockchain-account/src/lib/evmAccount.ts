@@ -4,6 +4,7 @@ import {
   Interface,
   isError,
   JsonRpcProvider,
+  Network,
   type Wallet,
 } from "ethers6";
 import { ERC20Abi, OrbiterRouterV3 } from '@orbiter-finance/abi'
@@ -23,23 +24,34 @@ import {
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
-  #provider: JsonRpcProvider;
-  // public nonceManager: NonceManager | EVMNonceManager;
+  #provider: Orbiter6Provider;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
-  get provider(): JsonRpcProvider {
+  get provider() {
     const rpc = this.chainConfig.rpc[0];
-    const provider = new Orbiter6Provider(rpc);
-    provider.on('error', (error) => {
-      this.logger.error(`${this.chainConfig.name} provider6 error ${error.message}`, error);
-      this.errorTracker.trackError('provider');
-      if(!this.errorTracker.isOperationAvailable) {
-        provider.destroy()
-        this.logger.error(`${this.chainConfig.name} provider6 The instance is unavailable and will be destroyed.${provider.destroyed}`);
+    const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
+    if (!this.#provider || this.#provider.url != rpc) {
+      if (this.#provider && this.#provider.url != rpc) {
+        this.logger.info(
+          `rpc url changes new ${rpc} old ${this.#provider.url}`,
+        );
       }
-    })
-    return provider;
+      const provider = new Orbiter6Provider(rpc,
+        network, {
+        staticNetwork: network,
+      });
+      provider.on('error', (error) => {
+        this.logger.error(`${this.chainConfig.name} provider6 error ${error.message}`, error);
+        this.errorTracker.trackError('provider');
+        if (!this.errorTracker.isOperationAvailable) {
+          provider.destroy()
+          this.logger.error(`${this.chainConfig.name} provider6 The instance is unavailable and will be destroyed.${provider.destroyed}`);
+        }
+      })
+      this.#provider = provider;
+    }
+    return this.#provider;
   }
 
   async connect(privateKey: string, _address?: string) {
@@ -399,20 +411,20 @@ export class EVMAccount extends OrbiterAccount {
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
-    // const provider = this.getProvider();
+    // const provider = this.provider();
     this.logger.info(`sendTransaction transactionRequest:${JSONStringify(transactionRequest)}`)
     const nonceResult = await this.nonceManager.getNextNonce();
     if (!nonceResult) {
       throw new TransactionSendConfirmFail('nonceResult nof found');
     }
     this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
-       
+
     try {
       // if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
       //   throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
       // }
       if (+nonceResult.localNonce - nonceResult.networkNonce >= 20) {
-        this.emit("NonceISTooDifferent",nonceResult);
+        this.emit("NonceISTooDifferent", nonceResult);
         throw new NonceISTooDifferent(`NonceISTooDifferent localNonce: ${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}`);
       }
       if (transactionRequest.value)
@@ -479,7 +491,7 @@ export class EVMAccount extends OrbiterAccount {
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
-    // const provider = this.getProvider();
+    // const provider = this.provider();
     let nonceResult;
     try {
       nonceResult = await this.nonceManager.getNextNonce();

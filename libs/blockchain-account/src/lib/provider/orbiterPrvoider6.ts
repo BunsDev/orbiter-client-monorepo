@@ -8,19 +8,12 @@ import {
   TransactionReceiptParams,
 } from 'ethers6';
 export default class Orbiter6Provider extends JsonRpcProvider {
-  #url!: string;
   constructor(
-    url?: string | FetchRequest,
+    public readonly url?: string | FetchRequest,
     network?: Networkish,
     options?: JsonRpcApiProviderOptions,
   ) {
     super(url, network, options);
-    if (typeof url === 'string') {
-      this.#url = url;
-    }
-  }
-  public getUrl() {
-    return this.#url;
   }
   override _wrapTransactionReceipt(
     value: TransactionReceiptParams,

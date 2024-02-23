@@ -13,7 +13,7 @@ import EVMVUtils from './lib/v6';
 import { Orbiter5Provider } from '@orbiter-finance/blockchain-account';
 export class EVMRpcScanningV5Service extends RpcScanningService {
   #provider: Orbiter5Provider;
-  getProvider() {
+  get provider() {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
 
@@ -29,7 +29,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     return this.#provider;
   }
   async getLatestBlockNumber(): Promise<number> {
-    const provider = this.getProvider();
+    const provider = this.provider();
     return await provider.getBlockNumber();
   }
 
@@ -94,7 +94,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       if (transaction.to == ZeroAddress) {
         return transfers;
       }
-      const provider = this.getProvider();
+      const provider = this.provider();
       if (!receipt.blockNumber || !receipt.blockHash) {
         throw new Error(
           `${transaction.hash} ${transaction.blockNumber} receipt block info not exist`,
@@ -284,7 +284,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     });
   }
   async getBlock(blockNumber: number): Promise<Block> {
-    const provider = this.getProvider();
+    const provider = this.provider();
     const data = await provider.getBlockWithTransactions(blockNumber);
     if (isEmpty(data)) {
       throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
@@ -292,7 +292,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     return data;
   }
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
-    const provider = this.getProvider();
+    const provider = this.provider();
     const receipt = await provider.getTransactionReceipt(hash);
     if (receipt.transactionHash != hash) {
       throw new Error(`provider getTransactionReceipt hash inconsistent expect ${hash} get ${receipt.transactionHash}`);

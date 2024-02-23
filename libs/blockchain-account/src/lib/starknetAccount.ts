@@ -17,7 +17,7 @@ export class StarknetAccount extends OrbiterAccount {
    * @returns Example after connection
    */
   async connect(privateKey: string, address: string) {
-    const provider = this.getProviderV4();
+    const provider = this.providerV4();
     // connect to the account
     const { abi: accountAbi } = await provider.getClassAt(address);
     if (accountAbi === undefined) { throw new Error("accountAbi no abi.") };
@@ -79,7 +79,7 @@ export class StarknetAccount extends OrbiterAccount {
     values: bigint[],
     transactionRequest: TransactionRequest = {}
   ): Promise<any> {
-    const provider = this.getProviderV4();
+    const provider = this.providerV4();
     const invocationList: any[] = [];
     for (let i = 0; i < tos.length; i++) {
       try {
@@ -175,7 +175,7 @@ export class StarknetAccount extends OrbiterAccount {
   }
 
   public async getTokenBalance(token: string, address?: string): Promise<bigint> {
-    const provider = this.getProviderV4();
+    const provider = this.providerV4();
     const contractInstance = new Contract(
       <any>StarknetERC20,
       token,
@@ -186,7 +186,7 @@ export class StarknetAccount extends OrbiterAccount {
   }
 
   public async waitForTransactionConfirmation(transactionHash: string) {
-    const provider = this.getProviderV4();
+    const provider = this.providerV4();
     try {
       const receipt = await provider.getTransactionReceipt(transactionHash);
       if (receipt) {

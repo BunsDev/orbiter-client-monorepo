@@ -326,7 +326,7 @@ export class EVM5Account extends OrbiterAccount {
         transactionRequest: any
     ): Promise<TransactionResponse> {
         const chainConfig = this.chainConfig;
-        // const provider = this.getProvider();
+        // const provider = this.provider();
         this.logger.info(`sendTransaction transactionRequest:${JSONStringify(transactionRequest)}`)
         const nonceResult = await this.nonceManager.getNextNonce();
         if (!nonceResult) {

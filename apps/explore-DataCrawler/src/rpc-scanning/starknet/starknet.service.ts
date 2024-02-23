@@ -18,7 +18,7 @@ import { addressPadStart } from '../../utils';
 import { StarknetAccountCairo1 } from '@orbiter-finance/abi';
 export class StarknetRpcScanningService extends RpcScanningService {
   #provider: RpcProvider;
-  getProvider() {
+  get provider() {
     const chainConfig = this.chainConfig;
     const chainId = StarknetChainId[this.chainId];
     if (!this.#provider) {
@@ -37,7 +37,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
   }
 
   async getLatestBlockNumber(): Promise<number> {
-    const provider = this.getProvider();
+    const provider = this.provider();
     const block = await provider.getBlockNumber();
     return block;
   }
@@ -450,7 +450,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     return calldata;
   }
   async getBlock(blockNumber: number): Promise<RPC.GetBlockWithTxs> {
-    const provider = this.getProvider();
+    const provider = this.provider();
     const data = await provider.getBlockWithTxs(blockNumber);
     if (isEmpty(data)) {
       throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
@@ -479,7 +479,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
   }
 
   async getTransactionReceipt(hash: string): Promise<RPC.TransactionReceipt> {
-    const provider = this.getProvider();
+    const provider = this.provider();
     const receipt = await provider.getTransactionReceipt(hash);
     if (isEmpty(receipt)) {
       throw new Error(`${hash} receipt empty`);
