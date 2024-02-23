@@ -193,7 +193,7 @@ export class TransactionService {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
       } else if (payload.version === '2-1') {
-        result = await this.transactionV2Service.handleTransferByDestTx(payload);
+        result = await this.transactionV1Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystem(result.data)
         }
