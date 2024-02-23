@@ -277,7 +277,7 @@ export class TransactionV1Service {
 
   public async handleTransferByDestTx(transfer: TransfersModel): Promise<handleTransferReturn> {
     let t1;
-    let version = '99-99';
+    let version = '';
     switch(transfer.version) {
       case '1-1':
         version='1-0';
@@ -286,7 +286,7 @@ export class TransactionV1Service {
           version='2-0';
           break;
     }
-    if (version) {
+    if (!version) {
         throw new Error(`handleTransferByDestTx is not supported ${version}`)
     }
     try {
