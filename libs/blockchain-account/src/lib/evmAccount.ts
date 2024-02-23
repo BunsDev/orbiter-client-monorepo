@@ -411,7 +411,7 @@ export class EVMAccount extends OrbiterAccount {
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
-    // const provider = this.provider();
+    // const provider = this.provider;
     this.logger.info(`sendTransaction transactionRequest:${JSONStringify(transactionRequest)}`)
     const nonceResult = await this.nonceManager.getNextNonce();
     if (!nonceResult) {
@@ -491,7 +491,7 @@ export class EVMAccount extends OrbiterAccount {
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
-    // const provider = this.provider();
+    // const provider = this.provider;
     let nonceResult;
     try {
       nonceResult = await this.nonceManager.getNextNonce();

@@ -208,7 +208,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       if (transaction.to == ZeroAddress) {
         return transfers;
       }
-      const provider = this.provider();
+      const provider = this.provider;
       if (!receipt.blockNumber || !receipt.blockHash) {
         throw new Error(
           `${transaction.hash} ${transaction.blockNumber} receipt block info not exist`,
@@ -395,7 +395,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     });
   }
   async getBlock(blockNumber: number): Promise<Block> {
-    const provider = this.provider();
+    const provider = this.provider;
     const data = await provider.getBlock(blockNumber, true);
     if (isEmpty(data)) {
       throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
@@ -403,7 +403,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     return data;
   }
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
-    const provider = this.provider();
+    const provider = this.provider;
     const receipt = await provider.getTransactionReceipt(hash);
     if (!receipt) {
       throw new Error(`${hash} receipt empty`);
