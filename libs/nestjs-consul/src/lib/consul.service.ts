@@ -7,7 +7,7 @@ import * as yaml from 'js-yaml';
 import { interval, take, lastValueFrom } from 'rxjs';
 
 
-export class ConsulService<T> {
+export class ConsulService<T = any> {
 	public configs: any = Object.create({});
 	private readonly consulURL: string;
 	private readonly keys: IConsulKeys<T>[] | undefined;
@@ -36,13 +36,17 @@ export class ConsulService<T> {
 					'X-Consul-Token': this.token,
 				},
 			}));
-		const configs = [];
+		const configName = String(k.alias || k.key);
+		const configs: any = this.configs[configName] || {};
 		for (const file of data) {
-			if (file.Value) {
-				configs.push(this.convertConfigFormat(file.Key, file.Value));
+			try {
+				if (file.Value) {
+					configs[this.getFileNameFromPath(file.Key)] = this.convertConfigFormat(file.Key, file.Value);
+				}
+			} catch (error) {
+				console.log(`getFileNameFromPath error ${JSON.stringify(file)}`)
 			}
 		}
-		const configName = String(k.alias || k.key);
 		this.configs[configName] = configs;
 	}
 	private async getKeyFromConsul(k: IConsulKeys) {
@@ -116,7 +120,12 @@ export class ConsulService<T> {
 		}
 		return false;
 	}
-
+	getFileNameFromPath(path: string): string {
+		const parts = path.split("/");
+		const fileNameWithExtension = parts[parts.length - 1];
+		const fileNameParts = fileNameWithExtension.split(".");
+		return fileNameParts[0];
+	}
 	public async get<T>(key: string): Promise<T> {
 		try {
 			const { data } = await lastValueFrom(this.httpService
