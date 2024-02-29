@@ -70,7 +70,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       : [];
     if (this.chainConfig.contracts) {
       for (const contract of this.chainConfig.contracts) {
-        contractList.push(contract.address);
+        contractList.push(contract.address.toLocaleLowerCase());
       }
     }
 
