@@ -18,7 +18,7 @@ export class MakerV1RuleService {
     }
 
     async init() {
-
+        
     }
     format(configs: any[]) {
         if (configs) {

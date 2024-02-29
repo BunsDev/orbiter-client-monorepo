@@ -72,7 +72,7 @@ export class TransactionService {
         const txTime = dayjs(transfer.timestamp).toDate(); // TODO: time
         // valid v1 or v2
 
-        const upsertData: any = {
+        const upsertData: Partial<TransfersModel> = {
           hash: transfer.hash,
           chainId: transfer.chainId,
           blockNumber: transfer.blockNumber.toString(),
@@ -93,15 +93,18 @@ export class TransactionService {
           signature: transfer.signature,
           version: "",
           feeToken: transfer.feeToken,
-          transactionIndex: transfer.transactionIndex,
+          transactionIndex: String(transfer.transactionIndex),
           syncStatus: 0,
-          crossChainParams: transfer.crossChainParams
+          crossChainParams: transfer.crossChainParams,
+          label: transfer.label
         }
         let versionStr = null;
         const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');
-        if ((await this.makerService.isInscriptionMakers(transfer.sender)) || await this.makerService.isInscriptionMakers(transfer.receiver)) {
+        if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
+          upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
+        } else if ((await this.makerService.isInscriptionMakers(transfer.sender)) || await this.makerService.isInscriptionMakers(transfer.receiver)) {
           // upsertData.opStatus = TransferOpStatus.INIT_STATUS;
-          const calldata = upsertData.calldata
+          const calldata = upsertData.calldata as any;
           if (await this.makerService.isInscriptionMakers(transfer.receiver)) {
             versionStr = '3-0'; // All tx transfers to maker are 3-0 by default
             if (calldata && calldata.op && calldata.op === InscriptionOpType.Deploy) {
@@ -123,8 +126,6 @@ export class TransactionService {
               versionStr = '3-4';
             }
           }
-        } else if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
-          upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
         } else {
           if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver) && await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
             upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
@@ -354,7 +355,7 @@ export class TransactionService {
         version: version,
         status: 2,
         opStatus: {
-          [Op.in]: [2, 3, 4, 5, 6,81]
+          [Op.in]: [2, 3, 4, 5, 6, 81]
         },
         chainId: transfer.chainId,
         sender: transfer.receiver,
@@ -418,7 +419,7 @@ export class TransactionService {
             t && await t.rollback();
           }
         } else {
-          if (refundRecord.targetId && refundRecord.status ==TransferOpStatus.REFUND) {
+          if (refundRecord.targetId && refundRecord.status == TransferOpStatus.REFUND) {
             throw new Error(`${transfer.hash} / ${sourceTx.hash} A matching record already exists`)
           }
           const t = await this.refundRecordModel.sequelize.transaction();
@@ -434,7 +435,7 @@ export class TransactionService {
               status: TransferOpStatus.REFUND,
               targetAmount: transfer.amount,
               createdAt: new Date(),
-            },{
+            }, {
               where: {
                 sourceId: sourceTx.hash
               },

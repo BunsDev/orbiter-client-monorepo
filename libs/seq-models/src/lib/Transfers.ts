@@ -206,4 +206,12 @@ export class Transfers
 
   @Column({ allowNull: true, type: DataType.JSONB })
   crossChainParams?: object;
+
+  @Column({ allowNull: true, type: DataType.JSONB })
+  @Index({
+    name: 'transfers_label_idx',
+    using: 'gin',
+    unique: false
+  })
+  label?: object;
 }
