@@ -93,7 +93,7 @@ export class TransactionService {
           signature: transfer.signature,
           version: "",
           feeToken: transfer.feeToken,
-          transactionIndex: String(transfer.transactionIndex),
+          transactionIndex: transfer.transactionIndex ? String(transfer.transactionIndex) : null,
           syncStatus: 0,
           crossChainParams: transfer.crossChainParams,
           label: transfer.label
