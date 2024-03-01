@@ -12,7 +12,6 @@ export class ZKSyncEraRpcScanningService extends EVMRpcScanningV5Service {
         transaction: TransactionResponse,
         receipt?: TransactionReceipt,
     ): Promise<TransferAmountTransaction[] | null> {
-        console.log(transaction, '=transaction')
         const transfers = await super.handleTransaction(transaction as any, receipt as any);
 
         return transfers;
@@ -29,9 +28,10 @@ export class ZKSyncEraRpcScanningService extends EVMRpcScanningV5Service {
                 // main token
                 if (transfer.contract && contractList.includes(transfer.contract.toLocaleLowerCase())) {
                     // Contract transfer
-                    const event1 = EVMV5Utils.getTransferEvent(transfer.receipt.logs, transfer.sender, transfer.contract, transfer.value);
+                    // console.log(transfer.receipt.logs, transfer.sender, transfer.contract,'--', transfer.value)
+                    // const event1 = EVMV5Utils.getTransferEvent(transfer.receipt.logs, transfer.sender, transfer.contract, transfer.value);
                     const event2 = EVMV5Utils.getTransferEvent(transfer.receipt.logs, transfer.contract, transfer.receiver, transfer.value);
-                    if (!event1 || !event2) {
+                    if(!event2) {
                         transfer.status = TransferAmountTransactionStatus.failed;
                     }
                 } else {
@@ -52,7 +52,6 @@ export class ZKSyncEraRpcScanningService extends EVMRpcScanningV5Service {
                 try {
                     const logs = transfer.receipt.logs;
                     const paymasterLog = logs.find(log => log.address.toLocaleLowerCase() === '0x069246dfecb95a6409180b52c071003537b23c27'.toLocaleLowerCase() && log.topics[0].toLocaleLowerCase() == '0x2c0985141a7ef8a4b1a56c0a6099a18351ce9ceccf590eb87f1df5ac3cb97b45'.toLocaleLowerCase());
-                    console.log(paymasterLog, '=paymasterLog')
                     if (paymasterLog) {
                         if (!transfer.label) {
                             transfer.label = {}
