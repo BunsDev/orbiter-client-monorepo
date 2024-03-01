@@ -278,16 +278,16 @@ export class TransactionV1Service {
   public async handleTransferByDestTx(transfer: TransfersModel): Promise<handleTransferReturn> {
     let t1;
     let version = '';
-    switch(transfer.version) {
+    switch (transfer.version) {
       case '1-1':
-        version='1-0';
+        version = '1-0';
         break;
-        case '2-1':
-          version='2-0';
-          break;
+      case '2-1':
+        version = '2-0';
+        break;
     }
     if (!version) {
-        throw new Error(`handleTransferByDestTx is not supported ${version}`)
+      throw new Error(`handleTransferByDestTx is not supported ${version}`)
     }
     try {
       const memoryBT =
@@ -308,7 +308,7 @@ export class TransactionV1Service {
           {
             where: {
               id: memoryBT.id,
-              version:version,
+              version: version,
               status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
               sourceTime: {
                 [Op.gt]: dayjs(transfer.timestamp).subtract(4320, 'minute').toISOString(),
@@ -377,14 +377,17 @@ export class TransactionV1Service {
     }
     const t2 = await this.sequelize.transaction();
     try {
-      let btTx = await this.bridgeTransactionModel.findOne({
-        attributes: ['id', 'sourceId'],
-        where: {
-          targetChain: transfer.chainId,
-          targetId: transfer.hash,
-        },
-        transaction: t2,
-      });
+      let btTx;
+      if (!transfer.hash.includes('#')) {
+        btTx = await this.bridgeTransactionModel.findOne({
+          attributes: ['id', 'sourceId'],
+          where: {
+            targetChain: transfer.chainId,
+            targetId: transfer.hash,
+          },
+          transaction: t2,
+        });
+      }
       if (!btTx || !btTx.id) {
         const where = {
           status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
