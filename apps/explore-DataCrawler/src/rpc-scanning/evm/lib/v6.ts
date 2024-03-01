@@ -357,7 +357,7 @@ export default class EVMVUtils {
           const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           const copyTxData = clone(txData);
           const logIndex = log.index || log['logIndex'];
-          if (!logIndex) {
+          if (logIndex == null ||logIndex==undefined ) {
             throw new Error(`${transaction.hash} LogIndex not found ${JSONStringify(log)}`)
           }
           copyTxData.hash = `${txData.hash}#${logIndex}`;
@@ -385,7 +385,7 @@ export default class EVMVUtils {
         ) {
           const copyTxData = clone(txData);
           const logIndex = log.index || log['logIndex'];
-          if (!logIndex) {
+          if (logIndex == null ||logIndex==undefined ) {
             throw new Error(`${transaction.hash} LogIndex not found ${JSONStringify(log)}`)
           }
           const value = new BigNumber(parsedLogData.args[2]).toFixed(0);
