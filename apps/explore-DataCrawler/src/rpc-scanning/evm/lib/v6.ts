@@ -356,7 +356,13 @@ export default class EVMVUtils {
         ) {
           const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           const copyTxData = clone(txData);
-          const logIndex = log.index || log['logIndex'];
+          let logIndex=null;
+          if (log['logIndex']!=undefined) {
+            logIndex = log['logIndex'];
+          }
+          if (log.index!=undefined) {
+            logIndex = log.index;
+          }
           if (logIndex == null ||logIndex==undefined ) {
             throw new Error(`${transaction.hash} LogIndex not found ${JSONStringify(log)}`)
           }
@@ -384,7 +390,13 @@ export default class EVMVUtils {
           '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
         ) {
           const copyTxData = clone(txData);
-          const logIndex = log.index || log['logIndex'];
+          let logIndex=null;
+          if (log['logIndex']!=undefined) {
+            logIndex = log['logIndex'];
+          }
+          if (log.index!=undefined) {
+            logIndex = log.index;
+          }
           if (logIndex == null ||logIndex==undefined ) {
             throw new Error(`${transaction.hash} LogIndex not found ${JSONStringify(log)}`)
           }
