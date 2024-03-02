@@ -13,9 +13,9 @@ export default class DataProcessor {
         private readonly chainId: string,
         private readonly logger: winston.Logger
     ) {
+        this.logger.info(`${this.chainId} - INIT DataProcessor`)
         // Initialize the LevelDB instance
         this.db = new Level(`./runtime/data/${this.chainId}`);
-
         // Initialize data sets and retrieve the max scan block number
         this.dataSet = new Set();
         this.initMaxScanBlockNumber();

@@ -103,7 +103,11 @@ export class StandardBuilder {
         }
       }
     }
-    result.targetAddress = transfer.sender;
+
+    return result
+  }
+  async buildCrossParams(transfer: TransfersModel) {
+    const result = {} as BuilderData
     const crossParams: CrossChainParams = transfer.crossChainParams || {};
     if (crossParams.targetChain) {
       const targetChainId = +crossParams.targetChain - 9000;
@@ -112,6 +116,15 @@ export class StandardBuilder {
         targetChainId,
       );
       result.targetChain = targetChain;
+      if (targetChain) {
+        const targetToken = this.chainConfigService.getTokenBySymbol(
+          targetChain.chainId,
+          transfer.symbol,
+        );
+        if (targetToken) {
+          result.targetToken = targetToken
+        }
+      }
     }
     if (crossParams.targetRecipient) {
       result.targetAddress = crossParams.targetRecipient;
@@ -564,9 +577,12 @@ export default class BridgeTransactionBuilder {
         const data = builderData = await this.zksyncLiteBuilder.build(transfer)
         Object.assign(builderData, data || {});
       }
+      
     } catch (error) {
       this.logger.error(`bridgeTransaction.builder error:${error.message}`, error);
     }
+    const crossParams = await this.standardBuilder.buildCrossParams(transfer);
+    builderData = Object.assign(builderData, crossParams)
     if (!builderData.targetToken && builderData.targetChain) {
       const targetToken = this.chainConfigService.getTokenBySymbol(
         builderData.targetChain.chainId,
