@@ -76,7 +76,7 @@ export class ValidatorService {
       return false;
     }
     const balanceEther = new BigNumber(balance.toString()).div(10**targetToken.decimals).toNumber();
-    if (BigInt(balanceEther.toString())<=BigInt(minAmount.toString())) {
+    if (new BigNumber(balanceEther).lte(minAmount)) {
       throw new Errors.InsufficientLiquidity(`checkMakerFluidity ${minAmount}/${balanceEther} ${targetToken.symbol}`);
     }
     return true;
@@ -114,6 +114,11 @@ export class ValidatorService {
     targetSymbol: string,
     targetAmount: string
   ) {
+    if(sourceSymbol.toLocaleLowerCase() === targetSymbol.toLocaleLowerCase()) {
+      if(+targetAmount>+sourceAmount) {
+        return false;
+      }
+    }
     const sourceAmountValue = await this.chainLinkService.getChainLinkPrice(
       sourceAmount,
       sourceSymbol,

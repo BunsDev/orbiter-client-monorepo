@@ -214,14 +214,15 @@ export class ConsumerService {
             await callback(data);
             channel.ack(msg);
           } catch (error: any) {
-        
             channel.nack(msg, true, false);
             // channel.reject(msg);
-            console.error(
+            Logger.error(
               `${queue} consumeMakerClientMessage Error processing message: ${error.message}`, msg.content.toString(),
               error,
             );
           }
+        } else {
+          channel.nack(msg, true, false);
         }
       });
     } catch (error: any) {

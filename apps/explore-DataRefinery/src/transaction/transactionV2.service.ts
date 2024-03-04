@@ -15,6 +15,7 @@ import { ethers } from 'ethers6';
 import { OrbiterLogger, LoggerDecorator } from '@orbiter-finance/utils';
 import { padStart, uniq } from 'lodash';
 import { TransactionID, addJob } from '../utils';
+import {TransactionV1Service} from './transactionV1.service';
 export interface handleTransferReturn {
   errno: number;
   errmsg?: string;
@@ -33,8 +34,8 @@ export class TransactionV2Service {
     protected memoryMatchingService: MemoryMatchingService,
     protected makerService: MakerService,
     protected envConfigService: ENVConfigService,
-    private schedulerRegistry: SchedulerRegistry
-
+    private schedulerRegistry: SchedulerRegistry,
+    private transactionV1Service: TransactionV1Service
   ) {
 
     if (this.envConfigService.get('START_VERSION') && this.envConfigService.get('START_VERSION').includes('2-0')) {
@@ -54,7 +55,6 @@ export class TransactionV2Service {
 
     }
   }
-  // @Cron('0 */5 * * * *')
   async matchScheduleUserSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -79,18 +79,16 @@ export class TransactionV2Service {
       this.logger.info(`handleTransferBySourceTx result:${JSON.stringify(result)}`)
     }
   }
-  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.memoryMatchingService.transfers) {
       if (transfer.version === '2-1') {
         const matchTx = this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
         if (matchTx) {
-          this.handleTransferByDestTx(transfer as any);
+          this.transactionV1Service.handleTransferByDestTx(transfer as any);
         }
       }
     }
   }
-  // @Cron('0 */10 * * * *')
   async matchScheduleMakerSendTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -106,7 +104,7 @@ export class TransactionV2Service {
       },
     });
     for (const transfer of transfers) {
-      const result = await this.handleTransferByDestTx(transfer).then(result => {
+      const result = await this.transactionV1Service.handleTransferByDestTx(transfer).then(result => {
         if (result && result.errno != 0) {
           this.memoryMatchingService.addTransferMatchCache(transfer);
         }
@@ -161,10 +159,27 @@ export class TransactionV2Service {
       createdAt: new Date(),
       version: transfer.version,
     };
-    const { dealerId, ebcId, targetChainIdIndex } = this.parseSecurityCode(
-      transfer.value,
-    );
-    if (+transfer.nonce > 9999) {
+    // let dealerId,ebcId,targetChainIdIndex;
+    const code = this.getSecurityCode(transfer);
+    let { dealerId, ebcId, targetChainIdIndex } = this.parseSecurityCode(code);
+    if (ebcId === 0 || dealerId === 0 || targetChainIdIndex === 0) {
+      const diffMinute = dayjs().diff(transfer.timestamp, 'minute');
+      if (diffMinute > 10) {
+        await this.transfersModel.update(
+          {
+            opStatus: 4,
+          },
+          {
+            where: {
+              hash: transfer.hash,
+            },
+          },
+        );
+      }
+
+      return this.errorBreakResult(`${transfer.hash} Rule Not Found`)
+    }
+    if (+transfer.nonce > 999999) {
       await this.transfersModel.update(
         {
           opStatus: 5,
@@ -180,6 +195,19 @@ export class TransactionV2Service {
     const txTimestamp = dayjs(transfer.timestamp).unix();
     const result = await this.makerService.getV2RuleByTransfer(transfer, +dealerId, +ebcId, +targetChainIdIndex);
     if (!result) {
+      const diffMinute = dayjs().diff(transfer.timestamp, 'minute');
+      if (diffMinute > 10) {
+        await this.transfersModel.update(
+          {
+            opStatus: 4,
+          },
+          {
+            where: {
+              hash: transfer.hash,
+            },
+          },
+        );
+      }
       return this.errorBreakResult(`${transfer.hash} getV2RuleByTransfer result not found`)
     }
     this.logger.info(`handleTransferBySourceTx ${transfer.hash}  dealerId: ${dealerId}, ebcId: ${ebcId}. targetChainIdIndex: ${targetChainIdIndex}, txTimestamp: ${txTimestamp}, owners: ${transfer.receiver}`);
@@ -189,11 +217,25 @@ export class TransactionV2Service {
     const { ebc, dealer, sourceToken, targetToken, rule } = result.data;
     const targetTokenAddrSub = `0x${targetToken.tokenAddress.substring(26).toLocaleLowerCase()}`;
     if (!ethers.isAddress(targetTokenAddrSub)) {
+      
       return this.errorBreakResult(`${transfer.hash} targetTokenAddrSub ${targetTokenAddrSub} isAddress error`)
     }
     // get config center
     const configCenterTargetToken = await this.chainConfigService.getTokenByChain(targetToken.chainId, targetTokenAddrSub);
     if (!configCenterTargetToken) {
+      const diffHours = dayjs().diff(transfer.timestamp, 'hours');
+      if (diffHours > 24) {
+        await this.transfersModel.update(
+          {
+            opStatus: 3,
+          },
+          {
+            where: {
+              hash: transfer.hash,
+            },
+          },
+        );
+      }
       return this.errorBreakResult(`${transfer.hash} configCenterTargetToken ${targetToken.chainId} - ${targetTokenAddrSub} not found`)
     }
     createdData.targetMaker = createdData.sourceMaker;
@@ -211,7 +253,7 @@ export class TransactionV2Service {
     const responseMaker = this.envConfigService.get("PAID_RESPONSE_MAKER");
     if (responseMaker) {
       for (const fakeAddr in responseMaker) {
-        if (responseMaker[fakeAddr].includes(createdData.sourceMaker)) {
+        if (responseMaker[fakeAddr].includes(createdData.sourceMaker.toLocaleLowerCase())) {
           createdData.responseMaker.push(fakeAddr.toLocaleLowerCase());
         }
       }
@@ -295,7 +337,7 @@ export class TransactionV2Service {
       // chain0 to chain1
       const withholdingFee = new BigNumber(rule.chain0WithholdingFee).div(10 ** sourceToken.decimals).toString();
       const result = this.getResponseIntent(
-        transfer.value,
+        transfer,
         new BigNumber(rule.chain0TradeFee).toFixed(0),
         new BigNumber(rule.chain0WithholdingFee).toFixed(0),
         transfer.nonce,
@@ -317,7 +359,7 @@ export class TransactionV2Service {
       // chain to chain0
       const withholdingFee = new BigNumber(rule.chain1WithholdingFee).div(10 ** sourceToken.decimals).toString();
       const result = this.getResponseIntent(
-        transfer.value,
+        transfer,
         new BigNumber(rule.chain1TradeFee).toFixed(0),
         new BigNumber(rule.chain1WithholdingFee).toFixed(0),
         transfer.nonce,
@@ -337,176 +379,18 @@ export class TransactionV2Service {
     }
     return null;
   }
-  public async handleTransferByDestTx(transfer: Transfers): Promise<handleTransferReturn> {
-    if (transfer.version != '2-1') {
-      throw new Error(`handleTransferByDestTx ${transfer.hash} version not 2-1`);
-    }
-    let t1;
-    try {
-      const memoryBT =
-        await this.memoryMatchingService.matchV1GetBridgeTransactions(transfer);
-      if (memoryBT && memoryBT.id) {
-        //
-        t1 = await this.sequelize.transaction();
-        const [rowCount] = await this.bridgeTransactionModel.update(
-          {
-            targetId: transfer.hash,
-            status: BridgeTransactionStatus.BRIDGE_SUCCESS,
-            targetTime: transfer.timestamp,
-            targetFee: transfer.feeAmount,
-            targetFeeSymbol: transfer.feeToken,
-            targetNonce: transfer.nonce,
-            targetMaker: transfer.sender
-          },
-          {
-            limit: 1,
-            where: {
-              id: memoryBT.id,
-              status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
-              sourceTime: {
-                [Op.lt]: dayjs(transfer.timestamp).add(5, 'minute').toISOString(),
-                [Op.gt]: dayjs(transfer.timestamp).subtract(120, 'minute').toISOString(),
-              }
-            },
-            transaction: t1,
-          },
-        );
-        if (rowCount != 1) {
-          throw new Error(
-            'The number of modified rows in bridgeTransactionModel is incorrect',
-          );
-        }
-        const [updateTransferRows] = await this.transfersModel.update(
-          {
-            opStatus: transfer.status == 3 ? BridgeTransactionStatus.PAID_CRASH : BridgeTransactionStatus.BRIDGE_SUCCESS,
-          },
-          {
-            where: {
-              hash: {
-                [Op.in]: [transfer.hash, memoryBT.sourceId],
-              },
-            },
-            transaction: t1,
-          },
-        );
-        if (updateTransferRows != 2) {
-          throw new Error(
-            'Failed to modify the opStatus status of source and target transactions',
-          );
-        }
-        await t1.commit();
-        this.memoryMatchingService.removeTransferMatchCache(memoryBT.sourceId);
-        this.memoryMatchingService.removeTransferMatchCache(transfer.hash);
-        this.logger.info(
-          `match success from cache ${memoryBT.sourceId}  /  ${transfer.hash}`,
-        );
-        return {
-          errno: 0,
-          data: memoryBT,
-          errmsg: 'memory success'
-        };
-      }
-    } catch (error) {
-      this.logger.error(
-        `handleTransferByDestTx matchV1GetBridgeTransactions match error ${transfer.hash}`,
-        error,
-      );
-      t1 && (await t1.rollback());
-    }
 
-    const result = {
-      errmsg: '',
-      data: null,
-      errno: 0
-    }
-    // db match
-    const t2 = await this.sequelize.transaction();
-    try {
-      let btTx = await this.bridgeTransactionModel.findOne({
-        attributes: ['id', 'sourceId'],
-        where: {
-          targetChain: transfer.chainId,
-          targetId: transfer.hash,
-        },
-        transaction: t2,
-      });
-      if (!btTx || !btTx.id) {
-        const where = {
-          status: [0, BridgeTransactionStatus.READY_PAID, BridgeTransactionStatus.PAID_CRASH, BridgeTransactionStatus.PAID_SUCCESS],
-          targetSymbol: transfer.symbol,
-          targetAddress: transfer.receiver,
-          targetChain: transfer.chainId,
-          targetAmount: transfer.amount,
-          responseMaker: {
-            [Op.contains]: [transfer.sender],
-          },
-        };
-        btTx = await this.bridgeTransactionModel.findOne({
-          attributes: ['id', 'sourceId'],
-          where,
-          transaction: t2,
-        });
-      }
-      if (btTx && btTx.id) {
-        btTx.targetId = transfer.hash;
-        btTx.status = transfer.status == 3 ? BridgeTransactionStatus.PAID_CRASH : BridgeTransactionStatus.BRIDGE_SUCCESS;
-        btTx.targetTime = transfer.timestamp;
-        btTx.targetFee = transfer.feeAmount;
-        btTx.targetFeeSymbol = transfer.feeToken;
-        btTx.targetNonce = transfer.nonce;
-        btTx.targetMaker = transfer.sender;
-        await btTx.save({
-          transaction: t2,
-        });
-        await this.transfersModel.update(
-          {
-            opStatus: BridgeTransactionStatus.BRIDGE_SUCCESS,
-          },
-          {
-            where: {
-              hash: {
-                [Op.in]: [btTx.sourceId, btTx.targetId],
-              },
-            },
-            transaction: t2,
-          },
-        );
-        this.memoryMatchingService.removeTransferMatchCache(btTx.sourceId);
-        this.memoryMatchingService.removeTransferMatchCache(btTx.targetId);
-        result.errno = 0;
-        result.errmsg = 'success';
-      } else {
-        this.memoryMatchingService
-          .addTransferMatchCache(transfer)
-          .catch((error) => {
-            this.logger.error(
-              `${transfer.hash} addTransferMatchCache error`,
-              error,
-            );
-          });
-        result.errno = 1001;
-        result.errmsg = 'bridgeTransaction not found';
-      }
-      await t2.commit();
-      result.data = btTx;
-      return result;
-    } catch (error) {
-      t2 && (await t2.rollback());
-      throw error;
-    }
-  }
 
-  private getSecurityCode(value: string): string {
+  private getSecurityCode(transfer: Transfers): string {
+    const value = transfer.crossChainParams && transfer.crossChainParams['targetChain'] ? transfer.crossChainParams['targetChain'] : transfer.value;
     const code = value.substring(value.length - 5, value.length);
-    // const code = new BigNumber(value).mod(100000).toString();
-    return code;
+    return code
   }
-  private parseSecurityCode(value: string): {
+  private parseSecurityCode(code: string): {
     dealerId: number;
     ebcId: number;
     targetChainIdIndex: number;
   } {
-    const code = this.getSecurityCode(value);
     const dealerId = Number(code.substring(0, 2));
     const ebcId = Number(code[2]);
     const targetChainIdIndex = Number(code.substring(3));
@@ -514,18 +398,20 @@ export class TransactionV2Service {
   }
 
   private getResponseIntent(
-    amount: string,
+    transfer:Transfers,
     tradeFee: string,
     withholdingFee: string,
     targetSafeCode: string,
   ) {
-    const securityCode = this.getSecurityCode(amount);
+    const securityCode = this.getSecurityCode(transfer);
+    const amount = transfer.value;
     const tradeAmount =
       BigInt(amount) - BigInt(securityCode) - BigInt(withholdingFee);
     //  tradeAmount valid max and min
     const tradingFee = (tradeAmount * BigInt(tradeFee)) / 1000000n;
     const responseAmount = ((tradeAmount - tradingFee) / 10000n) * 10000n;
     const responseAmountStr = responseAmount.toString();
+    const targetSafeCodeLength = String(targetSafeCode).length
     const result = {
       code: 0,
       value: amount,
@@ -535,8 +421,8 @@ export class TransactionV2Service {
       responseAmountOrigin: responseAmountStr,
       responseAmount: `${responseAmountStr.substring(
         0,
-        responseAmountStr.length - 4,
-      )}${padStart(targetSafeCode, 4, '0')}`,
+        responseAmountStr.length - targetSafeCodeLength,
+      )}${padStart(targetSafeCode,targetSafeCodeLength, '0')}`,
     };
     return result;
   }

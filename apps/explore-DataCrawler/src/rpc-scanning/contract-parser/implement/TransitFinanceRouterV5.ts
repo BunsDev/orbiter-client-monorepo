@@ -10,6 +10,7 @@ export default class TransitFinanceRouterV5 extends EVMPraser {
     }
     async cross(contractAddress: string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
         const txData = await this.buildTransferBaseData(transaction, receipt, parsedData);
+        txData.label['source'] = 'TransitFinance';
         const args = parsedData.args[0];
         const orbiterXContract = args[2];
         if (!this.chainInfo.contract[orbiterXContract.toLocaleLowerCase()]) {

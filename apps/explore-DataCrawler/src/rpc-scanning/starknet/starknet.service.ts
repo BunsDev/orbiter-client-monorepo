@@ -18,7 +18,7 @@ import { addressPadStart } from '../../utils';
 import { StarknetAccountCairo1 } from '@orbiter-finance/abi';
 export class StarknetRpcScanningService extends RpcScanningService {
   #provider: RpcProvider;
-  getProvider() {
+  get provider() {
     const chainConfig = this.chainConfig;
     const chainId = StarknetChainId[this.chainId];
     if (!this.#provider) {
@@ -37,7 +37,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
   }
 
   async getLatestBlockNumber(): Promise<number> {
-    const provider = this.getProvider();
+    const provider = this.provider;
     const block = await provider.getBlockNumber();
     return block;
   }
@@ -105,164 +105,180 @@ export class StarknetRpcScanningService extends RpcScanningService {
     transaction: any,
     transactionReceipt?: RPC.TransactionReceipt,
   ): Promise<TransferAmountTransaction[]> {
-    if (transaction.type != 'INVOKE') {
-      return [];
-    }
-    const toAddress = addressPadStart(transaction.calldata[1].toLocaleLowerCase(), 66);
-    if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddress) || transaction.calldata.includes('0x58680be0cf3f29c7a33474a218e5fed1ad213051cb2e9eac501a26852d64ca2')) {
-      let contractInfo = this.getChainConfigContract('0x058680be0cf3f29c7a33474a218e5fed1ad213051cb2e9eac501a26852d64ca2');
-      const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
-      const transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
-        this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);
+    try {
+      if (transaction.type != 'INVOKE') {
         return [];
-      })
+      }
+      if (!Array.isArray(transaction.calldata) || !transaction.calldata[1]) {
+        return [];
+      }
+      const toAddress = addressPadStart(transaction.calldata[1].toLocaleLowerCase(), 66);
+      if (this.ctx.contractParser.existRegisterContract(this.chainId, toAddress) || transaction.calldata.includes('0x58680be0cf3f29c7a33474a218e5fed1ad213051cb2e9eac501a26852d64ca2')) {
+        let contractInfo = this.getChainConfigContract('0x058680be0cf3f29c7a33474a218e5fed1ad213051cb2e9eac501a26852d64ca2');
+        const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
+        const transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
+          this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);
+          return [];
+        })
+        return transfers;
+      }
+      let parseData = this.decodeExecuteCalldataCairo0(transaction.calldata);
+      if (!parseData || parseData.length <= 0) {
+        parseData = this.decodeExecuteCalldataCairo1(transaction.calldata) as any;
+      }
+      if (!parseData) {
+        return [];
+      }
+      const transfers: TransferAmountTransaction[] = [];
+      const chainConfig = this.chainConfig;
+      for (const row of parseData) {
+        try {
+          const to = addressPadStart(row.to, 66);
+          const args = row.args;
+          const transfer: TransferAmountTransaction = {
+            chainId: String(this.chainId),
+            hash: addressPadStart(transaction.transaction_hash, 66),
+            blockNumber: transaction.block_number,
+            sender: addressPadStart(transaction.sender_address, 66),
+            receiver: null,
+            value: null,
+            amount: null,
+            token: null,
+            symbol: null,
+            fee: "0",
+            feeToken: chainConfig.nativeCurrency.symbol,
+            feeAmount: "0",
+            timestamp: transaction.timestamp,
+            status: TransferAmountTransactionStatus.none,
+            nonce: +transaction.nonce,
+            calldata: args,
+            selector: row.selector,
+            signature: row.signature,
+            receipt: {},
+          };
+          if (parseData.length > 1) {
+            transfer.hash = `${transfer.hash}#${row.index}`;
+          }
+          if (row.name) {
+            if (row.name === 'transfer') {
+              const receiver = addressPadStart(args[0], 66);
+              if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
+                continue;
+              }
+              transfer.receiver = receiver;
+              transfer.token = addressPadStart(to, 66);
+              const value = new BigNumber(args[1]);
+              transfer.value = value.toFixed(0);
+              // transfer.contract = transfer.token;
+              const tokenInfo = this.getChainConfigToken(to);
+              if (tokenInfo) {
+                transfer.symbol = tokenInfo.symbol;
+                transfer.amount = value
+                  .div(Math.pow(10, tokenInfo.decimals))
+                  .toString();
+              }
+              transfers.push(transfer);
+            } else if (row.name === 'sign_pending_multisig_transaction') {
+              // find
+              const transferData = args[1].slice(-5) as any;
+              const receiver = addressPadStart(transferData[1], 66);
+              if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
+                continue;
+              }
+              const tokenAddrss = addressPadStart(transferData[0], 66);
+              transfer.receiver = receiver;
+              transfer.token = tokenAddrss;
+              const value = new BigNumber(transferData[2]);
+              transfer.value = value.toFixed(0);
+              transfer.calldata = transferData;
+              const tokenInfo = this.getChainConfigToken(tokenAddrss);
+              if (tokenInfo) {
+                transfer.symbol = tokenInfo.symbol;
+                transfer.amount = value
+                  .div(Math.pow(10, tokenInfo.decimals))
+                  .toString();
+              }
+              transfers.push(transfer);
+            } else if (row.name === 'transferERC20') {
+              const receiver = addressPadStart(args[1], 66);
+              if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
+                continue;
+              }
+              const tokenAddress = addressPadStart(args[0], 66);
+              transfer.token = tokenAddress;
+              transfer.receiver = receiver;
+              const value = new BigNumber(args[2]);
+              transfer.value = value.toFixed(0);
+              transfer.contract = to;
+              const tokenInfo = this.getChainConfigToken(tokenAddress);
+              if (tokenInfo) {
+                transfer.symbol = tokenInfo.symbol;
+                transfer.amount = value
+                  .div(Math.pow(10, tokenInfo.decimals))
+                  .toString();
+              }
+              transfers.push(transfer);
+            }
+          }
+        } catch (error) {
+          this.logger.error(
+            `handleTransaction for calldata ${row.name} error`,
+            error,
+          );
+          throw error;
+        }
+      }
+      if (!transfers.length) {
+        return [];
+      }
+      const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
+      const fee = new BigNumber(receipt.actual_fee)
+        .dividedBy(transfers.length);
+      for (const transfer of transfers) {
+        transfer.fee = fee.toFixed(0);
+        transfer.feeAmount = fee
+          .div(Math.pow(10, this.chainConfig.nativeCurrency.decimals))
+          .toString();
+        transfer.status = this.getStatus(receipt);
+        receipt.version= transaction.version;
+        transfer.receipt = receipt;
+        if(!transfer.crossChainParams) {
+          transfer.crossChainParams = {}
+        }
+        transfer.crossChainParams.data = transaction.version;
+        if (transfer.status === TransferAmountTransactionStatus.confirmed) {
+          // 0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9 = transfer event topic
+          const events = receipt.events.filter(
+            (e: any) =>
+              e.keys[0] ===
+              "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9" &&
+              equals(
+                addressPadStart(e.from_address, 66),
+                transfer.token,
+              ),
+          );
+          const transferEvent = events.find((ev: any) => {
+            const fromAddress = addressPadStart(ev.data[0], 66);
+            const toAddress = addressPadStart(ev.data[1], 66);
+            const value = new BigNumber(ev.data[2]).toFixed(0);
+            return (
+              equals(fromAddress, transfer.sender) &&
+              equals(toAddress, transfer.receiver) &&
+              equals(value, transfer.value)
+            );
+          });
+          transfer.status = isEmpty(transferEvent) ? TransferAmountTransactionStatus.failed : transfer.status;
+        }
+      }
       return transfers;
     }
-    let parseData = this.decodeExecuteCalldataCairo0(transaction.calldata);
-    if (!parseData || parseData.length <= 0) {
-      parseData = this.decodeExecuteCalldataCairo1(transaction.calldata) as any;
+    catch (error) {
+      this.logger.error(
+        `handleTransaction error ${transaction.transaction_hash} - ${error.message}`,
+        error,
+      );
+      throw error;
     }
-    if (!parseData) {
-      return [];
-    }
-    const transfers: TransferAmountTransaction[] = [];
-    const chainConfig = this.chainConfig;
-    for (const row of parseData) {
-      try {
-        const to = addressPadStart(row.to, 66);
-        const args = row.args;
-        const transfer: TransferAmountTransaction = {
-          chainId: String(this.chainId),
-          hash: addressPadStart(transaction.transaction_hash, 66),
-          blockNumber: transaction.block_number,
-          sender: addressPadStart(transaction.sender_address, 66),
-          receiver: null,
-          value: null,
-          amount: null,
-          token: null,
-          symbol: null,
-          fee: "0",
-          feeToken: chainConfig.nativeCurrency.symbol,
-          feeAmount: "0",
-          timestamp: transaction.timestamp,
-          status: TransferAmountTransactionStatus.none,
-          nonce: +transaction.nonce,
-          calldata: args,
-          selector: row.selector,
-          signature: row.signature,
-          receipt: {},
-        };
-        if (parseData.length > 1) {
-          transfer.hash = `${transfer.hash}#${row.index}`;
-        }
-        if (row.name) {
-          if (row.name === 'transfer') {
-            const receiver = addressPadStart(args[0], 66);
-            if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
-              continue;
-            }
-            transfer.receiver = receiver;
-            transfer.token = addressPadStart(to, 66);
-            const value = new BigNumber(args[1]);
-            transfer.value = value.toFixed(0);
-            // transfer.contract = transfer.token;
-            const tokenInfo = this.getChainConfigToken(to);
-            if (tokenInfo) {
-              transfer.symbol = tokenInfo.symbol;
-              transfer.amount = value
-                .div(Math.pow(10, tokenInfo.decimals))
-                .toString();
-            }
-            transfers.push(transfer);
-          } else if (row.name === 'sign_pending_multisig_transaction') {
-            // find
-            const transferData = args[1].slice(-5) as any;
-            const receiver = addressPadStart(transferData[1], 66);
-            if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
-              continue;
-            }
-            const tokenAddrss = addressPadStart(transferData[0], 66);
-            transfer.receiver = receiver;
-            transfer.token = tokenAddrss;
-            const value = new BigNumber(transferData[2]);
-            transfer.value = value.toFixed(0);
-            transfer.calldata = transferData;
-            const tokenInfo = this.getChainConfigToken(tokenAddrss);
-            if (tokenInfo) {
-              transfer.symbol = tokenInfo.symbol;
-              transfer.amount = value
-                .div(Math.pow(10, tokenInfo.decimals))
-                .toString();
-            }
-            transfers.push(transfer);
-          } else if (row.name === 'transferERC20') {
-            const receiver = addressPadStart(args[1], 66);
-            if (!await this.isWatchAddress(transfer.sender || "") && !await this.isWatchAddress(receiver || "")) {
-              continue;
-            }
-            const tokenAddress = addressPadStart(args[0], 66);
-            transfer.token = tokenAddress;
-            transfer.receiver = receiver;
-            const value = new BigNumber(args[2]);
-            transfer.value = value.toFixed(0);
-            transfer.contract = to;
-            const tokenInfo = this.getChainConfigToken(tokenAddress);
-            if (tokenInfo) {
-              transfer.symbol = tokenInfo.symbol;
-              transfer.amount = value
-                .div(Math.pow(10, tokenInfo.decimals))
-                .toString();
-            }
-            transfers.push(transfer);
-          }
-        }
-      } catch (error) {
-        this.logger.error(
-          `handleTransaction for calldata ${row.name} error`,
-          error,
-        );
-        throw error;
-      }
-    }
-    if (!transfers.length) {
-      return [];
-    }
-    const receipt: any = transactionReceipt || <any>await this.getTransactionReceipt(transaction.transaction_hash);
-    const fee = new BigNumber(receipt.actual_fee)
-      .dividedBy(transfers.length);
-    for (const transfer of transfers) {
-      transfer.fee = fee.toFixed(0);
-      transfer.feeAmount = fee
-        .div(Math.pow(10, this.chainConfig.nativeCurrency.decimals))
-        .toString();
-      transfer.status = this.getStatus(receipt);
-      transfer.receipt = receipt;
-
-      if (transfer.status === TransferAmountTransactionStatus.confirmed) {
-        // 0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9 = transfer event topic
-        const events = receipt.events.filter(
-          (e: any) =>
-            e.keys[0] ===
-            "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9" &&
-            equals(
-              addressPadStart(e.from_address, 66),
-              transfer.token,
-            ),
-        );
-        const transferEvent = events.find((ev: any) => {
-          const fromAddress = addressPadStart(ev.data[0], 66);
-          const toAddress = addressPadStart(ev.data[1], 66);
-          const value = new BigNumber(ev.data[2]).toFixed(0);
-          return (
-            equals(fromAddress, transfer.sender) &&
-            equals(toAddress, transfer.receiver) &&
-            equals(value, transfer.value)
-          );
-        });
-        transfer.status = isEmpty(transferEvent) ? TransferAmountTransactionStatus.failed : transfer.status;
-      }
-    }
-    return transfers;
   }
   decodeExecuteCalldataCairo0(inputs: string[]): CalldataArg[] {
     if (!inputs) {
@@ -434,7 +450,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
     return calldata;
   }
   async getBlock(blockNumber: number): Promise<RPC.GetBlockWithTxs> {
-    const provider = this.getProvider();
+    const provider = this.provider;
     const data = await provider.getBlockWithTxs(blockNumber);
     if (isEmpty(data)) {
       throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
@@ -463,7 +479,7 @@ export class StarknetRpcScanningService extends RpcScanningService {
   }
 
   async getTransactionReceipt(hash: string): Promise<RPC.TransactionReceipt> {
-    const provider = this.getProvider();
+    const provider = this.provider;
     const receipt = await provider.getTransactionReceipt(hash);
     if (isEmpty(receipt)) {
       throw new Error(`${hash} receipt empty`);

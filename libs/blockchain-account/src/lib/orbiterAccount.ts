@@ -10,14 +10,17 @@ import KeyvFile from "keyv-file";
 import path from "path";
 import { NonceManager } from "./nonceManager";
 import { camelCase } from "lodash";
-import { EVMNonceManager } from "./nonceManager/evmNonceManager";
-
+// import { EVMNonceManager } from "./nonceManager/evmNonceManager";
+import { ErrorTracker } from './ErrorTracker';
 export class OrbiterAccount extends EventEmitter {
   public address: string;
   public logger!: OrbiterLogger;
+  public errorTracker: ErrorTracker;
+  public nonceManager?: NonceManager;
   constructor(protected readonly chainId: string, protected readonly ctx: Context) {
     super();
     this.logger = logger.createLoggerByName(`account-${camelCase(this.chainConfig.name)}`);
+    this.errorTracker = new ErrorTracker(10);
   }
 
   get chainConfig(): IChainConfig {
@@ -89,9 +92,6 @@ export class OrbiterAccount extends EventEmitter {
     const nonceManager = new NonceManager(async () => {
       return await getNonceFun();
     }, store);
-    nonceManager.on("noncesExceed", (data) => {
-      this.emit('noncesExceed', data)
-    });
     return nonceManager;
   }
   public createEVMNonceManager(address: string, getNonceFun: Function) {
@@ -103,11 +103,10 @@ export class OrbiterAccount extends EventEmitter {
       }),
       namespace: address,
     });
-    const nonceManager = new EVMNonceManager(async () => {
+    const nonceManager = new NonceManager(async () => {
       return await getNonceFun();
-    }, store);
-    nonceManager.on("noncesExceed", (data) => {
-      this.emit('noncesExceed', data)
+    }, store, {
+      beforeCommit: true
     });
     return nonceManager;
   }

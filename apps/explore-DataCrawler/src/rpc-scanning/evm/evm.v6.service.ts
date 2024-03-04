@@ -18,30 +18,50 @@ import { Orbiter6Provider } from '@orbiter-finance/blockchain-account';
 export class EVMRpcScanningV6Service extends RpcScanningService {
 
   #provider: Orbiter6Provider;
-  getProvider() {
+  get provider() {
     const rpc = this.chainConfig.rpc[0];
     const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
-    if (!this.#provider) {
+    if (!this.#provider || this.#provider.url != rpc) {
+      if (this.#provider && this.#provider.url != rpc) {
+        this.logger.info(
+          `rpc url changes new ${rpc} old ${this.#provider.url}`,
+        );
+      }
       const provider = new Orbiter6Provider(rpc,
         network, {
         staticNetwork: network,
       });
+      provider.on('error', (error) => {
+        this.logger.error(`${this.chainConfig.name} provider6 error ${error.message}`, error);
+      })
       this.#provider = provider;
-    }
-    if (this.#provider && this.#provider.getUrl() != rpc) {
-      this.logger.info(
-        `rpc url changes new ${rpc} old ${this.#provider.getUrl()}`,
-      );
-      this.#provider = new Orbiter6Provider(rpc, network, {
-        staticNetwork: network
-      });
     }
     return this.#provider;
   }
 
+  // getProvider() {
+  //   const rpc = this.chainConfig.rpc[0];
+  //   const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
+  //   if (!this.#provider) {
+  //     const provider = new Orbiter6Provider(rpc,
+  //       network, {
+  //       staticNetwork: network,
+  //     });
+  //     this.#provider = provider;
+  //   }
+  //   if (this.#provider && this.#provider.url != rpc) {
+  //     this.logger.info(
+  //       `rpc url changes new ${rpc} old ${this.#provider?.url}`,
+  //     );
+  //     this.#provider = new Orbiter6Provider(rpc, network, {
+  //       staticNetwork: network
+  //     });
+  //   }
+  //   return this.#provider;
+  // }
+
   async getLatestBlockNumber(): Promise<number> {
-    const provider = this.getProvider();
-    return await provider.getBlockNumber();
+    return await this.provider.getBlockNumber();
   }
   async filterBeforeTransactions<T>(transactions: T[]): Promise<T[]> {
     const rows = [];
@@ -50,7 +70,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       : [];
     if (this.chainConfig.contracts) {
       for (const contract of this.chainConfig.contracts) {
-        contractList.push(contract.address);
+        contractList.push(contract.address.toLocaleLowerCase());
       }
     }
 
@@ -188,7 +208,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
       if (transaction.to == ZeroAddress) {
         return transfers;
       }
-      const provider = this.getProvider();
+      const provider = this.provider;
       if (!receipt.blockNumber || !receipt.blockHash) {
         throw new Error(
           `${transaction.hash} ${transaction.blockNumber} receipt block info not exist`,
@@ -375,7 +395,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     });
   }
   async getBlock(blockNumber: number): Promise<Block> {
-    const provider = this.getProvider();
+    const provider = this.provider;
     const data = await provider.getBlock(blockNumber, true);
     if (isEmpty(data)) {
       throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
@@ -383,7 +403,7 @@ export class EVMRpcScanningV6Service extends RpcScanningService {
     return data;
   }
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
-    const provider = this.getProvider();
+    const provider = this.provider;
     const receipt = await provider.getTransactionReceipt(hash);
     if (!receipt) {
       throw new Error(`${hash} receipt empty`);

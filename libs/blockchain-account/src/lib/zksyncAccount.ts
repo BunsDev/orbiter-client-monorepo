@@ -8,7 +8,7 @@ import { NonceManager } from './nonceManager';
 import { sleep } from '@orbiter-finance/utils';
 export class ZkSyncAccount extends OrbiterAccount {
   public account: AbstractWallet;
-  private nonceManager: NonceManager;
+  // private nonceManager: NonceManager;
   async connect(privateKey: string, address: string) {
     const l1Wallet = new ethers.Wallet(privateKey);
     const wallet = await this.getL2Wallet(privateKey);

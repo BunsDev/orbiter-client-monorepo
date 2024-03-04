@@ -48,7 +48,9 @@ export enum TransferOpStatus {
   AMOUNT_TOO_SMALL = 6,
   BALANCED_LIQUIDITY = 10,
   REFUND = 80,
+  REFUND_TOCHECK = 81,
   MATCHED = 99,
+
 
   // insription Op Status
   INVALID_OP = 41,
@@ -204,4 +206,12 @@ export class Transfers
 
   @Column({ allowNull: true, type: DataType.JSONB })
   crossChainParams?: object;
+
+  @Column({ allowNull: true, type: DataType.JSONB })
+  @Index({
+    name: 'transfers_label_idx',
+    using: 'gin',
+    unique: false
+  })
+  label?: object;
 }

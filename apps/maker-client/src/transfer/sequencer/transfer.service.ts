@@ -48,7 +48,7 @@ export class TransferService {
     try {
       if (!transferToken) {
         throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Inconsistent transferToken (${transfer.targetChain}/${transfer.targetToken})`
+          `The target chain token does not exist (${transfer.targetChain}/${transfer.targetToken})`
         );
       }
       sourceTx = await this.bridgeTransactionModel.findOne({
@@ -74,26 +74,26 @@ export class TransferService {
         );
       }
       if (sourceTx.status != 0) {
-        throw new Errors.AlreadyPaid(`${sourceHash} status ${sourceTx.status}`);
+        throw new Errors.AlreadyPaid(`Status is not 0 ${sourceTx.status}`);
       }
       if (!isEmpty(sourceTx.targetId)) {
-        throw new Errors.AlreadyPaid(`${sourceHash} targetId ${sourceTx.targetId}`)
+        throw new Errors.AlreadyPaid(`targetId exists ${sourceTx.targetId}`)
       }
       if (!equals(sourceTx.targetChain, transfer.targetChain)) {
         throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Inconsistent target network (${sourceTx.targetChain}/${transfer.targetChain})`
+          `Inconsistent target network (${sourceTx.targetChain}/${transfer.targetChain})`
         );
       }
 
       if (!new BigNumber(sourceTx.targetAmount).eq(transfer.targetAmount)) {
         throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Inconsistent targetAmount (${sourceTx.targetAmount}/${transfer.targetAmount})`
+          `Inconsistent targetAmount (${sourceTx.targetAmount}/${transfer.targetAmount})`
         );
       }
 
       if (sourceTx.targetSymbol != transfer.targetSymbol) {
         throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Inconsistent targetSymbol (${sourceTx.targetSymbol}/${transfer.targetSymbol})`
+          `Inconsistent targetSymbol (${sourceTx.targetSymbol}/${transfer.targetSymbol})`
         );
       }
       sourceTx.status = BridgeTransactionStatus.READY_PAID;
@@ -102,7 +102,7 @@ export class TransferService {
       });
       if (!updateRes) {
         throw new Errors.PaidRollbackError(
-          `${sourceChainId} - ${sourceHash} Change status fail`
+          `Change status fail`
         );
       }
     } catch (error) {
@@ -112,6 +112,9 @@ export class TransferService {
     // transfer.targetAddress = '0xEFc6089224068b20197156A91D50132b2A47b908';
     let transferResult: TransferResponse;
     try {
+      if (!wallet.errorTracker.isOperationAvailable) {
+        throw new Error('Blockchain RPC status is not available')
+      }
       const transferAmount = new BigNumber(transfer.targetAmount).times(
         10 ** transferToken.decimals
       );
@@ -135,7 +138,7 @@ export class TransferService {
       });
       if (!updateRes) {
         throw new TransactionSendAfterError(
-          `${sourceChainId} - ${sourceHash} Change status fail`
+          `Change status fail`
         );
       }
       await transaction.commit();
@@ -209,7 +212,7 @@ export class TransferService {
       );
       if (result[0] != sourecIds.length) {
         throw new Error(
-          `The number of successful modifications is inconsistent ${sourecIds.join(',')}`
+          `The number of successful modifications is inconsistent ${result[0]}!=${sourecIds.length}`
         );
       }
     } catch (error) {
@@ -217,6 +220,9 @@ export class TransferService {
       throw error;
     }
     try {
+      if (!wallet.errorTracker.isOperationAvailable) {
+        throw new Error('Blockchain RPC status is not available')
+      }
       if (transferToken.isNative) {
         transferResult = await wallet.transfers(
           toAddressList,
@@ -329,7 +335,7 @@ export class TransferService {
       );
       if (result[0] != calldata[0].length) {
         throw new Error(
-          `The number of successful modifications is inconsistent ${calldata[0].join(',')}`
+          `The number of successful modifications is inconsistent ${result[0]}!=${calldata[0].length}`
         );
       }
       const targetChain = this.chainConfigService.getChainInfo(targetChainId);
@@ -459,26 +465,26 @@ export class TransferService {
           );
         }
         if (sourceTx.status != 0) {
-          throw new Errors.AlreadyPaid(`${sourceHash} status ${sourceTx.status}`);
+          throw new Errors.AlreadyPaid(`Incorrect status ${sourceTx.status}`);
         }
         if (!isEmpty(sourceTx.targetId)) {
-          throw new Errors.AlreadyPaid(`${sourceHash} targetId ${sourceTx.targetId}`)
+          throw new Errors.AlreadyPaid(`targetId exists ${sourceTx.targetId}`)
         }
         if (!equals(sourceTx.targetChain, transfer.targetChain)) {
           throw new Errors.PaidRollbackError(
-            `${sourceChainId} - ${sourceHash} Inconsistent target network (${sourceTx.targetChain}/${transfer.targetChain})`
+            `Inconsistent target network (${sourceTx.targetChain}/${transfer.targetChain})`
           );
         }
 
         if (!new BigNumber(sourceTx.targetAmount).eq(transfer.targetAmount)) {
           throw new Errors.PaidRollbackError(
-            `${sourceChainId} - ${sourceHash} Inconsistent targetAmount (${sourceTx.targetAmount}/${transfer.targetAmount})`
+            `Inconsistent targetAmount (${sourceTx.targetAmount}/${transfer.targetAmount})`
           );
         }
 
         if (sourceTx.targetSymbol != transfer.targetSymbol) {
           throw new Errors.PaidRollbackError(
-            `${sourceChainId} - ${sourceHash} Inconsistent targetSymbol (${sourceTx.targetSymbol}/${transfer.targetSymbol})`
+            `Inconsistent targetSymbol (${sourceTx.targetSymbol}/${transfer.targetSymbol})`
           );
         }
         sourceTx.status = BridgeTransactionStatus.READY_PAID;
@@ -487,7 +493,7 @@ export class TransferService {
         });
         if (!updateRes) {
           throw new Errors.PaidRollbackError(
-            `${sourceChainId} - ${sourceHash} Change status fail`
+            `Change status fail`
           );
         }
       } catch (error) {
@@ -599,7 +605,7 @@ export class TransferService {
       );
       if (result[0] != calldata[0].length) {
         throw new Error(
-          `The number of successful modifications is inconsistent ${calldata[0].join(',')}`
+          `The number of successful modifications is inconsistent ${result[0]}!=${calldata[0].length}`
         );
       }
       const targetChain = this.chainConfigService.getChainInfo(targetChainId);

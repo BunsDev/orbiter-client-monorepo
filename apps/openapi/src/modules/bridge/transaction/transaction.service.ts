@@ -39,6 +39,7 @@ export class TransactionService {
         });
 
         if (transaction) {
+
             transaction['targetId'] = null;
             transaction['targetAmount'] = null;
             transaction['targetSymbol'] = null;
@@ -60,7 +61,7 @@ export class TransactionService {
                 }
             } else if (transaction.opStatus === 80) {
                 const refundRecord = await this.refundRecordModel.findOne({
-                    attributes: ['targetId', 'targetAmount', 'sourceSymbol', 'sourceChain'],
+                    attributes: ['targetId', 'targetAmount', 'sourceSymbol', 'sourceChain','status'],
                     where: {
                         sourceId: transaction.hash
                     }

@@ -13,7 +13,7 @@ import EVMVUtils from './lib/v6';
 import { Orbiter5Provider } from '@orbiter-finance/blockchain-account';
 export class EVMRpcScanningV5Service extends RpcScanningService {
   #provider: Orbiter5Provider;
-  getProvider() {
+  get provider() {
     const chainConfig = this.chainConfig;
     const rpc = chainConfig.rpc[0];
 
@@ -29,7 +29,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     return this.#provider;
   }
   async getLatestBlockNumber(): Promise<number> {
-    const provider = this.getProvider();
+    const provider = this.provider;
     return await provider.getBlockNumber();
   }
 
@@ -94,7 +94,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
       if (transaction.to == ZeroAddress) {
         return transfers;
       }
-      const provider = this.getProvider();
+      const provider = this.provider;
       if (!receipt.blockNumber || !receipt.blockHash) {
         throw new Error(
           `${transaction.hash} ${transaction.blockNumber} receipt block info not exist`,
@@ -135,72 +135,43 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
               receipt as any,
             )
         }
-
       } else if (contractInfo) {
-        if (contractInfo.name === 'OBSource') {
-          transfers = EVMV5Utils.evmOBSource(chainConfig, transaction as any, receipt as any);
-        } else if (contractInfo.name === 'OrbiterRouterV1') {
-          transfers = EVMV5Utils.evmObRouterV1(chainConfig, transaction as any, receipt as any);
-        } else if (EVMV5Utils.name === 'OrbiterRouterV3') {
-          const methodId = transaction.data.substring(0, 10);
-          if (['0x29723511', '0xf9c028ec'].includes(methodId) && this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
-            try {
-              transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt)
-            } catch (error) {
-              transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
-              this.logger.error(`${this.chainConfig.name} - ${contractInfo.address} parseContract error ${error.message}`, error);
-            }
-          } else {
+      if (contractInfo.name === 'OBSource') {
+        transfers = EVMV5Utils.evmOBSource(chainConfig, transaction as any, receipt as any);
+      } else if (contractInfo.name === 'OrbiterRouterV1') {
+        transfers = EVMV5Utils.evmObRouterV1(chainConfig, transaction as any, receipt as any);
+      } else if (contractInfo.name === 'OrbiterRouterV3') {
+        const methodId = transaction.data.substring(0, 10);
+        if (['0x29723511', '0xf9c028ec'].includes(methodId) && this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
+          try {
+            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt)
+          } catch (error) {
             transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
+            this.logger.error(`${this.chainConfig.name} - ${contractInfo.address} parseContract error ${error.message}`, error);
           }
-        } else if (contractInfo.name === 'CrossInscriptions') {
-          transfers = EVMV5Utils.crossInscriptions(
-            chainConfig,
-            transaction as any,
-            receipt as any,
-          );
         } else {
-          if (this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
-            transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
-              this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);
-              return [];
-            })
-          }
+          transfers = EVMV5Utils.evmObRouterV3(chainConfig, transaction as any, receipt as any);
         }
+
+      } else if (contractInfo.name === 'CrossInscriptions') {
+        transfers = EVMV5Utils.crossInscriptions(
+          chainConfig,
+          transaction as any,
+          receipt as any,
+        );
       } else {
-        if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {
-          const decodeData = EVMV5Utils.decodeInscriptionCallData(transaction.data);
-          if (decodeData) {
-            const value = transaction.value.toString();
-            transfers.push({
-              chainId: String(chainId),
-              hash: transaction.hash,
-              blockNumber: transaction.blockNumber,
-              transactionIndex: receipt.transactionIndex,
-              sender: transaction.from,
-              receiver: transaction.to,
-              amount: new BigNumber(value)
-                .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-                .toString(),
-              value,
-              token: chainConfig.nativeCurrency.address,
-              symbol: chainConfig.nativeCurrency.symbol,
-              fee: fee.toString(),
-              feeToken: chainConfig.nativeCurrency.symbol,
-              feeAmount: new BigNumber(fee.toString())
-                .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-                .toString(),
-              timestamp: 0,
-              selector: decodeData.op,
-              calldata: decodeData,
-              status,
-              nonce,
-              version: '3',
-              receipt
-            });
-          }
-        } else if (transaction.data === '0x' || await provider.getCode(transaction.to) === '0x') {
-          // tag:
+        if (this.ctx.contractParser.existRegisterContract(this.chainId, contractInfo.address)) {
+          transfers = await this.ctx.contractParser.parseContract(this.chainId, contractInfo.address, transaction, receipt).catch((error) => {
+            this.logger.error(`${this.chainId} - ${contractInfo.name} - ${transaction.hash} parseContract error:${error.message}`, error);
+            return [];
+          })
+        }
+      }
+    } else {
+      // 0x646174613a2c
+      if (transaction.data.length > 14 && transaction.data.substring(0, 14) === '0x646174613a2c') {
+        const decodeData = EVMV5Utils.decodeInscriptionCallData(transaction.data)
+        if (decodeData) {
           const value = transaction.value.toString();
           transfers.push({
             chainId: String(chainId),
@@ -213,6 +184,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
               .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
               .toString(),
             value,
+            calldata: decodeData,
             token: chainConfig.nativeCurrency.address,
             symbol: chainConfig.nativeCurrency.symbol,
             fee: fee.toString(),
@@ -221,33 +193,61 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
               .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
               .toString(),
             timestamp: 0,
+            selector: decodeData.op,
+            version: '3',
             status,
             nonce,
             receipt
-          });
+          })
         }
       }
-      if (transfers) {
-        transfers = transfers.map((tx) => {
-          tx.transactionIndex = receipt.transactionIndex;
-          tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
-          tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
-          tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
-          tx.token = tx.token && tx.token.toLocaleLowerCase();
-          tx.nonce = nonce;
-          tx.receipt = receipt;
-          tx.fee = new BigNumber(fee.toString())
-            .dividedBy(transfers.length)
-            .toFixed(0);
-          tx.feeAmount = new BigNumber(tx.fee)
+      else if (transaction.data === '0x' || (transaction.to && await provider.getCode(transaction.to) === '0x')) {
+        const value = transaction.value.toString();
+        transfers.push({
+          chainId: String(chainId),
+          hash: transaction.hash,
+          blockNumber: transaction.blockNumber,
+          transactionIndex: receipt.transactionIndex,
+          sender: transaction.from,
+          receiver: transaction.to,
+          amount: new BigNumber(value)
             .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
-            .toString();
-          tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
-          return tx;
+            .toString(),
+          value,
+          token: chainConfig.nativeCurrency.address,
+          symbol: chainConfig.nativeCurrency.symbol,
+          fee: fee.toString(),
+          feeToken: chainConfig.nativeCurrency.symbol,
+          feeAmount: new BigNumber(fee.toString())
+            .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+            .toString(),
+          timestamp: 0,
+          status,
+          nonce,
+          receipt
         });
       }
-
-      return await this.handleTransactionAfter(transfers);
+    }
+    if (transfers) {
+      transfers = transfers.map((tx) => {
+        tx.transactionIndex = receipt.transactionIndex;
+        tx.sender = tx.sender && tx.sender.toLocaleLowerCase();
+        tx.receiver = tx.receiver && tx.receiver.toLocaleLowerCase();
+        tx.contract = tx.contract && tx.contract.toLocaleLowerCase();
+        tx.token = tx.token && tx.token.toLocaleLowerCase();
+        tx.nonce = nonce;
+        tx.receipt = receipt;
+        tx.fee = new BigNumber(fee.toString())
+          .dividedBy(transfers.length)
+          .toFixed(0);
+        tx.feeAmount = new BigNumber(tx.fee)
+          .div(Math.pow(10, chainConfig.nativeCurrency.decimals))
+          .toString();
+        tx.status = status === TransferAmountTransactionStatus.failed ? TransferAmountTransactionStatus.failed : tx.status;
+        return tx;
+      });
+    }
+    return await this.handleTransactionAfter(transfers);
     } catch (error) {
       this.logger.error(
         `handleTransaction error ${transaction.hash} `,
@@ -284,7 +284,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     });
   }
   async getBlock(blockNumber: number): Promise<Block> {
-    const provider = this.getProvider();
+    const provider = this.provider;
     const data = await provider.getBlockWithTransactions(blockNumber);
     if (isEmpty(data)) {
       throw new Error(`${this.chainConfig.name} ${blockNumber} Block empty`);
@@ -292,7 +292,7 @@ export class EVMRpcScanningV5Service extends RpcScanningService {
     return data;
   }
   async getTransactionReceipt(hash: string): Promise<TransactionReceipt> {
-    const provider = this.getProvider();
+    const provider = this.provider;
     const receipt = await provider.getTransactionReceipt(hash);
     if (receipt.transactionHash != hash) {
       throw new Error(`provider getTransactionReceipt hash inconsistent expect ${hash} get ${receipt.transactionHash}`);

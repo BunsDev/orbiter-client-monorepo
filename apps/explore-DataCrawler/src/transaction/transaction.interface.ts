@@ -9,6 +9,7 @@ export enum TransferAmountTransactionStatus {
     targetRecipient?:string;
     targetToken?:string;
     targetTokenSymbol?:String;
+    data?: string
   }
   export interface TransferAmountTransaction {
     chainId: string;
@@ -26,7 +27,7 @@ export enum TransferAmountTransactionStatus {
     timestamp: number;
     status: TransferAmountTransactionStatus;
     nonce: number;
-    calldata?: object;
+    calldata?: any;
     contract?: string;
     selector?: string;
     signature?: string;
@@ -34,5 +35,6 @@ export enum TransferAmountTransactionStatus {
     feeToken: string;
     receipt?: any;
     crossChainParams?: CrossChainParams
+    label?:{[key:string]:any}
   }
   

@@ -104,7 +104,6 @@ export class TransactionV3Service {
     };
   }
 
-  // @Cron('0 */1 * * * *')
   async matchScheduleTask() {
     this.logger.info('v3 matchScheduleTask start');
     const transfers = await this.transfersModel.findAll({
@@ -170,7 +169,6 @@ export class TransactionV3Service {
       }
     } while (!done)
   }
-  // @Cron('*/5 * * * * *')
   async fromCacheMatch() {
     for (const transfer of this.inscriptionMemoryMatchingService.transfers) {
       if (transfer.version === '3-1') {
@@ -196,7 +194,6 @@ export class TransactionV3Service {
       }
     }
   }
-  // @Cron('0 */1 * * * *')
   async matchSenderScheduleTask() {
     const transfers = await this.transfersModel.findAll({
       raw: true,

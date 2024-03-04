@@ -102,6 +102,7 @@ export class EVMPraser implements ContractParser {
             timestamp: 0,
             status: TransferAmountTransactionStatus.pending,
             nonce: transaction.nonce,
+            label: {}
         };
         if (parsedData) {
             txData.calldata = parsedData.args.toArray();

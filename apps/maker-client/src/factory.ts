@@ -113,16 +113,22 @@ export class AccountFactoryService {
         wallet = new EVM5Account(toChainId, ctx);
         break;
       default:
-        if (chainConfig.service && chainConfig.service['rpc'] && chainConfig.service['rpc'].includes('EVMRpcScanning')) {
-          wallet = new EVMAccount(toChainId, ctx);
+        const features = chainConfig.features;
+        if (features) {
+          if (features.find(f => f.name == 'evm-account5')) {
+            wallet = new EVM5Account(toChainId, ctx);
+          } else if (features.find(f => f.name == 'evm-rpc')) {
+            wallet = new EVMAccount(toChainId, ctx);
+          }
         }
+
         break;
     }
     if (!wallet) {
       throw new Error(`${toChainId}-${chainConfig.name} Chain WalletAccount Not implemented`);
     }
-    wallet.on("noncesExceed", ({ localNonce, networkNonce }) => {
-      this.alertService.sendMessage(`Nonces exceeded 10 - Local: ${localNonce}, Network: ${networkNonce}`, 'TG');
+    wallet.on("NonceISTooDifferent", ({ localNonce, networkNonce }) => {
+      this.alertService.sendMessage(`EVENT NonceISTooDifferent exceeded 10 - Local: ${localNonce}, Network: ${networkNonce}`, 'TG');
     });
     AccountFactoryService.wallets[walletId] = wallet;
     return wallet as T;

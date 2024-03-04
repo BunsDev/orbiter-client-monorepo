@@ -4,9 +4,9 @@ import {
   Interface,
   isError,
   JsonRpcProvider,
+  Network,
   type Wallet,
 } from "ethers6";
-import { NonceManager } from './nonceManager';
 import { ERC20Abi, OrbiterRouterV3 } from '@orbiter-finance/abi'
 import {
   Context,
@@ -19,19 +19,39 @@ import {
   TransactionResponse,
   TransactionSendConfirmFail,
   TransferResponse,
+  NonceISTooDifferent
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
-import { EVMNonceManager } from './nonceManager/evmNonceManager';
 export class EVMAccount extends OrbiterAccount {
   protected wallet: Wallet;
-  #provider: JsonRpcProvider;
-  public nonceManager: NonceManager | EVMNonceManager;
+  #provider: Orbiter6Provider;
   constructor(protected chainId: string, protected readonly ctx: Context) {
     super(chainId, ctx);
   }
-  get provider(): JsonRpcProvider {
+  get provider() {
     const rpc = this.chainConfig.rpc[0];
-    return new Orbiter6Provider(rpc)
+    const network = new Network(this.chainConfig.name, this.chainConfig.chainId);
+    if (!this.#provider || this.#provider.url != rpc) {
+      if (this.#provider && this.#provider.url != rpc) {
+        this.logger.info(
+          `rpc url changes new ${rpc} old ${this.#provider.url}`,
+        );
+      }
+      const provider = new Orbiter6Provider(rpc,
+        network, {
+        staticNetwork: network,
+      });
+      provider.on('error', (error) => {
+        this.logger.error(`${this.chainConfig.name} provider6 error ${error.message}`, error);
+        this.errorTracker.trackError('provider');
+        if (!this.errorTracker.isOperationAvailable) {
+          provider.destroy()
+          this.logger.error(`${this.chainConfig.name} provider6 The instance is unavailable and will be destroyed.${provider.destroyed}`);
+        }
+      })
+      this.#provider = provider;
+    }
+    return this.#provider;
   }
 
   async connect(privateKey: string, _address?: string) {
@@ -41,7 +61,7 @@ export class EVMAccount extends OrbiterAccount {
         throw new Error('The connected wallet address is inconsistent with the private key address')
       }
     }
-    if (!this.nonceManager || !equals(this.wallet.address,this.address)) {
+    if (!this.nonceManager || !equals(this.wallet.address, this.address)) {
       this.nonceManager = this.createEVMNonceManager(this.address, async () => {
         const nonce = await this.wallet.getNonce("pending");
         return Number(nonce);
@@ -181,6 +201,9 @@ export class EVMAccount extends OrbiterAccount {
       let count = 0;
       for (const tx of transactionList) {
         if (!tx.maxFeePerGas || !tx.maxPriorityFeePerGas || !tx.gasLimit || +tx.data) continue;
+        if (new BigNumber(String(tx.maxPriorityFeePerGas)).gt(500000000000)) {
+          continue;
+        }
         blockMaxFeePerGas = blockMaxFeePerGas.plus(String(tx.maxFeePerGas));
         blockMaxPriorityFeePerGas = blockMaxPriorityFeePerGas.plus(String(tx.maxPriorityFeePerGas));
         blockGasLimit = blockGasLimit.plus(String(tx.gasLimit));
@@ -192,15 +215,13 @@ export class EVMAccount extends OrbiterAccount {
         blockGasLimit = blockGasLimit.dividedBy(count);
       }
       if (new BigNumber(String(transactionRequest.maxFeePerGas)).lt(blockMaxFeePerGas)) {
-        logs.push(`blockMaxFeePerGas ${
-          String(new BigNumber(String(transactionRequest.maxFeePerGas)).dividedBy(10 ** 9))
-        } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`)
+        logs.push(`blockMaxFeePerGas ${String(new BigNumber(String(transactionRequest.maxFeePerGas)).dividedBy(10 ** 9))
+          } gWei < ${String(blockMaxFeePerGas.dividedBy(10 ** 9))} gWei`)
         transactionRequest.maxFeePerGas = BigInt(blockMaxFeePerGas.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).lt(blockMaxPriorityFeePerGas)) {
-        logs.push(`blockMaxPriorityFeePerGas ${
-          String(new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).dividedBy(10 ** 9))
-        } gWei < ${String(blockMaxPriorityFeePerGas.dividedBy(10 ** 9))} gWei`);
+        logs.push(`blockMaxPriorityFeePerGas ${String(new BigNumber(String(transactionRequest.maxPriorityFeePerGas)).dividedBy(10 ** 9))
+          } gWei < ${String(blockMaxPriorityFeePerGas.dividedBy(10 ** 9))} gWei`);
         transactionRequest.maxPriorityFeePerGas = BigInt(blockMaxPriorityFeePerGas.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
@@ -222,9 +243,8 @@ export class EVMAccount extends OrbiterAccount {
         blockGasLimit = blockGasLimit.dividedBy(count);
       }
       if (new BigNumber(String(transactionRequest.gasPrice)).lt(blockGasPrice)) {
-        logs.push(`blockGasPrice ${
-          String(new BigNumber(String(transactionRequest.gasPrice)).dividedBy(10 ** 9))
-        } gWei < ${String(blockGasPrice.dividedBy(10 ** 9))} gWei`);
+        logs.push(`blockGasPrice ${String(new BigNumber(String(transactionRequest.gasPrice)).dividedBy(10 ** 9))
+          } gWei < ${String(blockGasPrice.dividedBy(10 ** 9))} gWei`);
         transactionRequest.gasPrice = BigInt(blockGasPrice.toFixed(0));
       }
       if (new BigNumber(String(transactionRequest.gasLimit)).lt(blockGasLimit)) {
@@ -391,7 +411,7 @@ export class EVMAccount extends OrbiterAccount {
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
-    // const provider = this.getProvider();
+    // const provider = this.provider;
     this.logger.info(`sendTransaction transactionRequest:${JSONStringify(transactionRequest)}`)
     const nonceResult = await this.nonceManager.getNextNonce();
     if (!nonceResult) {
@@ -400,8 +420,12 @@ export class EVMAccount extends OrbiterAccount {
     this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
 
     try {
-      if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
-        throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+      // if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+      //   throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+      // }
+      if (+nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+        this.emit("NonceISTooDifferent", nonceResult);
+        throw new NonceISTooDifferent(`NonceISTooDifferent localNonce: ${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}`);
       }
       if (transactionRequest.value)
         transactionRequest.value = new BigNumber(String(transactionRequest.value)).toFixed(0);
@@ -467,7 +491,7 @@ export class EVMAccount extends OrbiterAccount {
     transactionRequest: TransactionRequest
   ): Promise<TransactionResponse> {
     const chainConfig = this.chainConfig;
-    // const provider = this.getProvider();
+    // const provider = this.provider;
     let nonceResult;
     try {
       nonceResult = await this.nonceManager.getNextNonce();

@@ -4,13 +4,17 @@ import { EventEmitter } from 'events';
 
 const FIVE_MINUTES_MS = 1000 * 60 * 5;
 
+export interface Options {
+  initNonce?:number;
+  beforeCommit?:boolean;
+}
 export class NonceManager extends EventEmitter {
   private readonly mutex = new Mutex();
 
   constructor(
     private readonly refreshNonceFun: Function,
     private readonly store: Keyv,
-    option: { initNonce?: number } = {}
+    private readonly option?: Options
   ) {
     super();
     this.mutex.acquire().then(async (release) => {
@@ -18,7 +22,7 @@ export class NonceManager extends EventEmitter {
         // Initialize nonce based on the maximum of refreshNonce, stored nonce, and initNonce
         const refreshNonce = await this.refreshNonceFun();
         const nonce = (await this.store.get("nonce")) || 0;
-        const initNonce = option.initNonce || 0;
+        const initNonce = (option && option.initNonce) || 0;
         const maxNonce = Math.max(refreshNonce, nonce, initNonce);
 
         // Update nonce if needed
@@ -29,7 +33,7 @@ export class NonceManager extends EventEmitter {
         release();
       }
     });
-    if (option && !option.initNonce) {
+    if (!option || !option.initNonce) {
       this.forceRefreshNonce();
     }
     // Start the auto-update mechanism
@@ -133,14 +137,14 @@ export class NonceManager extends EventEmitter {
           const networkNonce = await this.refreshNonceFun();
           const localNonce = await this.getLocalNonce();
           let useNonce = localNonce;
-          if (+localNonce - networkNonce >= 20) {
-            this.emit("noncesExceed", { localNonce, networkNonce, useNonce });
-            throw new Error(`noncesExceed localNonce: ${localNonce}, networkNonce:${networkNonce}`);
-          }
           // Update the nonce if the network nonce is greater
           if (networkNonce > localNonce) {
             useNonce = networkNonce;
             this.setNonce(networkNonce)
+          }
+          if (this.option && this.option.beforeCommit) {
+            await this.setLastUsageTime(Date.now());
+            await this.setNonce(useNonce + 1);
           }
           // Resolve with nonce details and functions to submit and rollback
           resolve({
@@ -148,8 +152,10 @@ export class NonceManager extends EventEmitter {
             networkNonce,
             localNonce,
             submit: async () => {
-              await this.setLastUsageTime(Date.now());
-              await this.setNonce(useNonce + 1);
+              if (!this.option || !this.option.beforeCommit) {
+                await this.setLastUsageTime(Date.now());
+                await this.setNonce(useNonce + 1);
+              }
               release();
             },
             rollback: async () => {

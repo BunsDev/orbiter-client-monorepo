@@ -103,7 +103,11 @@ export class StandardBuilder {
         }
       }
     }
-    result.targetAddress = transfer.sender;
+
+    return result
+  }
+  async buildCrossParams(transfer: TransfersModel) {
+    const result = {} as BuilderData
     const crossParams: CrossChainParams = transfer.crossChainParams || {};
     if (crossParams.targetChain) {
       const targetChainId = +crossParams.targetChain - 9000;
@@ -112,6 +116,15 @@ export class StandardBuilder {
         targetChainId,
       );
       result.targetChain = targetChain;
+      if (targetChain) {
+        const targetToken = this.chainConfigService.getTokenBySymbol(
+          targetChain.chainId,
+          transfer.symbol,
+        );
+        if (targetToken) {
+          result.targetToken = targetToken
+        }
+      }
     }
     if (crossParams.targetRecipient) {
       result.targetAddress = crossParams.targetRecipient;
@@ -531,7 +544,7 @@ export default class BridgeTransactionBuilder {
       version: transfer.version,
     };
     // TAG: Nonce NONCE_EXCEED_MAXIMUM
-    if (+transfer.nonce >= 1000000) {
+    if (+transfer.nonce >= 999999) {
       throw new ValidSourceTxError(TransferOpStatus.NONCE_EXCEED_MAXIMUM, `Exceeded the maximum nonce value ${transfer.nonce} / 1000000`)
     }
 
@@ -546,21 +559,30 @@ export default class BridgeTransactionBuilder {
     let builderData: BuilderData = await this.standardBuilder.build(transfer);
     try {
       if (this.evmRouterV3ContractBuilder.check(transfer, sourceChain)) {
-        builderData = await this.evmRouterV3ContractBuilder.build(transfer);
+        const data = await this.evmRouterV3ContractBuilder.build(transfer);
+        Object.assign(builderData, data || {});
       } else if (this.evmRouterV1ContractBuilder.check(transfer, sourceChain)) {
-        builderData = await this.evmRouterV1ContractBuilder.build(transfer)
+        const data = await this.evmRouterV1ContractBuilder.build(transfer)
+        Object.assign(builderData, data || {});
       } else if (this.loopringBuilder.check(transfer)) {
-        builderData = await this.loopringBuilder.build(transfer)
+        const data = builderData = await this.loopringBuilder.build(transfer)
+        Object.assign(builderData, data || {});
       } else if (this.evmOBSourceContractBuilder.check(transfer, sourceChain)) {
-        builderData = await this.evmOBSourceContractBuilder.build(transfer)
+        const data = builderData = await this.evmOBSourceContractBuilder.build(transfer)
+        Object.assign(builderData, data || {});
       } else if (this.starknetOBSourceContractBuilder.check(transfer, sourceChain)) {
-        builderData = await this.starknetOBSourceContractBuilder.build(transfer)
+        const data = await this.starknetOBSourceContractBuilder.build(transfer)
+        Object.assign(builderData, data || {});
       } else if (this.zksyncLiteBuilder.check(transfer)) {
-        builderData = await this.zksyncLiteBuilder.build(transfer)
+        const data = builderData = await this.zksyncLiteBuilder.build(transfer)
+        Object.assign(builderData, data || {});
       }
+      
     } catch (error) {
       this.logger.error(`bridgeTransaction.builder error:${error.message}`, error);
     }
+    const crossParams = await this.standardBuilder.buildCrossParams(transfer);
+    builderData = Object.assign(builderData, crossParams)
     if (!builderData.targetToken && builderData.targetChain) {
       const targetToken = this.chainConfigService.getTokenBySymbol(
         builderData.targetChain.chainId,
@@ -598,7 +620,7 @@ export default class BridgeTransactionBuilder {
       });
     }
     if (!rule) {
-      const errMsg = `sourceChain.internalId: ${sourceChain.internalId}, targetChain.internalId:${targetChain.internalId}, sourceToken.symbol:${sourceToken.symbol}, targetToken.symbol:${targetToken.symbol}, transfer.receiver:${transfer.receiver}`
+      const errMsg = `Rule Not Found sourceChain.internalId: ${sourceChain.internalId}, targetChain.internalId:${targetChain.internalId}, sourceToken.symbol:${sourceToken.symbol}, targetToken.symbol:${targetToken.symbol}, transfer.receiver:${transfer.receiver}`
       throw new ValidSourceTxError(TransferOpStatus.RULE_NOT_FOUND, errMsg)
     }
     if (builderDataTargetAddress) {
@@ -642,6 +664,9 @@ export default class BridgeTransactionBuilder {
       transfer.symbol,
       dayjs(transfer.timestamp).valueOf(),
     );
+    if (createdData.sourceChain == 'SN_MAIN' && transfer.crossChainParams && transfer.crossChainParams['data'] && +transfer.crossChainParams['data'] > 0) {
+      createdData.transactionId = `${createdData.transactionId}_${+transfer.crossChainParams['data']}`;
+    }
     createdData.withholdingFee = rule.tradingFee;
     createdData.responseMaker = [rule.sender.toLocaleLowerCase()];
     const v1ResponseMaker = this.envConfigService.get("v1ResponseMaker");

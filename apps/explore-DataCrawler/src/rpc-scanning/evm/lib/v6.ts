@@ -1,6 +1,6 @@
 import { Interface, InterfaceAbi, id, TransactionDescription, LogDescription, getAddress, BigNumberish, TransactionResponse, TransactionReceipt, hexlify } from 'ethers6';
 import { IChainConfig } from '@orbiter-finance/config';
-import { equals } from '@orbiter-finance/utils';
+import { JSONStringify, equals } from '@orbiter-finance/utils';
 import BigNumber from 'bignumber.js';
 import * as abis from '@orbiter-finance/abi'
 import _, { clone } from 'lodash'
@@ -356,7 +356,17 @@ export default class EVMVUtils {
         ) {
           const value = new BigNumber(parsedLogData.args[1]).toFixed(0);
           const copyTxData = clone(txData);
-          copyTxData.hash = `${txData.hash}#${log.index}`;
+          let logIndex=null;
+          if (log['logIndex']!=undefined) {
+            logIndex = log['logIndex'];
+          }
+          if (log.index!=undefined) {
+            logIndex = log.index;
+          }
+          if (logIndex == null ||logIndex==undefined ) {
+            throw new Error(`${transaction.hash} LogIndex not found ${JSONStringify(log)}`)
+          }
+          copyTxData.hash = `${txData.hash}#${logIndex}`;
           copyTxData.token = chainInfo.nativeCurrency.address;
           copyTxData.symbol = chainInfo.nativeCurrency.symbol;
           copyTxData.receiver = parsedLogData.args[0];
@@ -380,8 +390,18 @@ export default class EVMVUtils {
           '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
         ) {
           const copyTxData = clone(txData);
+          let logIndex=null;
+          if (log['logIndex']!=undefined) {
+            logIndex = log['logIndex'];
+          }
+          if (log.index!=undefined) {
+            logIndex = log.index;
+          }
+          if (logIndex == null ||logIndex==undefined ) {
+            throw new Error(`${transaction.hash} LogIndex not found ${JSONStringify(log)}`)
+          }
           const value = new BigNumber(parsedLogData.args[2]).toFixed(0);
-          copyTxData.hash = `${txData.hash}#${log.index}`;
+          copyTxData.hash = `${txData.hash}#${logIndex}`;
           copyTxData.token = parsedData.args[0];
           copyTxData.sender = parsedLogData.args[0];
           copyTxData.receiver = parsedLogData.args[1];

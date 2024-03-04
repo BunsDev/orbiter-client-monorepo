@@ -28,6 +28,12 @@ export class TransactionSendConfirmFail extends Error {
       this.name = 'TransactionSendConfirmFail';
   }
 }
+export class NonceISTooDifferent extends Error {
+  constructor(message: string = 'The nonce is too different from that on the chain') {
+      super(message);
+      this.name = 'NonceISTooDifferent';
+  }
+}
 
 export class TransactionSendAfterError extends TransactionError {
   constructor(message: string) {

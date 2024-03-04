@@ -14,6 +14,7 @@ export default class XBridge extends EVMPraser {
   }
   async bridgeToV2(contractAddress: string, transaction: TransactionResponse, receipt: TransactionReceipt, parsedData: TransactionDescription): Promise<TransferAmountTransaction[]> {
     const txData = await this.buildTransferBaseData(transaction, receipt, parsedData);
+    txData.label['source'] = 'XBridge';
     const calldata = parsedData.args[0];
     let token;
     if (transaction.value > 0) {

@@ -27,11 +27,11 @@ export class SequencerScheduleService {
   private readonly applicationStartupTime: number = Date.now();
   static Lock: { [key: string]: LockData } = {}
   constructor(
+    private readonly envConfig: ENVConfigService,
     private readonly chainConfigService: ChainConfigService,
     private readonly validatorService: ValidatorService,
     @InjectModel(BridgeTransactionModel)
     private readonly bridgeTransactionModel: typeof BridgeTransactionModel,
-    private readonly envConfig: ENVConfigService,
     private alertService: AlertService,
     private accountFactoryService: AccountFactoryService,
     private transferService: TransferService,
@@ -123,7 +123,9 @@ export class SequencerScheduleService {
     if (records.length > 0) {
       this.logger.info(`DB message ${records.map(item => item.sourceId).join(', ')}`);
       for (const tx of records) {
-        this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId, tx).catch(error => {
+        this.enqueueMessage(`${tx.targetChain}-${tx.targetMaker.toLocaleLowerCase()}`, tx.sourceId, tx).then(result => {
+          this.logger.info(`enqueueMessage complete ${tx.sourceId}`)
+        }).catch(error => {
           this.logger.error(
             `[readDBTransactionRecords] enqueueMessage handle error ${tx.sourceId}`, error
           );
@@ -206,6 +208,9 @@ export class SequencerScheduleService {
       }
     }
     if (Lock[queueKey].locked == true) {
+      if (Date.now() - Lock[queueKey].prevTime >= 1000 * 60 * 2) {
+        this.logger.error(`${queueKey} Lock time exceeds 2 minutes`);
+      }
       return;
     }
     try {
@@ -249,6 +254,7 @@ export class SequencerScheduleService {
       for (let i = hashList.length - 1; i >= 0; i--) {
         const isConsumed = await this.isConsumed(targetChain, hashList[i]);
         if (isConsumed) {
+          this.logger.error(`${queueKey} ready consumptionSendingQueue Already consumed, delete ${hashList[i]}`);
           hashList.splice(i, 1);
         }
       }
@@ -259,19 +265,26 @@ export class SequencerScheduleService {
         const tx = await this.dequeueMessageData(hash);
         if (tx) records.push(tx);
       }
-      this.logger.info(`record: ${records.map(item => item.sourceId).join(', ')}`);
-      Lock[queueKey].prevTime = Date.now();
-      await this.consumptionSendingQueue(records, queueKey)
-      Lock[queueKey].prevTime = Date.now();
-    } catch (error) {
-      this.alertService.sendMessage(`consumptionSendingQueue error ${error.message}`, "TG")
-      this.logger.error(`readQueueExecByKey error: message ${error.message}`, error);
-      if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
-        for (const tx of records) {
-          this.enqueueMessage(queueKey, tx.sourceId, tx);
-        }
-        this.logger.error(`execBatchTransfer error PaidRollbackError ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
+      if (records.length <= 0) {
+        this.logger.error(`${queueKey} ready consumptionSendingQueue Delete ALL Empty`);
+        return
       }
+      this.logger.info(`${queueKey} ready consumptionSendingQueue: ${records.map(item => item.sourceId).join(', ')}`);
+      Lock[queueKey].prevTime = Date.now();
+      const result = await this.consumptionSendingQueue(records, queueKey)
+      Lock[queueKey].prevTime = Date.now();
+      this.logger.info(`${queueKey} consumptionSendingQueue complete: ${records.map(item => item.sourceId).join(', ')}  hash  ${JSONStringify(result)}`);
+    } catch (error) {
+      // this.alertService.sendMessage(`PaidError ${error.name} ${error.message} hash: ${records.map(item => item.sourceId).join(', ')}`, "TG")
+      this.logger.error(`PaidError ${error.name} queueKey ${queueKey} readQueueExecByKey error: message ${error.message}, hash: ${records.map(item => item.sourceId).join(', ')}`, error);
+      // if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
+      //   for (const tx of records) {
+      //      this.enqueueMessage(queueKey, tx.sourceId, tx).catch(error=> {
+      //       this.logger.error(`PaidError error ${error.name} enqueueMessage ${tx.sourceId} error ${error.message}`);
+      //      })
+      //   }
+      //   this.logger.error(`PaidError error ${error.name} ${queueKey} - ${records.map(row => row.sourceId).join(',')} message ${error.message}`);
+      // }
     } finally {
       Lock[queueKey].locked = false;
     }
@@ -335,7 +348,7 @@ export class SequencerScheduleService {
         throw new Errors.InsufficientLiquidity(`targetAmount: ${bridgeTx.targetAmount} ${bridgeTx.targetSymbol}`)
       }
     } catch (error) {
-      this.logger.error(`checkMakerFluidity error sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`, error);
+      this.logger.error(`checkMakerFluidity ${bridgeTx.targetSymbol} error sourceId: ${bridgeTx.sourceId}, sourceAddress: ${bridgeTx.sourceAddress}`, error);
       if (error instanceof Errors.InsufficientLiquidity) {
         throw error;
       }
@@ -354,13 +367,9 @@ export class SequencerScheduleService {
       bridgeTx.targetMaker,
       bridgeTx.targetChain
     );
-    try {
-      await account.connect(wallets[0].key, bridgeTx.targetMaker);
-      await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
-      return await this.transferService.execSingleTransfer(bridgeTx, account);
-    } catch (error) {
-      await this.handlePaidTransactionError(error, [bridgeTx.sourceChain], bridgeTx.targetChain);
-    }
+    await account.connect(wallets[0].key, bridgeTx.targetMaker);
+    await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
+    return await this.transferService.execSingleTransfer(bridgeTx, account);
   }
   async paidSingleBridgeInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
     const sourceChain = this.chainConfigService.getChainInfo(bridgeTx.sourceChain);
@@ -400,13 +409,9 @@ export class SequencerScheduleService {
       bridgeTx.targetMaker,
       bridgeTx.targetChain
     );
-    try {
-      await account.connect(wallets[0].key, bridgeTx.targetMaker);
-      await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
-      return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
-    } catch (error) {
-      await this.handlePaidTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
-    }
+    await account.connect(wallets[0].key, bridgeTx.targetMaker);
+    await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
+    return await this.transferService.execSingleInscriptionTransfer(bridgeTx, account);
   }
 
   async paidSingleCrossInscriptionTransaction(bridgeTx: BridgeTransactionModel, queueKey: string) {
@@ -444,26 +449,28 @@ export class SequencerScheduleService {
       bridgeTx.targetChain
     );
     await account.connect(wallets[0].key, bridgeTx.targetMaker);
-    try {
-      await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
-      return await this.transferService.execSingleInscriptionCrossTransfer(bridgeTx, account);
-    } catch (error) {
-      await this.handlePaidTransactionError(error, [bridgeTx.sourceId], bridgeTx.targetChain);
-    }
+    await this.saveConsumeStatus(bridgeTx.targetChain, bridgeTx.sourceId);
+    return await this.transferService.execSingleInscriptionCrossTransfer(bridgeTx, account);
   }
-  async handlePaidTransactionError(error, sourceIds: string[], targetChain: string) {
-    // this.logger.error(`PaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
+  async handlePaidTransactionError(queueKey: string, error, txs: Array<BridgeTransactionModel>) {
+    const sourceIds = txs.map(tx => tx.sourceId);
+    const [targetChain, _] = queueKey.split('-');
     try {
       if (error instanceof Errors.PaidRollbackError || error instanceof TransactionSendConfirmFail) {
         await this.removeConsumeStatus(targetChain, sourceIds);
-        try {
-          this.alertService.sendMessage(`PaidTransactionError ${targetChain} - ${sourceIds.join(',')} message: ${error.message}`, "TG")
-        } catch (error) {
-          console.error('handlePaidTransactionError sendAlertMessage error:', error);
+        for (const tx of txs) {
+          this.enqueueMessage(queueKey, tx.sourceId, tx).catch(error => {
+            this.logger.error(`handlePaidTransactionError error ${error.name} enqueueMessage ${tx.sourceId} error ${error.message}`);
+          })
         }
+        // try {
+        //   // this.alertService.sendMessage(`PaidTransactionError ${targetChain} - ${sourceIds.join(',')} message: ${error.message}`, "TG")
+        // } catch (error) {
+        //   console.error('handlePaidTransactionError sendAlertMessage error:', error);
+        // }
       }
     } catch (cleanupError) {
-      this.logger.error(`handlePaidTransactionError error ${targetChain} - ${sourceIds} message ${error.message}`, error);
+      this.logger.error(`handlePaidTransactionError ${targetChain} - ${sourceIds} message ${error.message}`, error);
     }
     throw error;
   }
@@ -526,16 +533,12 @@ export class SequencerScheduleService {
       targetChain
     );
     const sourceIds = legalTransaction.map(tx => tx.sourceId);
-    try {
-      await account.connect(privateKey, targetMaker);
-      await this.saveConsumeStatus(targetChain, sourceIds);
-      if (legalTransaction.length == 1) {
-        return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
-      }
-      return await this.transferService.execBatchInscriptionTransfer(legalTransaction, account)
-    } catch (error) {
-      await this.handlePaidTransactionError(error, sourceIds, targetChain);
+    await account.connect(privateKey, targetMaker);
+    await this.saveConsumeStatus(targetChain, sourceIds);
+    if (legalTransaction.length == 1) {
+      return await this.transferService.execSingleInscriptionTransfer(legalTransaction[0], account)
     }
+    return await this.transferService.execBatchInscriptionTransfer(legalTransaction, account)
   }
 
   async paidManyCrossInscriptionTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
@@ -594,15 +597,11 @@ export class SequencerScheduleService {
 
     await account.connect(privateKey, targetMaker);
     const sourceIds = legalTransaction.map(tx => tx.sourceId);
-    try {
-      await this.saveConsumeStatus(targetChain, sourceIds);
-      if (legalTransaction.length == 1) {
-        return await this.transferService.execSingleInscriptionCrossTransfer(legalTransaction[0], account)
-      }
-      return await this.transferService.execBatchInscriptionCrossTransfer(legalTransaction, account)
-    } catch (error) {
-      await this.handlePaidTransactionError(error, sourceIds, targetChain);
+    await this.saveConsumeStatus(targetChain, sourceIds);
+    if (legalTransaction.length == 1) {
+      return await this.transferService.execSingleInscriptionCrossTransfer(legalTransaction[0], account)
     }
+    return await this.transferService.execBatchInscriptionCrossTransfer(legalTransaction, account)
   }
   async paidManyBridgeTransaction(bridgeTxs: BridgeTransactionModel[], queueKey: string) {
     const legalTransaction = [];
@@ -663,21 +662,21 @@ export class SequencerScheduleService {
       targetMaker,
       targetChain
     );
-    try {
-      await account.connect(privateKey, targetMaker);
-      if (maxItem[1].length == 1) {
-        return await this.transferService.execSingleTransfer(maxItem[1][0], account)
-      }
-      return await this.transferService.execBatchTransfer(maxItem[1], account)
-    } catch (error) {
-      await this.handlePaidTransactionError(error, [bridgeTxs[0].sourceChain], bridgeTxs[0].targetChain);
+    await account.connect(privateKey, targetMaker);
+    if (maxItem[1].length == 1) {
+      return await this.transferService.execSingleTransfer(maxItem[1][0], account)
     }
+    return await this.transferService.execBatchTransfer(maxItem[1], account)
   }
 
   async consumptionSendingQueue(bridgeTx: Array<BridgeTransactionModel>, queueKey: string) {
     let result;
     const [chainId, makerAddr] = queueKey.split('-');
     const chainInfo = this.chainConfigService.getChainInfo(chainId);
+    const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
+    if (sourceIds.length <= 0) {
+      return;
+    }
     try {
       if (bridgeTx[0].version === '3-0') {
         result = bridgeTx.length > 1 ? await this.paidManyBridgeInscriptionTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeInscriptionTransaction(bridgeTx[0], queueKey)
@@ -686,13 +685,13 @@ export class SequencerScheduleService {
       } else if (bridgeTx[0].version === '1-0' || bridgeTx[0].version === '2-0') {
         result = bridgeTx.length > 1 ? await this.paidManyBridgeTransaction(bridgeTx, queueKey) : await this.paidSingleBridgeTransaction(bridgeTx[0], queueKey)
       }
+      this.logger.info(`${queueKey} transfer info ${JSONStringify(result)}`);
+      return result;
     } catch (error) {
-      const sourceIds = bridgeTx.map(row => row.sourceId).join(',');
-      this.alertService.sendMessage(`${chainInfo.name}(${chainId}) - maker ${truncateEthAddress(makerAddr)} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, "TG")
-      this.logger.error(`${chainInfo.name}(${chainId}) - maker ${makerAddr} transfer error ErrorName:${error.name} sourceHash: ${sourceIds} ${error.message}`, error);
+      this.alertService.sendMessage(`TO CHAIN ${chainInfo.name}(${chainId}) - Maker:${truncateEthAddress(makerAddr)} ErrorName:${error.name} SourceHash: ${sourceIds} Message ${error.message}`, "TG")
+      this.logger.error(`TO CHAIN ${chainInfo.name}(${chainId}) - Maker:${makerAddr} ErrorName:${error.name} SourceHash: ${sourceIds} Message ${error.message}`, error);
+      this.handlePaidTransactionError(queueKey, error, bridgeTx);
     }
-    this.logger.info(`${queueKey} transfer info ${JSONStringify(result)}`);
-    return result;
   }
   async consumptionQueue(tx: BridgeTransactionModel) {
     const isDisabledSourceAddress = await this.validatorService.validDisabledSourceAddress(tx.sourceAddress);

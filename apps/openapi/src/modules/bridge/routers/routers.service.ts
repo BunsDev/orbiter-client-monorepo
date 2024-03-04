@@ -113,6 +113,9 @@ export class RoutersService {
                     continue;
                 }
                 routerConfig.line = `${routerConfig.srcChain}/${routerConfig.tgtChain}-${v1Rule['sourceSymbol']}/${v1Rule['targetSymbol']}`;
+                if (routerConfig.vc.length==4) {
+                    routerConfig.vc = `0${routerConfig.vc}`;
+                }
                 v1RouterConfigs.push(routerConfig);
             } catch (error) {
                 console.error('getV1Routers error', error);

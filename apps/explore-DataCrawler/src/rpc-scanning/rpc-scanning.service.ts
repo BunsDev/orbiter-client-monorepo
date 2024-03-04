@@ -124,7 +124,7 @@ export class RpcScanningService implements RpcScanningInterface {
 
       if (firstStart) {
         const newLastScannedBlockNumber = lastScannedBlockNumber > 100 ? lastScannedBlockNumber - 100 : lastScannedBlockNumber;
-        this.logger.info(`checkLatestHeight restart app, go back ${lastScannedBlockNumber} change ${newLastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
+        this.logger.info(`checkLatestHeight restart app, localhost go back ${lastScannedBlockNumber} change ${newLastScannedBlockNumber} blocks, lastBlock ${this.rpcLastBlockNumber}`)
         lastScannedBlockNumber = newLastScannedBlockNumber;
       }
       const safetyBlockNumber = this.rpcLastBlockNumber - this.targetConfirmation;

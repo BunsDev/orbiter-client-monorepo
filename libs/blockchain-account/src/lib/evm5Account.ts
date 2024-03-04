@@ -12,6 +12,7 @@ import {
     TransactionSendConfirmFail,
     TransactionRequest,
     TransferResponse,
+    NonceISTooDifferent
 } from "./IAccount.interface";
 import { JSONStringify, promiseWithTimeout, equals, sleep } from "@orbiter-finance/utils";
 import { Contract, Wallet } from 'ethers';
@@ -20,13 +21,18 @@ import { Interface } from 'ethers/lib/utils';
 export class EVM5Account extends OrbiterAccount {
     protected wallet: Wallet;
     #provider: Orbiter5Provider;
-    public nonceManager: NonceManager;
+    // public nonceManager: NonceManager;
     constructor(protected chainId: string, protected readonly ctx: Context) {
         super(chainId, ctx);
     }
     get provider(): Orbiter5Provider {
         const rpc = this.chainConfig.rpc[0];
-        return new Orbiter5Provider(rpc)
+        const provider = new Orbiter5Provider(rpc);
+        provider.on('error',(error) => {
+            this.logger.error(`${this.chainConfig.name} provider5 error ${error.message}`, error);
+            this.errorTracker.trackError('provider');
+          })
+          return provider;
     }
 
     async connect(privateKey: string, _address?: string) {
@@ -320,7 +326,7 @@ export class EVM5Account extends OrbiterAccount {
         transactionRequest: any
     ): Promise<TransactionResponse> {
         const chainConfig = this.chainConfig;
-        // const provider = this.getProvider();
+        // const provider = this.provider;
         this.logger.info(`sendTransaction transactionRequest:${JSONStringify(transactionRequest)}`)
         const nonceResult = await this.nonceManager.getNextNonce();
         if (!nonceResult) {
@@ -328,9 +334,13 @@ export class EVM5Account extends OrbiterAccount {
         }
         this.logger.info(`sendTransaction localNonce:${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}, ready6SendNonce:${nonceResult.nonce}`)
         try {
-            if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
-                throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
-            }
+            // if (nonceResult && +nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+            //     throw new TransactionSendConfirmFail('The Nonce network sending the transaction differs from the local one by more than 20');
+            // }
+            if (+nonceResult.localNonce - nonceResult.networkNonce >= 20) {
+                this.emit("NonceISTooDifferent",nonceResult);
+                throw new NonceISTooDifferent(`NonceISTooDifferent localNonce: ${nonceResult.localNonce}, networkNonce:${nonceResult.networkNonce}`);
+              }
             const valueStr = new BigNumber(String(transactionRequest.value)).toFixed(0);
             if (transactionRequest.value)
                 transactionRequest.value = ethers.BigNumber.from(valueStr)

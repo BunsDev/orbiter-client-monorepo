@@ -58,7 +58,7 @@ export class AlertService {
         const url = `https://api.telegram.org/bot${this.opts.telegram.token}/sendMessage`;
         const data = {
             chat_id: this.opts.telegram.chatId,
-            text: `${level}-${message}`,
+            text: `${message}`,
         };
 
         try {

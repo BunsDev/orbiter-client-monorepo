@@ -6,8 +6,21 @@ import { NonceManager } from './nonceManager';
 import { StarknetERC20 } from '@orbiter-finance/abi'
 export class StarknetAccount extends OrbiterAccount {
   public account: Account;
-  public provider: RpcProvider;
-  private nonceManager: NonceManager;
+  #provider: RpcProvider;
+  get provider() {
+    const chainConfig = this.chainConfig;
+    if (!this.#provider) {
+      this.#provider = new RpcProvider({
+        nodeUrl: chainConfig.rpc[0],
+      });
+    }
+    if (this.#provider && this.#provider.nodeUrl != chainConfig.rpc[0]) {
+      this.#provider = new RpcProvider({
+        nodeUrl: chainConfig.rpc[0],
+      });
+    }
+    return this.#provider;
+  }
 
   /**
    * connection wallet
@@ -17,14 +30,13 @@ export class StarknetAccount extends OrbiterAccount {
    * @returns Example after connection
    */
   async connect(privateKey: string, address: string) {
-    const provider = this.getProviderV4();
     // connect to the account
-    const { abi: accountAbi } = await provider.getClassAt(address);
+    const { abi: accountAbi } = await this.provider.getClassAt(address);
     if (accountAbi === undefined) { throw new Error("accountAbi no abi.") };
-    const accountContract = new Contract(accountAbi, address, provider);
+    const accountContract = new Contract(accountAbi, address, this.provider);
     const isCairo1: boolean = accountContract.isCairo1();
     const account = new Account(
-      provider,
+      this.provider,
       address,
       privateKey,
       <any>String(+isCairo1)
@@ -43,10 +55,7 @@ export class StarknetAccount extends OrbiterAccount {
     return this;
   }
 
-  public getProviderV4() {
-    this.provider = this.provider || new RpcProvider({ nodeUrl: this.chainConfig.rpc[0] });
-    return this.provider;
-  }
+
 
   public async transfer(
     to: string,
@@ -79,7 +88,6 @@ export class StarknetAccount extends OrbiterAccount {
     values: bigint[],
     transactionRequest: TransactionRequest = {}
   ): Promise<any> {
-    const provider = this.getProviderV4();
     const invocationList: any[] = [];
     for (let i = 0; i < tos.length; i++) {
       try {
@@ -89,7 +97,7 @@ export class StarknetAccount extends OrbiterAccount {
           continue;
         }
         const amount = String(values[i]);
-        const ethContract = new Contract(StarknetERC20, token, provider);
+        const ethContract = new Contract(StarknetERC20, token, this.provider);
         invocationList.push(ethContract.populateTransaction.transfer(recipient, cairo.uint256(amount)));
       } catch (error) {
         this.logger.error(`starknet transferTokens error:  to ${tos[i]}, amount ${values[i]}`);
@@ -133,23 +141,37 @@ export class StarknetAccount extends OrbiterAccount {
     //   }
     // }
     // accessLogger.info(`transactionDetail: ${JSON.stringify(transactionDetail)}`);
-    const trx = await this.account.execute(invocationList, <any>null, transactionDetail);
-    submit();
-    if (!trx || !trx.transaction_hash) {
-      throw new Error(`Starknet Failed to send transaction hash does not exist`);
+    try {
+      const trx = await this.account.execute(invocationList, <any>null, transactionDetail);
+      submit();
+      if (!trx || !trx.transaction_hash) {
+        throw new Error(`Starknet Failed to send transaction hash does not exist`);
+      }
+      // await sleep(1000);
+      const hash = addressPadStart(trx.transaction_hash, 66);
+      this.logger.info(`${this.chainConfig.name} sendTransaction txHash:${hash}`);
+      return {
+        hash,
+        from: this.address,
+        // to: tos.join(','),
+        // value: BigInt(value),
+        fee: BigInt(transactionDetail.maxFee),
+        nonce: nonce,
+        token
+      };
+    } catch (error) {
+      // const errmsg = error.message;
+      this.logger.error(
+        `broadcastTransaction tx error:${transactionDetail.nonce} - ${error.message}， rpc: ${this.chainConfig.rpc[0]}`,
+        error
+      );
+      const dataMsg = error.data || error.message;
+      if (dataMsg.includes('StarkNet Alpha throughput limit reached')) {
+        throw new TransactionSendConfirmFail(error.message);
+      } else {
+        throw error;
+      }
     }
-    // await sleep(1000);
-    const hash = addressPadStart(trx.transaction_hash, 66);
-    this.logger.info(`${this.chainConfig.name} sendTransaction txHash:${hash}`);
-    return {
-      hash,
-      from: this.address,
-      // to: tos.join(','),
-      // value: BigInt(value),
-      fee: BigInt(transactionDetail.maxFee),
-      nonce: nonce,
-      token
-    };
   }
 
   public async getBalance(address?: string, token?: string): Promise<bigint> {
@@ -161,20 +183,18 @@ export class StarknetAccount extends OrbiterAccount {
   }
 
   public async getTokenBalance(token: string, address?: string): Promise<bigint> {
-    const provider = this.getProviderV4();
     const contractInstance = new Contract(
       <any>StarknetERC20,
       token,
-      provider,
+      this.provider,
     );
     const balanceResult = (await contractInstance.balanceOf(address)).balance;
     return BigInt(balanceResult.low.toString());
   }
 
   public async waitForTransactionConfirmation(transactionHash: string) {
-    const provider = this.getProviderV4();
     try {
-      const receipt = await provider.getTransactionReceipt(transactionHash);
+      const receipt = await this.provider.getTransactionReceipt(transactionHash);
       if (receipt) {
         return receipt;
       }

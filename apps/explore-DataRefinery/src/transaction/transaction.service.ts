@@ -39,10 +39,11 @@ export class TransactionService {
     if (!this.envConfig.get('RABBITMQ_URL')) {
       throw new Error('Get RABBITMQ_URL Config fail');
     }
-
-    this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
-    this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
-    this.matchRefundRecord()
+    if (!this.envConfig.get('LOCAL_DEBUG_PROD')) {
+      this.consumerService.consumeScanTransferReceiptMessages(this.batchInsertTransactionReceipt.bind(this))
+      this.consumerService.consumeScanTransferSaveDBAfterMessages(this.executeMatch.bind(this))
+      this.matchRefundRecord()
+    }
   }
   public async execCreateTransactionReceipt(
     transfers: TransferAmountTransaction[],
@@ -71,7 +72,7 @@ export class TransactionService {
         const txTime = dayjs(transfer.timestamp).toDate(); // TODO: time
         // valid v1 or v2
 
-        const upsertData: any = {
+        const upsertData: Partial<TransfersModel> = {
           hash: transfer.hash,
           chainId: transfer.chainId,
           blockNumber: transfer.blockNumber.toString(),
@@ -92,15 +93,18 @@ export class TransactionService {
           signature: transfer.signature,
           version: "",
           feeToken: transfer.feeToken,
-          transactionIndex: transfer.transactionIndex,
+          transactionIndex: transfer.transactionIndex ? String(transfer.transactionIndex) : null,
           syncStatus: 0,
-          crossChainParams: transfer.crossChainParams
+          crossChainParams: transfer.crossChainParams,
+          label: transfer.label
         }
         let versionStr = null;
         const ignoreAddress = this.envConfig.get("IgnoreAddress", '').toLocaleLowerCase().split(',');
-        if ((await this.makerService.isInscriptionMakers(transfer.sender)) || await this.makerService.isInscriptionMakers(transfer.receiver)) {
+        if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
+          upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
+        } else if ((await this.makerService.isInscriptionMakers(transfer.sender)) || await this.makerService.isInscriptionMakers(transfer.receiver)) {
           // upsertData.opStatus = TransferOpStatus.INIT_STATUS;
-          const calldata = upsertData.calldata
+          const calldata = upsertData.calldata as any;
           if (await this.makerService.isInscriptionMakers(transfer.receiver)) {
             versionStr = '3-0'; // All tx transfers to maker are 3-0 by default
             if (calldata && calldata.op && calldata.op === InscriptionOpType.Deploy) {
@@ -122,8 +126,6 @@ export class TransactionService {
               versionStr = '3-4';
             }
           }
-        } else if (ignoreAddress.includes(transfer.sender) && ignoreAddress.includes(transfer.receiver)) {
-          upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
         } else {
           if (await this.makerService.isV1WhiteWalletAddress(transfer.receiver) && await this.makerService.isV1WhiteWalletAddress(transfer.sender)) {
             upsertData.opStatus = TransferOpStatus.BALANCED_LIQUIDITY;
@@ -192,7 +194,7 @@ export class TransactionService {
         result =
           await this.transactionV2Service.handleTransferBySourceTx(payload);
       } else if (payload.version === '2-1') {
-        result = await this.transactionV2Service.handleTransferByDestTx(payload);
+        result = await this.transactionV1Service.handleTransferByDestTx(payload);
         if (+this.envConfig.get("enablePointsSystem") == 1 && result.errno === 0) {
           this.messageService.sendMessageToPointsSystem(result.data)
         }
@@ -250,7 +252,7 @@ export class TransactionService {
     }
 
   }
-  @Interval(1000 * 60 * 2)
+  @Interval(1000 * 60 * 5)
   async matchRefundRecord() {
     const transfers = await this.transfersModel.findAll({
       raw: true,
@@ -258,10 +260,10 @@ export class TransactionService {
       attributes: ['id', 'hash', 'chainId', 'amount', 'version', 'receiver', 'symbol', 'timestamp', 'version'],
       where: {
         version: ['1-1', '2-1'],
-        opStatus:0,
+        opStatus: 0,
         timestamp: {
           [Op.gte]: dayjs().subtract(1, 'month').toISOString(),
-          [Op.lte]: dayjs().subtract(2, 'minute').toISOString(),
+          [Op.lte]: dayjs().subtract(10, 'minute').toISOString(),
         },
         status: 2,
         sender: ['0x646592183ff25a0c44f09896a384004778f831ed', '0x06e18dd81378fd5240704204bccc546f6dfad3d08c4a3a44347bd274659ff328']
@@ -353,7 +355,7 @@ export class TransactionService {
         version: version,
         status: 2,
         opStatus: {
-          [Op.in]: [2,3,4,5,6]
+          [Op.in]: [2, 3, 4, 5, 6, 81]
         },
         chainId: transfer.chainId,
         sender: transfer.receiver,
@@ -373,7 +375,10 @@ export class TransactionService {
         const refundRecord = await this.refundRecordModel.findOne({
           attributes: ['id'],
           where: {
-            targetId: transfer.hash,
+            [Op.or]: [
+              { targetId: transfer.hash },
+              { sourceId: sourceTx.hash }
+            ]
           }
         });
         if (!refundRecord || !refundRecord.id) {
@@ -409,10 +414,55 @@ export class TransactionService {
             }
             t && await t.commit();
           } catch (error) {
+            console.error(error);
             this.logger.error(`matchRefundRecord2 error:${transfer.hash} msg:${error.message}`, error);
             t && await t.rollback();
           }
-        };
+        } else {
+          if (refundRecord.targetId && refundRecord.status == TransferOpStatus.REFUND) {
+            throw new Error(`${transfer.hash} / ${sourceTx.hash} A matching record already exists`)
+          }
+          const t = await this.refundRecordModel.sequelize.transaction();
+          try {
+            const createData = await this.refundRecordModel.update({
+              targetId: transfer.hash,
+              sourceAmount: sourceTx.amount,
+              sourceChain: sourceTx.chainId,
+              sourceId: sourceTx.hash,
+              sourceSymbol: sourceTx.symbol,
+              sourceTime: sourceTx.timestamp,
+              reason: sourceTx.opStatus.toString(),
+              status: TransferOpStatus.REFUND,
+              targetAmount: transfer.amount,
+              createdAt: new Date(),
+            }, {
+              where: {
+                sourceId: sourceTx.hash
+              },
+              transaction: t
+
+            });
+            if (!createData) {
+              throw new Error('refund record create fail')
+            }
+            const [rows] = await this.transfersModel.update({
+              opStatus: TransferOpStatus.REFUND,
+              updatedAt: new Date()
+            }, {
+              where: {
+                id: [transfer.id, sourceTx.id],
+              }
+            });
+            if (rows != 2) {
+              throw new Error(`matchRefundRecord2 match refund change status rows fail ${rows}/2`)
+            }
+            t && await t.commit();
+          } catch (error) {
+            console.error(error);
+            this.logger.error(`matchRefundRecord2 error:${transfer.hash} msg:${error.message}`, error);
+            t && await t.rollback();
+          }
+        }
       }
     }
   }
